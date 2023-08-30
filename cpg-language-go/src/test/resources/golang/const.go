@@ -1,7 +1,9 @@
 package p
 
+type custom int64
+
 const (
-	one = 1
+	one custom = 1
 	oneAsWell
 	ten = 10
 	tenAsWell

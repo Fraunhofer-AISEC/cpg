@@ -225,6 +225,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             } else {
                 newCallExpression(callee, name, rawNode = callExpr)
             }
+        call.type = unknownType()
 
         // TODO(oxisto) Add type constraints
         if (typeConstraints.isNotEmpty()) {

@@ -108,6 +108,9 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
          */
         var constInitializers = mutableMapOf<Int, GoStandardLibrary.Ast.Expr>()
 
+        /** The current const type, which is valid until a new initializer is present */
+        var constType: Type? = null
+
         /** The current [GoStandardLibrary.Ast.GenDecl] that is being processed. */
         var currentDecl: GoStandardLibrary.Ast.GenDecl? = null
     }
@@ -368,29 +371,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     }
 
     private fun isBuiltinType(name: String): Boolean {
-        return when (name) {
-            "bool",
-            "byte",
-            "complex128",
-            "complex64",
-            "error",
-            "float32",
-            "float64",
-            "int",
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "rune",
-            "string",
-            "uint",
-            "uint8",
-            "uint16",
-            "uint32",
-            "uint64",
-            "uintptr" -> true
-            else -> false
-        }
+        return language.primitiveTypeNames.contains(name)
     }
 
     override fun codeOf(astNode: GoStandardLibrary.Ast.Node): String? {
@@ -413,34 +394,6 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             val comment = this.commentMap?.comment(astNode)
             node.comment = comment
         }
-    }
-
-    /**
-     * This function produces a Go-style function type name such as `func(int, string) string` or
-     * `func(int) (error, string)`
-     */
-    private fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
-        val rn = mutableListOf<String>()
-        val pn = mutableListOf<String>()
-
-        for (t in paramTypes) {
-            pn += t.name.toString()
-        }
-
-        for (t in returnTypes) {
-            rn += t.name.toString()
-        }
-
-        val rs =
-            if (returnTypes.size > 1) {
-                rn.joinToString(", ", prefix = " (", postfix = ")")
-            } else if (returnTypes.isNotEmpty()) {
-                rn.joinToString(", ", prefix = " ")
-            } else {
-                ""
-            }
-
-        return pn.joinToString(", ", prefix = "func(", postfix = ")$rs")
     }
 
     companion object {
@@ -502,3 +455,31 @@ val Type?.isOverlay: Boolean
     get() {
         return this is ObjectType && this.recordDeclaration?.kind == "overlay"
     }
+
+/**
+ * This function produces a Go-style function type name such as `func(int, string) string` or
+ * `func(int) (error, string)`
+ */
+fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
+    val rn = mutableListOf<String>()
+    val pn = mutableListOf<String>()
+
+    for (t in paramTypes) {
+        pn += t.name.toString()
+    }
+
+    for (t in returnTypes) {
+        rn += t.name.toString()
+    }
+
+    val rs =
+        if (returnTypes.size > 1) {
+            rn.joinToString(", ", prefix = " (", postfix = ")")
+        } else if (returnTypes.isNotEmpty()) {
+            rn.joinToString(", ", prefix = " ")
+        } else {
+            ""
+        }
+
+    return pn.joinToString(", ", prefix = "func(", postfix = ")$rs")
+}

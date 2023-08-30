@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.types.*
 import org.neo4j.ogm.annotation.Transient
 
@@ -112,7 +113,16 @@ class GoLanguage :
         )
 
     override fun isDerivedFrom(type: Type, superType: Type): Boolean {
-        if (type == superType) {
+        if (type == superType || superType == primitiveType("any")) {
+            return true
+        }
+
+        // If we encounter an auto type as part of the function declaration, we accept this as any
+        // type
+        if (
+            (type is ObjectType && superType is AutoType) ||
+                (type is PointerType && type.isArray && superType.root is AutoType)
+        ) {
             return true
         }
 

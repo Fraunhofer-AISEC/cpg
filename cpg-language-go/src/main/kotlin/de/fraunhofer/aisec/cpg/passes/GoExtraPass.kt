@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.frontends.golang.funcTypeName
 import de.fraunhofer.aisec.cpg.frontends.golang.isOverlay
 import de.fraunhofer.aisec.cpg.frontends.golang.underlyingType
 import de.fraunhofer.aisec.cpg.graph.*
@@ -114,6 +115,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         get() = scopeManager.currentScope
 
     override fun accept(component: Component) {
+        // Add built-int functions
+        component.translationUnits += addBuiltIn()
+
         val walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
             when (node) {
@@ -128,6 +132,52 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
+    }
+
+    private fun addBuiltIn(): TranslationUnitDeclaration {
+        val builtin = newTranslationUnitDeclaration("builtin.go")
+        scopeManager.resetToGlobal(builtin)
+
+        val len = newFunctionDeclaration("len", localNameOnly = true)
+        len.parameters = listOf(newParamVariableDeclaration("v", GoLanguage().autoType()))
+        len.type =
+            typeManager.registerType(
+                FunctionType(funcTypeName(len.signatureTypes, len.returnTypes))
+            )
+        scopeManager.addDeclaration(len)
+
+        /**
+         * ```go
+         * func append(slice []Type, elems ...Type) []Type
+         * ```
+         */
+        val append = newFunctionDeclaration("append", localNameOnly = true)
+        append.parameters =
+            listOf(
+                newParamVariableDeclaration("slice", GoLanguage().autoType().array()),
+                newParamVariableDeclaration("elems", GoLanguage().autoType(), variadic = true),
+            )
+        append.returnTypes = listOf(GoLanguage().autoType().array())
+        append.type =
+            typeManager.registerType(
+                FunctionType(funcTypeName(append.signatureTypes, append.returnTypes))
+            )
+        scopeManager.addDeclaration(append)
+
+        val error = newRecordDeclaration("error", "interface")
+        scopeManager.enterScope(error)
+
+        val errorFunc = newMethodDeclaration("Error", recordDeclaration = error)
+        errorFunc.returnTypes = listOf(GoLanguage().primitiveType("string"))
+        errorFunc.type =
+            typeManager.registerType(
+                FunctionType(funcTypeName(errorFunc.signatureTypes, errorFunc.returnTypes))
+            )
+        scopeManager.addDeclaration(errorFunc)
+
+        scopeManager.leaveScope(error)
+
+        return builtin
     }
 
     /**

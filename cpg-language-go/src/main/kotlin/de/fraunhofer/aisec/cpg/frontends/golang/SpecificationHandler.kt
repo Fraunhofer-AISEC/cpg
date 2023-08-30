@@ -224,6 +224,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         } else {
             val sequence = DeclarationSequence()
 
+            var type = valueSpec.type?.let { frontend.typeOf(it) }
+
             for ((nameIdx, ident) in valueSpec.names.withIndex()) {
                 // We want to make sure that top-level declarations, i.e, the ones that are directly
                 // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
@@ -235,9 +237,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         ident.name
                     }
                 val decl = newVariableDeclaration(fqn, rawNode = valueSpec)
-
-                if (valueSpec.type != null) {
-                    decl.type = frontend.typeOf(valueSpec.type!!)
+                if (type != null) {
+                    decl.type = type
                 } else {
                     decl.type = autoType()
                 }
@@ -259,6 +260,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     if (initializerExpr != null) {
                         // Set the current initializer
                         frontend.declCtx.constInitializers[nameIdx] = initializerExpr
+
+                        // Set the const type
+                        frontend.declCtx.constType = type
                     } else {
                         // Fetch expr from existing initializers
                         initializerExpr = frontend.declCtx.constInitializers[nameIdx]
@@ -271,6 +275,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         } else {
                             decl.initializer = frontend.expressionHandler.handle(initializerExpr)
                         }
+                    }
+
+                    type = frontend.declCtx.constType
+                    if (type != null) {
+                        decl.type = type
                     }
                 }
 
@@ -318,6 +327,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // list of superclasses.
             else -> {
                 val record = newRecordDeclaration(spec.name.name, "overlay")
+                frontend.typeManager.registerType(record.toType())
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)

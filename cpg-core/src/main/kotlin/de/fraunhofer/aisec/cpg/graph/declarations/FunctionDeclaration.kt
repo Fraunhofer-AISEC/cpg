@@ -117,13 +117,13 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 .stream()
                 .sorted(Comparator.comparingInt(ParameterDeclaration::argumentIndex))
                 .collect(Collectors.toList())
-        return if (targetSignature.size < signature.size) {
+        return if (signature.all { !it.isVariadic } && targetSignature.size < signature.size) {
             false
         } else {
             // signature is a collection of positional arguments, so the order must be preserved
             for (i in signature.indices) {
                 val declared = signature[i]
-                if (declared.isVariadic && targetSignature.size >= signature.size) {
+                if (declared.isVariadic) {
                     // Everything that follows is collected by this param, so the signature is
                     // fulfilled no matter what comes now (potential FIXME: in Java, we could have
                     // overloading with different vararg types, in C++ we can't, as vararg types are

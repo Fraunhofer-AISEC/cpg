@@ -300,25 +300,28 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val values =
-            mapOf(
-                "one" to 1,
-                "oneAsWell" to 1,
-                "two" to 2,
-                "three" to 3,
-                "four" to 4,
-                "tenAsWell" to 10,
-                "five" to 5,
-                "fiveAsWell" to 5,
-                "six" to 6,
-                "fivehundred" to 500,
-                "sixhundred" to 600,
-                "onehundredandfive" to 105
-            )
-        values.forEach {
-            val variable = tu.variables[it.key]
-            assertNotNull(variable, "variable \"${it.key}\" not found")
-            assertEquals(it.value, variable.evaluate(), "${it.key} does not match")
+        with(tu) {
+            val values =
+                mapOf(
+                    "one" to Pair(1, objectType("p.custom")),
+                    "oneAsWell" to Pair(1, objectType("p.custom")),
+                    "two" to Pair(2, primitiveType("int")),
+                    "three" to Pair(3, primitiveType("int")),
+                    "four" to Pair(4, primitiveType("int")),
+                    "tenAsWell" to Pair(10, primitiveType("int")),
+                    "five" to Pair(5, primitiveType("int")),
+                    "fiveAsWell" to Pair(5, primitiveType("int")),
+                    "six" to Pair(6, primitiveType("int")),
+                    "fivehundred" to Pair(500, primitiveType("int")),
+                    "sixhundred" to Pair(600, primitiveType("int")),
+                    "onehundredandfive" to Pair(105, primitiveType("int")),
+                )
+            values.forEach {
+                val variable = tu.variables[it.key]
+                assertNotNull(variable, "variable \"${it.key}\" not found")
+                assertEquals(it.value.first, variable.evaluate(), "${it.key} does not match")
+                assertEquals(it.value.second, variable.type, "${it.key} has the wrong type")
+            }
         }
     }
 
