@@ -727,7 +727,7 @@ interface PythonAST {
      * ```
      */
     class Constant(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: Any by lazy { getSingle(pyObject, uri, "value") }
+        val value: Any? by lazy { getSingle(pyObject, uri, "value") }
         val kind: String? by lazy { getSingle(pyObject, uri, "kind") }
     }
 

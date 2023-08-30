@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -41,10 +40,6 @@ import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 @ExecuteFirst
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
-
-    val scope: Scope?
-        get() = scopeManager.currentScope
-
     override fun cleanup() {
         // nothing to do
     }
