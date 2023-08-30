@@ -339,7 +339,7 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.Name):
-        r = ExpressionBuilderKt.newDeclaredReferenceExpression(
+        r = ExpressionBuilderKt.newReference(
             self.frontend, expr.id,
             TypeBuilderKt.unknownType(self.frontend),
             self.get_src_code(expr))

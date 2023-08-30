@@ -65,7 +65,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._statements import handle_function_or_method
     from ._statements import handle_statement
     from ._statements import handle_statement_impl
-    from ._statements import make_compound_statement
+    from ._statements import make_block_statement
 
     def execute(self):
         if isinstance(self.rootNode, ast.Module):
