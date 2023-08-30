@@ -33,8 +33,4 @@ class ProblemType : Type() {
     override fun dereference(): Type {
         return this
     }
-
-    override fun duplicate(): Type {
-        return this
-    }
 }

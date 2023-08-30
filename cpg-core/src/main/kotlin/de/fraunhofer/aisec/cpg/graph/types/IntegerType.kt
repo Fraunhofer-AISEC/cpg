@@ -33,9 +33,4 @@ class IntegerType(
     bitWidth: Int? = null,
     language: Language<*>? = null,
     modifier: Modifier = Modifier.SIGNED
-) : NumericType(typeName, bitWidth, language, modifier) {
-
-    override fun duplicate(): Type {
-        return IntegerType(this.name, bitWidth, language, modifier)
-    }
-}
+) : NumericType(typeName, bitWidth, language, modifier)

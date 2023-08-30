@@ -139,9 +139,6 @@ abstract class Type : Node {
             }
         }
 
-    /** @return Creates an exact copy of the current type (chain) */
-    abstract fun duplicate(): Type
-
     val typeName: String
         get() = name.toString()
 

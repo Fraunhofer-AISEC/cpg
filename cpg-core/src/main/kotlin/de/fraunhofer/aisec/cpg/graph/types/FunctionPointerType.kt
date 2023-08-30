@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -80,11 +79,6 @@ class FunctionPointerType : Type {
 
     override fun dereference(): Type {
         return this
-    }
-
-    override fun duplicate(): Type {
-        val copiedParameters: List<Type> = ArrayList(unwrap(parametersPropertyEdge))
-        return FunctionPointerType(this, copiedParameters, language, returnType)
     }
 
     override fun isSimilar(t: Type?): Boolean {

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -92,10 +91,9 @@ fun Type.ref(): Type {
 }
 
 /**
- * This function creates a new [Type] with the given [name]. In order to avoid unnecessary
- * allocation of simple types, we do a pre-check within this function, whether a built-in type exist
- * with the particular name. If it not exists, a new [ObjectType] is created and registered with the
- * [TypeManager].
+ * This function returns an [ObjectType] with the given [name]. If a respective [Type] does not yet
+ * exist, it will be created In order to avoid unnecessary allocation of simple types, we do a
+ * pre-check within this function, whether a built-in type exist with the particular name.
  */
 @JvmOverloads
 fun LanguageProvider.objectType(name: CharSequence, generics: List<Type> = listOf()): Type {
@@ -112,9 +110,28 @@ fun LanguageProvider.objectType(name: CharSequence, generics: List<Type> = listO
             ?: throw TranslationException(
                 "Could not create type: translation context not available"
             )
-    val type = ObjectType(name, generics, false, language)
 
-    return c.typeManager.registerType(type)
+    synchronized(c.typeManager.firstOrderTypes) {
+        // We can try to look up the type by its name and return it, if it already exists.
+        var type =
+            c.typeManager.firstOrderTypes.firstOrNull {
+                it is ObjectType &&
+                    it.name == name &&
+                    it.generics == generics &&
+                    it.language == language
+            }
+        if (type != null) {
+            return type
+        }
+
+        // Otherwise, we either need to create the type because of the generics or because we do not
+        // know the type yet.
+        type = ObjectType(name, generics, false, language)
+
+        // Piping it through register type will ensure that in any case we return the one unique
+        // type object for it.
+        return c.typeManager.registerType(type)
+    }
 }
 
 /**

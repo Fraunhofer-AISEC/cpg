@@ -31,9 +31,4 @@ class StringType(
     typeName: CharSequence = "",
     language: Language<*>? = null,
     generics: List<Type> = listOf()
-) : ObjectType(typeName, generics, false, language) {
-
-    override fun duplicate(): Type {
-        return StringType(this.name, language, generics)
-    }
-}
+) : ObjectType(typeName, generics, false, language)
