@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -65,7 +65,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDecl)
+        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
 
     @Test
@@ -86,7 +86,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDecl)
+        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
 
     companion object {
@@ -108,7 +108,7 @@ class UnresolvedDFGPassTest {
                         record("DfgUnresolvedCalls") {
                             field("i", t("int")) { modifiers = listOf("private") }
                             constructor {
-                                receiver = newVariableDecl("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
                                 param("i", t("int"))
                                 body {
                                     member("i", ref("this")) assign { ref("i") }
@@ -116,7 +116,7 @@ class UnresolvedDFGPassTest {
                                 }
                             }
                             method("knownFunction", t("int")) {
-                                receiver = newVariableDecl("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
                                 param("arg", t("int"))
                                 body { returnStmt { member("i", ref("this")) + ref("arg") } }
                             }

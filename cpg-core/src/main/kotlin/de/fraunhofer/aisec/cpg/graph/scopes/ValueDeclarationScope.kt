@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
@@ -40,17 +40,17 @@ import org.slf4j.LoggerFactory
  * Works for if, for, and extends to the block scope
  */
 open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
-    @Transient var valueDecls = mutableListOf<ValueDecl>()
+    @Transient var valueDeclarations = mutableListOf<ValueDeclaration>()
 
     /** A map of typedefs keyed by their alias. */
-    @Transient val typedefs = mutableMapOf<Type, TypedefDecl>()
+    @Transient val typedefs = mutableMapOf<Type, TypedefDeclaration>()
 
-    fun addTypedef(typedef: TypedefDecl) {
+    fun addTypedef(typedef: TypedefDeclaration) {
         typedefs[typedef.alias] = typedef
     }
 
     open fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
-        if (declaration is ValueDecl) {
+        if (declaration is ValueDeclaration) {
             addValueDeclaration(declaration, addToAST)
         } else {
             Util.errorWithFileLocation(
@@ -65,18 +65,18 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
      * THe value declarations are only set in the ast node if the handler of the ast node may not
      * know the outer
      *
-     * @param valueDecl the [ValueDecl]
+     * @param valueDeclaration the [ValueDeclaration]
      * @param addToAST whether to also add the declaration to the AST of its holder.
      */
-    fun addValueDeclaration(valueDecl: ValueDecl, addToAST: Boolean) {
-        valueDecls.add(valueDecl)
+    fun addValueDeclaration(valueDeclaration: ValueDeclaration, addToAST: Boolean) {
+        valueDeclarations.add(valueDeclaration)
         if (addToAST) {
             if (astNode is DeclarationHolder) {
                 val holder = astNode as DeclarationHolder
-                holder.addDeclaration(valueDecl)
+                holder.addDeclaration(valueDeclaration)
             } else {
                 Util.errorWithFileLocation(
-                    valueDecl,
+                    valueDeclaration,
                     log,
                     "Trying to add a value declaration to a scope which does not have a declaration holder AST node"
                 )

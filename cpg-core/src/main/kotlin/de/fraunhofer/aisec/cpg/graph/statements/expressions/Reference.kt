@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
- * expression `a = b`, which itself is an [AssignExpr], contains two [Reference]s, one for the
+ * expression `a = b`, which itself is an [AssignExpression], contains two [Reference]s, one for the
  * variable `a` and one for variable `b`, which have been previously been declared.
  */
 open class Reference : Expression(), HasType.TypeObserver {
@@ -62,7 +62,7 @@ open class Reference : Expression(), HasType.TypeObserver {
 
             // set it
             field = value
-            if (value is ValueDecl) {
+            if (value is ValueDeclaration) {
                 value.addUsage(this)
             }
 
@@ -95,7 +95,7 @@ open class Reference : Expression(), HasType.TypeObserver {
      * @return the declaration cast to the expected class, or null if the class is not assignable
      *   </T>
      */
-    fun <T : VariableDecl?> getRefersToAs(clazz: Class<T>): T? {
+    fun <T : VariableDeclaration?> getRefersToAs(clazz: Class<T>): T? {
         return if (refersTo?.javaClass?.let { clazz.isAssignableFrom(it) } == true)
             clazz.cast(refersTo)
         else null

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
@@ -45,8 +45,9 @@ import org.slf4j.LoggerFactory
  * store additional information that relate to the relationship between the two nodes that belong to
  * neither of the two nodes directly.
  *
- * An example would be the name (in this case `a`) of an argument between a [CallExpr] (`foo`) and
- * its argument (a [Literal] of `2`) in languages that support keyword arguments, such as Python:
+ * An example would be the name (in this case `a`) of an argument between a [CallExpression] (`foo`)
+ * and its argument (a [Literal] of `2`) in languages that support keyword arguments, such as
+ * Python:
  * ```python
  * foo("bar", a = 2)
  * ```

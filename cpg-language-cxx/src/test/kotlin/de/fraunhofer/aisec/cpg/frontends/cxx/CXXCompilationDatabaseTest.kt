@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.io.File
 import kotlin.test.Test
@@ -50,35 +50,35 @@ class CXXCompilationDatabaseTest {
             val tu = result.translationUnits.firstOrNull()
             assertNotNull(tu)
 
-            val mainFunc = tu.byNameOrNull<FunctionDecl>("main")
+            val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
             assertNotNull(mainFunc)
 
-            val func1 = tu.byNameOrNull<FunctionDecl>("func1")
+            val func1 = tu.byNameOrNull<FunctionDeclaration>("func1")
             assertNotNull(func1)
             assertEquals(func1.isInferred, false)
-            val func2 = tu.byNameOrNull<FunctionDecl>("func2")
+            val func2 = tu.byNameOrNull<FunctionDeclaration>("func2")
             assertNotNull(func2)
             assertEquals(func2.isInferred, false)
-            val sysFunc = tu.byNameOrNull<FunctionDecl>("sys_func")
+            val sysFunc = tu.byNameOrNull<FunctionDeclaration>("sys_func")
             assertNotNull(sysFunc)
             assertEquals(sysFunc.isInferred, false)
 
-            val s0 = mainFunc.getBodyStatementAs(0, CallExpr::class.java)
+            val s0 = mainFunc.getBodyStatementAs(0, CallExpression::class.java)
             assertNotNull(s0)
             val arg1 = s0.arguments[1]
             assert(arg1 is Literal<*>)
             val lit = arg1 as Literal<*>
             assertEquals(lit.value, "hi")
 
-            val s1 = mainFunc.getBodyStatementAs(1, CallExpr::class.java)
+            val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
             assertNotNull(s1)
             assertEquals(func1, s1.invokes.iterator().next())
 
-            val s2 = mainFunc.getBodyStatementAs(2, CallExpr::class.java)
+            val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
             assertNotNull(s2)
             assertEquals(func2, s2.invokes.iterator().next())
 
-            val s3 = mainFunc.getBodyStatementAs(3, CallExpr::class.java)
+            val s3 = mainFunc.getBodyStatementAs(3, CallExpression::class.java)
             assertNotNull(s3)
             assertEquals(sysFunc, s3.invokes.iterator().next())
 
@@ -100,10 +100,10 @@ class CXXCompilationDatabaseTest {
         assertNotNull(tu)
         assertNotNull(tu)
 
-        val mainFunc = tu.byNameOrNull<FunctionDecl>("main")
+        val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(mainFunc)
 
-        val s0 = mainFunc.getBodyStatementAs(0, ReturnStmt::class.java)
+        val s0 = mainFunc.getBodyStatementAs(0, ReturnStatement::class.java)
         assertNotNull(s0)
 
         val retVal = s0.returnValue as Literal<*>
@@ -121,7 +121,7 @@ class CXXCompilationDatabaseTest {
         for (i in tus.indices) {
             val tu = tus[i]
             val value = ref[File(tu.name.toString()).name]
-            val mainFunc = tu.byNameOrNull<FunctionDecl>("main")
+            val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
             assertNotNull(mainFunc)
 
             val s0 = mainFunc.getBodyStatementAs(0, Literal::class.java)
@@ -139,7 +139,7 @@ class CXXCompilationDatabaseTest {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_arch.json")
         val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
 
-        val main = result.translationUnits.firstOrNull()?.byNameOrNull<FunctionDecl>("main")
+        val main = result.translationUnits.firstOrNull()?.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
     }
 }

@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
 class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
@@ -41,11 +41,11 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
      * `defer`). We need to gather the appropriate deferred call expressions and then connect them
      * in [handleFunctionDeclaration].
      */
-    private var deferredCalls = mutableMapOf<FunctionDecl, MutableList<UnaryOp>>()
+    private var deferredCalls = mutableMapOf<FunctionDeclaration, MutableList<UnaryOperator>>()
 
-    override fun handleUnspecificUnaryOperator(node: UnaryOp) {
+    override fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
-        if (node.operatorCode == "defer" && input is CallExpr) {
+        if (node.operatorCode == "defer" && input is CallExpression) {
             handleDeferUnaryOperator(node, input)
         } else {
             super.handleUnspecificUnaryOperator(node)
@@ -53,7 +53,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
     }
 
     /** Handles the EOG for a [`defer`](https://go.dev/ref/spec#Defer_statements) statement. */
-    private fun handleDeferUnaryOperator(node: UnaryOp, input: CallExpr) {
+    private fun handleDeferUnaryOperator(node: UnaryOperator, input: CallExpression) {
         val function = scopeManager.currentFunction
         if (function != null) {
             // We need to disrupt the regular EOG handling here and store this deferred call. We
@@ -80,7 +80,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         }
     }
 
-    override fun handleFunctionDeclaration(node: FunctionDecl) {
+    override fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // First, call the regular EOG handler
         super.handleFunctionDeclaration(node)
 
@@ -90,7 +90,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         // We need to follow the path from the defer statement to all return statements that are
         // reachable from this point.
         for (defer in defers ?: listOf()) {
-            val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStmt }
+            val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
             for (path in paths.fulfilled) {
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node

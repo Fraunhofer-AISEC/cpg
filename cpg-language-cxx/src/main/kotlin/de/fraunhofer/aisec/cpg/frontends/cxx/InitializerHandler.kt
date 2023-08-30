@@ -25,16 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.newConstructExpr
-import de.fraunhofer.aisec.cpg.graph.newInitializerListExpr
-import de.fraunhofer.aisec.cpg.graph.newProblemExpr
+import de.fraunhofer.aisec.cpg.graph.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTEqualsInitializer
@@ -43,7 +43,7 @@ import org.eclipse.cdt.core.dom.ast.IASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
 
 class InitializerHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTInitializer>(Supplier(::ProblemExpr), lang) {
+    CXXHandler<Expression, IASTInitializer>(Supplier(::ProblemExpression), lang) {
 
     override fun handleNode(node: IASTInitializer): Expression {
         return when (node) {
@@ -57,9 +57,9 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = newConstructExpr(ctx.rawSignature)
+        val constructExpression = newConstructExpression(ctx.rawSignature)
         constructExpression.type =
-            (frontend.declaratorHandler.lastNode as? VariableDecl)?.type ?: unknownType()
+            (frontend.declaratorHandler.lastNode as? VariableDeclaration)?.type ?: unknownType()
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = frontend.expressionHandler.handle(argument)
@@ -72,13 +72,14 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         return constructExpression
     }
 
-    private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpr {
+    private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
         // Because an initializer list expression is used for many different things, it is important
         // for us to know which kind of variable (or rather of which kind), we are initializing.
         // This information can be found in the lastNode property of our declarator handler.
-        val targetType = (frontend.declaratorHandler.lastNode as? ValueDecl)?.type ?: unknownType()
+        val targetType =
+            (frontend.declaratorHandler.lastNode as? ValueDeclaration)?.type ?: unknownType()
 
-        val expression = newInitializerListExpr(targetType, ctx.rawSignature)
+        val expression = newInitializerListExpression(targetType, ctx.rawSignature)
 
         for (clause in ctx.clauses) {
             frontend.expressionHandler.handle(clause)?.let {
@@ -95,6 +96,6 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
     private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {
         return frontend.expressionHandler.handle(ctx.initializerClause)
-            ?: return newProblemExpr("could not parse initializer clause")
+            ?: return newProblemExpression("could not parse initializer clause")
     }
 }

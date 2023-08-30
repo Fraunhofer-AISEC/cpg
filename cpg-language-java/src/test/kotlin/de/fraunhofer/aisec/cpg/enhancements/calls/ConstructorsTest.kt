@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
@@ -45,33 +45,33 @@ internal class ConstructorsTest : BaseTest() {
     fun testJava() {
         val result =
             TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-        val constructors = result.allChildren<ConstructorDecl>()
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.isEmpty() }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }
         val twoArgs = findByUniquePredicate(constructors) { it.parameters.size == 2 }
         val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
-        assertTrue(a1.initializer is NewExpr)
-        assertTrue((a1.initializer as? NewExpr)?.initializer is ConstructExpr)
+        assertTrue(a1.initializer is NewExpression)
+        assertTrue((a1.initializer as? NewExpression)?.initializer is ConstructExpression)
 
-        val a1Initializer = (a1.initializer as NewExpr).initializer as ConstructExpr
+        val a1Initializer = (a1.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(noArg, a1Initializer.constructor)
 
         val a2 = findByUniqueName(variables, "a2")
         assertNotNull(a2)
-        assertTrue(a2.initializer is NewExpr)
-        assertTrue((a2.initializer as? NewExpr)?.initializer is ConstructExpr)
+        assertTrue(a2.initializer is NewExpression)
+        assertTrue((a2.initializer as? NewExpression)?.initializer is ConstructExpression)
 
-        val a2Initializer = (a2.initializer as NewExpr).initializer as ConstructExpr
+        val a2Initializer = (a2.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(singleArg, a2Initializer.constructor)
 
         val a3 = findByUniqueName(variables, "a3")
         assertNotNull(a3)
-        assertTrue(a3.initializer is NewExpr)
-        assertTrue((a3.initializer as NewExpr).initializer is ConstructExpr)
+        assertTrue(a3.initializer is NewExpression)
+        assertTrue((a3.initializer as NewExpression).initializer is ConstructExpression)
 
-        val a3Initializer = (a3.initializer as NewExpr).initializer as ConstructExpr
+        val a3Initializer = (a3.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(twoArgs, a3Initializer.constructor)
 
         val a4 = findByUniqueName(variables, "a4")

@@ -30,24 +30,25 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayExpr
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
- * Creates a new [TranslationUnitDecl]. This is the top-most [Node] that a [LanguageFrontend] or
- * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
+ * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTranslationUnitDecl(
+fun MetadataProvider.newTranslationUnitDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
-): TranslationUnitDecl {
-    val node = TranslationUnitDecl()
+): TranslationUnitDeclaration {
+    val node = TranslationUnitDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
@@ -55,19 +56,19 @@ fun MetadataProvider.newTranslationUnitDecl(
 }
 
 /**
- * Creates a new [FunctionDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [FunctionDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newFunctionDecl(
+fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null,
     localNameOnly: Boolean = false
-): FunctionDecl {
-    val node = FunctionDecl()
+): FunctionDeclaration {
+    val node = FunctionDeclaration()
     node.applyMetadata(this, name, rawNode, code, localNameOnly)
 
     log(node)
@@ -75,67 +76,67 @@ fun MetadataProvider.newFunctionDecl(
 }
 
 /**
- * Creates a new [MethodDecl]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newMethodDecl(
+fun MetadataProvider.newMethodDeclaration(
     name: CharSequence?,
     code: String? = null,
     isStatic: Boolean = false,
-    recordDecl: RecordDecl? = null,
+    recordDeclaration: RecordDeclaration? = null,
     rawNode: Any? = null
-): MethodDecl {
-    val node = MethodDecl()
-    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDecl?.name)
+): MethodDeclaration {
+    val node = MethodDeclaration()
+    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.name)
 
     node.isStatic = isStatic
-    node.recordDecl = recordDecl
+    node.recordDeclaration = recordDeclaration
 
     log(node)
     return node
 }
 
 /**
- * Creates a new [ConstructorDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newConstructorDecl(
+fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
     code: String? = null,
-    recordDecl: RecordDecl?,
+    recordDeclaration: RecordDeclaration?,
     rawNode: Any? = null
-): ConstructorDecl {
-    val node = ConstructorDecl()
+): ConstructorDeclaration {
+    val node = ConstructorDeclaration()
 
-    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDecl?.name)
+    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.name)
 
-    node.recordDecl = recordDecl
+    node.recordDeclaration = recordDeclaration
 
     log(node)
     return node
 }
 
 /**
- * Creates a new [MethodDecl]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newParameterDecl(
+fun MetadataProvider.newParameterDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
-): ParameterDecl {
-    val node = ParameterDecl()
+): ParameterDeclaration {
+    val node = ParameterDeclaration()
     node.applyMetadata(this, name, rawNode, code, localNameOnly = true)
 
     node.type = type
@@ -146,20 +147,20 @@ fun MetadataProvider.newParameterDecl(
 }
 
 /**
- * Creates a new [VariableDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [VariableDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newVariableDecl(
+fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
-): VariableDecl {
-    val node = VariableDecl()
+): VariableDeclaration {
+    val node = VariableDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     node.type = type
@@ -170,19 +171,19 @@ fun MetadataProvider.newVariableDecl(
 }
 
 /**
- * Creates a new [TypedefDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [TypedefDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTypedefDecl(
+fun MetadataProvider.newTypedefDeclaration(
     targetType: Type,
     alias: Type,
     code: String? = null,
     rawNode: Any? = null
-): TypedefDecl {
-    val node = TypedefDecl()
+): TypedefDeclaration {
+    val node = TypedefDeclaration()
     node.applyMetadata(this, alias.typeName, rawNode, code, true)
 
     node.type = targetType
@@ -193,18 +194,18 @@ fun MetadataProvider.newTypedefDecl(
 }
 
 /**
- * Creates a new [TypeParamDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [TypeParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTypeParamDecl(
+fun MetadataProvider.newTypeParameterDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
-): TypeParamDecl {
-    val node = TypeParamDecl()
+): TypeParameterDeclaration {
+    val node = TypeParameterDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
@@ -212,19 +213,19 @@ fun MetadataProvider.newTypeParamDecl(
 }
 
 /**
- * Creates a new [RecordDecl]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [RecordDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newRecordDecl(
+fun MetadataProvider.newRecordDeclaration(
     name: CharSequence,
     kind: String,
     code: String? = null,
     rawNode: Any? = null
-): RecordDecl {
-    val node = RecordDecl()
+): RecordDeclaration {
+    val node = RecordDeclaration()
     node.applyMetadata(this, name, rawNode, code, false)
 
     node.kind = kind
@@ -234,19 +235,19 @@ fun MetadataProvider.newRecordDecl(
 }
 
 /**
- * Creates a new [EnumDecl]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [EnumDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newEnumDecl(
+fun MetadataProvider.newEnumDeclaration(
     name: CharSequence?,
     code: String? = null,
     location: PhysicalLocation?,
     rawNode: Any? = null
-): EnumDecl {
-    val node = EnumDecl()
+): EnumDeclaration {
+    val node = EnumDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
     node.location = location
@@ -256,18 +257,18 @@ fun MetadataProvider.newEnumDecl(
 }
 
 /**
- * Creates a new [FunctionTemplateDecl]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [FunctionTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newFunctionTemplateDecl(
+fun MetadataProvider.newFunctionTemplateDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
-): FunctionTemplateDecl {
-    val node = FunctionTemplateDecl()
+): FunctionTemplateDeclaration {
+    val node = FunctionTemplateDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
@@ -275,18 +276,18 @@ fun MetadataProvider.newFunctionTemplateDecl(
 }
 
 /**
- * Creates a new [ClassTemplateDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [RecordTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newClassTemplateDecl(
+fun MetadataProvider.newRecordTemplateDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
-): ClassTemplateDecl {
-    val node = ClassTemplateDecl()
+): RecordTemplateDeclaration {
+    val node = RecordTemplateDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
@@ -294,19 +295,19 @@ fun MetadataProvider.newClassTemplateDecl(
 }
 
 /**
- * Creates a new [EnumConstantDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [EnumConstantDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newEnumConstantDecl(
+fun MetadataProvider.newEnumConstantDeclaration(
     name: CharSequence?,
     code: String? = null,
     location: PhysicalLocation?,
     rawNode: Any? = null
-): EnumConstantDecl {
-    val node = EnumConstantDecl()
+): EnumConstantDeclaration {
+    val node = EnumConstantDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
     node.location = location
@@ -316,13 +317,13 @@ fun MetadataProvider.newEnumConstantDecl(
 }
 
 /**
- * Creates a new [FieldDecl]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [FieldDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newFieldDecl(
+fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     modifiers: List<String>? = listOf(),
@@ -331,8 +332,8 @@ fun MetadataProvider.newFieldDecl(
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
-): FieldDecl {
-    val node = FieldDecl()
+): FieldDeclaration {
+    val node = FieldDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
     node.type = type
@@ -340,7 +341,7 @@ fun MetadataProvider.newFieldDecl(
     node.location = location
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
-        if (initializer is ArrayExpr) {
+        if (initializer is NewArrayExpression) {
             node.isArray = true
         }
         node.initializer = initializer
@@ -351,19 +352,19 @@ fun MetadataProvider.newFieldDecl(
 }
 
 /**
- * Creates a new [ProblemDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [ProblemDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newProblemDecl(
+fun MetadataProvider.newProblemDeclaration(
     problem: String = "",
     problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
     code: String? = null,
     rawNode: Any? = null
-): ProblemDecl {
-    val node = ProblemDecl()
+): ProblemDeclaration {
+    val node = ProblemDeclaration()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.problem = problem
@@ -374,18 +375,18 @@ fun MetadataProvider.newProblemDecl(
 }
 
 /**
- * Creates a new [IncludeDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [IncludeDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newIncludeDecl(
+fun MetadataProvider.newIncludeDeclaration(
     includeFilename: CharSequence,
     code: String? = null,
     rawNode: Any? = null
-): IncludeDecl {
-    val node = IncludeDecl()
+): IncludeDeclaration {
+    val node = IncludeDeclaration()
     node.applyMetadata(this, includeFilename, rawNode, code, true)
     node.filename = includeFilename.toString()
 
@@ -394,18 +395,18 @@ fun MetadataProvider.newIncludeDecl(
 }
 
 /**
- * Creates a new [NamespaceDecl]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [NamespaceDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newNamespaceDecl(
+fun MetadataProvider.newNamespaceDeclaration(
     name: CharSequence,
     code: String? = null,
     rawNode: Any? = null
-): NamespaceDecl {
-    val node = NamespaceDecl()
+): NamespaceDeclaration {
+    val node = NamespaceDeclaration()
     node.applyMetadata(this, name, rawNode, code)
 
     log(node)
@@ -413,18 +414,18 @@ fun MetadataProvider.newNamespaceDecl(
 }
 
 /**
- * Creates a new [UsingDecl]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [UsingDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newUsingDecl(
+fun MetadataProvider.newUsingDeclaration(
     code: String? = null,
     qualifiedName: CharSequence?,
     rawNode: Any? = null
-): UsingDecl {
-    val node = UsingDecl()
+): UsingDeclaration {
+    val node = UsingDeclaration()
     node.applyMetadata(this, qualifiedName, rawNode, code)
 
     node.qualifiedName = qualifiedName.toString()

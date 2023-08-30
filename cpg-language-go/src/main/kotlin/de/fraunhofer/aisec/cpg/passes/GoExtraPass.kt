@@ -28,15 +28,15 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpr
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -85,8 +85,8 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * a, b := 1, 2
  * ```
  *
- * In the frontend we only do the assignment, therefore we need to create a new [VariableDecl] for
- * `b` and inject a [DeclarationStmt].
+ * In the frontend we only do the assignment, therefore we need to create a new
+ * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
  *
  * ## Converting Call Expressions into Cast Expressions
  *
@@ -100,7 +100,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * This is also possible with more complex types, such as interfaces or aliased types, as long as
  * they are compatible. Because types in the same package can be defined in multiple files, we
  * cannot decide during the frontend run. Therefore, we need to execute this pass before the
- * [CallResolver] and convert certain [CallExpr] nodes into a [CastExpr].
+ * [CallResolver] and convert certain [CallExpression] nodes into a [CastExpression].
  */
 @ExecuteBefore(VariableUsageResolver::class)
 @ExecuteBefore(CallResolver::class)
@@ -114,10 +114,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         val walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
             when (node) {
-                is CallExpr -> handleCall(node, parent)
-                is IncludeDecl -> handleInclude(node)
-                is AssignExpr -> handleAssign(node)
-                is ForEachStmt -> handleForEachStatement(node)
+                is CallExpression -> handleCall(node, parent)
+                is IncludeDeclaration -> handleInclude(node)
+                is AssignExpression -> handleAssign(node)
+                is ForEachStatement -> handleForEachStatement(node)
             }
         }
 
@@ -127,11 +127,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStmt.iterable] of an
-     * [ForEachStmt] in order to determine the types used in [ForEachStmt.variable] (index and
-     * iterated value).
+     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStatement.iterable] of an
+     * [ForEachStatement] in order to determine the types used in [ForEachStatement.variable] (index
+     * and iterated value).
      */
-    private fun handleForEachStatement(forEach: ForEachStmt) {
+    private fun handleForEachStatement(forEach: ForEachStatement) {
         (forEach.iterable as HasType).registerTypeObserver(
             object : HasType.TypeObserver {
                 override fun typeChanged(newType: Type, src: HasType) {
@@ -140,13 +140,15 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                     }
 
                     val variable = forEach.variable
-                    if (variable is DeclarationStmt) {
+                    if (variable is DeclarationStatement) {
                         // The key is the first variable. It is always an int
-                        val keyVariable = variable.declarations.firstOrNull() as? VariableDecl
+                        val keyVariable =
+                            variable.declarations.firstOrNull() as? VariableDeclaration
                         keyVariable?.type = forEach.primitiveType("int")
 
                         // The value is the second one. Its type depends on the array type
-                        val valueVariable = variable.declarations.getOrNull(1) as? VariableDecl
+                        val valueVariable =
+                            variable.declarations.getOrNull(1) as? VariableDeclaration
                         ((forEach.iterable as? HasType)?.type as? PointerType)?.let {
                             valueVariable?.type = it.elementType
                         }
@@ -161,10 +163,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * This function gets called for every [AssignExpr], to check, whether we need to implicitly
-     * define any variables assigned in the statement.
+     * This function gets called for every [AssignExpression], to check, whether we need to
+     * implicitly define any variables assigned in the statement.
      */
-    private fun handleAssign(assign: AssignExpr) {
+    private fun handleAssign(assign: AssignExpression) {
         // Only filter nodes that could potentially declare
         if (assign.operatorCode != ":=") {
             return
@@ -177,7 +179,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                 val ref = scopeManager.resolveReference(expr)
                 if (ref == null) {
                     // We need to implicitly declare it, if its not declared before.
-                    val decl = newVariableDecl(expr.name, expr.autoType())
+                    val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.location = expr.location
                     decl.isImplicit = true
                     decl.initializer = assign.findValue(expr)
@@ -192,11 +194,12 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * This function gets called for every [IncludeDecl] (which in Go imports a whole package) and
-     * checks, if we need to infer a [NamespaceDecl] for this particular include.
+     * This function gets called for every [IncludeDeclaration] (which in Go imports a whole
+     * package) and checks, if we need to infer a [NamespaceDeclaration] for this particular
+     * include.
      */
     // TODO: Somehow, this gets called twice?!
-    private fun handleInclude(include: IncludeDecl) {
+    private fun handleInclude(include: IncludeDeclaration) {
         // If the namespace is included as _, we can ignore it, as its only included as a runtime
         // dependency
         if (include.name.localName == "_") {
@@ -205,7 +208,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.resolve<NamespaceDecl>(scopeManager.globalScope, true) {
+            scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
                 it.name == include.name && it.path == include.filename
             }
 
@@ -220,10 +223,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     }
 
     /**
-     * This function gets called for every [CallExpr] and checks, whether this is actually a
-     * "calling" a type and is thus a [CastExpr] rather than a [CallExpr].
+     * This function gets called for every [CallExpression] and checks, whether this is actually a
+     * "calling" a type and is thus a [CastExpression] rather than a [CallExpression].
      */
-    private fun handleCall(call: CallExpr, parent: Node?) {
+    private fun handleCall(call: CallExpression, parent: Node?) {
         // We need to check, whether the "callee" refers to a type and if yes, convert it into a
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
@@ -254,9 +257,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     private fun replaceCallWithCast(
         typeName: CharSequence,
         parent: Node,
-        call: CallExpr,
+        call: CallExpression,
     ) {
-        val cast = parent.newCastExpr(call.code)
+        val cast = parent.newCastExpression(call.code)
         cast.location = call.location
         cast.castType = call.objectType(typeName)
         cast.expression = call.arguments.single()

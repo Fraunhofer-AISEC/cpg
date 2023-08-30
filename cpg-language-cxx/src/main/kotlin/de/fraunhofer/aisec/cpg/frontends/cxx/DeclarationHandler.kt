@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
@@ -58,7 +58,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
  */
 class DeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDecl), lang) {
+    CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
     override fun handleNode(node: IASTDeclaration): Declaration {
         return when (node) {
@@ -77,19 +77,19 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++ (using
      * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
-     * [UsingDecl]. However, currently, no actual adjustment of available names / scopes is done
-     * yet.
+     * [UsingDeclaration]. However, currently, no actual adjustment of available names / scopes is
+     * done yet.
      */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return newUsingDecl(using.rawSignature, using.qualifiedName.toString())
+        return newUsingDeclaration(using.rawSignature, using.qualifiedName.toString())
     }
 
     /**
      * Translates a C++ [namespace](https://en.cppreference.com/w/cpp/language/namespace#Namespaces)
-     * into a [NamespaceDecl].
+     * into a [NamespaceDeclaration].
      */
-    private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDecl {
-        val declaration = newNamespaceDecl(ctx.name.toString(), frontend.codeOf(ctx))
+    private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
+        val declaration = newNamespaceDeclaration(ctx.name.toString(), frontend.codeOf(ctx))
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -107,7 +107,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
-        val problem = newProblemDecl(ctx.problem.message)
+        val problem = newProblemDeclaration(ctx.problem.message)
 
         frontend.scopeManager.addDeclaration(problem)
 
@@ -116,8 +116,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C/C++ (function)[https://en.cppreference.com/w/cpp/language/functions]
-     * definition into a [FunctionDecl]. A definition, in contrast to a declaration also has a
-     * function body. Function declarations are most likely handled by [handleSimpleDeclaration].
+     * definition into a [FunctionDeclaration]. A definition, in contrast to a declaration also has
+     * a function body. Function declarations are most likely handled by [handleSimpleDeclaration].
      * However, in both cases, the majority of the function is described by a declarator, which gets
      * parsed by [DeclaratorHandler.handleFunctionDeclarator].
      */
@@ -126,8 +126,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         //  as throw(...) is not compiler enforced (Problem for TryStatement)
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
-        if (declaration !is FunctionDecl) {
-            return ProblemDecl("declarator of function definition is not a function declarator")
+        if (declaration !is FunctionDeclaration) {
+            return ProblemDeclaration(
+                "declarator of function definition is not a function declarator"
+            )
         }
 
         // Retrieve the type. This should parse as a function type, otherwise it is unknown.
@@ -156,7 +158,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // TODO: This should be extracted into a separate pass and done for all function
             //  declarations, also global ones
             var candidates =
-                (holder as? DeclarationHolder)?.declarations?.filterIsInstance<FunctionDecl>()
+                (holder as? DeclarationHolder)
+                    ?.declarations
+                    ?.filterIsInstance<FunctionDeclaration>()
                     ?: listOf()
 
             // Look for the method or constructor
@@ -191,7 +195,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // Let the statement handler take care of the function body. The outcome should (always)
             // be a compound statement, holding all other statements.
             val bodyStatement = frontend.statementHandler.handle(ctx.body)
-            if (bodyStatement is CompoundStmt) {
+            if (bodyStatement is BlockStatement) {
                 val statements = bodyStatement.statementEdges
 
                 // get the last statement
@@ -201,8 +205,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
 
                 // add an implicit return statement, if there is none
-                if (lastStatement !is ReturnStmt) {
-                    val returnStatement = newReturnStmt("return;")
+                if (lastStatement !is ReturnStatement) {
+                    val returnStatement = newReturnStatement("return;")
                     returnStatement.isImplicit = true
                     bodyStatement.addStatement(returnStatement)
                 }
@@ -222,9 +226,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // definitions and declarations.
         // TODO: Extract this into a pass
         val declarationCandidates =
-            frontend.currentTU?.declarations?.filterIsInstance(FunctionDecl::class.java)?.filter {
-                !it.isDefinition && it.hasSameSignature(declaration)
-            }
+            frontend.currentTU
+                ?.declarations
+                ?.filterIsInstance(FunctionDeclaration::class.java)
+                ?.filter { !it.isDefinition && it.hasSameSignature(declaration) }
                 ?: listOf()
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
@@ -261,52 +266,55 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-    private fun handleTemplateDeclaration(ctx: CPPASTTemplateDeclaration): TemplateDecl {
+    private fun handleTemplateDeclaration(ctx: CPPASTTemplateDeclaration): TemplateDeclaration {
         val name = ctx.rawSignature.split("{").toTypedArray()[0].replace('\n', ' ').trim()
 
-        val templateDecl: TemplateDecl =
+        val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                newFunctionTemplateDecl(name, frontend.codeOf(ctx))
+                newFunctionTemplateDeclaration(name, frontend.codeOf(ctx))
             } else {
-                newClassTemplateDecl(name, frontend.codeOf(ctx))
+                newRecordTemplateDeclaration(name, frontend.codeOf(ctx))
             }
 
-        templateDecl.location = frontend.locationOf(ctx)
-        frontend.scopeManager.addDeclaration(templateDecl)
-        frontend.scopeManager.enterScope(templateDecl)
-        addTemplateParameters(ctx, templateDecl)
+        templateDeclaration.location = frontend.locationOf(ctx)
+        frontend.scopeManager.addDeclaration(templateDeclaration)
+        frontend.scopeManager.enterScope(templateDeclaration)
+        addTemplateParameters(ctx, templateDeclaration)
 
         // Handle Template
         val innerDeclaration = frontend.declarationHandler.handle(ctx.declaration)
-        frontend.scopeManager.leaveScope(templateDecl)
-        if (templateDecl is FunctionTemplateDecl) {
+        frontend.scopeManager.leaveScope(templateDeclaration)
+        if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
-            templateDecl.name = templateDecl.realizations[0].name.clone()
+            templateDeclaration.name = templateDeclaration.realizations[0].name.clone()
         } else
-            (innerDeclaration as? RecordDecl)?.let {
-                addParameterizedTypesToRecord(templateDecl, it)
+            (innerDeclaration as? RecordDeclaration)?.let {
+                addParameterizedTypesToRecord(templateDeclaration, it)
             }
 
-        addRealizationToScope(templateDecl)
+        addRealizationToScope(templateDeclaration)
 
-        return templateDecl
+        return templateDeclaration
     }
 
     /**
      * Add Template Parameters to the TemplateDeclaration
      *
      * @param ctx
-     * @param templateDecl
+     * @param templateDeclaration
      */
-    private fun addTemplateParameters(ctx: CPPASTTemplateDeclaration, templateDecl: TemplateDecl) {
+    private fun addTemplateParameters(
+        ctx: CPPASTTemplateDeclaration,
+        templateDeclaration: TemplateDeclaration
+    ) {
         for (templateParameter in ctx.templateParameters) {
             if (templateParameter is CPPASTSimpleTypeTemplateParameter) {
                 // Handle Type Parameters
                 val typeParamDecl =
-                    frontend.declaratorHandler.handle(templateParameter) as TypeParamDecl
+                    frontend.declaratorHandler.handle(templateParameter) as TypeParameterDeclaration
                 val parameterizedType =
                     frontend.typeManager.createOrGetTypeParameter(
-                        templateDecl,
+                        templateDeclaration,
                         templateParameter.name.toString(),
                         language
                     )
@@ -315,14 +323,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
                     typeParamDecl.default = defaultType
                 }
-                templateDecl.addParameter(typeParamDecl)
+                templateDeclaration.addParameter(typeParamDecl)
             } else if (templateParameter is CPPASTParameterDeclaration) {
                 // Handle Value Parameters
                 val nonTypeTemplateParamDeclaration =
                     frontend.parameterDeclarationHandler.handle(
                         templateParameter as IASTParameterDeclaration
                     )
-                if (nonTypeTemplateParamDeclaration is ParameterDecl) {
+                if (nonTypeTemplateParamDeclaration is ParameterDeclaration) {
                     if (templateParameter.declarator.initializer != null) {
                         val defaultExpression =
                             frontend.initializerHandler.handle(
@@ -334,7 +342,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             it.addNextDFG(nonTypeTemplateParamDeclaration)
                         }
                     }
-                    templateDecl.addParameter(nonTypeTemplateParamDeclaration)
+                    templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
                     frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
                 }
             }
@@ -344,30 +352,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Adds the generic realization of the template to the scope
      *
-     * @param templateDecl
+     * @param templateDeclaration
      */
-    private fun addRealizationToScope(templateDecl: TemplateDecl) {
-        for (declaration in templateDecl.realizations) {
+    private fun addRealizationToScope(templateDeclaration: TemplateDeclaration) {
+        for (declaration in templateDeclaration.realizations) {
             frontend.scopeManager.addDeclaration(declaration)
         }
     }
 
     /**
-     * Adjusts the type created in a [RecordDecl] to include the parametrized types of the
-     * [templateDecl]. This is necessary because templates are being parsed after all record types
-     * (e.g. used in receivers) are created.
+     * Adjusts the type created in a [RecordDeclaration] to include the parametrized types of the
+     * [templateDeclaration]. This is necessary because templates are being parsed after all record
+     * types (e.g. used in receivers) are created.
      *
-     * @param templateDecl the template
+     * @param templateDeclaration the template
      * @param innerDeclaration the record
      */
     private fun addParameterizedTypesToRecord(
-        templateDecl: TemplateDecl,
-        innerDeclaration: RecordDecl
+        templateDeclaration: TemplateDeclaration,
+        innerDeclaration: RecordDeclaration
     ) {
-        val parameterizedTypes = frontend.typeManager.getAllParameterizedType(templateDecl)
+        val parameterizedTypes = frontend.typeManager.getAllParameterizedType(templateDeclaration)
 
         // Loop through all the methods and adjust their receiver types
-        for (method in (innerDeclaration as? RecordDecl)?.methods ?: listOf()) {
+        for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
             // Add ParameterizedTypes to type
             method.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
         }
@@ -404,7 +412,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
-        val sequence = DeclSequence()
+        val sequence = DeclarationSequence()
         val declSpecifier = ctx.declSpecifier
 
         // check, whether the declaration specifier also contains declarations, e.g. class
@@ -441,7 +449,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // Parse the declaration first, so we can supply the declaration as a hint to
                 // the typeOf function.
                 val declaration =
-                    frontend.declaratorHandler.handle(declarator) as? ValueDecl ?: continue
+                    frontend.declaratorHandler.handle(declarator) as? ValueDeclaration ?: continue
 
                 // Parse the type (with some hints)
                 type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
@@ -449,7 +457,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // For function *declarations*, we need to update the return types based on the
                 // function type. For function *definitions*, this is done in
                 // [handleFunctionDefinition].
-                if (declaration is FunctionDecl) {
+                if (declaration is FunctionDeclaration) {
                     declaration.returnTypes =
                         (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
                 }
@@ -471,7 +479,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // * Additionally, it makes sure that the type is known before parsing the
                 //   initializer. This allows us to guess cast vs. call expression in the
                 //   initializer.
-                if (declaration is VariableDecl) {
+                if (declaration is VariableDeclaration) {
                     // Set template parameters of the variable (if any)
                     declaration.templateParameters = templateParams
 
@@ -483,7 +491,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             // reference to this declaration can resolve the function pointer (using
                             // the type of this declaration). The typical (and only) scenario we
                             // support here is the assignment of a `&ref` as initializer.
-                            initializer is UnaryOp && type is FunctionPointerType -> {
+                            initializer is UnaryOperator && type is FunctionPointerType -> {
                                 val ref = initializer.input as? Reference
                                 ref?.resolutionHelper = declaration
                             }
@@ -506,7 +514,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleDeclarationSpecifier(
         declSpecifier: IASTDeclSpecifier?,
         ctx: IASTSimpleDeclaration,
-        sequence: DeclSequence
+        sequence: DeclarationSequence
     ): Pair<Declaration?, Boolean> {
         var primaryDeclaration: Declaration? = null
         var useNameOfDeclarator = false
@@ -561,7 +569,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Extracts template parameters (used for [VariableDecl.templateParameters] out of the
+     * Extracts template parameters (used for [VariableDeclaration.templateParameters] out of the
      * declaration (if it has any), otherwise null is returned.
      */
     private fun extractTemplateParams(
@@ -579,7 +587,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (templateArgument is CPPASTTypeId) {
                     val genericInstantiation = frontend.typeOf(templateArgument)
                     templateParams.add(
-                        newTypeExpr(
+                        newTypeExpression(
                             genericInstantiation.name.toString(),
                             genericInstantiation,
                         )
@@ -620,10 +628,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleEnum(
         ctx: IASTSimpleDeclaration,
         declSpecifier: IASTEnumerationSpecifier
-    ): EnumDecl {
-        val entries = mutableListOf<EnumConstantDecl>()
+    ): EnumDeclaration {
+        val entries = mutableListOf<EnumConstantDeclaration>()
         val enum =
-            newEnumDecl(
+            newEnumDeclaration(
                 name = declSpecifier.name.toString(),
                 location = frontend.locationOf(ctx),
             )
@@ -631,7 +639,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {
             val enumConst =
-                newEnumConstantDecl(
+                newEnumConstantDeclaration(
                     enumerator.name.toString(),
                     frontend.codeOf(enumerator),
                     frontend.locationOf(enumerator),
@@ -658,7 +666,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * @return First Element of DeclarationSequence if the Sequence consist of only one element,
      *   full sequence if it contains more than one element
      */
-    private fun simplifySequence(sequence: DeclSequence): Declaration {
+    private fun simplifySequence(sequence: DeclarationSequence): Declaration {
         return if (sequence.isSingle) {
             sequence.first()
         } else {
@@ -680,9 +688,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnitDecl {
+    fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnitDeclaration {
         val node =
-            newTranslationUnitDecl(
+            newTranslationUnitDeclaration(
                 translationUnit.filePath,
                 translationUnit.rawSignature,
                 translationUnit
@@ -693,13 +701,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // other translation units
         frontend.scopeManager.resetToGlobal(node)
         frontend.currentTU = node
-        val problematicIncludes = HashMap<String?, HashSet<ProblemDecl>>()
+        val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
         for (declaration in translationUnit.declarations) {
             if (declaration is CPPASTLinkageSpecification) {
                 continue // do not care about these for now
             }
             val decl = handle(declaration) ?: continue
-            (decl as? ProblemDecl)?.location?.let {
+            (decl as? ProblemDeclaration)?.location?.let {
                 val problems =
                     problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
                         HashSet()
@@ -717,8 +725,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun addIncludes(
         translationUnit: IASTTranslationUnit,
-        problematicIncludes: Map<String?, Set<ProblemDecl>>,
-        node: TranslationUnitDecl
+        problematicIncludes: Map<String?, Set<ProblemDeclaration>>,
+        node: TranslationUnitDeclaration
     ) {
         // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.
         // Probably needs to be refactored
@@ -737,7 +745,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         // create all include nodes, potentially attach problemdecl
-        val includeMap = HashMap<String?, IncludeDecl>()
+        val includeMap = HashMap<String?, IncludeDeclaration>()
 
         for (includesStrings in allIncludes.values) {
             for (includeString in includesStrings) {
@@ -746,7 +754,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
 
                 val problems = problematicIncludes[includeString]
-                val includeDeclaration = newIncludeDecl(includeString ?: "")
+                val includeDeclaration = newIncludeDeclaration(includeString ?: "")
                 if (problems != null) {
                     includeDeclaration.addProblems(problems)
                 }

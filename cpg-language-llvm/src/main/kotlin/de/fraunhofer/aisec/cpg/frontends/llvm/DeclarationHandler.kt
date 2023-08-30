@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
@@ -43,7 +43,7 @@ import org.bytedeco.llvm.global.LLVM.*
  * declarations, mainly functions and types.
  */
 class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::ProblemDecl, lang) {
+    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::ProblemDeclaration, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
         map.put(LLVMTypeRef::class.java) { handleStructureType(it as LLVMTypeRef) }
@@ -55,7 +55,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             LLVMGlobalVariableValueKind -> handleGlobal(value)
             else -> {
                 log.error("Not handling declaration kind {} yet", kind)
-                newProblemDecl(
+                newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
                     frontend.codeOf(value)
@@ -74,7 +74,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         // the pointer type
         val type = frontend.typeOf(valueRef)
 
-        val variableDeclaration = newVariableDecl(name, type, frontend.codeOf(valueRef), false)
+        val variableDeclaration =
+            newVariableDeclaration(name, type, frontend.codeOf(valueRef), false)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -91,12 +92,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the parsing of [functions](https://llvm.org/docs/LangRef.html#functions). They can
-     * either be pure declarations of (external) functions, which do not have a [FunctionDecl.body]
-     * or complete definitions of functions including a body of at least one basic block.
+     * either be pure declarations of (external) functions, which do not have a
+     * [FunctionDeclaration.body] or complete definitions of functions including a body of at least
+     * one basic block.
      */
-    private fun handleFunction(func: LLVMValueRef): FunctionDecl {
+    private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-        val functionDeclaration = newFunctionDecl(name.string, frontend.codeOf(func))
+        val functionDeclaration = newFunctionDeclaration(name.string, frontend.codeOf(func))
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
@@ -117,7 +119,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val type = frontend.typeOf(param)
 
             // TODO: support variardic
-            val decl = newParameterDecl(paramName, type, false, frontend.codeOf(param))
+            val decl = newParameterDeclaration(paramName, type, false, frontend.codeOf(param))
 
             frontend.scopeManager.addDeclaration(decl)
             frontend.bindingsCache[paramSymbolName] = decl
@@ -146,18 +148,18 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // as a compound statement
 
             // Take the entry block as our body
-            if (LLVMGetEntryBasicBlock(func) == bb && stmt is CompoundStmt) {
+            if (LLVMGetEntryBasicBlock(func) == bb && stmt is BlockStatement) {
                 functionDeclaration.body = stmt
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
-                functionDeclaration.body = newCompoundStmt()
+                functionDeclaration.body = newBlockStatement()
                 if (stmt != null) {
-                    (functionDeclaration.body as CompoundStmt).addStatement(stmt)
+                    (functionDeclaration.body as BlockStatement).addStatement(stmt)
                 }
             } else {
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
                 if (stmt != null) {
-                    (functionDeclaration.body as? CompoundStmt)?.addStatement(stmt)
+                    (functionDeclaration.body as? BlockStatement)?.addStatement(stmt)
                 }
             }
 
@@ -177,13 +179,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
      * - literal structs, which do not have a name, but are structurally unique To emulate this
-     *   uniqueness, we create a [RecordDecl] for each literal struct and name it according to its
-     *   element types (see [getLiteralStructName]).
+     *   uniqueness, we create a [RecordDeclaration] for each literal struct and name it according
+     *   to its element types (see [getLiteralStructName]).
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
-    ): RecordDecl {
+    ): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
         val name =
             if (LLVMIsLiteralStruct(typeRef) == 1) {
@@ -195,7 +197,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         // try to see, if the struct already exists as a record declaration
         var record =
             frontend.scopeManager
-                .resolve<RecordDecl>(frontend.scopeManager.globalScope, true) {
+                .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
                     it.name.toString() == name
                 }
                 .firstOrNull()
@@ -205,7 +207,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDecl(name, "struct", "")
+        record = newRecordDeclaration(name, "struct", "")
 
         frontend.scopeManager.enterScope(record)
 
@@ -218,7 +220,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field = newFieldDecl(fieldName, fieldType, listOf(), "", null, null, false)
+            val field = newFieldDeclaration(fieldName, fieldType, listOf(), "", null, null, false)
 
             frontend.scopeManager.addDeclaration(field)
         }

@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -75,7 +75,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
      */
     var bindingsCache = mutableMapOf<String, Declaration>()
 
-    override fun parse(file: File): TranslationUnitDecl {
+    override fun parse(file: File): TranslationUnitDeclaration {
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
         bindingsCache.clear()
@@ -118,7 +118,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
-        val tu = newTranslationUnitDecl(file.name)
+        val tu = newTranslationUnitDeclaration(file.name)
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -243,7 +243,9 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
         return this.scopeManager
-            .resolve<RecordDecl>(this.scopeManager.globalScope, true) { it.name.toString() == name }
+            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
+                it.name.toString() == name
+            }
             .isNotEmpty()
     }
 

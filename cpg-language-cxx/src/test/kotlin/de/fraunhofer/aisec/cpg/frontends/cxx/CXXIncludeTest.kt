@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.records
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -52,30 +52,30 @@ internal class CXXIncludeTest : BaseTest() {
         assertEquals(6, tu.declarations.size)
 
         val someClass =
-            tu.getDeclarationsByName("SomeClass", RecordDecl::class.java).iterator().next()
+            tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java).iterator().next()
         assertNotNull(someClass)
 
-        val main = tu.getDeclarationsByName("main", FunctionDecl::class.java)
+        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
         assertFalse(main.isEmpty())
 
         val someClassConstructor =
-            tu.getDeclarationsByName("SomeClass::SomeClass", ConstructorDecl::class.java)
+            tu.getDeclarationsByName("SomeClass::SomeClass", ConstructorDeclaration::class.java)
                 .iterator()
                 .next()
         assertNotNull(someClassConstructor)
-        assertEquals(someClass, someClassConstructor.recordDecl)
+        assertEquals(someClass, someClassConstructor.recordDeclaration)
 
         val doSomething =
-            tu.getDeclarationsByName("SomeClass::DoSomething", MethodDecl::class.java)
+            tu.getDeclarationsByName("SomeClass::DoSomething", MethodDeclaration::class.java)
                 .iterator()
                 .next()
         assertNotNull(doSomething)
-        assertEquals(someClass, doSomething.recordDecl)
+        assertEquals(someClass, doSomething.recordDeclaration)
 
-        val returnStmt = doSomething.getBodyStatementAs(0, ReturnStmt::class.java)
-        assertNotNull(returnStmt)
+        val returnStatement = doSomething.getBodyStatementAs(0, ReturnStatement::class.java)
+        assertNotNull(returnStatement)
 
-        val ref = returnStmt.returnValue as Reference
+        val ref = returnStatement.returnValue as Reference
         assertNotNull(ref)
 
         val someField = someClass.fields["someField"]
@@ -89,7 +89,7 @@ internal class CXXIncludeTest : BaseTest() {
         // checks, whether code and region for nodes in includes are properly set
         val file = File("src/test/resources/include.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        val someClass = tu.getDeclarationsByName("SomeClass", RecordDecl::class.java)
+        val someClass = tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java)
         assertFalse(someClass.isEmpty())
 
         val decl = someClass.iterator().next().constructors[0]
@@ -121,7 +121,7 @@ internal class CXXIncludeTest : BaseTest() {
         // another-include.h should be there - include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDecl ->
+            next.includes.stream().anyMatch { d: IncludeDeclaration ->
                 (d.filename == File("src/test/resources/another-include.h").absolutePath)
             }
         )
@@ -148,7 +148,7 @@ internal class CXXIncludeTest : BaseTest() {
         // another-include.h should be there - include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDecl ->
+            next.includes.stream().anyMatch { d: IncludeDeclaration ->
                 (d.filename == File("src/test/resources/another-include.h").absolutePath)
             }
         )
@@ -175,7 +175,7 @@ internal class CXXIncludeTest : BaseTest() {
         // include.h should be there - another-include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDecl ->
+            next.includes.stream().anyMatch { d: IncludeDeclaration ->
                 (d.filename == File("src/test/resources/include.h").absolutePath)
             }
         )
@@ -202,7 +202,7 @@ internal class CXXIncludeTest : BaseTest() {
         // include.h should be there - another-include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDecl ->
+            next.includes.stream().anyMatch { d: IncludeDeclaration ->
                 (d.filename == File("src/test/resources/include.h").absolutePath)
             }
         )
@@ -233,7 +233,7 @@ internal class CXXIncludeTest : BaseTest() {
         assertEquals(1, next.includes.size)
         // another-include.h will stay in the include list
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDecl ->
+            next.includes.stream().anyMatch { d: IncludeDeclaration ->
                 (d.filename == File("src/test/resources/another-include.h").absolutePath)
             }
         )
@@ -264,6 +264,6 @@ internal class CXXIncludeTest : BaseTest() {
 
         // however, we should still have two methods (one of which is a constructor declaration)
         assertEquals(2, tu.methods.size)
-        assertEquals(1, tu.methods.filterIsInstance<ConstructorDecl>().size)
+        assertEquals(1, tu.methods.filterIsInstance<ConstructorDeclaration>().size)
     }
 }

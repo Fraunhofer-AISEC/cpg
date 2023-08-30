@@ -28,13 +28,13 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import java.util.Objects
 
 class CatchClause : Statement(), BranchingNode {
-    @AST var parameter: VariableDecl? = null
+    @AST var parameter: VariableDeclaration? = null
 
-    @AST var body: CompoundStmt? = null
+    @AST var body: BlockStatement? = null
 
     override val branchedBy: Node?
         get() = parameter

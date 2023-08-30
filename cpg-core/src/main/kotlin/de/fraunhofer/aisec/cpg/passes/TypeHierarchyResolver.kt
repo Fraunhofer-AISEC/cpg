@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -40,25 +40,26 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 
 /**
- * Transitively connect [RecordDecl] nodes with their supertypes' records.
+ * Transitively connect [RecordDeclaration] nodes with their supertypes' records.
  *
  * Supertypes are all interfaces a class implements and the superclass it inherits from (including
  * all of their respective supertypes). The JavaParser provides us with initial info about direct
  * ancestors' names. This pass then recursively maps those and their own supertypes to the correct
- * [RecordDecl] (if available).
+ * [RecordDeclaration] (if available).
  *
  * After determining the ancestors of a class, all inherited methods are scanned to find out which
- * of them are overridden/implemented in the current class. See [FunctionDecl.getOverriddenBy]
+ * of them are overridden/implemented in the current class. See
+ * [FunctionDeclaration.getOverriddenBy]
  *
  * **Attention:** Needs to be run before other analysis passes, as it triggers a type refresh. This
  * is needed e.g. for [de.fraunhofer.aisec.cpg.graph.TypeManager.getCommonType] to be re-evaluated
- * at places where it is crucial to have parsed all [RecordDecl]s. Otherwise, type information in
- * the graph might not be fully correct
+ * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
+ * information in the graph might not be fully correct
  */
 @DependsOn(TypeResolver::class)
 open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    protected val recordMap = mutableMapOf<Name, RecordDecl>()
-    protected val enums = mutableListOf<EnumDecl>()
+    protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
+    protected val enums = mutableListOf<EnumDeclaration>()
 
     override fun accept(component: Component) {
         for (tu in component.translationUnits) {
@@ -71,7 +72,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         for (enumDecl in enums) {
             val directSupertypeRecords =
-                enumDecl.superTypes.mapNotNull { (it as? ObjectType)?.recordDecl }.toSet()
+                enumDecl.superTypes.mapNotNull { (it as? ObjectType)?.recordDeclaration }.toSet()
             val allSupertypes =
                 directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
             enumDecl.superTypeDeclarations = allSupertypes
@@ -84,9 +85,9 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(t: Node) {
-                    if (t is RecordDecl) {
+                    if (t is RecordDeclaration) {
                         recordMap.putIfAbsent(t.name, t)
-                    } else if (t is EnumDecl) {
+                    } else if (t is EnumDeclaration) {
                         enums.add(t)
                     }
                 }
@@ -94,20 +95,24 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         )
     }
 
-    protected fun getAllMethodsFromSupertypes(supertypeRecords: Set<RecordDecl>): List<MethodDecl> {
+    protected fun getAllMethodsFromSupertypes(
+        supertypeRecords: Set<RecordDeclaration>
+    ): List<MethodDeclaration> {
         return supertypeRecords.map { it.methods }.flatten()
     }
 
-    protected fun findSupertypeRecords(recordDecl: RecordDecl): Set<RecordDecl> {
+    protected fun findSupertypeRecords(
+        recordDeclaration: RecordDeclaration
+    ): Set<RecordDeclaration> {
         val superTypeDeclarations =
-            recordDecl.superTypes.mapNotNull { (it as ObjectType).recordDecl }.toSet()
-        recordDecl.superTypeDeclarations = superTypeDeclarations
+            recordDeclaration.superTypes.mapNotNull { (it as ObjectType).recordDeclaration }.toSet()
+        recordDeclaration.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }
 
     protected fun analyzeOverridingMethods(
-        declaration: RecordDecl,
-        allMethodsFromSupertypes: List<MethodDecl>
+        declaration: RecordDeclaration,
+        allMethodsFromSupertypes: List<MethodDeclaration>
     ) {
         for (superMethod in allMethodsFromSupertypes) {
             val overrideCandidates =

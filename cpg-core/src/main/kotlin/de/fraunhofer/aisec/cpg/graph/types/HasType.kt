@@ -29,16 +29,16 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /**
  * This interfaces denotes that the given [Node] has a "type". Currently, we only have two known
- * implementations of this class, an [Expression] and a [ValueDecl]. All other nodes with types
- * should derive from these two base classes.
+ * implementations of this class, an [Expression] and a [ValueDeclaration]. All other nodes with
+ * types should derive from these two base classes.
  */
 interface HasType : ContextProvider, LanguageProvider {
 
@@ -46,7 +46,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * This property refers to the *definite* [Type] that the [Node] has. If you are unsure about
      * what it's type is, you should prefer to set it to the [UnknownType]. It is usually one of the
      * following:
-     * - the type declared by the [Node], e.g., by a [ValueDecl]
+     * - the type declared by the [Node], e.g., by a [ValueDeclaration]
      * - intrinsically tied to the node, e.g. an [IntegerType] in an integer [Literal]
      * - the [Type] of a declaration a node is referring to, e.g., in a [Reference]
      *
@@ -108,7 +108,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * [HasType.type] and/or [HasType.assignedTypes] of a [Node] (that implements [HasType]). The
      * implementing node can then decide if and how to propagate this type information to itself
      * (and possibly to others). Examples include modifying the incoming type depending on an
-     * operator, e.g., in a [UnaryOp] expression. Changes to [HasType.type] will invoke
+     * operator, e.g., in a [UnaryOperator] expression. Changes to [HasType.type] will invoke
      * [typeChanged], changes to [HasType.assignedTypes] will invoke [assignedTypes].
      */
     interface TypeObserver {

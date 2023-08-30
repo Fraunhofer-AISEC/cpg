@@ -25,19 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
 
-/** Represents scopes that can be interrupted by a [BreakStmt]. */
+/** Represents scopes that can be interrupted by a [BreakStatement]. */
 interface Breakable {
-    fun addBreakStatement(breakStmt: BreakStmt)
+    fun addBreakStatement(breakStatement: BreakStatement)
 
-    val breakStmts: List<BreakStmt>
+    val breakStatements: List<BreakStatement>
 }
 
-/** Represents scopes that can be interrupted by a [ContinueStmt]. */
+/** Represents scopes that can be interrupted by a [ContinueStatement]. */
 interface Continuable {
-    fun addContinueStatement(continueStmt: ContinueStmt)
+    fun addContinueStatement(continueStatement: ContinueStatement)
 
-    val continueStmts: List<ContinueStmt>
+    val continueStatements: List<ContinueStatement>
 }

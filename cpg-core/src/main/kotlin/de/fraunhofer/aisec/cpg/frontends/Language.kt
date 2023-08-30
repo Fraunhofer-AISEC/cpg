@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOp
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -141,7 +141,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * Determines how to propagate types across binary operations since these may differ among the
      * programming languages.
      */
-    open fun propagateTypeOfBinaryOperation(operation: BinaryOp): Type {
+    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         if (operation.operatorCode == "==" || operation.operatorCode == "===") {
             // A comparison, so we return the type "boolean"
             return this.builtInTypes.values.firstOrNull { it is BooleanType }

@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -43,8 +43,8 @@ import java.util.*
 import java.util.function.Consumer
 
 /**
- * This [Pass] is responsible for resolving function pointer calls, i.e., [CallExpr] nodes that
- * contain a reference/pointer to a function and are being "called". This pass is intentionally
+ * This [Pass] is responsible for resolving function pointer calls, i.e., [CallExpression] nodes
+ * that contain a reference/pointer to a function and are being "called". This pass is intentionally
  * split from the [CallResolver] because it depends on DFG edges. This split allows the
  * [CallResolver] to be run before any DFG passes, which in turn allow us to also populate DFG
  * passes for inferred functions.
@@ -63,7 +63,7 @@ class FunctionPointerCallResolver(ctx: TranslationContext) : ComponentPass(ctx) 
     override fun accept(component: Component) {
         inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         walker = ScopedWalker(scopeManager)
-        walker.registerHandler { _: RecordDecl?, _: Node?, currNode: Node? ->
+        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
             walker.collectDeclarations(currNode)
         }
         walker.registerHandler { node, _ -> resolve(node) }
@@ -75,16 +75,16 @@ class FunctionPointerCallResolver(ctx: TranslationContext) : ComponentPass(ctx) 
 
     private fun resolve(node: Node?) {
         when (node) {
-            is MemberCallExpr -> handleMemberCallExpression(node)
-            is CallExpr -> handleCallExpression(node)
+            is MemberCallExpression -> handleMemberCallExpression(node)
+            is CallExpression -> handleCallExpression(node)
         }
     }
 
     /**
-     * Resolves function pointers in a [CallExpr] node. As long as the [CallExpr.callee] has a
-     * [FunctionPointerType], we should be able to resolve it.
+     * Resolves function pointers in a [CallExpression] node. As long as the [CallExpression.callee]
+     * has a [FunctionPointerType], we should be able to resolve it.
      */
-    private fun handleCallExpression(call: CallExpr) {
+    private fun handleCallExpression(call: CallExpression) {
         val callee = call.callee
         if (callee?.type is FunctionPointerType) {
             handleFunctionPointerCall(call, callee)
@@ -92,19 +92,20 @@ class FunctionPointerCallResolver(ctx: TranslationContext) : ComponentPass(ctx) 
     }
 
     /**
-     * Resolves function pointers in a [MemberCallExpr]. In this case the [MemberCallExpr.callee]
-     * field is a binary operator on which [BinaryOp.rhs] needs to have a [FunctionPointerType].
+     * Resolves function pointers in a [MemberCallExpression]. In this case the
+     * [MemberCallExpression.callee] field is a binary operator on which [BinaryOperator.rhs] needs
+     * to have a [FunctionPointerType].
      */
-    private fun handleMemberCallExpression(call: MemberCallExpr) {
+    private fun handleMemberCallExpression(call: MemberCallExpression) {
         val callee = call.callee
-        if (callee is BinaryOp && callee.rhs.type is FunctionPointerType) {
+        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
             handleFunctionPointerCall(call, callee.rhs)
         }
     }
 
-    private fun handleFunctionPointerCall(call: CallExpr, pointer: Expression) {
+    private fun handleFunctionPointerCall(call: CallExpression, pointer: Expression) {
         val pointerType = pointer.type as FunctionPointerType
-        val invocationCandidates: MutableList<FunctionDecl> = ArrayList()
+        val invocationCandidates: MutableList<FunctionDeclaration> = ArrayList()
         val work: Deque<Node> = ArrayDeque()
         val seen = IdentitySet<Node>()
         work.push(pointer)
@@ -114,15 +115,15 @@ class FunctionPointerCallResolver(ctx: TranslationContext) : ComponentPass(ctx) 
                 continue
             }
 
-            val isLambda = curr is VariableDecl && curr.initializer is LambdaExpr
+            val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
             val currentFunction =
                 if (isLambda) {
-                    ((curr as VariableDecl).initializer as LambdaExpr).function
+                    ((curr as VariableDeclaration).initializer as LambdaExpression).function
                 } else {
                     curr
                 }
 
-            if (currentFunction is FunctionDecl) {
+            if (currentFunction is FunctionDeclaration) {
                 // Even if it is a function declaration, the dataflow might just come from a
                 // situation where the target of a fptr is passed through via a return value. Keep
                 // searching if return type or signature don't match

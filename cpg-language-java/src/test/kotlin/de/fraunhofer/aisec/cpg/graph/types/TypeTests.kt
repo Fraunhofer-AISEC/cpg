@@ -85,7 +85,7 @@ internal class TypeTests : BaseTest() {
         val objectTypes = findByName(variables, "A")
         val recordDeclarationA = findByUniqueName(recordDeclarations, "A")
         for (objectType in objectTypes) {
-            assertEquals(recordDeclarationA, objectType.recordDecl)
+            assertEquals(recordDeclarationA, objectType.recordDeclaration)
         }
 
         // Test uniqueness of types x and y have same type

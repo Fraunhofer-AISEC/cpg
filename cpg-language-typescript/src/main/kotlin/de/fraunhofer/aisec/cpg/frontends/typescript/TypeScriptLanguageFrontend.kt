@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -89,7 +89,7 @@ class TypeScriptLanguageFrontend(
         }
     }
 
-    override fun parse(file: File): TranslationUnitDecl {
+    override fun parse(file: File): TranslationUnitDeclaration {
         // Necessary to not read file contents several times
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
@@ -101,7 +101,7 @@ class TypeScriptLanguageFrontend(
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 
-        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDecl
+        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
 
         handleComments(file, translationUnit)
 
@@ -119,7 +119,7 @@ class TypeScriptLanguageFrontend(
      * @param file The source of comments
      * @param translationUnit the ast root node which children get the comments associated to
      */
-    fun handleComments(file: File, translationUnit: TranslationUnitDecl) {
+    fun handleComments(file: File, translationUnit: TranslationUnitDeclaration) {
         // Extracting comments with regex, not ideal, as you need a context sensitive parser. but
         // the parser does not support comments so we
         // use a regex as best effort approach. We may recognize something as a comment, which is
@@ -216,7 +216,7 @@ class TypeScriptLanguageFrontend(
         // a decorator can contain a call expression with additional arguments
         val callExpr = node.firstChild("CallExpression")
         return if (callExpr != null) {
-            val call = this.expressionHandler.handle(callExpr) as CallExpr
+            val call = this.expressionHandler.handle(callExpr) as CallExpression
 
             val annotation = newAnnotation(call.name.localName, this.codeOf(node) ?: "")
 

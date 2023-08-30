@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edge
 
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDecl.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import java.util.function.Function
 
 /**

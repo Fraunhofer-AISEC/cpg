@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import java.util.function.Consumer
 import kotlin.reflect.KClass
@@ -51,15 +51,15 @@ abstract class TranslationResultPass(ctx: TranslationContext) : Pass<Translation
 abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
 
 /**
- * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDecl]. If used with
- * [executePassSequential], one [Pass] object is instantiated for each [TranslationUnitDecl] in a
- * [Component].
+ * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
+ * [executePassSequential], one [Pass] object is instantiated for each [TranslationUnitDeclaration]
+ * in a [Component].
  */
-abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDecl>(ctx)
+abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
 
 /**
  * A pass target is an interface for a [Node] on which a [Pass] can operate, it should only be
- * implemented by [TranslationResult], [Component] and [TranslationUnitDecl].
+ * implemented by [TranslationResult], [Component] and [TranslationUnitDeclaration].
  */
 interface PassTarget
 
@@ -68,7 +68,7 @@ interface PassTarget
  * three different levels:
  * - the overall [TranslationResult]
  * - a [Component], and
- * - a [TranslationUnitDecl].
+ * - a [TranslationUnitDeclaration].
  *
  * A level should be chosen as granular as possible, to allow for the (future) parallel execution of
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],

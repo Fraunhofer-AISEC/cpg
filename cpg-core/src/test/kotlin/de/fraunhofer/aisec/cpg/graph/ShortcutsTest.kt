@@ -27,13 +27,13 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
-import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import kotlin.test.*
@@ -49,8 +49,8 @@ class ShortcutsTest {
         val toStringCall = result.callsByName("toString")[0]
         val printDecl =
             result.translationUnits[0]
-                .byNameOrNull<RecordDecl>("Dataflow")
-                ?.byNameOrNull<MethodDecl>("print")
+                .byNameOrNull<RecordDeclaration>("Dataflow")
+                ?.byNameOrNull<MethodDeclaration>("print")
 
         val (fulfilled, failed) =
             toStringCall.followNextDFGEdgesUntilHit { it == printDecl!!.parameters[0] }
@@ -63,31 +63,31 @@ class ShortcutsTest {
     fun testCalls() {
         val actual = shortcutClassResult.calls
 
-        val expected = mutableListOf<CallExpr>()
+        val expected = mutableListOf<CallExpression>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val main = classDecl.byNameOrNull<MethodDecl>("main")
+        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
         expected.add(
-            ((((main.body as CompoundStmt).statements[0] as DeclarationStmt).declarations[0]
-                        as VariableDecl)
-                    .initializer as NewExpr)
-                .initializer as ConstructExpr
+            ((((main.body as BlockStatement).statements[0] as DeclarationStatement).declarations[0]
+                        as VariableDeclaration)
+                    .initializer as NewExpression)
+                .initializer as ConstructExpression
         )
-        expected.add((main.body as CompoundStmt).statements[1] as MemberCallExpr)
-        expected.add((main.body as CompoundStmt).statements[2] as MemberCallExpr)
-        expected.add((main.body as CompoundStmt).statements[3] as MemberCallExpr)
+        expected.add((main.body as BlockStatement).statements[1] as MemberCallExpression)
+        expected.add((main.body as BlockStatement).statements[2] as MemberCallExpression)
+        expected.add((main.body as BlockStatement).statements[3] as MemberCallExpression)
 
-        val print = classDecl.byNameOrNull<MethodDecl>("print")
+        val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
         expected.add(print.bodyOrNull(0)!!)
-        expected.add(print.bodyOrNull<CallExpr>(0)?.arguments?.get(0) as CallExpr)
+        expected.add(print.bodyOrNull<CallExpression>(0)?.arguments?.get(0) as CallExpression)
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
 
         assertEquals(
-            listOf((main.body as CompoundStmt).statements[1] as MemberCallExpr),
+            listOf((main.body as BlockStatement).statements[1] as MemberCallExpression),
             expected("print")
         )
     }
@@ -98,42 +98,42 @@ class ShortcutsTest {
 
         val actual = result.callsByName("print")
 
-        val expected = mutableListOf<CallExpr>()
+        val expected = mutableListOf<CallExpression>()
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val main = classDecl.byNameOrNull<MethodDecl>("main")
+        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
-        expected.add((main.body as CompoundStmt).statements[1] as MemberCallExpr)
+        expected.add((main.body as BlockStatement).statements[1] as MemberCallExpression)
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
     }
 
     @Test
     fun testCalleesOf() {
-        val expected = mutableListOf<FunctionDecl>()
+        val expected = mutableListOf<FunctionDeclaration>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val print = classDecl.byNameOrNull<MethodDecl>("print")
+        val print = classDecl.byNameOrNull<MethodDeclaration>("print")
         assertNotNull(print)
         expected.add(print)
 
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
         expected.add(magic)
 
-        val magic2 = classDecl.byNameOrNull<MethodDecl>("magic2")
+        val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
         assertNotNull(magic2)
         expected.add(magic2)
 
-        val main = classDecl.byNameOrNull<MethodDecl>("main")
+        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
         assertNotNull(main)
         val actual = main.callees
 
         expected.add(
-            (((((main.body as CompoundStmt).statements[0] as DeclarationStmt).declarations[0]
-                            as VariableDecl)
-                        .initializer as NewExpr)
-                    .initializer as ConstructExpr)
+            (((((main.body as BlockStatement).statements[0] as DeclarationStatement).declarations[0]
+                            as VariableDeclaration)
+                        .initializer as NewExpression)
+                    .initializer as ConstructExpression)
                 .constructor!!
         )
 
@@ -148,7 +148,7 @@ class ShortcutsTest {
         val print = classDecl.methods["print"]
         assertNotNull(print)
 
-        val expected = mutableListOf<FunctionDecl>()
+        val expected = mutableListOf<FunctionDeclaration>()
         val main = classDecl.functions["main"]
         assertNotNull(main)
 
@@ -173,43 +173,53 @@ class ShortcutsTest {
         val expected = mutableListOf<Node>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
-        val ifStmt = (magic.body as CompoundStmt).statements[0] as IfStmt
+        val ifStatement = (magic.body as BlockStatement).statements[0] as IfStatement
 
-        val actual = ifStmt.controls()
-        ifStmt.thenStatement?.let { expected.add(it) }
-        val thenStatement = (ifStmt.thenStatement as CompoundStmt).statements[0] as IfStmt
+        val actual = ifStatement.controls()
+        ifStatement.thenStatement?.let { expected.add(it) }
+        val thenStatement =
+            (ifStatement.thenStatement as BlockStatement).statements[0] as IfStatement
         expected.add(thenStatement)
         thenStatement.condition?.let { expected.add(it) }
-        expected.add((thenStatement.condition as BinaryOp).lhs)
-        expected.add(((thenStatement.condition as BinaryOp).lhs as MemberExpr).base)
-        expected.add((thenStatement.condition as BinaryOp).rhs)
-        val nestedThen = thenStatement.thenStatement as CompoundStmt
+        expected.add((thenStatement.condition as BinaryOperator).lhs)
+        expected.add(((thenStatement.condition as BinaryOperator).lhs as MemberExpression).base)
+        expected.add((thenStatement.condition as BinaryOperator).rhs)
+        val nestedThen = thenStatement.thenStatement as BlockStatement
         expected.add(nestedThen)
         expected.add(nestedThen.statements[0])
-        expected.add((nestedThen.statements[0] as AssignExpr).lhs.first())
-        expected.add(((nestedThen.statements[0] as AssignExpr).lhs.first() as MemberExpr).base)
-        expected.add((nestedThen.statements[0] as AssignExpr).rhs.first())
-        val nestedElse = thenStatement.elseStatement as CompoundStmt
+        expected.add((nestedThen.statements[0] as AssignExpression).lhs.first())
+        expected.add(
+            ((nestedThen.statements[0] as AssignExpression).lhs.first() as MemberExpression).base
+        )
+        expected.add((nestedThen.statements[0] as AssignExpression).rhs.first())
+        val nestedElse = thenStatement.elseStatement as BlockStatement
         expected.add(nestedElse)
         expected.add(nestedElse.statements[0])
-        expected.add((nestedElse.statements[0] as AssignExpr).lhs.first())
-        expected.add(((nestedElse.statements[0] as AssignExpr).lhs.first() as MemberExpr).base)
-        expected.add((nestedElse.statements[0] as AssignExpr).rhs.first())
-
-        ifStmt.elseStatement?.let { expected.add(it) }
-        expected.add((ifStmt.elseStatement as CompoundStmt).statements[0])
+        expected.add((nestedElse.statements[0] as AssignExpression).lhs.first())
         expected.add(
-            ((ifStmt.elseStatement as CompoundStmt).statements[0] as AssignExpr).lhs.first()
+            ((nestedElse.statements[0] as AssignExpression).lhs.first() as MemberExpression).base
+        )
+        expected.add((nestedElse.statements[0] as AssignExpression).rhs.first())
+
+        ifStatement.elseStatement?.let { expected.add(it) }
+        expected.add((ifStatement.elseStatement as BlockStatement).statements[0])
+        expected.add(
+            ((ifStatement.elseStatement as BlockStatement).statements[0] as AssignExpression)
+                .lhs
+                .first()
         )
         expected.add(
-            (((ifStmt.elseStatement as CompoundStmt).statements[0] as AssignExpr).lhs.first()
-                    as MemberExpr)
+            (((ifStatement.elseStatement as BlockStatement).statements[0] as AssignExpression)
+                    .lhs
+                    .first() as MemberExpression)
                 .base
         )
         expected.add(
-            ((ifStmt.elseStatement as CompoundStmt).statements[0] as AssignExpr).rhs.first()
+            ((ifStatement.elseStatement as BlockStatement).statements[0] as AssignExpression)
+                .rhs
+                .first()
         )
 
         assertTrue(expected.containsAll(actual))
@@ -230,17 +240,18 @@ class ShortcutsTest {
         val expected = mutableListOf<Node>()
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
         // get the statement attr = 3;
-        val ifStmt = (magic.body as CompoundStmt).statements[0] as IfStmt
-        val thenStatement = (ifStmt.thenStatement as CompoundStmt).statements[0] as IfStmt
-        val nestedThen = thenStatement.thenStatement as CompoundStmt
+        val ifStatement = (magic.body as BlockStatement).statements[0] as IfStatement
+        val thenStatement =
+            (ifStatement.thenStatement as BlockStatement).statements[0] as IfStatement
+        val nestedThen = thenStatement.thenStatement as BlockStatement
         val interestingNode = nestedThen.statements[0]
         val actual = interestingNode.controlledBy()
 
-        expected.add(ifStmt)
+        expected.add(ifStatement)
         expected.add(thenStatement)
 
         assertTrue(expected.containsAll(actual))
@@ -251,13 +262,14 @@ class ShortcutsTest {
     fun testFollowPrevDFGEdgesUntilHit() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic2 = classDecl.byNameOrNull<MethodDecl>("magic2")
+        val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
         assertNotNull(magic2)
 
         val aAssignment2 =
-            ((((magic2.body as CompoundStmt).statements[1] as IfStmt).elseStatement as CompoundStmt)
+            ((((magic2.body as BlockStatement).statements[1] as IfStatement).elseStatement
+                        as BlockStatement)
                     .statements[0]
-                    as AssignExpr)
+                    as AssignExpression)
                 .lhs
                 .first()
 
@@ -266,13 +278,14 @@ class ShortcutsTest {
         assertEquals(0, paramPassed2.failed.size)
         assertEquals(5, (paramPassed2.fulfilled[0].last() as? Literal<*>)?.value)
 
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
         val attrAssignment =
-            ((((magic.body as CompoundStmt).statements[0] as IfStmt).elseStatement as CompoundStmt)
+            ((((magic.body as BlockStatement).statements[0] as IfStatement).elseStatement
+                        as BlockStatement)
                     .statements[0]
-                    as AssignExpr)
+                    as AssignExpression)
                 .lhs
                 .first()
 
@@ -286,13 +299,14 @@ class ShortcutsTest {
     fun testFollowPrevEOGEdgesUntilHit() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
         val attrAssignment =
-            ((((magic.body as CompoundStmt).statements[0] as IfStmt).elseStatement as CompoundStmt)
+            ((((magic.body as BlockStatement).statements[0] as IfStatement).elseStatement
+                        as BlockStatement)
                     .statements[0]
-                    as AssignExpr)
+                    as AssignExpression)
                 .lhs
                 .first()
 
@@ -309,15 +323,16 @@ class ShortcutsTest {
     fun testFollowNextEOGEdgesUntilHit() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
         val ifCondition =
-            ((magic.body as CompoundStmt).statements[0] as IfStmt).condition as BinaryOp
+            ((magic.body as BlockStatement).statements[0] as IfStatement).condition
+                as BinaryOperator
 
         val paramPassed =
             ifCondition.followNextEOGEdgesUntilHit {
-                it is AssignExpr &&
+                it is AssignExpression &&
                     it.operatorCode == "=" &&
                     (it.rhs.first() as? Reference)?.refersTo ==
                         (ifCondition.lhs as Reference).refersTo
@@ -330,13 +345,14 @@ class ShortcutsTest {
     fun testFollowPrevDFGEdges() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDecl>("magic")
+        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
         assertNotNull(magic)
 
         val attrAssignment =
-            ((((magic.body as CompoundStmt).statements[0] as IfStmt).elseStatement as CompoundStmt)
+            ((((magic.body as BlockStatement).statements[0] as IfStatement).elseStatement
+                        as BlockStatement)
                     .statements[0]
-                    as AssignExpr)
+                    as AssignExpression)
                 .lhs
                 .first()
 

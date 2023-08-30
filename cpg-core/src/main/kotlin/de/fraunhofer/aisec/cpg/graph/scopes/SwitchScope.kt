@@ -25,16 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStmt
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 
-class SwitchScope(switchStmt: SwitchStmt) : ValueDeclarationScope(switchStmt), Breakable {
-    private val breaks = mutableListOf<BreakStmt>()
+class SwitchScope(switchStatement: SwitchStatement) :
+    ValueDeclarationScope(switchStatement), Breakable {
+    private val breaks = mutableListOf<BreakStatement>()
 
-    override fun addBreakStatement(breakStmt: BreakStmt) {
-        breaks.add(breakStmt)
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
     }
 
-    override val breakStmts: List<BreakStmt>
+    override val breakStatements: List<BreakStatement>
         get() = breaks
 }

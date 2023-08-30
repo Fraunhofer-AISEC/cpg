@@ -38,10 +38,10 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
@@ -51,16 +51,16 @@ import kotlin.collections.set
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, BodyDeclaration<*>, JavaLanguageFrontend>(
-        Supplier { ProblemDecl() },
+        Supplier { ProblemDeclaration() },
         lang
     ) {
     fun handleConstructorDeclaration(
         constructorDecl: ConstructorDeclaration
-    ): de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDecl {
+    ): de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration {
         val resolvedConstructor = constructorDecl.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
         val declaration =
-            this.newConstructorDecl(
+            this.newConstructorDeclaration(
                 resolvedConstructor.name,
                 constructorDecl.toString(),
                 currentRecordDecl
@@ -73,7 +73,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         )
         for (parameter in constructorDecl.parameters) {
             val param =
-                this.newParameterDecl(
+                this.newParameterDeclaration(
                     parameter.nameAsString,
                     frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
                     parameter.isVarArgs
@@ -84,7 +84,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         }
 
         val record =
-            frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode as? RecordDecl
+            frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode
+                as? RecordDeclaration
         if (record != null) {
             val type = record.toType()
             declaration.type = type
@@ -101,11 +102,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     fun handleMethodDeclaration(
         methodDecl: MethodDeclaration
-    ): de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl {
+    ): de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration {
         val resolvedMethod = methodDecl.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
         val functionDeclaration =
-            this.newMethodDecl(
+            this.newMethodDeclaration(
                 resolvedMethod.name,
                 methodDecl.toString(),
                 methodDecl.isStatic,
@@ -119,14 +120,18 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         for (parameter in methodDecl.parameters) {
             var resolvedType: Type? =
                 frontend.typeManager.getTypeParameter(
-                    functionDeclaration.recordDecl,
+                    functionDeclaration.recordDeclaration,
                     parameter.type.toString()
                 )
             if (resolvedType == null) {
                 resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
             }
             val param =
-                this.newParameterDecl(parameter.nameAsString, resolvedType, parameter.isVarArgs)
+                this.newParameterDeclaration(
+                    parameter.nameAsString,
+                    resolvedType,
+                    parameter.isVarArgs
+                )
             functionDeclaration.addParameter(param)
             frontend.setCodeAndLocation(param, parameter)
             frontend.processAnnotations(param, parameter)
@@ -152,26 +157,31 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     }
 
     private fun createMethodReceiver(
-        recordDecl: RecordDecl?,
-        functionDeclaration: de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
+        recordDeclaration: RecordDeclaration?,
+        functionDeclaration: de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
     ) {
         // create the receiver
         val receiver =
-            this.newVariableDecl("this", recordDecl?.toType() ?: unknownType(), "this", false)
+            this.newVariableDeclaration(
+                "this",
+                recordDeclaration?.toType() ?: unknownType(),
+                "this",
+                false
+            )
         functionDeclaration.receiver = receiver
         frontend.scopeManager.addDeclaration(receiver)
     }
 
     open fun handleClassOrInterfaceDeclaration(
         classInterDecl: ClassOrInterfaceDeclaration
-    ): RecordDecl {
+    ): RecordDeclaration {
         // TODO: support other kinds, such as interfaces
         val fqn = classInterDecl.nameAsString
 
         // Todo adapt name using a new type of scope "Namespace/Package scope"
 
         // add a type declaration
-        val recordDeclaration = this.newRecordDecl(fqn, "class", null, classInterDecl)
+        val recordDeclaration = this.newRecordDeclaration(fqn, "class", null, classInterDecl)
         recordDeclaration.superClasses =
             classInterDecl.extendedTypes
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
@@ -224,13 +234,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 ?: when (decl) {
                     is MethodDeclaration -> {
                         val md =
-                            handle(decl) as de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl?
+                            handle(decl)
+                                as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration?
                         frontend.scopeManager.addDeclaration(md)
                     }
                     is ConstructorDeclaration -> {
                         val c =
                             handle(decl)
-                                as de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDecl?
+                                as
+                                de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration?
                         frontend.scopeManager.addDeclaration(c)
                     }
                     is ClassOrInterfaceDeclaration -> {
@@ -254,7 +266,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         }
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
-                this.newConstructorDecl(
+                this.newConstructorDeclaration(
                     recordDeclaration.name.localName,
                     recordDeclaration.name.localName,
                     recordDeclaration
@@ -281,7 +293,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 // Enter the scope of the inner class because the new field belongs there.
                 frontend.scopeManager.enterScope(recordDeclaration)
                 val field =
-                    this.newFieldDecl(
+                    this.newFieldDeclaration(
                         "this$" + scope.name?.localName,
                         fieldType,
                         listOf(),
@@ -299,7 +311,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     fun handleFieldDeclaration(
         fieldDecl: com.github.javaparser.ast.body.FieldDeclaration
-    ): FieldDecl {
+    ): FieldDeclaration {
 
         // TODO: can  field have more than one variable?
         val variable = fieldDecl.getVariable(0)
@@ -338,7 +350,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             }
         }
         val fieldDeclaration =
-            this.newFieldDecl(
+            this.newFieldDeclaration(
                 variable.name.asString(),
                 type,
                 modifiers,
@@ -351,11 +363,13 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return fieldDeclaration
     }
 
-    fun handleEnumDeclaration(enumDecl: com.github.javaparser.ast.body.EnumDeclaration): EnumDecl {
+    fun handleEnumDeclaration(
+        enumDecl: com.github.javaparser.ast.body.EnumDeclaration
+    ): EnumDeclaration {
         val name = enumDecl.nameAsString
         val location = frontend.locationOf(enumDecl)
-        val enumDeclaration = this.newEnumDecl(name, enumDecl.toString(), location)
-        val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDecl? }
+        val enumDeclaration = this.newEnumDeclaration(name, enumDecl.toString(), location)
+        val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
 
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
@@ -367,8 +381,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     /* Not so sure about the place of Annotations in the CPG currently */
     fun handleEnumConstantDeclaration(
         enumConstDecl: com.github.javaparser.ast.body.EnumConstantDeclaration
-    ): EnumConstantDecl {
-        return this.newEnumConstantDecl(
+    ): EnumConstantDeclaration {
+        return this.newEnumConstantDeclaration(
             enumConstDecl.nameAsString,
             enumConstDecl.toString(),
             frontend.locationOf(enumConstDecl)
@@ -378,7 +392,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun /* TODO refine return type*/ handleAnnotationDeclaration(
         annotationConstDecl: AnnotationDeclaration?
     ): Declaration {
-        return ProblemDecl(
+        return ProblemDeclaration(
             "AnnotationDeclaration not supported yet",
             ProblemNode.ProblemType.TRANSLATION
         )
@@ -387,7 +401,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun /* TODO refine return type*/ handleAnnotationMemberDeclaration(
         annotationMemberDecl: AnnotationMemberDeclaration?
     ): Declaration {
-        return ProblemDecl(
+        return ProblemDeclaration(
             "AnnotationMemberDeclaration not supported yet",
             ProblemNode.ProblemType.TRANSLATION
         )

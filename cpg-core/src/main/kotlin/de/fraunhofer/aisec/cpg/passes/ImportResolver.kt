@@ -37,7 +37,7 @@ import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
 open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    protected val records: MutableList<RecordDecl> = ArrayList()
+    protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 
     override fun cleanup() {
@@ -57,11 +57,13 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getStaticImports(recordDecl: RecordDecl): MutableSet<ValueDecl> {
+    protected fun getStaticImports(
+        recordDeclaration: RecordDeclaration
+    ): MutableSet<ValueDeclaration> {
         val partitioned =
-            recordDecl.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
+            recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
-        val staticImports = mutableSetOf<ValueDecl>()
+        val staticImports = mutableSetOf<ValueDeclaration>()
         val importPattern = Pattern.compile("(?<base>.*)\\.(?<member>.*)")
 
         for (specificStaticImport in partitioned[false] ?: listOf()) {
@@ -70,10 +72,10 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 continue
             }
             val base = importables[matcher.group("base")]
-            var members = setOf<ValueDecl>()
-            if (base is RecordDecl) {
+            var members = setOf<ValueDeclaration>()
+            if (base is RecordDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
-            } else if (base is EnumDecl) {
+            } else if (base is EnumDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
             }
             staticImports.addAll(members)
@@ -81,15 +83,17 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         for (asteriskImport in partitioned[true] ?: listOf()) {
             val base = importables[asteriskImport.replace(".*", "")]
-            if (base is RecordDecl) {
+            if (base is RecordDeclaration) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
                 // Add all the static methods implemented in the class "base" and its superclasses
-                staticImports.addAll(classes.flatMap { it.methods }.filter(MethodDecl::isStatic))
+                staticImports.addAll(
+                    classes.flatMap { it.methods }.filter(MethodDeclaration::isStatic)
+                )
                 // Add all the static fields implemented in the class "base" and its superclasses
                 staticImports.addAll(
                     classes.flatMap { it.fields }.filter { "static" in it.modifiers }
                 )
-            } else if (base is EnumDecl) {
+            } else if (base is EnumDeclaration) {
                 staticImports.addAll(base.entries)
             }
         }
@@ -100,11 +104,11 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return targetTypes.mapNotNull { importables[it] }.toMutableSet()
     }
 
-    protected fun getOrCreateMembers(base: EnumDecl, name: String): Set<ValueDecl> {
+    protected fun getOrCreateMembers(base: EnumDeclaration, name: String): Set<ValueDeclaration> {
         return base.entries.filter { it.name.localName == name }.toSet()
     }
 
-    protected fun getOrCreateMembers(base: RecordDecl, name: String): Set<ValueDecl> {
+    protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
         val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
 
         // add methods from superclasses
@@ -121,13 +125,13 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // now it gets weird: you can import a field and a number of methods that have the same
         // name, all with a *single* static import...
-        val result = mutableSetOf<ValueDecl>()
+        val result = mutableSetOf<ValueDeclaration>()
         result.addAll(memberMethods)
         result.addAll(memberFields)
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                base.newFieldDecl(
+                base.newFieldDeclaration(
                     name,
                     UnknownType.getUnknownType(base.language),
                     ArrayList(),
@@ -138,7 +142,7 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     base.language
                 )
             targetField.isInferred = true
-            val targetMethod = base.newMethodDecl(name, "", true, base)
+            val targetMethod = base.newMethodDeclaration(name, "", true, base)
             targetMethod.isInferred = true
             base.addField(targetField)
             base.addMethod(targetMethod)
@@ -154,10 +158,10 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(t: Node) {
-                    if (t is RecordDecl) {
+                    if (t is RecordDeclaration) {
                         records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)
-                    } else if (t is EnumDecl) {
+                    } else if (t is EnumDeclaration) {
                         importables.putIfAbsent(t.name.toString(), t)
                     }
                 }

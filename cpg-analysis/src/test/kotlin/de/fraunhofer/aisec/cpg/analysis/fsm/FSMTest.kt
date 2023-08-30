@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.graph.statements.EmptyStmt
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
 import kotlin.test.*
 
 class FSMTest {
@@ -102,7 +102,7 @@ class FSMTest {
         assertFalse { createEdge === createEdgeCopy }
         assertFalse { createEdge.nextState === createEdgeCopy.nextState }
 
-        val emptyNode = EmptyStmt()
+        val emptyNode = EmptyStatement()
         dfa.initializeOrderEvaluation(emptyNode)
         dfa.makeTransitionWithOp(setOf("create()"), emptyNode)
 

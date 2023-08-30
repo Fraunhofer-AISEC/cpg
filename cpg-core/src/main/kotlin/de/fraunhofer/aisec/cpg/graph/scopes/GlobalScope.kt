@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 
 /**
  * This should ideally only be called once. It constructs a new global scope, which is not
@@ -40,16 +40,16 @@ class GlobalScope : StructureDeclarationScope(null) {
 
     /**
      * Because the way we currently handle parallel parsing in [TranslationManager.parseParallel],
-     * we end up with multiple [GlobalScope] objects, one for each [TranslationUnitDecl]. In the
-     * end, we need to merge all these different scopes into one final global scope. To be somewhat
-     * consistent with the behaviour of [TranslationManager.parseSequentially], we assign the *last*
-     * translation unit declaration we see to the AST node of the [GlobalScope]. This is not
-     * completely ideal, but the best we can do for now.
+     * we end up with multiple [GlobalScope] objects, one for each [TranslationUnitDeclaration]. In
+     * the end, we need to merge all these different scopes into one final global scope. To be
+     * somewhat consistent with the behaviour of [TranslationManager.parseSequentially], we assign
+     * the *last* translation unit declaration we see to the AST node of the [GlobalScope]. This is
+     * not completely ideal, but the best we can do for now.
      */
     fun mergeFrom(others: Collection<GlobalScope>) {
         for (other in others) {
             structureDeclarations.addAll(other.structureDeclarations)
-            valueDecls.addAll(other.valueDecls)
+            valueDeclarations.addAll(other.valueDeclarations)
             typedefs.putAll(other.typedefs)
             for (child in other.children) {
                 child.parent = this

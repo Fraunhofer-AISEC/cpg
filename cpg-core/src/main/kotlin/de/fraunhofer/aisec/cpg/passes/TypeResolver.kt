@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -212,11 +212,11 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param node
      */
     fun handle(node: Node) {
-        if (node is RecordDecl) {
+        if (node is RecordDeclaration) {
             for (t in typeState.keys) {
                 if (t.name == node.name && t is ObjectType) {
                     // The node is the class of the type t
-                    t.recordDecl = node
+                    t.recordDeclaration = node
                 }
             }
         }

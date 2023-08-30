@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ([VariableDecl]) or function
- * ([FunctionDecl]).
+ * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
+ * function ([FunctionDeclaration]).
  *
  * Note: We do NOT (currently) distinguish between the definition and the declaration of a function.
  * This means, that if a function is first declared and later defined with a function body, we will
- * currently have two [FunctionDecl] nodes. This is very similar to the behaviour of clang, however
- * clang does establish a connection between those nodes, we currently do not.
+ * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
+ * however clang does establish a connection between those nodes, we currently do not.
  */
 abstract class Declaration : Node()

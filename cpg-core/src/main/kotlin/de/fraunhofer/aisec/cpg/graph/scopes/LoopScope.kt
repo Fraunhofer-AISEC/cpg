@@ -38,24 +38,24 @@ class LoopScope(loopStatement: Statement) :
     val starts: List<Node>
         get() =
             when (val loopStatement = astNode) {
-                is WhileStmt -> {
+                is WhileStatement -> {
                     if (loopStatement.conditionDeclaration != null)
                         SubgraphWalker.getEOGPathEdges(loopStatement.conditionDeclaration).entries
                     else if (loopStatement.condition != null)
                         SubgraphWalker.getEOGPathEdges(loopStatement.condition).entries
                     else SubgraphWalker.getEOGPathEdges(loopStatement.statement).entries
                 }
-                is ForStmt -> {
+                is ForStatement -> {
                     if (loopStatement.conditionDeclaration != null)
                         SubgraphWalker.getEOGPathEdges(loopStatement.conditionDeclaration).entries
                     else if (loopStatement.condition != null)
                         SubgraphWalker.getEOGPathEdges(loopStatement.condition).entries
                     else SubgraphWalker.getEOGPathEdges(loopStatement.statement).entries
                 }
-                is ForEachStmt -> {
+                is ForEachStatement -> {
                     SubgraphWalker.getEOGPathEdges(loopStatement).entries
                 }
-                is DoStmt -> {
+                is DoStatement -> {
                     SubgraphWalker.getEOGPathEdges(loopStatement.statement).entries
                 }
                 else -> {
@@ -71,12 +71,12 @@ class LoopScope(loopStatement: Statement) :
     val conditions: List<Node>
         get() =
             when (val node = astNode) {
-                is WhileStmt ->
+                is WhileStatement ->
                     mutableListOf(node.condition, node.conditionDeclaration).filterNotNull()
-                is ForStmt -> mutableListOf(node.condition).filterNotNull()
-                is ForEachStmt -> mutableListOf(node.variable).filterNotNull()
-                is DoStmt -> mutableListOf(node.condition).filterNotNull()
-                is AssertStmt -> mutableListOf(node.condition).filterNotNull()
+                is ForStatement -> mutableListOf(node.condition).filterNotNull()
+                is ForEachStatement -> mutableListOf(node.variable).filterNotNull()
+                is DoStatement -> mutableListOf(node.condition).filterNotNull()
+                is AssertStatement -> mutableListOf(node.condition).filterNotNull()
                 null -> {
                     LOGGER.error("Ast node of loop scope is null.")
                     mutableListOf()
@@ -90,21 +90,21 @@ class LoopScope(loopStatement: Statement) :
                 }
             }
 
-    private val breaks = mutableListOf<BreakStmt>()
-    private val continues = mutableListOf<ContinueStmt>()
+    private val breaks = mutableListOf<BreakStatement>()
+    private val continues = mutableListOf<ContinueStatement>()
 
-    override fun addBreakStatement(breakStmt: BreakStmt) {
-        breaks.add(breakStmt)
+    override fun addBreakStatement(breakStatement: BreakStatement) {
+        breaks.add(breakStatement)
     }
 
-    override fun addContinueStatement(continueStmt: ContinueStmt) {
-        continues.add(continueStmt)
+    override fun addContinueStatement(continueStatement: ContinueStatement) {
+        continues.add(continueStatement)
     }
 
-    override val breakStmts: List<BreakStmt>
+    override val breakStatements: List<BreakStatement>
         get() = breaks
 
-    override val continueStmts: List<ContinueStmt>
+    override val continueStatements: List<ContinueStatement>
         get() = continues
 
     companion object {

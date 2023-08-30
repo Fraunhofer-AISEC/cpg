@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.records
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.concurrent.ExecutionException
@@ -47,9 +47,9 @@ class VisitorTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDecl()
-        val name = NamespaceDecl()
-        val func = FunctionDecl()
+        val tu = TranslationUnitDeclaration()
+        val name = NamespaceDeclaration()
+        val func = FunctionDeclaration()
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)
@@ -73,9 +73,9 @@ class VisitorTest : BaseTest() {
     fun testAllEogNodeVisitor() {
         val nodeList: MutableList<Node> = ArrayList()
         // val recordDeclaration = namespace?.getDeclarationAs(0, RecordDeclaration::class.java)
-        assertNotNull(recordDecl)
+        assertNotNull(recordDeclaration)
 
-        val method = recordDecl!!.byNameOrNull<MethodDecl>("method")
+        val method = recordDeclaration!!.byNameOrNull<MethodDeclaration>("method")
         assertNotNull(method)
 
         val firstStmt = method.bodyOrNull<Statement>()
@@ -96,10 +96,10 @@ class VisitorTest : BaseTest() {
     /** Visits all nodes along AST. */
     @Test
     fun testAllAstNodeVisitor() {
-        assertNotNull(recordDecl)
+        assertNotNull(recordDeclaration)
 
         val nodeList = mutableListOf<Node>()
-        recordDecl!!.accept(
+        recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(n: Node) {
@@ -117,22 +117,22 @@ class VisitorTest : BaseTest() {
     /** Visits only ReturnStatement nodes. */
     @Test
     fun testReturnStmtVisitor() {
-        val returnStmts: MutableList<ReturnStmt> = ArrayList()
-        assertNotNull(recordDecl)
+        val returnStatements: MutableList<ReturnStatement> = ArrayList()
+        assertNotNull(recordDeclaration)
 
-        recordDecl!!.accept(
+        recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
-                fun visit(r: ReturnStmt) {
-                    returnStmts.add(r)
+                fun visit(r: ReturnStatement) {
+                    returnStatements.add(r)
                 }
             }
         )
-        assertEquals(2, returnStmts.size)
+        assertEquals(2, returnStatements.size)
     }
 
     companion object {
-        private var recordDecl: RecordDecl? = null
+        private var recordDeclaration: RecordDeclaration? = null
 
         @BeforeAll
         @JvmStatic
@@ -144,7 +144,7 @@ class VisitorTest : BaseTest() {
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()
-            recordDecl = cpg.records.firstOrNull()
+            recordDeclaration = cpg.records.firstOrNull()
         }
     }
 }

@@ -31,7 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 
 class SpecificationHandler(frontend: GoLanguageFrontend) :
-    Handler<Declaration, GoStandardLibrary.Ast.Spec, GoLanguageFrontend>(::ProblemDecl, frontend) {
+    Handler<Declaration, GoStandardLibrary.Ast.Spec, GoLanguageFrontend>(
+        ::ProblemDeclaration,
+        frontend
+    ) {
 
     init {
         map[GoStandardLibrary.Ast.ImportSpec::class.java] = HandlerInterface {
@@ -50,17 +53,17 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         val message = "Not parsing specification of type ${spec.goType} yet"
         log.error(message)
 
-        return newProblemDecl(message)
+        return newProblemDeclaration(message)
     }
 
-    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): IncludeDecl {
+    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): IncludeDeclaration {
         // We set the name of the include declaration to the imported name, i.e., the package name
         val name = frontend.getImportName(importSpec)
         // We set the filename of the include declaration to the package path, i.e., its full path
         // including any module identifiers. This way we can match the include declaration back to
         // the namespace's path and name
         val filename = importSpec.path.value.removeSurrounding("\"")
-        val include = newIncludeDecl(filename, rawNode = importSpec)
+        val include = newIncludeDeclaration(filename, rawNode = importSpec)
         include.name = parseName(name)
 
         return include
@@ -72,7 +75,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             when (type) {
                 is GoStandardLibrary.Ast.StructType -> handleStructTypeSpec(spec, type)
                 is GoStandardLibrary.Ast.InterfaceType -> handleInterfaceTypeSpec(spec, type)
-                else -> return ProblemDecl("not parsing type of type ${spec.goType} yet")
+                else -> return ProblemDeclaration("not parsing type of type ${spec.goType} yet")
             }
 
         return decl
@@ -81,8 +84,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     private fun handleStructTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
         structType: GoStandardLibrary.Ast.StructType
-    ): RecordDecl {
-        val record = newRecordDecl(typeSpec.name.name, "struct", rawNode = typeSpec)
+    ): RecordDeclaration {
+        val record = newRecordDeclaration(typeSpec.name.name, "struct", rawNode = typeSpec)
 
         frontend.scopeManager.enterScope(record)
 
@@ -101,7 +104,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         field.names[0].name
                     }
 
-                val decl = newFieldDecl(name, type, rawNode = field)
+                val decl = newFieldDeclaration(name, type, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
             }
         }
@@ -115,7 +118,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
         interfaceType: GoStandardLibrary.Ast.InterfaceType
     ): Declaration {
-        val record = newRecordDecl(typeSpec.name.name, "interface", rawNode = typeSpec)
+        val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
 
         frontend.scopeManager.enterScope(record)
 
@@ -128,7 +131,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // "method" actually has a name, we declare a new method
                 // declaration.
                 if (field.names.isNotEmpty()) {
-                    val method = newMethodDecl(field.names[0].name, rawNode = field)
+                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
 
                     frontend.scopeManager.addDeclaration(method)
@@ -150,13 +153,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     /**
      * // handleValueSpec handles parsing of an ast.ValueSpec, which is a variable // declaration.
      * Since this can potentially declare multiple variables with one // "spec", this returns a
-     * [DeclSequence].
+     * [DeclarationSequence].
      */
-    private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): DeclSequence {
-        val sequence = DeclSequence()
+    private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): DeclarationSequence {
+        val sequence = DeclarationSequence()
 
         for ((idx, ident) in valueSpec.names.withIndex()) {
-            val decl = newVariableDecl(ident.name, rawNode = valueSpec)
+            val decl = newVariableDeclaration(ident.name, rawNode = valueSpec)
 
             if (valueSpec.type != null) {
                 decl.type = frontend.typeOf(valueSpec.type!!)

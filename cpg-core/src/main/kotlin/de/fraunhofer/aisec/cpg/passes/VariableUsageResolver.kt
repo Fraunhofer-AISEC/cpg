@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
@@ -45,17 +45,18 @@ import org.slf4j.LoggerFactory
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [MemberExpr]. After AST building, its base and member references
- * are set to [Reference] stubs. This pass resolves those references and makes the member point to
- * the appropriate [FieldDecl] and the base to the "this" [FieldDecl] of the containing class. It is
- * also capable of resolving references to fields that are inherited from a superclass and thus not
- * declared in the actual base class. When base or member declarations are not found in the graph, a
- * new "inferred" [FieldDecl] is being created that is then used to collect all usages to the same
- * unknown declaration. [Reference] stubs are removed from the graph after being resolved.
+ * A field access is modeled with a [MemberExpression]. After AST building, its base and member
+ * references are set to [Reference] stubs. This pass resolves those references and makes the member
+ * point to the appropriate [FieldDeclaration] and the base to the "this" [FieldDeclaration] of the
+ * containing class. It is also capable of resolving references to fields that are inherited from a
+ * superclass and thus not declared in the actual base class. When base or member declarations are
+ * not found in the graph, a new "inferred" [FieldDeclaration] is being created that is then used to
+ * collect all usages to the same unknown declaration. [Reference] stubs are removed from the graph
+ * after being resolved.
  *
  * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
  * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
- * to the appropriate [ValueDecl].
+ * to the appropriate [ValueDeclaration].
  */
 @DependsOn(TypeHierarchyResolver::class)
 open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
@@ -87,11 +88,11 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    /** This function seems to resolve function pointers pointing to a [MethodDecl]. */
+    /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
     protected fun resolveMethodFunctionPointer(
         reference: Reference,
         type: FunctionPointerType
-    ): ValueDecl {
+    ): ValueDeclaration {
         val parent = reference.name.parent
 
         return handleUnknownFunction(
@@ -105,10 +106,14 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         )
     }
 
-    protected fun resolveLocalVarUsage(currentClass: RecordDecl?, parent: Node?, current: Node?) {
+    protected fun resolveLocalVarUsage(
+        currentClass: RecordDeclaration?,
+        parent: Node?,
+        current: Node?
+    ) {
         val language = current?.language
 
-        if (current !is Reference || current is MemberExpr) return
+        if (current !is Reference || current is MemberExpression) return
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -120,12 +125,12 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         // to extend this particular code to resolve all callee references to their declarations,
         // i.e., their function definitions and get rid of the separate CallResolver.
         var wouldResolveTo: Declaration? = null
-        if (parent is CallExpr && parent.callee === current) {
+        if (parent is CallExpression && parent.callee === current) {
             // Peek into the declaration, and if it is a variable, we can proceed normally, as we
             // are running into the special case explained above. Otherwise, we abort here (for
             // now).
             wouldResolveTo = scopeManager.resolveReference(current, current.scope)
-            if (wouldResolveTo !is VariableDecl) {
+            if (wouldResolveTo !is VariableDeclaration) {
                 return
             }
         }
@@ -203,8 +208,8 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    protected fun resolveFieldUsages(curClass: RecordDecl?, parent: Node?, current: Node?) {
-        if (current !is MemberExpr) {
+    protected fun resolveFieldUsages(curClass: RecordDeclaration?, parent: Node?, current: Node?) {
+        if (current !is MemberExpression) {
             return
         }
 
@@ -214,7 +219,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         // however, that these will show up in this callback function. To not mess with legacy code
         // (yet), we are ignoring all MemberExpressions whose parents are MemberCallExpressions in
         // this function for now.
-        if (parent is MemberCallExpr && parent.callee == current) {
+        if (parent is MemberCallExpression && parent.callee == current) {
             return
         }
 
@@ -238,7 +243,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                         // We need to connect this super reference to the receiver of this
                         // method
                         val func = scopeManager.currentFunction
-                        if (func is MethodDecl) {
+                        if (func is MethodDeclaration) {
                             baseTarget = func.receiver
                         }
                         if (baseTarget != null) {
@@ -249,7 +254,8 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                             // And set the assigned subtypes, to ensure, that really only our
                             // super type is in there
                             base.assignedTypes = mutableSetOf(superType)
-                            (base.refersTo as? ValueDecl)?.assignedTypes = mutableSetOf(superType)
+                            (base.refersTo as? ValueDeclaration)?.assignedTypes =
+                                mutableSetOf(superType)
                         }
                     }
                 } else {
@@ -262,14 +268,14 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                 baseTarget = resolveBase(current.base as Reference)
                 base.refersTo = baseTarget
             }
-            if (baseTarget is EnumDecl) {
+            if (baseTarget is EnumDeclaration) {
                 val memberTarget =
                     baseTarget.entries.firstOrNull { it.name.lastPartsMatch(current.name) }
                 if (memberTarget != null) {
                     current.refersTo = memberTarget
                     return
                 }
-            } else if (baseTarget is RecordDecl) {
+            } else if (baseTarget is RecordDeclaration) {
                 var baseType = baseTarget.toType()
                 if (baseType.name !in recordMap) {
                     val containingT = baseType
@@ -309,13 +315,13 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    protected fun resolveMember(containingClass: Type, reference: Reference): ValueDecl? {
+    protected fun resolveMember(containingClass: Type, reference: Reference): ValueDeclaration? {
         if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
             // this in the call resolver instead
             return null
         }
-        var member: FieldDecl? = null
+        var member: FieldDeclaration? = null
         if (containingClass !is UnknownType && containingClass.name in recordMap) {
             member =
                 recordMap[containingClass.name]
@@ -338,7 +344,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     }
 
     // TODO(oxisto): Move to inference class
-    protected fun handleUnknownField(base: Type, ref: Reference): FieldDecl? {
+    protected fun handleUnknownField(base: Type, ref: Reference): FieldDeclaration? {
         val name = ref.name
 
         // unwrap a potential pointer-type
@@ -376,7 +382,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
             target
         } else {
             val declaration =
-                recordDeclaration.newFieldDecl(
+                recordDeclaration.newFieldDeclaration(
                     name.localName,
                     // we will set the type later through the type inference observer
                     unknownType(),
@@ -398,15 +404,16 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     }
 
     /**
-     * Generates a [MethodDecl] if the [declarationHolder] is a [RecordDecl] or a [FunctionDecl] if
-     * the [declarationHolder] is a [TranslationUnitDecl]. The resulting function/method has the
-     * signature and return type specified in [fctPtrType] and the specified [name].
+     * Generates a [MethodDeclaration] if the [declarationHolder] is a [RecordDeclaration] or a
+     * [FunctionDeclaration] if the [declarationHolder] is a [TranslationUnitDeclaration]. The
+     * resulting function/method has the signature and return type specified in [fctPtrType] and the
+     * specified [name].
      */
     protected fun handleUnknownFunction(
-        declarationHolder: RecordDecl?,
+        declarationHolder: RecordDeclaration?,
         name: Name,
         fctPtrType: FunctionPointerType
-    ): FunctionDecl {
+    ): FunctionDeclaration {
         // Try to find the function or method in the list of existing functions.
         val target =
             if (declarationHolder != null) {

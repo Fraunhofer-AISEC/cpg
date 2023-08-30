@@ -43,23 +43,23 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 @DependsOn(TypeHierarchyResolver::class)
 abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected lateinit var walker: SubgraphWalker.ScopedWalker
-    lateinit var currentTU: TranslationUnitDecl
+    lateinit var currentTU: TranslationUnitDeclaration
 
-    val recordMap = mutableMapOf<Name, RecordDecl>()
-    protected val enumMap = mutableMapOf<Type, EnumDecl>()
-    protected val templateList = mutableListOf<TemplateDecl>()
+    val recordMap = mutableMapOf<Name, RecordDeclaration>()
+    protected val enumMap = mutableMapOf<Type, EnumDeclaration>()
+    protected val templateList = mutableListOf<TemplateDeclaration>()
     protected val superTypesMap = mutableMapOf<Name, List<Type>>()
 
     /** Maps the name of the type of record declarations to its declaration. */
     protected fun findRecords(node: Node?) {
-        if (node is RecordDecl) {
+        if (node is RecordDeclaration) {
             recordMap.putIfAbsent(node.name, node)
         }
     }
 
     /** Maps the type of enums to its declaration. */
     protected fun findEnums(node: Node?) {
-        if (node is EnumDecl) {
+        if (node is EnumDeclaration) {
             // TODO: Use the name instead of the type.
             val type = node.objectType(node.name)
             enumMap.putIfAbsent(type, node)
@@ -68,13 +68,13 @@ abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) 
 
     /** Caches all TemplateDeclarations in [templateList] */
     protected fun findTemplates(node: Node?) {
-        if (node is TemplateDecl) {
+        if (node is TemplateDeclaration) {
             templateList.add(node)
         }
     }
 
     /** Checks if the function has the given [name], [returnType] and [signature] */
-    protected fun FunctionDecl.matches(
+    protected fun FunctionDeclaration.matches(
         name: Name,
         returnType: Type,
         signature: List<Type>

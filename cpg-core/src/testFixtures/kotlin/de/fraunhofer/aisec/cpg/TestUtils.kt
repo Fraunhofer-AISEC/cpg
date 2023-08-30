@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.io.File
 import java.nio.file.Files
@@ -85,7 +85,7 @@ object TestUtils {
      * @param topLevel The directory to traverse while looking for files to parse
      * @param usePasses Whether the analysis should run passes after the initial phase
      * @param configModifier An optional modifier for the config
-     * @return A list of [TranslationUnitDecl] nodes, representing the CPG roots
+     * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
     @JvmOverloads
@@ -112,7 +112,7 @@ object TestUtils {
      * @param topLevel The directory to traverse while looking for files to parse
      * @param usePasses Whether the analysis should run passes after the initial phase
      * @param configModifier An optional modifier for the config
-     * @return A list of [TranslationUnitDecl] nodes, representing the CPG roots
+     * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
     @JvmOverloads
@@ -146,11 +146,13 @@ object TestUtils {
      * Default way of parsing a list of files into a full CPG. All default passes are applied
      *
      * @param builder A [TranslationConfiguration.Builder] which contains the configuration
-     * @return A list of [TranslationUnitDecl] nodes, representing the CPG roots
+     * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
      * @throws Exception Any exception thrown during the parsing process
      */
     @Throws(Exception::class)
-    fun analyzeWithBuilder(builder: TranslationConfiguration.Builder): List<TranslationUnitDecl> {
+    fun analyzeWithBuilder(
+        builder: TranslationConfiguration.Builder
+    ): List<TranslationUnitDeclaration> {
         val config = builder.build()
         val analyzer = TranslationManager.builder().config(config).build()
         return analyzer.analyze().get().translationUnits
@@ -163,7 +165,7 @@ object TestUtils {
         topLevel: Path,
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
-    ): TranslationUnitDecl {
+    ): TranslationUnitDeclaration {
         val result = analyze(files, topLevel, usePasses, configModifier)
         return result.translationUnits.first()
     }
@@ -219,7 +221,7 @@ object TestUtils {
      * Asserts, that the call expression given in [call] refers to the expected function declaration
      * [func].
      */
-    fun assertInvokes(call: CallExpr, func: FunctionDecl?) {
+    fun assertInvokes(call: CallExpression, func: FunctionDeclaration?) {
         assertContains(call.invokes, func)
     }
 
@@ -248,9 +250,9 @@ object TestUtils {
 
     /**
      * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
-     * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpr] where
-     * [MemberExpr.base] uses `usedBase` and [ ][MemberExpr.refersTo] uses `usedMember`. Using is
-     * checked as preformed per [assertUsageOf]
+     * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpression] where
+     * [MemberExpression.base] uses `usedBase` and [ ][MemberExpression.refersTo] uses `usedMember`.
+     * Using is checked as preformed per [assertUsageOf]
      *
      * @param usingNode
      * - Node that uses some member
@@ -263,18 +265,18 @@ object TestUtils {
      */
     fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Node?) {
         assertNotNull(usingNode)
-        if (usingNode !is MemberExpr && !ENFORCE_MEMBER_EXPRESSION) {
+        if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the
             // base is resolved
             assertUsageOf(usingNode, usedMember)
         } else {
-            assertTrue(usingNode is MemberExpr)
-            val memberExprExpression = usingNode as MemberExpr?
-            assertNotNull(memberExprExpression)
+            assertTrue(usingNode is MemberExpression)
+            val memberExpressionExpression = usingNode as MemberExpression?
+            assertNotNull(memberExpressionExpression)
 
-            val base = memberExprExpression.base
+            val base = memberExpressionExpression.base
             assertUsageOf(base, usedBase)
-            assertUsageOf(memberExprExpression.refersTo, usedMember)
+            assertUsageOf(memberExpressionExpression.refersTo, usedMember)
         }
     }
 }

@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStmt
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
@@ -47,19 +47,19 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // Nothing to do
     }
 
-    override fun accept(tu: TranslationUnitDecl) {
+    override fun accept(tu: TranslationUnitDeclaration) {
         val walker = SubgraphWalker.IterativeGraphWalker()
         walker.registerOnNodeVisit(::handle)
         walker.iterate(tu)
     }
 
     /**
-     * We perform the actions for each [FunctionDecl].
+     * We perform the actions for each [FunctionDeclaration].
      *
      * @param node every node in the TranslationResult
      */
     protected fun handle(node: Node) {
-        if (node is FunctionDecl) {
+        if (node is FunctionDeclaration) {
             val startState = UnreachabilityState()
             for (firstEdge in node.nextEOGEdges) {
                 startState.push(firstEdge, ReachabilityLattice(Reachability.REACHABLE))
@@ -80,9 +80,9 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  * process, [currentState] contains the state which was observed before arriving here.
  *
  * This method modifies the state for the next eog edge as follows:
- * - If the next node in the eog is an [IfStmt], the condition is evaluated and if it is either
+ * - If the next node in the eog is an [IfStatement], the condition is evaluated and if it is either
  *   always true or false, the else or then branch receives set to [Reachability.UNREACHABLE].
- * - If the next node in the eog is a [WhileStmt], the condition is evaluated and if it's
+ * - If the next node in the eog is a [WhileStatement], the condition is evaluated and if it's
  *   always true or false, either the EOG edge to the loop body or out of the loop body is set to
  *   [Reachability.UNREACHABLE].
  * - For all other nodes, we simply propagate the state which led us here.
@@ -95,9 +95,9 @@ fun transfer(
     currentWorklist: Worklist<PropertyEdge<Node>, PropertyEdge<Node>, Reachability>
 ): State<PropertyEdge<Node>, Reachability> {
     val currentNode = currentEdge.end
-    if (currentNode is IfStmt) {
+    if (currentNode is IfStatement) {
         handleIfStatement(currentEdge, currentNode, currentState)
-    } else if (currentNode is WhileStmt) {
+    } else if (currentNode is WhileStatement) {
         handleWhileStatement(currentEdge, currentNode, currentState)
     } else {
         // For all other edges, we simply propagate the reachability property of the edge
@@ -109,14 +109,14 @@ fun transfer(
 }
 
 /**
- * Evaluates the condition of the [IfStmt] [n] (which is the end node of [enteringEdge]). If it
+ * Evaluates the condition of the [IfStatement] [n] (which is the end node of [enteringEdge]). If it
  * is always true, then the else-branch receives the [state] [Reachability.UNREACHABLE]. If the
  * condition is always false, then the then-branch receives the [state] [Reachability.UNREACHABLE].
  * All other cases simply copy the state which led us here.
  */
 private fun handleIfStatement(
     enteringEdge: PropertyEdge<Node>,
-    n: IfStmt,
+    n: IfStatement,
     state: State<PropertyEdge<Node>, Reachability>
 ) {
     val evalResult = ValueEvaluator().evaluate(n.condition)
@@ -147,7 +147,7 @@ private fun handleIfStatement(
 }
 
 /**
- * Evaluates the condition of the [WhileStmt] [n] (which is the end node of [enteringEdge]). If
+ * Evaluates the condition of the [WhileStatement] [n] (which is the end node of [enteringEdge]). If
  * it is always true, then the edge to the code after the loop receives the [state]
  * [Reachability.UNREACHABLE]. If the condition is always false, then the edge to the loop body
  * receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state which led
@@ -155,7 +155,7 @@ private fun handleIfStatement(
  */
 private fun handleWhileStatement(
     enteringEdge: PropertyEdge<Node>,
-    n: WhileStmt,
+    n: WhileStatement,
     state: State<PropertyEdge<Node>, Reachability>
 ) {
     /*

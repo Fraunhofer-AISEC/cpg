@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -45,7 +45,7 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPP() {
         val result = TestUtils.analyze("cpp", topLevel, true)
-        val constructors = result.allChildren<ConstructorDecl>()
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) {
                 it.parameters.isEmpty() && it.name.localName == "A"
@@ -61,76 +61,76 @@ internal class ConstructorsTest : BaseTest() {
         val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
-        assertTrue(a1.initializer is ConstructExpr)
+        assertTrue(a1.initializer is ConstructExpression)
 
-        val a1Initializer = a1.initializer as ConstructExpr
+        val a1Initializer = a1.initializer as ConstructExpression
         assertEquals(noArg, a1Initializer.constructor)
 
         val a2 = findByUniqueName(variables, "a2")
         assertNotNull(a2)
-        assertTrue(a2.initializer is ConstructExpr)
+        assertTrue(a2.initializer is ConstructExpression)
 
-        val a2Initializer = a2.initializer as ConstructExpr
+        val a2Initializer = a2.initializer as ConstructExpression
         assertEquals(singleArg, a2Initializer.constructor)
 
         val a3 = findByUniqueName(variables, "a3")
         assertNotNull(a3)
-        assertTrue(a3.initializer is ConstructExpr)
+        assertTrue(a3.initializer is ConstructExpression)
 
-        val a3Initializer = a3.initializer as ConstructExpr
+        val a3Initializer = a3.initializer as ConstructExpression
         assertEquals(twoArgs, a3Initializer.constructor)
 
         val a4 = findByUniqueName(variables, "a4")
         assertNotNull(a4)
-        assertTrue(a4.initializer is ConstructExpr)
+        assertTrue(a4.initializer is ConstructExpression)
 
-        val a4Initializer = a4.initializer as ConstructExpr
+        val a4Initializer = a4.initializer as ConstructExpression
         assertEquals(noArg, a4Initializer.constructor)
 
         val a5 = findByUniqueName(variables, "a5")
         assertNotNull(a5)
-        assertTrue(a5.initializer is ConstructExpr)
+        assertTrue(a5.initializer is ConstructExpression)
 
-        val a5Initializer = a5.initializer as ConstructExpr
+        val a5Initializer = a5.initializer as ConstructExpression
         assertEquals(singleArg, a5Initializer.constructor)
 
         val a6 = findByUniqueName(variables, "a6")
         assertNotNull(a6)
-        assertTrue(a6.initializer is ConstructExpr)
+        assertTrue(a6.initializer is ConstructExpression)
 
-        val a6Initializer = a6.initializer as ConstructExpr
+        val a6Initializer = a6.initializer as ConstructExpression
         assertEquals(twoArgs, a6Initializer.constructor)
 
         val a7 = findByUniqueName(variables, "a7")
         assertNotNull(a7)
-        assertTrue(a7.initializer is NewExpr)
-        assertTrue((a7.initializer as NewExpr).initializer is ConstructExpr)
+        assertTrue(a7.initializer is NewExpression)
+        assertTrue((a7.initializer as NewExpression).initializer is ConstructExpression)
 
-        val a7Initializer = (a7.initializer as NewExpr).initializer as ConstructExpr
+        val a7Initializer = (a7.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(noArg, a7Initializer.constructor)
 
         val a8 = findByUniqueName(variables, "a8")
         assertNotNull(a8)
-        assertTrue(a8.initializer is NewExpr)
-        assertTrue((a8.initializer as NewExpr).initializer is ConstructExpr)
+        assertTrue(a8.initializer is NewExpression)
+        assertTrue((a8.initializer as NewExpression).initializer is ConstructExpression)
 
-        val a8Initializer = (a8.initializer as NewExpr).initializer as ConstructExpr
+        val a8Initializer = (a8.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(noArg, a8Initializer.constructor)
 
         val a9 = findByUniqueName(variables, "a9")
         assertNotNull(a9)
-        assertTrue(a9.initializer is NewExpr)
-        assertTrue((a9.initializer as NewExpr).initializer is ConstructExpr)
+        assertTrue(a9.initializer is NewExpression)
+        assertTrue((a9.initializer as NewExpression).initializer is ConstructExpression)
 
-        val a9Initializer = (a9.initializer as NewExpr).initializer as ConstructExpr
+        val a9Initializer = (a9.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(singleArg, a9Initializer.constructor)
 
         val a10 = findByUniqueName(variables, "a10")
         assertNotNull(a10)
-        assertTrue(a10.initializer is NewExpr)
-        assertTrue((a10.initializer as NewExpr).initializer is ConstructExpr)
+        assertTrue(a10.initializer is NewExpression)
+        assertTrue((a10.initializer as NewExpression).initializer is ConstructExpression)
 
-        val a10Initializer = (a10.initializer as NewExpr).initializer as ConstructExpr
+        val a10Initializer = (a10.initializer as NewExpression).initializer as ConstructExpression
         assertEquals(twoArgs, a10Initializer.constructor)
     }
 
@@ -145,7 +145,7 @@ internal class ConstructorsTest : BaseTest() {
                 topLevel,
                 true
             )
-        val constructors = result.allChildren<ConstructorDecl>()
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val twoDefaultArg =
             findByUniquePredicate(constructors) {
@@ -157,9 +157,9 @@ internal class ConstructorsTest : BaseTest() {
         val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         val d1 = findByUniqueName(variables, "d1")
         assertNotNull(d1)
-        assertTrue(d1.initializer is ConstructExpr)
+        assertTrue(d1.initializer is ConstructExpression)
 
-        val d1Initializer = d1.initializer as ConstructExpr
+        val d1Initializer = d1.initializer as ConstructExpression
         assertEquals(twoDefaultArg, d1Initializer.constructor)
         assertEquals(0, d1Initializer.arguments.size)
         assertTrue(twoDefaultArg.nextEOG.contains(literal0))
@@ -172,17 +172,17 @@ internal class ConstructorsTest : BaseTest() {
             }
         }
         val d2 = findByUniqueName(variables, "d2")
-        assertTrue(d2.initializer is ConstructExpr)
+        assertTrue(d2.initializer is ConstructExpression)
 
-        val d2Initializer = d2.initializer as ConstructExpr
+        val d2Initializer = d2.initializer as ConstructExpression
         assertEquals(twoDefaultArg, d2Initializer.constructor)
         assertEquals(1, d2Initializer.arguments.size)
         assertEquals(2, (d2Initializer.arguments[0] as Literal<*>).value)
 
         val d3 = findByUniqueName(variables, "d3")
-        assertTrue(d3.initializer is ConstructExpr)
+        assertTrue(d3.initializer is ConstructExpression)
 
-        val d3Initializer = d3.initializer as ConstructExpr
+        val d3Initializer = d3.initializer as ConstructExpression
         assertEquals(twoDefaultArg, d3Initializer.constructor)
         assertEquals(2, d3Initializer.arguments.size)
         assertEquals(3, (d3Initializer.arguments[0] as Literal<*>).value)
@@ -200,21 +200,21 @@ internal class ConstructorsTest : BaseTest() {
                 topLevel,
                 true
             )
-        val constructors = result.allChildren<ConstructorDecl>()
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val singleDefaultArg =
-            findByUniquePredicate(constructors) { c: ConstructorDecl ->
+            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
                 c.parameters.size == 2 && c.name.localName == "E"
             }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val e1 = findByUniqueName(variables, "e1")
-        assertTrue(e1.initializer is ConstructExpr)
-        val e1Initializer = e1.initializer as ConstructExpr
+        assertTrue(e1.initializer is ConstructExpression)
+        val e1Initializer = e1.initializer as ConstructExpression
         assertTrue(e1Initializer.constructor!!.isInferred)
         assertEquals(0, e1Initializer.arguments.size)
         val e2 = findByUniqueName(variables, "e2")
-        assertTrue(e2.initializer is ConstructExpr)
-        val e2Initializer = e2.initializer as ConstructExpr
+        assertTrue(e2.initializer is ConstructExpression)
+        val e2Initializer = e2.initializer as ConstructExpression
         assertEquals(singleDefaultArg, e2Initializer.constructor)
         assertEquals(1, e2Initializer.arguments.size)
         assertEquals(5, (e2Initializer.arguments[0] as Literal<*>).value)
@@ -225,8 +225,8 @@ internal class ConstructorsTest : BaseTest() {
             }
         }
         val e3 = findByUniqueName(variables, "e3")
-        assertTrue(e3.initializer is ConstructExpr)
-        val e3Initializer = e3.initializer as ConstructExpr
+        assertTrue(e3.initializer is ConstructExpression)
+        val e3Initializer = e3.initializer as ConstructExpression
         assertEquals(singleDefaultArg, e3Initializer.constructor)
         assertEquals(2, e3Initializer.arguments.size)
         assertEquals(6, (e3Initializer.arguments[0] as Literal<*>).value)
@@ -245,37 +245,41 @@ internal class ConstructorsTest : BaseTest() {
                 topLevel,
                 true
             )
-        val constructors = result.allChildren<ConstructorDecl>()
+        val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val implicitConstructor =
-            findByUniquePredicate(constructors) { c: ConstructorDecl -> c.name.localName == "I" }
+            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
+                c.name.localName == "I"
+            }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
-        assertTrue(i1.initializer is ConstructExpr)
+        assertTrue(i1.initializer is ConstructExpression)
 
-        val i1Constructor = i1.initializer as ConstructExpr
+        val i1Constructor = i1.initializer as ConstructExpression
         assertFalse(i1Constructor.isImplicit)
         assertEquals(implicitConstructor, i1Constructor.constructor)
         assertEquals(1, i1Constructor.arguments.size)
-        assertTrue(i1Constructor.arguments[0] is CastExpr)
+        assertTrue(i1Constructor.arguments[0] is CastExpression)
 
-        val i1ConstructorArgument = i1Constructor.arguments[0] as CastExpr
+        val i1ConstructorArgument = i1Constructor.arguments[0] as CastExpression
         assertLocalName("int", i1ConstructorArgument.castType)
         assertEquals("1.0", i1ConstructorArgument.expression.code)
         assertLocalName("double", i1ConstructorArgument.expression.type)
 
         val implicitConstructorWithDefault =
-            findByUniquePredicate(constructors) { c: ConstructorDecl -> c.name.localName == "H" }
+            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
+                c.name.localName == "H"
+            }
         val h1 = findByUniqueName(variables, "h1")
-        assertTrue(h1.initializer is ConstructExpr)
+        assertTrue(h1.initializer is ConstructExpression)
 
-        val h1Constructor = h1.initializer as ConstructExpr
+        val h1Constructor = h1.initializer as ConstructExpression
         assertFalse(h1Constructor.isImplicit)
         assertEquals(implicitConstructorWithDefault, h1Constructor.constructor)
         assertEquals(1, h1Constructor.arguments.size)
-        assertTrue(h1Constructor.arguments[0] is CastExpr)
+        assertTrue(h1Constructor.arguments[0] is CastExpression)
 
-        val h1ConstructorArgument1 = h1Constructor.arguments[0] as CastExpr
+        val h1ConstructorArgument1 = h1Constructor.arguments[0] as CastExpression
         assertLocalName("int", h1ConstructorArgument1.castType)
         assertEquals("2.0", h1ConstructorArgument1.expression.code)
         assertLocalName("double", h1ConstructorArgument1.expression.type)

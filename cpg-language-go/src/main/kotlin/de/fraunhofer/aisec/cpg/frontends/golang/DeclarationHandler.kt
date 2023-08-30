@@ -29,13 +29,16 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class DeclarationHandler(frontend: GoLanguageFrontend) :
-    Handler<Declaration, GoStandardLibrary.Ast.Decl, GoLanguageFrontend>(::ProblemDecl, frontend) {
+    Handler<Declaration, GoStandardLibrary.Ast.Decl, GoLanguageFrontend>(
+        ::ProblemDeclaration,
+        frontend
+    ) {
 
     init {
         map[GoStandardLibrary.Ast.FuncDecl::class.java] = HandlerInterface {
@@ -51,14 +54,14 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         val message = "Not parsing declaration of type ${decl.goType} yet"
         log.error(message)
 
-        return newProblemDecl(message)
+        return newProblemDeclaration(message)
     }
 
-    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): FunctionDecl {
+    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): FunctionDeclaration {
         val recv = funcDecl.recv
         val func =
             if (recv != null) {
-                val method = newMethodDecl(funcDecl.name.name, rawNode = funcDecl)
+                val method = newMethodDeclaration(funcDecl.name.name, rawNode = funcDecl)
                 val recvField = recv.list.firstOrNull()
                 val recordType = recvField?.type?.let { frontend.typeOf(it) } ?: unknownType()
 
@@ -68,7 +71,11 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // of the struct, but it is not modifying the receiver.
                 if (recvField?.names?.isNotEmpty() == true) {
                     method.receiver =
-                        newVariableDecl(recvField.names[0].name, recordType, rawNode = recvField)
+                        newVariableDeclaration(
+                            recvField.names[0].name,
+                            recordType,
+                            rawNode = recvField
+                        )
                 }
 
                 if (recordType !is UnknownType) {
@@ -98,12 +105,12 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     localNameOnly = true
                 }
 
-                newFunctionDecl(funcDecl.name.name, null, funcDecl, localNameOnly)
+                newFunctionDeclaration(funcDecl.name.name, null, funcDecl, localNameOnly)
             }
 
         frontend.scopeManager.enterScope(func)
 
-        if (func is MethodDecl && func.receiver != null) {
+        if (func is MethodDeclaration && func.receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
             frontend.scopeManager.addDeclaration(func.receiver)
         }
@@ -119,7 +126,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // If the function has named return variables, be sure to declare them as well
                 if (returnVar.names.isNotEmpty()) {
                     val param =
-                        newVariableDecl(
+                        newVariableDeclaration(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
                             rawNode = returnVar
@@ -164,7 +171,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     frontend.typeOf(param.type)
                 }
 
-            val p = newParameterDecl(name, type, variadic, rawNode = param)
+            val p = newParameterDeclaration(name, type, variadic, rawNode = param)
 
             frontend.scopeManager.addDeclaration(p)
 
@@ -173,10 +180,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         // Check, if the last statement is a return statement, otherwise we insert an implicit one
         val body = frontend.statementHandler.handle(funcDecl.body)
-        if (body is CompoundStmt) {
+        if (body is BlockStatement) {
             val last = body.statements.lastOrNull()
-            if (last !is ReturnStmt) {
-                val ret = newReturnStmt()
+            if (last !is ReturnStatement) {
+                val ret = newReturnStatement()
                 ret.isImplicit = true
                 body += ret
             }
@@ -189,8 +196,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         return func
     }
 
-    private fun handleGenDecl(genDecl: GoStandardLibrary.Ast.GenDecl): DeclSequence {
-        val sequence = DeclSequence()
+    private fun handleGenDecl(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {
+        val sequence = DeclarationSequence()
 
         for (spec in genDecl.specs) {
             frontend.specificationHandler.handle(spec)?.let {

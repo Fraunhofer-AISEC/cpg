@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -47,27 +47,27 @@ class JavaCallResolverHelper {
          *
          * This function basically sets the correct type of the [Reference] containing the "super"
          * keyword. Afterwards, we can use the regular [CallResolver.resolveMemberCallee] to resolve
-         * the [MemberCallExpr].
+         * the [MemberCallExpression].
          *
          * @param callee The callee of the call expression that needs to be adjusted
          * @param curClass The class containing the call
          */
         fun handleSuperCall(
-            callee: MemberExpr,
-            curClass: RecordDecl,
+            callee: MemberExpression,
+            curClass: RecordDeclaration,
             scopeManager: ScopeManager,
-            recordMap: Map<Name, RecordDecl>
+            recordMap: Map<Name, RecordDeclaration>
         ): Boolean {
             // Because the "super" keyword still refers to "this" (but casted to another class), we
             // still
             // need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
-            if (func is MethodDecl) {
+            if (func is MethodDeclaration) {
                 (callee.base as Reference?)?.refersTo = func.receiver
             }
 
             // In the next step we can "cast" the base to the correct type, by setting the base
-            var target: RecordDecl? = null
+            var target: RecordDeclaration? = null
 
             // In case the reference is just called "super", this is a direct superclass, either
             // defined
@@ -111,10 +111,10 @@ class JavaCallResolverHelper {
         }
 
         fun handleSpecificSupertype(
-            callee: MemberExpr,
-            curClass: RecordDecl,
-            recordMap: Map<Name, RecordDecl>
-        ): RecordDecl? {
+            callee: MemberExpression,
+            curClass: RecordDeclaration,
+            recordMap: Map<Name, RecordDeclaration>
+        ): RecordDeclaration? {
             val baseName = callee.base.name.parent ?: return null
 
             if (curClass.objectType(baseName) in curClass.implementedInterfaces) {

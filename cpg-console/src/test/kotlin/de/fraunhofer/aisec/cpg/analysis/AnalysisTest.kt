@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -83,16 +83,16 @@ class AnalysisTest {
         val result = analyzer.analyze().get()
         val tu = result.translationUnits.first()
 
-        val main = tu.byNameOrNull<FunctionDecl>("Array.main", true)
+        val main = tu.byNameOrNull<FunctionDeclaration>("Array.main", true)
         assertNotNull(main)
-        val call = main.body<CallExpr>(0)
+        val call = main.body<CallExpression>(0)
 
         var code = call.fancyCode(showNumbers = false)
 
         // assertEquals("obj.\u001B[36mdoSomething\u001B[0m();", code)
         println(code)
 
-        var decl = main.body<DeclarationStmt>(0)
+        var decl = main.body<DeclarationStatement>(0)
         code = decl.fancyCode(showNumbers = false)
         println(code)
 

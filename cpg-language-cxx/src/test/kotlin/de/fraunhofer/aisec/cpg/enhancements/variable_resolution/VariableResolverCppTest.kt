@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ForStmt
-import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -47,25 +47,25 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class VariableResolverCppTest : BaseTest() {
-    private var externalClass: RecordDecl? = null
-    private var externVarName: FieldDecl? = null
-    private var externStaticVarName: FieldDecl? = null
-    private var outerClass: RecordDecl? = null
-    private var outerVarName: FieldDecl? = null
-    private var outerStaticVarName: FieldDecl? = null
-    private var function2Receiver: VariableDecl? = null
-    private var innerClass: RecordDecl? = null
-    private var innerVarName: FieldDecl? = null
-    private var innerStaticVarName: FieldDecl? = null
-    private var main: FunctionDecl? = null
-    private var outerFunction1: MethodDecl? = null
-    private var forStmts: List<ForStmt>? = null
-    private var outerFunction2: MethodDecl? = null
-    private var outerFunction3: MethodDecl? = null
-    private var outerFunction4: MethodDecl? = null
-    private var outerFunction5: MethodDecl? = null
-    private var innerFunction1: MethodDecl? = null
-    private var innerFunction2: MethodDecl? = null
+    private var externalClass: RecordDeclaration? = null
+    private var externVarName: FieldDeclaration? = null
+    private var externStaticVarName: FieldDeclaration? = null
+    private var outerClass: RecordDeclaration? = null
+    private var outerVarName: FieldDeclaration? = null
+    private var outerStaticVarName: FieldDeclaration? = null
+    private var function2Receiver: VariableDeclaration? = null
+    private var innerClass: RecordDeclaration? = null
+    private var innerVarName: FieldDeclaration? = null
+    private var innerStaticVarName: FieldDeclaration? = null
+    private var main: FunctionDeclaration? = null
+    private var outerFunction1: MethodDeclaration? = null
+    private var forStatements: List<ForStatement>? = null
+    private var outerFunction2: MethodDeclaration? = null
+    private var outerFunction3: MethodDeclaration? = null
+    private var outerFunction4: MethodDeclaration? = null
+    private var outerFunction5: MethodDeclaration? = null
+    private var innerFunction1: MethodDeclaration? = null
+    private var innerFunction2: MethodDeclaration? = null
     private val callParamMap: MutableMap<String, Expression> = HashMap()
 
     @BeforeAll
@@ -88,7 +88,7 @@ internal class VariableResolverCppTest : BaseTest() {
         outerClass = records["ScopeVariables"]
         outerVarName = outerClass?.byNameOrNull("varName")
         outerStaticVarName = outerClass?.byNameOrNull("staticVarName")
-        function2Receiver = outerClass?.byNameOrNull<MethodDecl>("function2")?.receiver
+        function2Receiver = outerClass?.byNameOrNull<MethodDeclaration>("function2")?.receiver
 
         // Inner class and its fields
         innerClass = records["ScopeVariables::InnerClass"]
@@ -98,7 +98,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
         // Functions in the outer and inner object
         outerFunction1 = outerClass?.methods?.first { it.name.localName == "function1" }
-        forStmts = outerFunction1.allChildren()
+        forStatements = outerFunction1.allChildren()
         outerFunction2 = outerClass?.methods?.first { it.name.localName == "function2" }
         outerFunction3 = outerClass?.methods?.first { it.name.localName == "function3" }
         outerFunction4 = outerClass?.methods?.first { it.name.localName == "function4" }
@@ -127,20 +127,20 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testVarNameOfFirstLoopAccessed() {
         val asReference = callParamMap["func1_first_loop_varName"] as? Reference
         assertNotNull(asReference)
-        val vDeclaration = forStmts?.first().variables["varName"]
+        val vDeclaration = forStatements?.first().variables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)
     }
 
     @Test
     fun testAccessLocalVarNameInNestedBlock() {
-        val innerBlock = forStmts?.get(1).allChildren<CompoundStmt>()[""]
+        val innerBlock = forStatements?.get(1).allChildren<BlockStatement>()[""]
         val nestedDeclaration = innerBlock.variables["varName"]
         assertUsageOf(callParamMap["func1_nested_block_shadowed_local_varName"], nestedDeclaration)
     }
 
     @Test
     fun testVarNameOfSecondLoopAccessed() {
-        val vDeclaration = forStmts?.get(1).variables["varName"]
+        val vDeclaration = forStatements?.get(1).variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], vDeclaration)
     }
 
@@ -161,7 +161,8 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInIfClause() {
-        val declaration = outerFunction2.allChildren<IfStmt>()[Node.EMPTY_NAME].variables["varName"]
+        val declaration =
+            outerFunction2.allChildren<IfStatement>()[Node.EMPTY_NAME].variables["varName"]
         assertUsageOf(callParamMap["func2_if_varName"], declaration)
     }
 

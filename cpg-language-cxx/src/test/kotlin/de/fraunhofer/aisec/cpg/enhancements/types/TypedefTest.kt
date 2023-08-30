@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
@@ -168,8 +168,8 @@ internal class TypedefTest : BaseTest() {
         val variables = result.variables
         val records = result.records
         val addConst = findByUniqueName(records, "add_const")
-        val typeMember1: ValueDecl = findByUniqueName(addConst.fields, "typeMember1")
-        val typeMember2: ValueDecl = findByUniqueName(addConst.fields, "typeMember2")
+        val typeMember1: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember1")
+        val typeMember2: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember2")
         assertEquals(typeMember1.type, typeMember2.type)
 
         val typeMemberOutside = findByUniqueName(variables, "typeMemberOutside")

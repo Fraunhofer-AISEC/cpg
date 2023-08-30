@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.console.fancyLocationLink
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -53,15 +53,15 @@ class NullPointerCheck {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
-                    fun visit(v: MemberCallExpr) {
+                    fun visit(v: MemberCallExpression) {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: MemberExpr) {
+                    fun visit(v: MemberExpression) {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: SubscriptionExpr) {
+                    fun visit(v: SubscriptionExpression) {
                         handleHasBase(v)
                     }
                 }
@@ -114,13 +114,13 @@ class NullPointerCheck {
 
                     val path =
                         it.followPrevEOG { edge ->
-                            return@followPrevEOG edge.start is IfStmt ||
-                                edge.start is FunctionDecl
+                            return@followPrevEOG edge.start is IfStatement ||
+                                edge.start is FunctionDeclaration
                         }
 
                     val last = path?.last()?.start
 
-                    if (last is IfStmt) {
+                    if (last is IfStatement) {
                         println()
                         println(
                             "Branch depends on ${AttributedString("IfStatement", DEFAULT.foreground(GREEN)).toAnsi()} with condition ${AttributedString(last.condition?.code, DEFAULT.foreground(CYAN)).toAnsi()} in ${last.fancyLocationLink()}"

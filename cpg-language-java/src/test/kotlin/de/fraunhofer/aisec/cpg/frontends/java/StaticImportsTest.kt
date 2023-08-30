@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -68,12 +68,12 @@ internal class StaticImportsTest : BaseTest() {
         assertNotNull(staticField)
         assertTrue(staticField.modifiers.contains("static"))
 
-        val memberExprExpressions = main.allChildren<MemberExpr>()
+        val memberExpressionExpressions = main.allChildren<MemberExpression>()
         // we have two member expressions, one to the field and one to the method
-        assertEquals(2, memberExprExpressions.size)
+        assertEquals(2, memberExpressionExpressions.size)
 
         // we want the one to the field
-        val usage = memberExprExpressions[{ it.type.name.localName == "int" }]
+        val usage = memberExpressionExpressions[{ it.type.name.localName == "int" }]
         assertNotNull(usage)
         assertEquals(staticField, usage.refersTo)
     }
@@ -95,7 +95,7 @@ internal class StaticImportsTest : BaseTest() {
             when (call.name.localName) {
                 "a" -> {
                     assertEquals(listOf(findByUniqueName(methods, "a")), call.invokes)
-                    assertTrue((call.invokes[0] as MethodDecl).isStatic)
+                    assertTrue((call.invokes[0] as MethodDeclaration).isStatic)
                 }
                 "b" -> {
                     val bs = methods { it.name.localName == "b" && it.isStatic }
@@ -114,7 +114,7 @@ internal class StaticImportsTest : BaseTest() {
         assertTrue(staticField.modifiers.contains("static"))
         assertFalse(nonStaticField.modifiers.contains("static"))
 
-        val declaredReferences = main.allChildren<MemberExpr>()
+        val declaredReferences = main.allChildren<MemberExpression>()
         val usage = findByUniqueName(declaredReferences, "staticField")
         assertEquals(staticField, usage.refersTo)
 

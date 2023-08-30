@@ -29,14 +29,14 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
-import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import kotlin.test.*
@@ -82,7 +82,7 @@ class FluentTest {
         assertLocalName("argc", argc)
         assertLocalName("int", argc.type)
 
-        val body = main.body as? CompoundStmt
+        val body = main.body as? BlockStatement
         assertNotNull(body)
         assertTrue {
             body.scope is FunctionScope
@@ -90,11 +90,11 @@ class FluentTest {
         }
 
         // First line should be a DeclarationStatement
-        val declarationStmt = main[0] as? DeclarationStmt
-        assertNotNull(declarationStmt)
-        assertTrue(declarationStmt.scope is BlockScope)
+        val declarationStatement = main[0] as? DeclarationStatement
+        assertNotNull(declarationStatement)
+        assertTrue(declarationStatement.scope is BlockScope)
 
-        val variable = declarationStmt.singleDeclaration as? VariableDecl
+        val variable = declarationStatement.singleDeclaration as? VariableDeclaration
         assertNotNull(variable)
         assertTrue(variable.scope is BlockScope)
         assertLocalName("a", variable)
@@ -105,21 +105,21 @@ class FluentTest {
         assertEquals(1, lit1.value)
 
         // Second line should be an IfStatement
-        val ifStmt = main[1] as? IfStmt
-        assertNotNull(ifStmt)
-        assertTrue(ifStmt.scope is BlockScope)
+        val ifStatement = main[1] as? IfStatement
+        assertNotNull(ifStatement)
+        assertTrue(ifStatement.scope is BlockScope)
 
-        val condition = ifStmt.condition as? BinaryOp
+        val condition = ifStatement.condition as? BinaryOperator
         assertNotNull(condition)
         assertEquals("==", condition.operatorCode)
 
         // The "then" should have a call to "printf" with argument "then"
-        var printf = ifStmt.thenStatement.calls["printf"]
+        var printf = ifStatement.thenStatement.calls["printf"]
         assertNotNull(printf)
         assertEquals("then", printf.arguments[0]<Literal<*>>()?.value)
 
         // The "else" contains another if (else-if) and a call to "printf" with argument "elseIf"
-        val elseIf = ifStmt.elseStatement as? IfStmt
+        val elseIf = ifStatement.elseStatement as? IfStatement
         assertNotNull(elseIf)
 
         printf = elseIf.thenStatement.calls["printf"]
@@ -139,20 +139,20 @@ class FluentTest {
         assertEquals(1, lit1.value)
 
         // Fourth line is the CallExpression (containing another MemberCallExpression as argument)
-        val call = main[3] as? CallExpr
+        val call = main[3] as? CallExpression
         assertNotNull(call)
         assertLocalName("do", call)
 
-        val mce = call.arguments[0] as? MemberCallExpr
+        val mce = call.arguments[0] as? MemberCallExpression
         assertNotNull(mce)
         assertFullName("UNKNOWN.func", mce)
 
         // Fifth line is the ReturnStatement
-        val returnStmt = main[4] as? ReturnStmt
-        assertNotNull(returnStmt)
-        assertNotNull(returnStmt.scope)
+        val returnStatement = main[4] as? ReturnStatement
+        assertNotNull(returnStatement)
+        assertNotNull(returnStatement.scope)
 
-        val binOp = returnStmt.returnValue as? BinaryOp
+        val binOp = returnStatement.returnValue as? BinaryOperator
         assertNotNull(binOp)
         assertNotNull(binOp.scope)
         assertEquals("+", binOp.operatorCode)

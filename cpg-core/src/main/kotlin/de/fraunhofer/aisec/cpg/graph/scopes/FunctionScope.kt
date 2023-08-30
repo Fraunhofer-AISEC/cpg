@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
-class FunctionScope(astNode: FunctionDecl) : ValueDeclarationScope(astNode) {
+class FunctionScope(astNode: FunctionDeclaration) : ValueDeclarationScope(astNode) {
     @Transient var catchesOrRelays = mutableMapOf<Type, MutableList<Node>>()
 }

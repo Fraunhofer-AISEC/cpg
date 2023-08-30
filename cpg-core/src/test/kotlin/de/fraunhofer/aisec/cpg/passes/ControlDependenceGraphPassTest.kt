@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,7 +48,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(result)
         val main = result.functions["main"]
         assertNotNull(main)
-        val if0 = (main.body as CompoundStmt).statements[1]
+        val if0 = (main.body as BlockStatement).statements[1]
         assertNotNull(if0)
         assertEquals(1, if0.prevCDG.size)
         assertTrue(main in if0.prevCDG)
@@ -90,7 +90,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(result)
         val main = result.functions["main"]
         assertNotNull(main)
-        val forEachStmt = (main.body as CompoundStmt).statements[1]
+        val forEachStmt = (main.body as BlockStatement).statements[1]
         assertNotNull(forEachStmt)
         assertEquals(1, forEachStmt.prevCDG.size)
         assertTrue(main in forEachStmt.prevCDG)

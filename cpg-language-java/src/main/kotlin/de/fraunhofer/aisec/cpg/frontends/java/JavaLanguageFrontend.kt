@@ -56,8 +56,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -98,7 +98,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     }
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDecl {
+    override fun parse(file: File): TranslationUnitDeclaration {
         // load in the file
         return try {
             val parserConfiguration = ParserConfiguration()
@@ -114,16 +114,17 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDecl(file.toString(), context.toString())
+            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context?.packageDeclaration?.orElse(null)
-            var namespaceDecl: NamespaceDecl? = null
+            var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
-                namespaceDecl = newNamespaceDecl(packDecl.name.asString(), codeOf(packDecl))
-                setCodeAndLocation(namespaceDecl, packDecl)
-                scopeManager.addDeclaration(namespaceDecl)
-                scopeManager.enterScope(namespaceDecl)
+                namespaceDeclaration =
+                    newNamespaceDeclaration(packDecl.name.asString(), codeOf(packDecl))
+                setCodeAndLocation(namespaceDeclaration, packDecl)
+                scopeManager.addDeclaration(namespaceDeclaration)
+                scopeManager.enterScope(namespaceDeclaration)
             }
 
             for (type in context?.types ?: listOf()) {
@@ -135,12 +136,12 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             }
 
             for (anImport in context?.imports ?: listOf()) {
-                val incl = newIncludeDecl(anImport.nameAsString)
+                val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
             }
 
-            if (namespaceDecl != null) {
-                scopeManager.leaveScope(namespaceDecl)
+            if (namespaceDeclaration != null) {
+                scopeManager.leaveScope(namespaceDeclaration)
             }
             bench.addMeasurement()
             fileDeclaration
@@ -370,7 +371,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     private fun getFQNInCurrentPackage(simpleName: String): String {
         // TODO: Somehow we cannot use scopeManager.currentNamespace. not sure why
         val theScope =
-            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDecl }
+            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
         return theScope.name?.fqn(simpleName).toString()

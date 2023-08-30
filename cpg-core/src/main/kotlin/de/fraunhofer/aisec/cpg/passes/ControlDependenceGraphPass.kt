@@ -29,14 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.IfStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOp
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
@@ -47,7 +47,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
         // Nothing to do
     }
 
-    override fun accept(tu: TranslationUnitDecl) {
+    override fun accept(tu: TranslationUnitDeclaration) {
         tu.functions.forEach(::handle)
     }
 
@@ -62,7 +62,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
      *    parent node and the path(s) through which the [BranchingNode] node is reachable. 3.c)
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
-    private fun handle(functionDecl: FunctionDecl) {
+    private fun handle(functionDecl: FunctionDeclaration) {
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
         // the node, we use the dominator's state instead (i.e., we move the node one layer upwards)
@@ -125,7 +125,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
      *
      * This method collects the merging points. It also includes the function declaration itself.
      */
-    private fun getBranchingNodeConditions(functionDecl: FunctionDecl) =
+    private fun getBranchingNodeConditions(functionDecl: FunctionDeclaration) =
         mapOf(
             // For the function declaration, there's only the path through the function declaration
             // itself.
@@ -218,8 +218,9 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
     return if (this.getProperty(Properties.BRANCH) == true) {
         true
     } else
-        (this.start is IfStmt || this.start is ConditionalExpr || this.start is ShortCircuitOp) &&
-            this.getProperty(Properties.BRANCH) == false
+        (this.start is IfStatement ||
+            this.start is ConditionalExpression ||
+            this.start is ShortCircuitOperator) && this.getProperty(Properties.BRANCH) == false
 }
 
 /**

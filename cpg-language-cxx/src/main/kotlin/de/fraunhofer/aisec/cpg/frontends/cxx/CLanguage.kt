@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
@@ -112,10 +112,10 @@ open class CLanguage :
         )
 
     override fun refineNormalCallResolution(
-        call: CallExpr,
+        call: CallExpression,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDecl
-    ): List<FunctionDecl> {
+        currentTU: TranslationUnitDeclaration
+    ): List<FunctionDeclaration> {
         val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for implicit casts
@@ -125,20 +125,20 @@ open class CLanguage :
     }
 
     override fun refineMethodCallResolution(
-        curClass: RecordDecl?,
+        curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>,
-        call: CallExpr,
+        call: CallExpression,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDecl,
+        currentTU: TranslationUnitDeclaration,
         callResolver: CallResolver
-    ): List<FunctionDecl> = emptyList()
+    ): List<FunctionDeclaration> = emptyList()
 
     override fun refineInvocationCandidatesFromRecord(
-        recordDecl: RecordDecl,
-        call: CallExpr,
+        recordDeclaration: RecordDeclaration,
+        call: CallExpression,
         namePattern: Pattern,
         ctx: TranslationContext
-    ): List<FunctionDecl> = emptyList()
+    ): List<FunctionDeclaration> = emptyList()
 
     /**
      * @param call we want to find invocation targets for by performing implicit casts
@@ -146,9 +146,9 @@ open class CLanguage :
      * @return list of invocation candidates by applying implicit casts
      */
     protected fun resolveWithImplicitCastFunc(
-        call: CallExpr,
+        call: CallExpression,
         ctx: TranslationContext,
-    ): List<FunctionDecl> {
+    ): List<FunctionDeclaration> {
         val initialInvocationCandidates =
             listOf(
                 *ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray()

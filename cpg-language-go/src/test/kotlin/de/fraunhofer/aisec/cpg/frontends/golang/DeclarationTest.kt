@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
@@ -53,14 +53,14 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDecl>("main")
+        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
         assertNotNull(main)
 
-        val myStruct = main.byNameOrNull<RecordDecl>("main.MyStruct")
+        val myStruct = main.byNameOrNull<RecordDeclaration>("main.MyStruct")
         assertNotNull(myStruct)
 
         // Receiver should be null since its unnamed
-        val myFunc = myStruct.byNameOrNull<MethodDecl>("MyFunc")
+        val myFunc = myStruct.byNameOrNull<MethodDeclaration>("MyFunc")
         assertNotNull(myFunc)
         assertNull(myFunc.receiver)
     }
@@ -78,11 +78,11 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDecl>("main")
+        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
         assertNotNull(main)
 
         // Parameter should be there but not have a name
-        val myGlobalFunc = main.byNameOrNull<FunctionDecl>("MyGlobalFunc")
+        val myGlobalFunc = main.byNameOrNull<FunctionDeclaration>("MyGlobalFunc")
         assertNotNull(myGlobalFunc)
 
         val param = myGlobalFunc.parameters.firstOrNull()
@@ -103,13 +103,13 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDecl>("main")
+        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
         assertNotNull(main)
 
-        val myInterface = main.byNameOrNull<RecordDecl>("main.MyInterface")
+        val myInterface = main.byNameOrNull<RecordDeclaration>("main.MyInterface")
         assertNotNull(myInterface)
 
-        val myOtherInterface = main.byNameOrNull<RecordDecl>("main.MyOtherInterface")
+        val myOtherInterface = main.byNameOrNull<RecordDeclaration>("main.MyOtherInterface")
         assertNotNull(myOtherInterface)
 
         // MyOtherInterface should be in the superClasses and superTypeDeclarations of MyInterface,

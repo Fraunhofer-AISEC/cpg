@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.DeclSequence
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
-import de.fraunhofer.aisec.cpg.graph.newNamespaceDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -77,7 +77,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     var expressionHandler = ExpressionHandler(this)
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDecl {
+    override fun parse(file: File): TranslationUnitDeclaration {
         // Make sure, that our top level is set either way
         val topLevel =
             if (config.topLevel != null) {
@@ -102,7 +102,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         currentFile = f
         currentFileSet = fset
 
-        val tu = newTranslationUnitDecl(file.absolutePath, rawNode = f)
+        val tu = newTranslationUnitDeclaration(file.absolutePath, rawNode = f)
         scopeManager.resetToGlobal(tu)
         currentTU = tu
 
@@ -111,7 +111,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             scopeManager.addDeclaration(import)
         }
 
-        val p = newNamespaceDecl(f.name.name)
+        val p = newNamespaceDeclaration(f.name.name)
         scopeManager.enterScope(p)
 
         try {
@@ -134,7 +134,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             // Retrieve all top level declarations. One "Decl" could potentially
             // contain multiple CPG declarations.
             val declaration = declarationHandler.handle(decl)
-            if (declaration is DeclSequence) {
+            if (declaration is DeclarationSequence) {
                 declaration.declarations.forEach { scopeManager.addDeclaration(it) }
             } else {
                 scopeManager.addDeclaration(declaration)

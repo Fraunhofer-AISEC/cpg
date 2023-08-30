@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDecl
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -44,7 +44,7 @@ import org.bytedeco.llvm.global.LLVM.*
  * [Expression]. Operands are basically arguments to an instruction.
  */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpr, lang) {
+    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it) }
     }
@@ -85,7 +85,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMMetadataAsValueValueKind,
             LLVMInlineAsmValueKind -> {
                 // TODO
-                return newProblemExpr(
+                return newProblemExpression(
                     "Metadata or ASM value kind not supported yet",
                     ProblemNode.ProblemType.TRANSLATION,
                     frontend.codeOf(value)
@@ -118,7 +118,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     newReference("poison", cpgType, "poison")
                 } else {
                     log.error("Unknown expression {}", kind)
-                    newProblemExpr(
+                    newProblemExpression(
                         "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.codeOf(value)
@@ -226,7 +226,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMAdd,
                 LLVMFAdd ->
                     frontend.statementHandler.handleBinaryOperator(value, "+", false) as? Expression
-                        ?: newProblemExpr(
+                        ?: newProblemExpression(
                             "Wrong type of constant binary operation +",
                             ProblemNode.ProblemType.TRANSLATION,
                             frontend.codeOf(value)
@@ -234,7 +234,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMSub,
                 LLVMFSub ->
                     frontend.statementHandler.handleBinaryOperator(value, "-", false) as? Expression
-                        ?: newProblemExpr(
+                        ?: newProblemExpression(
                             "Wrong type of constant binary operation -",
                             ProblemNode.ProblemType.TRANSLATION,
                             frontend.codeOf(value)
@@ -242,20 +242,20 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMAShr ->
                     frontend.statementHandler.handleBinaryOperator(value, ">>", false)
                         as? Expression
-                        ?: newProblemExpr(
+                        ?: newProblemExpression(
                             "Wrong type of constant binary operation >>",
                             ProblemNode.ProblemType.TRANSLATION,
                             frontend.codeOf(value)
                         )
                 LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value) as? Expression
-                        ?: newProblemExpr(
+                        ?: newProblemExpression(
                             "Wrong type of constant comparison",
                             ProblemNode.ProblemType.TRANSLATION,
                             frontend.codeOf(value)
                         )
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
-                    newProblemExpr(
+                    newProblemExpression(
                         "Not handling constant expression of opcode $kind yet",
                         ProblemNode.ProblemType.TRANSLATION,
                         frontend.codeOf(value)
@@ -270,15 +270,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
-     * [ConstructExpr], with the individual struct members being added as arguments.
+     * [ConstructExpression], with the individual struct members being added as arguments.
      */
     private fun handleConstantStructValue(value: LLVMValueRef): Expression {
         // retrieve the type
         val type = frontend.typeOf(value)
 
-        val expr: ConstructExpr = newConstructExpr(frontend.codeOf(value))
+        val expr: ConstructExpression = newConstructExpression(frontend.codeOf(value))
         // map the construct expression to the record declaration of the type
-        expr.instantiates = (type as? ObjectType)?.recordDecl
+        expr.instantiates = (type as? ObjectType)?.recordDeclaration
 
         // loop through the operands
         for (i in 0 until LLVMGetNumOperands(value)) {
@@ -296,7 +296,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant array value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Their element
      * types and number of elements needs to match the specified array type. We parse the array
-     * contents as an [InitializerListExpr], similar to the C syntax of `int a[] = { 1, 2 }`.
+     * contents as an [InitializerListExpression], similar to the C syntax of `int a[] = { 1, 2 }`.
      *
      * There is a special case, in which LLVM allows to represent the array as a double-quoted
      * string, prefixed with `c`. In this case we
@@ -309,7 +309,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val arrayType = LLVMTypeOf(valueRef)
-        val list = newInitializerListExpr(frontend.typeOf(valueRef), frontend.codeOf(valueRef))
+        val list =
+            newInitializerListExpression(frontend.typeOf(valueRef), frontend.codeOf(valueRef))
         val length =
             if (LLVMIsAConstantDataArray(valueRef) != null) {
                 LLVMGetArrayLength(arrayType)
@@ -334,7 +335,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Recursively creates a structure of [type] and initializes all its fields with a `null`-
      * [Literal] as this is closest to `undef`.
      *
-     * Returns a [ConstructExpr].
+     * Returns a [ConstructExpression].
      */
     private fun initializeAsUndef(type: Type, code: String?): Expression {
         return if (
@@ -342,13 +343,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         ) {
             newLiteral(null, type, code)
         } else {
-            val expr: ConstructExpr = newConstructExpr(code)
+            val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
-            expr.instantiates = (type as? ObjectType)?.recordDecl
+            expr.instantiates = (type as? ObjectType)?.recordDeclaration
             if (expr.instantiates == null) return expr
 
             // loop through the operands
-            for (field in (expr.instantiates as RecordDecl).fields) {
+            for (field in (expr.instantiates as RecordDeclaration).fields) {
                 // and handle them as expressions themselves
                 val arg = initializeAsUndef(field.type, code)
                 expr.addArgument(arg)
@@ -361,7 +362,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Recursively creates a structure of [type] and initializes all its fields with 0-[Literal].
      *
-     * Returns a [ConstructExpr].
+     * Returns a [ConstructExpression].
      */
     private fun initializeAsZero(type: Type, code: String?): Expression {
         return if (
@@ -369,13 +370,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         ) {
             newLiteral(0, type, code)
         } else {
-            val expr: ConstructExpr = newConstructExpr(code)
+            val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
-            expr.instantiates = (type as? ObjectType)?.recordDecl
+            expr.instantiates = (type as? ObjectType)?.recordDeclaration
             if (expr.instantiates == null) return expr
 
             // loop through the operands
-            for (field in (expr.instantiates as RecordDecl).fields) {
+            for (field in (expr.instantiates as RecordDeclaration).fields) {
                 // and handle them as expressions themselves
                 val arg = initializeAsZero(field.type, code)
                 expr.addArgument(arg)
@@ -397,10 +398,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [SubscriptionExpr] or an [MemberExpr], depending on
-     * whether the accessed variable is a struct or an array. Furthermore, since `getelementptr`
-     * allows an (infinite) chain of sub-element access within a single instruction, we need to
-     * unwrap those into individual expressions.
+     * We try to convert it either into an [SubscriptionExpression] or an [MemberExpression],
+     * depending on whether the accessed variable is a struct or an array. Furthermore, since
+     * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
+     * we need to unwrap those into individual expressions.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =
@@ -429,7 +430,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         var base = operand
 
         var expr: Expression =
-            newProblemExpr(
+            newProblemExpression(
                 "Default node for getelementptr",
                 ProblemNode.ProblemType.TRANSLATION,
                 frontend.codeOf(instr)
@@ -456,7 +457,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // check, if the current base type is a pointer -> then we need to handle this as an
             // array access
             if (baseType is PointerType) {
-                val arrayExpr = newSubscriptionExpr("")
+                val arrayExpr = newSubscriptionExpression("")
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
@@ -470,17 +471,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             } else {
                 // otherwise, this is a member field access, where the index denotes the n-th field
                 // in the structure
-                var record = (baseType as? ObjectType)?.recordDecl
+                var record = (baseType as? ObjectType)?.recordDeclaration
 
                 if (record == null) {
                     record =
                         frontend.scopeManager
-                            .resolve<RecordDecl>(frontend.scopeManager.globalScope, true) {
+                            .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
                                 it.name == baseType.name
                             }
                             .firstOrNull()
                     if (record != null) {
-                        (baseType as? ObjectType)?.recordDecl = record
+                        (baseType as? ObjectType)?.recordDeclaration = record
                     }
                 }
 
@@ -498,7 +499,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
                 // look for the field
-                val field: FieldDecl?
+                val field: FieldDeclaration?
                 val fieldName: String =
                     if (index is Int) {
                         field = record.fields["field_$index"]
@@ -514,7 +515,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: unknownType()
 
                 // construct our member expression
-                expr = newMemberExpr(fieldName, base, field?.type ?: unknownType(), ".", "")
+                expr = newMemberExpression(fieldName, base, field?.type ?: unknownType(), ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -525,7 +526,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
         // to do a final unary & operation
         if (isGetElementPtr) {
-            val ref = newUnaryOp("&", postfix = false, prefix = true, code = "")
+            val ref = newUnaryOperator("&", postfix = false, prefix = true, code = "")
             ref.input = expr
             expr = ref
         }
@@ -535,14 +536,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the [`select`](https://llvm.org/docs/LangRef.html#i-select) instruction, which
-     * behaves like a [ConditionalExpr].
+     * behaves like a [ConditionalExpression].
      */
     fun handleSelect(instr: LLVMValueRef): Expression {
         val cond = frontend.getOperandValueAtIndex(instr, 0)
         val value1 = frontend.getOperandValueAtIndex(instr, 1)
         val value2 = frontend.getOperandValueAtIndex(instr, 2)
 
-        return newConditionalExpr(cond, value1, value2, value1.type)
+        return newConditionalExpression(cond, value1, value2, value1.type)
     }
 
     /**
@@ -550,7 +551,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [cast instruction](https://llvm.org/docs/LangRef.html#conversion-operations).
      */
     fun handleCastInstruction(instr: LLVMValueRef): Expression {
-        val castExpr = newCastExpr(frontend.codeOf(instr))
+        val castExpr = newCastExpression(frontend.codeOf(instr))
         castExpr.castType = frontend.typeOf(instr)
         castExpr.expression = frontend.getOperandValueAtIndex(instr, 0)
         return castExpr

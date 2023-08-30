@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -127,7 +127,7 @@ class TypePropagationTest {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val assign = (main.body as? CompoundStmt)?.statements?.get(2) as? AssignExpr
+            val assign = (main.body as? BlockStatement)?.statements?.get(2) as? AssignExpression
             assertNotNull(assign)
 
             val shortVar = main.variables["shortVar"]
@@ -149,12 +149,13 @@ class TypePropagationTest {
             assertEquals(primitiveType("short"), shortVarRefLhs.type)
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
-            val shortVarRefReturnValue = main.allChildren<ReturnStmt>().firstOrNull()?.returnValue
+            val shortVarRefReturnValue =
+                main.allChildren<ReturnStatement>().firstOrNull()?.returnValue
             assertNotNull(shortVarRefReturnValue)
             // Finally, the assigned types should propagate along the DFG
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
-            val refersTo = shortVarRefLhs.refersTo as? VariableDecl
+            val refersTo = shortVarRefLhs.refersTo as? VariableDeclaration
             assertNotNull(refersTo)
             assertIs<IntegerType>(refersTo.type)
             assertLocalName("short", refersTo.type)
@@ -379,7 +380,7 @@ class TypePropagationTest {
                     .commonType
             )
 
-            val assign = (body as CompoundStmt).statements<AssignExpr>(1)
+            val assign = (body as BlockStatement).statements<AssignExpression>(1)
             assertNotNull(assign)
 
             val bb = variables["bb"]
@@ -396,10 +397,10 @@ class TypePropagationTest {
                 bb.assignedTypes
             )
 
-            val returnStmt = (body as CompoundStmt).statements<ReturnStmt>(3)
-            assertNotNull(returnStmt)
+            val returnStatement = (body as BlockStatement).statements<ReturnStatement>(3)
+            assertNotNull(returnStatement)
 
-            val returnValue = returnStmt.returnValue
+            val returnValue = returnStatement.returnValue
             assertNotNull(returnValue)
             assertEquals(objectType("BaseClass").pointer(), returnValue.type)
             // The assigned types should now contain both classes and the base class in a non-array

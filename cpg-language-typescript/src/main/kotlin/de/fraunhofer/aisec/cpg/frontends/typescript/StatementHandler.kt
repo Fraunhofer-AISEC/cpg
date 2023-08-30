@@ -26,18 +26,18 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.newCompoundStmt
-import de.fraunhofer.aisec.cpg.graph.newDeclarationStmt
-import de.fraunhofer.aisec.cpg.graph.newReturnStmt
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStmt
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStmt
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
+import de.fraunhofer.aisec.cpg.graph.newBlockStatement
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpr
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpr, lang) {
+    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -52,13 +52,13 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
         }
 
-        return ProblemExpr("No handler was implemented for nodes of type " + node.type)
+        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = newDeclarationStmt(this.frontend.codeOf(node))
+        val statement = newDeclarationStatement(this.frontend.codeOf(node))
 
         val decl = this.frontend.declarationHandler.handle(node)
 
@@ -71,8 +71,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         return statement
     }
 
-    private fun handleReturnStatement(node: TypeScriptNode): ReturnStmt {
-        val returnStmt = newReturnStmt(this.frontend.codeOf(node))
+    private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
+        val returnStmt = newReturnStatement(this.frontend.codeOf(node))
 
         node.children?.first()?.let {
             returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
@@ -81,8 +81,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         return returnStmt
     }
 
-    private fun handleBlock(node: TypeScriptNode): CompoundStmt {
-        val block = newCompoundStmt(this.frontend.codeOf(node))
+    private fun handleBlock(node: TypeScriptNode): BlockStatement {
+        val block = newBlockStatement(this.frontend.codeOf(node))
 
         node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
 
@@ -94,11 +94,11 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         // this is possible because in our CPG, expression inherit from statements
         // and can be directly added to a compound statement
         return node.children?.first()?.let { this.frontend.expressionHandler.handle(it) }
-            ?: ProblemExpr("problem parsing expression")
+            ?: ProblemExpression("problem parsing expression")
     }
 
-    private fun handleVariableStatement(node: TypeScriptNode): DeclarationStmt {
-        val statement = newDeclarationStmt(this.frontend.codeOf(node))
+    private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
+        val statement = newDeclarationStatement(this.frontend.codeOf(node))
 
         // the declarations are contained in a VariableDeclarationList
         val nodes = node.firstChild("VariableDeclarationList")?.children

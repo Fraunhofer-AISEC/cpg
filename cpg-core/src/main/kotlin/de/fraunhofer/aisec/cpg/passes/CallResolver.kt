@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDecl.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
@@ -45,17 +45,17 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * Resolves [CallExpr] and [NewExpr] targets.
+ * Resolves [CallExpression] and [NewExpression] targets.
  *
- * A [CallExpr] specifies the method that wants to be called via [CallExpr.name]. The call target is
- * a method of the same class the caller belongs to, so the name is resolved to the appropriate
- * [MethodDecl]. This pass also takes into consideration that a method might not be present in the
- * current class, but rather has its implementation in a superclass, and sets the pointer
- * accordingly.
+ * A [CallExpression] specifies the method that wants to be called via [CallExpression.name]. The
+ * call target is a method of the same class the caller belongs to, so the name is resolved to the
+ * appropriate [MethodDeclaration]. This pass also takes into consideration that a method might not
+ * be present in the current class, but rather has its implementation in a superclass, and sets the
+ * pointer accordingly.
  *
- * Constructor calls with [ConstructExpr] are resolved in such a way that their
- * [ConstructExpr.instantiates] points to the correct [RecordDecl]. Additionally, the
- * [ConstructExpr.constructor] is set to the according [ConstructorDecl].
+ * Constructor calls with [ConstructExpression] are resolved in such a way that their
+ * [ConstructExpression.instantiates] points to the correct [RecordDeclaration]. Additionally, the
+ * [ConstructExpression.constructor] is set to the according [ConstructorDeclaration].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -66,7 +66,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
      * their parent record (more accurately their type). Seems to be only used by
      * [getOverridingCandidates] and should probably be replaced through a scope manager call.
      */
-    protected val containingType = mutableMapOf<FunctionDecl, Type>()
+    protected val containingType = mutableMapOf<FunctionDeclaration, Type>()
 
     override fun cleanup() {
         containingType.clear()
@@ -96,20 +96,20 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun registerMethods(currentClass: RecordDecl?, currentNode: Node?) {
-        if (currentNode is MethodDecl && currentClass != null) {
+    protected fun registerMethods(currentClass: RecordDeclaration?, currentNode: Node?) {
+        if (currentNode is MethodDeclaration && currentClass != null) {
             containingType[currentNode] = currentNode.objectType(currentClass.name)
         }
     }
 
     protected fun fixInitializers(node: Node?) {
-        if (node is VariableDecl) {
+        if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val typeString = node.type.root.name
             if (typeString in recordMap) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = node.newConstructExpr(typeString, "$typeString()")
+                    val initializer = node.newConstructExpression(typeString, "$typeString()")
                     initializer.type = node.type
                     initializer.isImplicit = true
                     node.initializer = initializer
@@ -117,14 +117,15 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                         addImplicitTemplateParametersToCall(it, initializer)
                     }
                 } else if (
-                    currInitializer !is ConstructExpr &&
-                        currInitializer is CallExpr &&
+                    currInitializer !is ConstructExpression &&
+                        currInitializer is CallExpression &&
                         currInitializer.name.localName == node.type.root.name.localName
                 ) {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
-                    val initializer = node.newConstructExpr(typeString, "$typeString($signature)")
+                    val initializer =
+                        node.newConstructExpression(typeString, "$typeString($signature)")
                     initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     initializer.isImplicit = true
@@ -137,20 +138,20 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     protected fun handleNode(node: Node?) {
         when (node) {
-            is TranslationUnitDecl -> {
+            is TranslationUnitDeclaration -> {
                 currentTU = node
             }
-            is ConstructorCallExpr -> {
+            is ConstructorCallExpression -> {
                 handleExplicitConstructorInvocation(node)
             }
-            is ConstructExpr -> {
+            is ConstructExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
                 // resolve this call's signature, we need to make sure any call expression arguments
                 // are fully resolved
                 handleArguments(node)
                 handleConstructExpression(node)
             }
-            is CallExpr -> {
+            is CallExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
                 // resolve this call's signature, we need to make sure any call expression arguments
                 // are fully resolved
@@ -160,7 +161,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleCallExpression(curClass: RecordDecl?, call: CallExpr) {
+    protected fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
         // Function pointers are handled by extra pass, so we are not resolving them here
         if (call.callee?.type is FunctionPointerType) {
             return
@@ -206,8 +207,8 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                     // unit. Nothing else is allowed (fow now)
                     val func =
                         when (val start = scope?.astNode) {
-                            is TranslationUnitDecl -> start.inferFunction(call, ctx = ctx)
-                            is NamespaceDecl -> start.inferFunction(call, ctx = ctx)
+                            is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
+                            is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
                             else -> null
                         }
 
@@ -229,17 +230,18 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     /**
-     * Resolves [call] to a list of [FunctionDecl] nodes, based on the [CallExpr.callee] property.
+     * Resolves [call] to a list of [FunctionDeclaration] nodes, based on the
+     * [CallExpression.callee] property.
      *
      * In case a resolution is not possible, `null` can be returned.
      */
     protected fun resolveCallee(
         callee: Expression?,
-        curClass: RecordDecl?,
-        call: CallExpr
-    ): List<FunctionDecl>? {
+        curClass: RecordDeclaration?,
+        call: CallExpression
+    ): List<FunctionDeclaration>? {
         return when (callee) {
-            is MemberExpr -> resolveMemberCallee(callee, curClass, call)
+            is MemberExpression -> resolveMemberCallee(callee, curClass, call)
             is Reference -> resolveReferenceCallee(callee, curClass, call)
             null -> {
                 Util.warnWithFileLocation(
@@ -260,18 +262,18 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleArguments(call: CallExpr) {
+    protected fun handleArguments(call: CallExpression) {
         val worklist: Deque<Node> = ArrayDeque()
         call.arguments.forEach { worklist.push(it) }
         while (worklist.isNotEmpty()) {
             val curr = worklist.pop()
-            if (curr is CallExpr) {
+            if (curr is CallExpression) {
                 handleNode(curr)
             } else {
                 val it = Strategy.AST_FORWARD(curr)
                 while (it.hasNext()) {
                     val astChild = it.next()
-                    if (astChild !is RecordDecl) {
+                    if (astChild !is RecordDeclaration) {
                         worklist.push(astChild)
                     }
                 }
@@ -280,13 +282,14 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     /**
-     * Resolves a [CallExpr.callee] of type [Reference] to a possible list of [FunctionDecl] nodes.
+     * Resolves a [CallExpression.callee] of type [Reference] to a possible list of
+     * [FunctionDeclaration] nodes.
      */
     protected fun resolveReferenceCallee(
         callee: Reference,
-        curClass: RecordDecl?,
-        call: CallExpr
-    ): List<FunctionDecl> {
+        curClass: RecordDeclaration?,
+        call: CallExpression
+    ): List<FunctionDeclaration> {
         val language = call.language
 
         return if (curClass == null) {
@@ -308,21 +311,22 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     /**
-     * Resolves a [CallExpr.callee] of type [MemberExpr] to a possible list of [FunctionDecl] nodes.
+     * Resolves a [CallExpression.callee] of type [MemberExpression] to a possible list of
+     * [FunctionDeclaration] nodes.
      *
      * TODO: Change callee to MemberExpression, but we can't since resolveReferenceCallee somehow
      *   delegates resolving of regular function calls within classes to this function (meh!)
      */
     fun resolveMemberCallee(
         callee: Reference,
-        curClass: RecordDecl?,
-        call: CallExpr
-    ): List<FunctionDecl> {
+        curClass: RecordDeclaration?,
+        call: CallExpression
+    ): List<FunctionDeclaration> {
         // We need to adjust certain types of the base in case of a super call and we delegate this.
         // If that is successful, we can continue with regular resolving
         if (
             curClass != null &&
-                callee is MemberExpr &&
+                callee is MemberExpression &&
                 callee.base is Reference &&
                 isSuperclassReference(callee.base as Reference)
         ) {
@@ -364,10 +368,10 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     protected fun retrieveInvocationCandidatesFromCall(
-        call: CallExpr,
-        curClass: RecordDecl?,
+        call: CallExpression,
+        curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>
-    ): MutableList<FunctionDecl> {
+    ): MutableList<FunctionDeclaration> {
         return if (call.language is HasComplexCallResolution) {
             (call.language as HasComplexCallResolution)
                 .refineMethodCallResolution(
@@ -392,8 +396,8 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
      */
     protected fun createMethodDummies(
         possibleContainingTypes: Set<Type>,
-        call: CallExpr
-    ): List<FunctionDecl> {
+        call: CallExpression
+    ): List<FunctionDeclaration> {
         return possibleContainingTypes
             .mapNotNull {
                 var record = recordMap[it.root.name]
@@ -414,18 +418,18 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
      * @param call
      * @return true if we should stop searching parent, false otherwise
      */
-    protected fun shouldSearchForInvokesInParent(call: CallExpr): Boolean {
+    protected fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
         return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
-    protected fun handleConstructExpression(constructExpr: ConstructExpr) {
+    protected fun handleConstructExpression(constructExpr: ConstructExpression) {
         if (constructExpr.instantiates != null && constructExpr.constructor != null) return
         val typeName = constructExpr.type.name
         val recordDeclaration = recordMap[typeName]
         constructExpr.instantiates = recordDeclaration
         for (template in templateList) {
             if (
-                template is ClassTemplateDecl &&
+                template is RecordTemplateDeclaration &&
                     recordDeclaration != null &&
                     recordDeclaration in template.realizations &&
                     (constructExpr.templateParameters.size <= template.parameters.size)
@@ -461,14 +465,14 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleExplicitConstructorInvocation(eci: ConstructorCallExpr) {
+    protected fun handleExplicitConstructorInvocation(eci: ConstructorCallExpression) {
         eci.containingClass?.let { containingClass ->
             val recordDeclaration = recordMap[eci.parseName(containingClass)]
             val signature = eci.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
                     getConstructorDeclarationForExplicitInvocation(signature, recordDeclaration)
-                val invokes = mutableListOf<FunctionDecl>()
+                val invokes = mutableListOf<FunctionDeclaration>()
                 invokes.add(constructor)
                 eci.invokes = invokes
             }
@@ -477,7 +481,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     protected fun getPossibleContainingTypes(node: Node?): Set<Type> {
         val possibleTypes = mutableSetOf<Type>()
-        if (node is MemberCallExpr) {
+        if (node is MemberCallExpression) {
             node.base?.let { base ->
                 possibleTypes.add(base.type)
                 possibleTypes.addAll(base.assignedTypes)
@@ -492,29 +496,29 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     fun getInvocationCandidatesFromRecord(
-        recordDecl: RecordDecl?,
+        recordDeclaration: RecordDeclaration?,
         name: String?,
-        call: CallExpr
-    ): List<FunctionDecl> {
-        if (recordDecl == null) return listOf()
+        call: CallExpression
+    ): List<FunctionDeclaration> {
+        if (recordDeclaration == null) return listOf()
 
         val namePattern =
             Pattern.compile(
                 "(" +
-                    Pattern.quote(recordDecl.name.toString()) +
-                    Regex.escape(recordDecl.language?.namespaceDelimiter ?: "") +
+                    Pattern.quote(recordDeclaration.name.toString()) +
+                    Regex.escape(recordDeclaration.language?.namespaceDelimiter ?: "") +
                     ")?" +
                     Pattern.quote(name)
             )
         return if (call.language is HasComplexCallResolution) {
             (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
-                recordDecl,
+                recordDeclaration,
                 call,
                 namePattern,
                 ctx
             )
         } else {
-            recordDecl.methods.filter {
+            recordDeclaration.methods.filter {
                 namePattern.matcher(it.name).matches() && it.hasSignature(call.signature)
             }
         }
@@ -522,9 +526,9 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     protected fun getInvocationCandidatesFromParents(
         name: String?,
-        call: CallExpr,
-        possibleTypes: Set<RecordDecl>
-    ): List<FunctionDecl> {
+        call: CallExpression,
+        possibleTypes: Set<RecordDeclaration>
+    ): List<FunctionDeclaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
         return if (possibleTypes.isEmpty()) {
             listOf()
@@ -557,8 +561,8 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     protected fun getOverridingCandidates(
         possibleSubTypes: Set<Type>,
-        declaration: FunctionDecl
-    ): Set<FunctionDecl> {
+        declaration: FunctionDeclaration
+    ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f -> containingType[f] in possibleSubTypes }
             .toSet()
@@ -566,14 +570,14 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     /**
      * @param signature of the ConstructExpression
-     * @param recordDecl matching the class the ConstructExpression wants to construct
+     * @param recordDeclaration matching the class the ConstructExpression wants to construct
      * @return ConstructorDeclaration that matches the provided signature
      */
     protected fun getConstructorDeclarationDirectMatch(
         signature: List<Type>,
-        recordDecl: RecordDecl
-    ): ConstructorDecl? {
-        for (constructor in recordDecl.constructors) {
+        recordDeclaration: RecordDeclaration
+    ): ConstructorDeclaration? {
+        for (constructor in recordDeclaration.constructors) {
             if (constructor.hasSignature(signature)) {
                 return constructor
             }
@@ -583,38 +587,42 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     /**
      * @param constructExpr we want to find an invocation target for
-     * @param recordDecl associated with the Object the ConstructExpression constructs
+     * @param recordDeclaration associated with the Object the ConstructExpression constructs
      * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If
      *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
      *   matches the ConstructExpression.
      */
     protected fun getConstructorDeclaration(
-        constructExpr: ConstructExpr,
-        recordDecl: RecordDecl
-    ): ConstructorDecl {
+        constructExpr: ConstructExpression,
+        recordDeclaration: RecordDeclaration
+    ): ConstructorDeclaration {
         val signature = constructExpr.signature
-        var constructorCandidate = getConstructorDeclarationDirectMatch(signature, recordDecl)
+        var constructorCandidate =
+            getConstructorDeclarationDirectMatch(signature, recordDeclaration)
         if (constructorCandidate == null && constructExpr.language is HasDefaultArguments) {
             // Check for usage of default args
             constructorCandidate =
-                resolveConstructorWithDefaults(constructExpr, signature, recordDecl)
+                resolveConstructorWithDefaults(constructExpr, signature, recordDeclaration)
         }
         if (constructorCandidate == null && constructExpr.language.isCPP) { // TODO: Fix this
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
-            constructorCandidate = resolveConstructorWithImplicitCast(constructExpr, recordDecl)
+            constructorCandidate =
+                resolveConstructorWithImplicitCast(constructExpr, recordDeclaration)
         }
 
         return constructorCandidate
-            ?: recordDecl.startInference(ctx).createInferredConstructor(constructExpr.signature)
+            ?: recordDeclaration
+                .startInference(ctx)
+                .createInferredConstructor(constructExpr.signature)
     }
 
     protected fun getConstructorDeclarationForExplicitInvocation(
         signature: List<Type>,
-        recordDecl: RecordDecl
-    ): ConstructorDecl {
-        return recordDecl.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDecl.startInference(ctx).createInferredConstructor(signature)
+        recordDeclaration: RecordDeclaration
+    ): ConstructorDeclaration {
+        return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
+            ?: recordDeclaration.startInference(ctx).createInferredConstructor(signature)
     }
 
     companion object {
@@ -629,10 +637,10 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpr: ConstructExpr
+            constructExpr: ConstructExpression
         ) {
             for (node in templateParams) {
-                if (node is TypeExpr) {
+                if (node is TypeExpression) {
                     constructExpr.addTemplateParameter(node.duplicate(true))
                 } else if (node is Literal<*>) {
                     constructExpr.addTemplateParameter(node.duplicate(true))

@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.fields
 import de.fraunhofer.aisec.cpg.graph.methods
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStmt
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpr
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.variables
 import kotlin.test.Test
@@ -50,15 +50,15 @@ internal class VariableResolverTest : BaseTest() {
         val fields = result.fields
         val field = findByUniqueName(fields, "field")
         val getField = findByUniqueName(methods, "getField")
-        var returnStmt = getField.allChildren<ReturnStmt>().firstOrNull()
-        assertNotNull(returnStmt)
-        assertEquals(field, (returnStmt.returnValue as MemberExpr).refersTo)
+        var returnStatement = getField.allChildren<ReturnStatement>().firstOrNull()
+        assertNotNull(returnStatement)
+        assertEquals(field, (returnStatement.returnValue as MemberExpression).refersTo)
 
         val noShadow = findByUniqueName(methods, "getField")
 
-        returnStmt = noShadow.allChildren<ReturnStmt>().firstOrNull()
-        assertNotNull(returnStmt)
-        assertEquals(field, (returnStmt.returnValue as MemberExpr).refersTo)
+        returnStatement = noShadow.allChildren<ReturnStatement>().firstOrNull()
+        assertNotNull(returnStatement)
+        assertEquals(field, (returnStatement.returnValue as MemberExpression).refersTo)
     }
 
     @Test
@@ -69,23 +69,23 @@ internal class VariableResolverTest : BaseTest() {
         val fields = result.fields
         val field = findByUniqueName(fields, "field")
         val getLocal = findByUniqueName(methods, "getLocal")
-        var returnStmt = getLocal.allChildren<ReturnStmt>().firstOrNull()
-        assertNotNull(returnStmt)
+        var returnStatement = getLocal.allChildren<ReturnStatement>().firstOrNull()
+        assertNotNull(returnStatement)
 
         var local = getLocal.variables.firstOrNull { it.name.localName != "this" }
 
-        var returnValue = returnStmt.returnValue as Reference
+        var returnValue = returnStatement.returnValue as Reference
         assertNotEquals(field, returnValue.refersTo)
         assertEquals(local, returnValue.refersTo)
 
         val getShadow = findByUniqueName(methods, "getShadow")
 
-        returnStmt = getShadow.allChildren<ReturnStmt>().firstOrNull()
-        assertNotNull(returnStmt)
+        returnStatement = getShadow.allChildren<ReturnStatement>().firstOrNull()
+        assertNotNull(returnStatement)
 
         local = getShadow.variables.firstOrNull { it.name.localName != "this" }
 
-        returnValue = returnStmt.returnValue as Reference
+        returnValue = returnStatement.returnValue as Reference
         assertNotEquals(field, returnValue.refersTo)
         assertEquals(local, returnValue.refersTo)
     }

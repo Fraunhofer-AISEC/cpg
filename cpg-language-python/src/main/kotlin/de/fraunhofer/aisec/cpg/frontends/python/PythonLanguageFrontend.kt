@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -44,7 +44,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDecl {
+    override fun parse(file: File): TranslationUnitDeclaration {
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 
@@ -67,15 +67,15 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         // will be invoked by native function
     }
 
-    private fun parseInternal(code: String, path: String): TranslationUnitDecl {
+    private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
         val pythonInterpreter = jep.getInterp()
-        val tu: TranslationUnitDecl
+        val tu: TranslationUnitDeclaration
         val absolutePath = Paths.get(path).absolutePathString()
         try {
             // run python function parse_code()
             tu =
                 pythonInterpreter.invoke("parse_code", this, code, absolutePath)
-                    as TranslationUnitDecl
+                    as TranslationUnitDeclaration
 
             if (config.matchCommentsToNodes) {
                 // Parse comments and attach to nodes

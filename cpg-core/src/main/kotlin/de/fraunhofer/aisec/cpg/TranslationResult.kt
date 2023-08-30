@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDecl
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -82,12 +82,12 @@ class TranslationResult(
      * @return the list of all translation units.
      */
     @Deprecated(message = "translation units of individual components should be accessed instead")
-    val translationUnits: List<TranslationUnitDecl>
+    val translationUnits: List<TranslationUnitDeclaration>
         get() {
             if (components.size == 1) {
                 return Collections.unmodifiableList(components[0].translationUnits)
             }
-            val result: MutableList<TranslationUnitDecl> = ArrayList()
+            val result: MutableList<TranslationUnitDeclaration> = ArrayList()
             for (sc in components) {
                 result.addAll(sc.translationUnits)
             }
@@ -105,7 +105,7 @@ class TranslationResult(
         selected and the translation unit should be added there."""
     )
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDecl?) {
+    fun addTranslationUnit(tu: TranslationUnitDeclaration?) {
         var swc: Component? = null
         if (components.size == 1) {
             // Only one component exists, so we take this one
@@ -152,7 +152,7 @@ class TranslationResult(
             val result: MutableList<String> = ArrayList()
             components.forEach { sc: Component ->
                 result.addAll(
-                    sc.translationUnits.map(TranslationUnitDecl::name).map(Name::toString)
+                    sc.translationUnits.map(TranslationUnitDeclaration::name).map(Name::toString)
                 )
             }
             return result

@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.capacity
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDecl
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayExpr
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpr
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -53,7 +53,7 @@ class OutOfBoundsCheck {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
-                    fun visit(v: SubscriptionExpr) {
+                    fun visit(v: SubscriptionExpression) {
                         val evaluator = ValueEvaluator()
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)
 
@@ -61,9 +61,8 @@ class OutOfBoundsCheck {
                             // check, if we know that the array was initialized with a fixed length
                             // TODO(oxisto): it would be nice to have a helper that follows the expr
                             val decl =
-                                (v.arrayExpression as? Reference)?.refersTo
-                                    as? VariableDecl
-                            (decl?.initializer as? ArrayExpr)?.let {
+                                (v.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
+                            (decl?.initializer as? NewArrayExpression)?.let {
                                 val capacity = it.capacity
 
                                 if (resolvedIndex >= capacity) {

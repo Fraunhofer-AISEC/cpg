@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.DeclSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
 class StatementHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpr, frontend) {
+    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
 
     override fun handleNode(stmt: GoStandardLibrary.Ast.Stmt): Statement {
         return when (stmt) {
@@ -56,7 +56,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): AssignExpr {
+    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): AssignExpression {
         val lhs = assignStmt.lhs.map { frontend.expressionHandler.handle(it) }
         val rhs = assignStmt.rhs.map { frontend.expressionHandler.handle(it) }
 
@@ -70,33 +70,33 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 ""
             }
 
-        return newAssignExpr(operatorCode, lhs, rhs, rawNode = assignStmt)
+        return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 
     private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Statement {
         when (branchStmt.tokString) {
             "break" -> {
-                val stmt = newBreakStmt(rawNode = branchStmt)
+                val stmt = newBreakStatement(rawNode = branchStmt)
                 branchStmt.label?.let { stmt.label = it.name }
                 return stmt
             }
             "continue" -> {
-                val stmt = newContinueStmt(rawNode = branchStmt)
+                val stmt = newContinueStatement(rawNode = branchStmt)
                 branchStmt.label?.let { stmt.label = it.name }
                 return stmt
             }
             "goto" -> {
-                val stmt = newGotoStmt(rawNode = branchStmt)
+                val stmt = newGotoStatement(rawNode = branchStmt)
                 branchStmt.label?.let { stmt.labelName = it.name }
                 return stmt
             }
         }
 
-        return newProblemExpr("unknown token \"${branchStmt.tokString}\" in branch statement")
+        return newProblemExpression("unknown token \"${branchStmt.tokString}\" in branch statement")
     }
 
     private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
-        val compound = newCompoundStmt(rawNode = blockStmt)
+        val compound = newBlockStatement(rawNode = blockStmt)
 
         frontend.scopeManager.enterScope(compound)
 
@@ -104,7 +104,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             val node = handle(stmt)
             // Do not add case statements to the block because the already add themselves in
             // handleCaseClause. Otherwise, the order of case's would be wrong
-            if (node !is CaseStmt) {
+            if (node !is CaseStatement) {
                 compound += node
             }
         }
@@ -117,9 +117,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleCaseClause(caseClause: GoStandardLibrary.Ast.CaseClause): Statement {
         val case =
             if (caseClause.list.isEmpty()) {
-                newDefaultStmt(rawNode = caseClause)
+                newDefaultStatement(rawNode = caseClause)
             } else {
-                val case = newCaseStmt(rawNode = caseClause)
+                val case = newCaseStatement(rawNode = caseClause)
                 case.caseExpression = frontend.expressionHandler.handle(caseClause.list[0])
                 case
             }
@@ -129,7 +129,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         if (block == null) {
             log.error("could not find block to add case clauses")
-            return newProblemExpr("could not find block to add case clauses")
+            return newProblemExpression("could not find block to add case clauses")
         }
 
         // Add the case statement
@@ -144,12 +144,12 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return case
     }
 
-    private fun handleDeclStmt(declStmt: GoStandardLibrary.Ast.DeclStmt): DeclarationStmt {
+    private fun handleDeclStmt(declStmt: GoStandardLibrary.Ast.DeclStmt): DeclarationStatement {
         // Let's create a variable declaration (wrapped with a declaration stmt) with
         // this, because we define the variable here
-        val stmt = newDeclarationStmt(rawNode = declStmt)
+        val stmt = newDeclarationStatement(rawNode = declStmt)
         val sequence = frontend.declarationHandler.handle(declStmt.decl)
-        if (sequence is DeclSequence) {
+        if (sequence is DeclarationSequence) {
             for (declaration in sequence.declarations) {
                 frontend.scopeManager.addDeclaration(declaration)
             }
@@ -168,8 +168,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * this 1:1, so we basically we create a call expression to a built-in call. // We adjust the
      * EOG of the call later in an extra pass.
      */
-    private fun handleDeferStmt(deferStmt: GoStandardLibrary.Ast.DeferStmt): UnaryOp {
-        val op = newUnaryOp("defer", postfix = false, prefix = true, rawNode = deferStmt)
+    private fun handleDeferStmt(deferStmt: GoStandardLibrary.Ast.DeferStmt): UnaryOperator {
+        val op = newUnaryOperator("defer", postfix = false, prefix = true, rawNode = deferStmt)
         op.input = frontend.expressionHandler.handle(deferStmt.call)
         return op
     }
@@ -179,16 +179,16 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * supplied call expression in a separate Go routine. We cannot model this 1:1, so we basically
      * we create a call expression to a built-in call.
      */
-    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): CallExpr {
+    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): CallExpression {
         val ref = newReference("go")
-        val call = newCallExpr(ref, "go", rawNode = goStmt)
+        val call = newCallExpression(ref, "go", rawNode = goStmt)
         call += frontend.expressionHandler.handle(goStmt.call)
 
         return call
     }
 
-    private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): ForStmt {
-        val stmt = newForStmt(rawNode = forStmt)
+    private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): ForStatement {
+        val stmt = newForStatement(rawNode = forStmt)
 
         frontend.scopeManager.enterScope(stmt)
 
@@ -202,16 +202,21 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return stmt
     }
 
-    private fun handleIncDecStmt(incDecStmt: GoStandardLibrary.Ast.IncDecStmt): UnaryOp {
+    private fun handleIncDecStmt(incDecStmt: GoStandardLibrary.Ast.IncDecStmt): UnaryOperator {
         val op =
-            newUnaryOp(incDecStmt.tokString, postfix = true, prefix = false, rawNode = incDecStmt)
+            newUnaryOperator(
+                incDecStmt.tokString,
+                postfix = true,
+                prefix = false,
+                rawNode = incDecStmt
+            )
         op.input = frontend.expressionHandler.handle(incDecStmt.x)
 
         return op
     }
 
-    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfStmt {
-        val stmt = newIfStmt(rawNode = ifStmt)
+    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfStatement {
+        val stmt = newIfStatement(rawNode = ifStmt)
 
         frontend.scopeManager.enterScope(stmt)
 
@@ -227,28 +232,28 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return stmt
     }
 
-    private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): LabelStmt {
-        val stmt = newLabelStmt(rawNode = labeledStmt)
+    private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): LabelStatement {
+        val stmt = newLabelStatement(rawNode = labeledStmt)
         stmt.subStatement = handle(labeledStmt.stmt)
         stmt.label = labeledStmt.label.name
 
         return stmt
     }
 
-    private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEachStmt {
-        val forEach = newForEachStmt(rawNode = rangeStmt)
+    private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEachStatement {
+        val forEach = newForEachStatement(rawNode = rangeStmt)
 
         frontend.scopeManager.enterScope(forEach)
 
         // TODO: Support other use cases that do not use DEFINE
         if (rangeStmt.tokString == ":=") {
-            val stmt = newDeclarationStmt()
+            val stmt = newDeclarationStatement()
 
             // TODO: not really the best way to deal with this
             // TODO: key type is always int. we could set this
             var ref = rangeStmt.key?.let { frontend.expressionHandler.handle(it) }
             if (ref is Reference) {
-                val key = newVariableDecl(ref.name, rawNode = rangeStmt.key)
+                val key = newVariableDeclaration(ref.name, rawNode = rangeStmt.key)
                 frontend.scopeManager.addDeclaration(key)
                 stmt.addToPropertyEdgeDeclaration(key)
             }
@@ -256,7 +261,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             // TODO: not really the best way to deal with this
             ref = rangeStmt.value?.let { frontend.expressionHandler.handle(it) }
             if (ref is Reference) {
-                val key = newVariableDecl(ref.name, rawNode = rangeStmt.key)
+                val key = newVariableDeclaration(ref.name, rawNode = rangeStmt.key)
                 frontend.scopeManager.addDeclaration(key)
                 stmt.addToPropertyEdgeDeclaration(key)
             }
@@ -272,8 +277,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return forEach
     }
 
-    private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): ReturnStmt {
-        val `return` = newReturnStmt(rawNode = returnStmt)
+    private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): ReturnStatement {
+        val `return` = newReturnStatement(rawNode = returnStmt)
 
         val results = returnStmt.results
         if (results.isNotEmpty()) {
@@ -291,7 +296,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Statement {
-        val switch = newSwitchStmt(rawNode = switchStmt)
+        val switch = newSwitchStatement(rawNode = switchStmt)
 
         frontend.scopeManager.enterScope(switch)
 
@@ -299,7 +304,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
 
         val block =
-            handle(switchStmt.body) as? CompoundStmt ?: return newProblemExpr("missing switch body")
+            handle(switchStmt.body) as? BlockStatement
+                ?: return newProblemExpression("missing switch body")
 
         // Because of the way we parse the statements, the case statement turns out to be the last
         // statement. However, we need it to be the first statement, so we need to switch first and
