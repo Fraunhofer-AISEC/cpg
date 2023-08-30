@@ -15,7 +15,7 @@ The EOG is similar to a CFG which connects basic blocks of statements, but there
 
 * For methods without explicit return statement, the EOG will have an edge to a virtual return node  with line number -1 which does not exist in the original code. 
   A CFG will always end with the last reachable statement(s) and not insert any virtual return statements.
-* The EOG considers an opening blocking (`CompoundStatement`, indicated by a `{`) as a separate node.
+* The EOG considers an opening blocking (`BlockStatement`, indicated by a `{`) as a separate node.
   A CFG will rather use the first actual executable statement within the block.
 * For IF statements, the EOG treats the `if` keyword and the condition as separate nodes.
   A CFG treats this as one `if` statement.
@@ -52,7 +52,7 @@ A function declaration is the start of an intraprocedural EOG and contains its e
 
 Interesting fields:
 
-* `parameters: List<ParamVariableDeclaration>`: The parameters of the function.
+* `parameters: List<ParameterDeclaration>`: The parameters of the function.
 * `defaultValue: Expression`: Optional default values of the parameters that have to be evaluated before executing the function's body.
 * `body: Statement`: One or multiple statements executed when this function is called.
 
@@ -69,11 +69,11 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `CompoundStatement`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `BlockStatement`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
 
 Interesting fields:
 
-* `statements: List<Statement>`: The code inside a holder. The individual elements are distinguished by a property marking them as `staticBlock` if they are a `CompoundStatement`.
+* `statements: List<Statement>`: The code inside a holder. The individual elements are distinguished by a property marking them as `staticBlock` if they are a `BlockStatement`.
 
 Scheme:
 ```mermaid
@@ -168,7 +168,7 @@ flowchart LR
   child --EOG--> parent
 ```
 
-## ArraySubscriptionExpression
+## SubscriptionExpression
 Array access in the form of `arrayExpression[subscriptExpression]`.
 
 Interesting fields:
@@ -182,13 +182,13 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
   child --EOG--> child2["subscriptExpression"]
-  parent(["ArraySubscriptionExpression"]) --EOG--> next:::outer
+  parent(["SubscriptionExpression"]) --EOG--> next:::outer
   parent -.-> child["arrayExpression"]
   parent -.-> child2
   child2 --EOG--> parent
 ```
 
-## ArrayCreationExpression
+## NewArrayExpression
 Interesting fields:
 
 * `dimensions: List<Expression>`: Multiple expressions that define the array's dimensions.
@@ -201,7 +201,7 @@ flowchart LR
   prev:::outer --EOG--> child1["dimension(i-1)"]
   child1 --EOG--> child2["dimension(i)"]
   child2 --EOG--> initializer
-  parent(["ArrayCreationExpression"]) --EOG--> next:::outer
+  parent(["NewArrayExpression"]) --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
   parent -.-> initializer
@@ -320,7 +320,7 @@ flowchart LR
 ```
 
 
-## CompoundStatement
+## BlockStatement
 
 Represents an explicit block of statements.
 
@@ -334,7 +334,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["statement(i-1)"]
   child1 --EOG-->child2["statement(i)"]
-  parent(["CompoundStatement"]) --EOG--> next:::outer
+  parent(["BlockStatement"]) --EOG--> next:::outer
   parent -."statements(n)".-> child1
   parent -."statements(n)".-> child2
   child2 --EOG--> parent
@@ -407,9 +407,9 @@ After the execution of the statement the control flow only proceeds with the nex
 Interesting fields:
 
 * `resources:List<Statement>`: Initialization of values needed in the block or special objects needing cleanup.
-* `tryBlock:CompoundStatement`: The code that should be tried, exceptions inside lead to an eog edge to the catch clauses.
-* `finallyBlock:CompoundStatement`: All EOG paths inside the `tryBlock` or the `catch` blocks will finally reach this block and evaluate it.
-* `catchBlocks:List<CompoundStatementt>`: Children of `CatchClause` (omitted here), evaluated when the exception matches the clauses condition.
+* `tryBlock:BlockStatement`: The code that should be tried, exceptions inside lead to an eog edge to the catch clauses.
+* `finallyBlock:BlockStatement`: All EOG paths inside the `tryBlock` or the `catch` blocks will finally reach this block and evaluate it.
+* `catchBlocks:List<BlockStatementt>`: Children of `CatchClause` (omitted here), evaluated when the exception matches the clauses condition.
 
 Scheme:
 ```mermaid
@@ -584,7 +584,7 @@ The placement of the root node between expression and executed block is such tha
 Interesting fields:
 
 * `expression: Expression`: Its evaluation returns an object that acts as a lock for synchronization.
-* `blockStatement: CompoundStatement`: Code executed while the object evaluated from `expression` is locked.
+* `blockStatement: BlockStatement`: Code executed while the object evaluated from `expression` is locked.
 
 Scheme:
 ```mermaid

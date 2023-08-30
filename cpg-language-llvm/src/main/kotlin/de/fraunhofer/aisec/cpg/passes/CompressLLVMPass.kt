@@ -57,7 +57,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // prevents to treat the final goto in the case or default statement as a normal
         // compound
         // statement which would lead to inlining the instructions BB but we want to keep the BB
-        // inside a CompoundStatement.
+        // inside a BlockStatement.
         for (node in
             flatAST.sortedBy { n ->
                 when (n) {
@@ -151,7 +151,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     fixThrowStatementsForCatch(catch)
                 }
             } else if (node is BlockStatement) {
-                // Get the last statement in a CompoundStatement and replace a goto statement
+                // Get the last statement in a BlockStatement and replace a goto statement
                 // iff it is the only one jumping to the target
                 val goto = node.statements.lastOrNull()
                 if (

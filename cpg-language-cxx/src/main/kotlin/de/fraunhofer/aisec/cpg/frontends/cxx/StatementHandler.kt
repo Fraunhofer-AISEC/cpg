@@ -47,7 +47,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTStatement): Statement {
         return when (node) {
-            is IASTCompoundStatement -> handleCompoundStatement(node)
+            is IASTBlockStatement -> handleBlockStatement(node)
             is IASTReturnStatement -> handleReturnStatement(node)
             is IASTDeclarationStatement -> handleDeclarationStatement(node)
             is IASTExpressionStatement -> handleExpressionStatement(node)
@@ -310,7 +310,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return returnStatement
     }
 
-    private fun handleCompoundStatement(ctx: IASTCompoundStatement): BlockStatement {
+    private fun handleBlockStatement(ctx: IASTBlockStatement): BlockStatement {
         val compoundStatement = newBlockStatement(ctx.rawSignature)
 
         frontend.scopeManager.enterScope(compoundStatement)

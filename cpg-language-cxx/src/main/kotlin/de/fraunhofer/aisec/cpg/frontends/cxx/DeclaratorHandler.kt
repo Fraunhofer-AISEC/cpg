@@ -478,7 +478,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * Handles template parameters that are types
      *
      * @param ctx
-     * @return TypeParamDeclaration with its name
+     * @return TypeParameterDeclaration with its name
      */
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter

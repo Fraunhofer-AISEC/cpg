@@ -96,7 +96,7 @@ open class ValueEvaluator(
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is SubscriptionExpression -> return handleArraySubscriptionExpression(node, depth)
+            is SubscriptionExpression -> return handleSubscriptionExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
@@ -277,7 +277,7 @@ open class ValueEvaluator(
      * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
      * s.
      */
-    protected fun handleArraySubscriptionExpression(
+    protected fun handleSubscriptionExpression(
         expr: SubscriptionExpression,
         depth: Int
     ): Any? {

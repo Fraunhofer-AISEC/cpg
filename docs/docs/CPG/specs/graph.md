@@ -77,7 +77,7 @@ Node--"TYPEDEFS*"-->NodeTYPEDEFS[<a href='#etypedefdeclaration'>TypedefDeclarati
 <span class="child">[SwitchStatement](#eswitchstatement)</span>
 <span class="child">[GotoStatement](#egotostatement)</span>
 <span class="child">[WhileStatement](#ewhilestatement)</span>
-<span class="child">[CompoundStatement](#ecompoundstatement)</span>
+<span class="child">[BlockStatement](#ecompoundstatement)</span>
 <span class="child">[ContinueStatement](#econtinuestatement)</span>
 <span class="child">[DefaultStatement](#edefaultstatement)</span>
 <span class="child">[SynchronizedStatement](#esynchronizedstatement)</span>
@@ -251,15 +251,15 @@ ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpr
 <span class="child">[KeyValueExpression](#ekeyvalueexpression)</span>
 <span class="child">[AssignExpression](#eassignexpression)</span>
 <span class="child">[CastExpression](#ecastexpression)</span>
-<span class="child">[ArrayCreationExpression](#earraycreationexpression)</span>
-<span class="child">[ArraySubscriptionExpression](#earraysubscriptionexpression)</span>
+<span class="child">[NewArrayExpression](#earraycreationexpression)</span>
+<span class="child">[SubscriptionExpression](#earraysubscriptionexpression)</span>
 <span class="child">[TypeExpression](#etypeexpression)</span>
 <span class="child">[BinaryOperator](#ebinaryoperator)</span>
 <span class="child">[ConditionalExpression](#econditionalexpression)</span>
 <span class="child">[Reference](#edeclaredreferenceexpression)</span>
 <span class="child">[InitializerListExpression](#einitializerlistexpression)</span>
 <span class="child">[DeleteExpression](#edeleteexpression)</span>
-<span class="child">[CompoundStatementExpression](#ecompoundstatementexpression)</span>
+<span class="child">[BlockStatementExpression](#ecompoundstatementexpression)</span>
 <span class="child">[ProblemExpression](#eproblemexpression)</span>
 <span class="child">[Literal](#eliteral)</span>
 <span class="child">[TypeIdExpression](#etypeidexpression)</span>
@@ -467,7 +467,7 @@ ArrayRangeExpression--"FLOOR¹"-->ArrayRangeExpressionFLOOR[<a href='#eexpressio
 <span class="classLabel">[CallExpression](#ecallexpression)</span>
 
 ### Children
-<span class="child">[ExplicitConstructorInvocation](#eexplicitconstructorinvocation)</span>
+<span class="child">[ConstructorCallExpression](#eexplicitconstructorinvocation)</span>
 <span class="child">[ConstructExpression](#econstructexpression)</span>
 <span class="child">[MemberCallExpression](#emembercallexpression)</span>
 
@@ -530,12 +530,12 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 CallExpression--"TEMPLATE_PARAMETERS*"-->CallExpressionTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
 ```
-## ExplicitConstructorInvocation<a id="eexplicitconstructorinvocation"></a>
+## ConstructorCallExpression<a id="eexplicitconstructorinvocation"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
 <span class="superclassLabel">[CallExpression](#ecallexpression)</span>
-<span class="classLabel">[ExplicitConstructorInvocation](#eexplicitconstructorinvocation)</span>
+<span class="classLabel">[ConstructorCallExpression](#eexplicitconstructorinvocation)</span>
 
 ### Relationships
 <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
@@ -834,16 +834,16 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 CastExpression--"EXPRESSION¹"-->CastExpressionEXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-## ArrayCreationExpression<a id="earraycreationexpression"></a>
+## NewArrayExpression<a id="earraycreationexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[ArrayCreationExpression](#earraycreationexpression)</span>
+<span class="classLabel">[NewArrayExpression](#earraycreationexpression)</span>
 
 ### Relationships
-<span class="relationship">[INITIALIZER](#ArrayCreationExpressionINITIALIZER)</span>
+<span class="relationship">[INITIALIZER](#NewArrayExpressionINITIALIZER)</span>
 
-<span class="relationship">[DIMENSIONS](#ArrayCreationExpressionDIMENSIONS)</span>
+<span class="relationship">[DIMENSIONS](#NewArrayExpressionDIMENSIONS)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ExpressionPOSSIBLE_SUB_TYPES)</span>
 
@@ -863,28 +863,28 @@ CastExpression--"EXPRESSION¹"-->CastExpressionEXPRESSION[<a href='#eexpression'
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### INITIALIZER<a id="ArrayCreationExpressionINITIALIZER"></a>
+#### INITIALIZER<a id="NewArrayExpressionINITIALIZER"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArrayCreationExpression--"INITIALIZER¹"-->ArrayCreationExpressionINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
+NewArrayExpression--"INITIALIZER¹"-->NewArrayExpressionINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### DIMENSIONS<a id="ArrayCreationExpressionDIMENSIONS"></a>
+#### DIMENSIONS<a id="NewArrayExpressionDIMENSIONS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArrayCreationExpression--"DIMENSIONS*"-->ArrayCreationExpressionDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
+NewArrayExpression--"DIMENSIONS*"-->NewArrayExpressionDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
 ```
-## ArraySubscriptionExpression<a id="earraysubscriptionexpression"></a>
+## SubscriptionExpression<a id="earraysubscriptionexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[ArraySubscriptionExpression](#earraysubscriptionexpression)</span>
+<span class="classLabel">[SubscriptionExpression](#earraysubscriptionexpression)</span>
 
 ### Relationships
-<span class="relationship">[ARRAY_EXPRESSION](#ArraySubscriptionExpressionARRAY_EXPRESSION)</span>
+<span class="relationship">[ARRAY_EXPRESSION](#SubscriptionExpressionARRAY_EXPRESSION)</span>
 
-<span class="relationship">[SUBSCRIPT_EXPRESSION](#ArraySubscriptionExpressionSUBSCRIPT_EXPRESSION)</span>
+<span class="relationship">[SUBSCRIPT_EXPRESSION](#SubscriptionExpressionSUBSCRIPT_EXPRESSION)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ExpressionPOSSIBLE_SUB_TYPES)</span>
 
@@ -904,17 +904,17 @@ ArrayCreationExpression--"DIMENSIONS*"-->ArrayCreationExpressionDIMENSIONS[<a hr
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### ARRAY_EXPRESSION<a id="ArraySubscriptionExpressionARRAY_EXPRESSION"></a>
+#### ARRAY_EXPRESSION<a id="SubscriptionExpressionARRAY_EXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArraySubscriptionExpression--"ARRAY_EXPRESSION¹"-->ArraySubscriptionExpressionARRAY_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+SubscriptionExpression--"ARRAY_EXPRESSION¹"-->SubscriptionExpressionARRAY_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### SUBSCRIPT_EXPRESSION<a id="ArraySubscriptionExpressionSUBSCRIPT_EXPRESSION"></a>
+#### SUBSCRIPT_EXPRESSION<a id="SubscriptionExpressionSUBSCRIPT_EXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArraySubscriptionExpression--"SUBSCRIPT_EXPRESSION¹"-->ArraySubscriptionExpressionSUBSCRIPT_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+SubscriptionExpression--"SUBSCRIPT_EXPRESSION¹"-->SubscriptionExpressionSUBSCRIPT_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ## TypeExpression<a id="etypeexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1169,14 +1169,14 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 DeleteExpression--"OPERAND¹"-->DeleteExpressionOPERAND[<a href='#eexpression'>Expression</a>]:::outer
 ```
-## CompoundStatementExpression<a id="ecompoundstatementexpression"></a>
+## BlockStatementExpression<a id="ecompoundstatementexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[CompoundStatementExpression](#ecompoundstatementexpression)</span>
+<span class="classLabel">[BlockStatementExpression](#ecompoundstatementexpression)</span>
 
 ### Relationships
-<span class="relationship">[STATEMENT](#CompoundStatementExpressionSTATEMENT)</span>
+<span class="relationship">[STATEMENT](#BlockStatementExpressionSTATEMENT)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ExpressionPOSSIBLE_SUB_TYPES)</span>
 
@@ -1196,11 +1196,11 @@ DeleteExpression--"OPERAND¹"-->DeleteExpressionOPERAND[<a href='#eexpression'>E
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### STATEMENT<a id="CompoundStatementExpressionSTATEMENT"></a>
+#### STATEMENT<a id="BlockStatementExpressionSTATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CompoundStatementExpression--"STATEMENT¹"-->CompoundStatementExpressionSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
+BlockStatementExpression--"STATEMENT¹"-->BlockStatementExpressionSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ## ProblemExpression<a id="eproblemexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1526,7 +1526,7 @@ CatchClause--"PARAMETER¹"-->CatchClausePARAMETER[<a href='#evariabledeclaration
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CatchClause--"BODY¹"-->CatchClauseBODY[<a href='#ecompoundstatement'>CompoundStatement</a>]:::outer
+CatchClause--"BODY¹"-->CatchClauseBODY[<a href='#ecompoundstatement'>BlockStatement</a>]:::outer
 ```
 ## SwitchStatement<a id="eswitchstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1652,13 +1652,13 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 WhileStatement--"STATEMENT¹"-->WhileStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
-## CompoundStatement<a id="ecompoundstatement"></a>
+## BlockStatement<a id="ecompoundstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[CompoundStatement](#ecompoundstatement)</span>
+<span class="classLabel">[BlockStatement](#ecompoundstatement)</span>
 
 ### Relationships
-<span class="relationship">[STATEMENTS](#CompoundStatementSTATEMENTS)</span>
+<span class="relationship">[STATEMENTS](#BlockStatementSTATEMENTS)</span>
 
 <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
@@ -1674,11 +1674,11 @@ WhileStatement--"STATEMENT¹"-->WhileStatementSTATEMENT[<a href='#estatement'>St
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### STATEMENTS<a id="CompoundStatementSTATEMENTS"></a>
+#### STATEMENTS<a id="BlockStatementSTATEMENTS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CompoundStatement--"STATEMENTS*"-->CompoundStatementSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
+BlockStatement--"STATEMENTS*"-->BlockStatementSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
 ```
 ## ContinueStatement<a id="econtinuestatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1748,7 +1748,7 @@ CompoundStatement--"STATEMENTS*"-->CompoundStatementSTATEMENTS[<a href='#estatem
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SynchronizedStatement--"BLOCK_STATEMENT¹"-->SynchronizedStatementBLOCK_STATEMENT[<a href='#ecompoundstatement'>CompoundStatement</a>]:::outer
+SynchronizedStatement--"BLOCK_STATEMENT¹"-->SynchronizedStatementBLOCK_STATEMENT[<a href='#ecompoundstatement'>BlockStatement</a>]:::outer
 ```
 #### EXPRESSION<a id="SynchronizedStatementEXPRESSION"></a>
 ```mermaid
@@ -1794,13 +1794,13 @@ TryStatement--"RESOURCES*"-->TryStatementRESOURCES[<a href='#estatement'>Stateme
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"FINALLY_BLOCK¹"-->TryStatementFINALLY_BLOCK[<a href='#ecompoundstatement'>CompoundStatement</a>]:::outer
+TryStatement--"FINALLY_BLOCK¹"-->TryStatementFINALLY_BLOCK[<a href='#ecompoundstatement'>BlockStatement</a>]:::outer
 ```
 #### TRY_BLOCK<a id="TryStatementTRY_BLOCK"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"TRY_BLOCK¹"-->TryStatementTRY_BLOCK[<a href='#ecompoundstatement'>CompoundStatement</a>]:::outer
+TryStatement--"TRY_BLOCK¹"-->TryStatementTRY_BLOCK[<a href='#ecompoundstatement'>BlockStatement</a>]:::outer
 ```
 #### CATCH_CLAUSES<a id="TryStatementCATCH_CLAUSES"></a>
 ```mermaid
@@ -1960,8 +1960,8 @@ LabelStatement--"SUB_STATEMENT¹"-->LabelStatementSUB_STATEMENT[<a href='#estate
 <span class="child">[ProblemDeclaration](#eproblemdeclaration)</span>
 <span class="child">[EnumConstantDeclaration](#eenumconstantdeclaration)</span>
 <span class="child">[FunctionDeclaration](#efunctiondeclaration)</span>
-<span class="child">[ParamVariableDeclaration](#eparamvariabledeclaration)</span>
-<span class="child">[TypeParamDeclaration](#etypeparamdeclaration)</span>
+<span class="child">[ParameterDeclaration](#eparamvariabledeclaration)</span>
+<span class="child">[TypeParameterDeclaration](#etypeparamdeclaration)</span>
 
 ### Relationships
 <span class="relationship">[POSSIBLE_SUB_TYPES](#ValueDeclarationPOSSIBLE_SUB_TYPES)</span>
@@ -2216,7 +2216,7 @@ FunctionDeclaration--"RETURN_TYPES*"-->FunctionDeclarationRETURN_TYPES[<a href='
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"PARAMETERS*"-->FunctionDeclarationPARAMETERS[<a href='#eparamvariabledeclaration'>ParamVariableDeclaration</a>]:::outer
+FunctionDeclaration--"PARAMETERS*"-->FunctionDeclarationPARAMETERS[<a href='#eparamvariabledeclaration'>ParameterDeclaration</a>]:::outer
 ```
 #### DEFINES<a id="FunctionDeclarationDEFINES"></a>
 ```mermaid
@@ -2328,14 +2328,14 @@ MethodDeclaration--"RECORD_DECLARATION¹"-->MethodDeclarationRECORD_DECLARATION[
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-## ParamVariableDeclaration<a id="eparamvariabledeclaration"></a>
+## ParameterDeclaration<a id="eparamvariabledeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Declaration](#edeclaration)</span>
 <span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
-<span class="classLabel">[ParamVariableDeclaration](#eparamvariabledeclaration)</span>
+<span class="classLabel">[ParameterDeclaration](#eparamvariabledeclaration)</span>
 
 ### Relationships
-<span class="relationship">[DEFAULT](#ParamVariableDeclarationDEFAULT)</span>
+<span class="relationship">[DEFAULT](#ParameterDeclarationDEFAULT)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ValueDeclarationPOSSIBLE_SUB_TYPES)</span>
 
@@ -2355,20 +2355,20 @@ MethodDeclaration--"RECORD_DECLARATION¹"-->MethodDeclarationRECORD_DECLARATION[
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### DEFAULT<a id="ParamVariableDeclarationDEFAULT"></a>
+#### DEFAULT<a id="ParameterDeclarationDEFAULT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ParamVariableDeclaration--"DEFAULT¹"-->ParamVariableDeclarationDEFAULT[<a href='#eexpression'>Expression</a>]:::outer
+ParameterDeclaration--"DEFAULT¹"-->ParameterDeclarationDEFAULT[<a href='#eexpression'>Expression</a>]:::outer
 ```
-## TypeParamDeclaration<a id="etypeparamdeclaration"></a>
+## TypeParameterDeclaration<a id="etypeparamdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Declaration](#edeclaration)</span>
 <span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
-<span class="classLabel">[TypeParamDeclaration](#etypeparamdeclaration)</span>
+<span class="classLabel">[TypeParameterDeclaration](#etypeparamdeclaration)</span>
 
 ### Relationships
-<span class="relationship">[DEFAULT](#TypeParamDeclarationDEFAULT)</span>
+<span class="relationship">[DEFAULT](#TypeParameterDeclarationDEFAULT)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ValueDeclarationPOSSIBLE_SUB_TYPES)</span>
 
@@ -2388,11 +2388,11 @@ ParamVariableDeclaration--"DEFAULT¹"-->ParamVariableDeclarationDEFAULT[<a href=
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### DEFAULT<a id="TypeParamDeclarationDEFAULT"></a>
+#### DEFAULT<a id="TypeParameterDeclarationDEFAULT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TypeParamDeclaration--"DEFAULT¹"-->TypeParamDeclarationDEFAULT[<a href='#etype'>Type</a>]:::outer
+TypeParameterDeclaration--"DEFAULT¹"-->TypeParameterDeclarationDEFAULT[<a href='#etype'>Type</a>]:::outer
 ```
 ## TemplateDeclaration<a id="etemplatedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>

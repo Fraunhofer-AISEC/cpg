@@ -1171,9 +1171,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     instr
                 )
 
-            val catchCompoundStatement = newBlockStatement(instrStr)
-            catchCompoundStatement.addStatement(gotoCatch)
-            catchClause.body = catchCompoundStatement
+            val catchBlockStatement = newBlockStatement(instrStr)
+            catchBlockStatement.addStatement(gotoCatch)
+            catchClause.body = catchBlockStatement
             tryStatement.catchClauses = mutableListOf(catchClause)
 
             return tryStatement

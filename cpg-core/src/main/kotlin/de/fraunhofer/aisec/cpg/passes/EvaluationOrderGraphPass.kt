@@ -60,8 +60,8 @@ import org.slf4j.LoggerFactory
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
- * * EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate node.
- *   A CFG will rather use the first actual executable statement within the block.
+ * * EOG considers an opening blocking ("BlockStatement", indicated by a "{") as a separate node. A
+ *   CFG will rather use the first actual executable statement within the block.
  * * For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG treats
  *   this as one "if" statement.
  * * EOG considers a method header as a node. CFG will consider the first executable statement of
@@ -109,11 +109,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
         map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
         map[SubscriptionExpression::class.java] = {
-            handleArraySubscriptionExpression(it as SubscriptionExpression)
+            handleSubscriptionExpression(it as SubscriptionExpression)
         }
-        map[NewArrayExpression::class.java] = {
-            handleArrayCreationExpression(it as NewArrayExpression)
-        }
+        map[NewArrayExpression::class.java] = { handleNewArrayExpression(it as NewArrayExpression) }
         map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
         map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
@@ -122,8 +120,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
         map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
         map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[BlockStatement::class.java] = { handleCompoundStatement(it as BlockStatement) }
-        map[Block::class.java] = { handleCompoundStatementExpression(it as Block) }
+        map[BlockStatement::class.java] = { handleBlockStatement(it as BlockStatement) }
+        map[Block::class.java] = { handleBlockStatementExpression(it as Block) }
         map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
         map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
         map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
@@ -419,7 +417,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArraySubscriptionExpression(node: SubscriptionExpression) {
+    protected fun handleSubscriptionExpression(node: SubscriptionExpression) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
         createEOG(node.arrayExpression)
@@ -427,7 +425,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArrayCreationExpression(node: NewArrayExpression) {
+    protected fun handleNewArrayExpression(node: NewArrayExpression) {
         for (dimension in node.dimensions) {
             createEOG(dimension)
         }
@@ -524,7 +522,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatement(node: BlockStatement) {
+    protected fun handleBlockStatement(node: BlockStatement) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)
@@ -579,7 +577,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatementExpression(node: Block) {
+    protected fun handleBlockStatementExpression(node: Block) {
         createEOG(node.statement)
         pushToEOG(node)
     }

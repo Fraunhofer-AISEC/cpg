@@ -142,7 +142,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                 currentTU = node
             }
             is ConstructorCallExpression -> {
-                handleExplicitConstructorInvocation(node)
+                handleConstructorCallExpression(node)
             }
             is ConstructExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
@@ -465,7 +465,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleExplicitConstructorInvocation(eci: ConstructorCallExpression) {
+    protected fun handleConstructorCallExpression(eci: ConstructorCallExpression) {
         eci.containingClass?.let { containingClass ->
             val recordDeclaration = recordMap[eci.parseName(containingClass)]
             val signature = eci.arguments.map { it.type }

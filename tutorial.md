@@ -89,22 +89,22 @@ In the following, we will use the aforementioned objects to query the source cod
 res3: List<de.fraunhofer.aisec.cpg.graph.Node> = ...
 ```
 
-The output here can be quite verbose, so additional filtering is needed. The `all` function takes an additional type parameter, which can be used to further filter nodes of a particular type. In this case, we are interested in all `ArraySubscriptionExpression` nodes, i.e. those that represent access to an element of an array. These operations are often prone to out of bounds errors and we want to explore, whether our code is also affected by that.
+The output here can be quite verbose, so additional filtering is needed. The `all` function takes an additional type parameter, which can be used to further filter nodes of a particular type. In this case, we are interested in all `SubscriptionExpression` nodes, i.e. those that represent access to an element of an array. These operations are often prone to out of bounds errors and we want to explore, whether our code is also affected by that.
 
 ```kotlin
-[4] result.all<ArraySubscriptionExpression>()
-res4: List<de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression> = [
-    {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}},
-    {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}},
-    {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}, 
-    {"@type":"ArraySubscriptionExpression","location":"array.cpp(12:12-12:16)","type":{"@type":"ObjectType","name":"char"}}
+[4] result.all<SubscriptionExpression>()
+res4: List<de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression> = [
+    {"@type":"SubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}},
+    {"@type":"SubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}},
+    {"@type":"SubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}, 
+    {"@type":"SubscriptionExpression","location":"array.cpp(12:12-12:16)","type":{"@type":"ObjectType","name":"char"}}
 ]
 ```
 
 Much better. We have found four nodes that represent an array access. To see the corresponding source code of our result, we can prefix our previous command with `:code` or `:c`. This shows the raw source code as well as the location of the file where the code is located.
 
 ```kotlin
-[5] :code result.all<ArraySubscriptionExpression>()
+[5] :code result.all<SubscriptionExpression>()
 --- src/test/resources/array.go:6:2 ---
   6: a[11]
 ------------------------------------------------
@@ -129,7 +129,7 @@ This also demonstrates quite nicely, that queries on the CPG work independently 
 In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output we have seen before we can already identify two array indicies: `0` and `11`. But the other two are using a variable `b` as the index. Using the `evaluate` function, we can try to evaluate the variable `b`, to check if it has a constant value.
 
 ```kotlin
-[6] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.evaluate() }
+[6] result.all<SubscriptionExpression>().map { it.subscriptExpression.evaluate() }
 res6: List<Any?> = [11, 5, 5, 0]
 ```
 
@@ -138,17 +138,17 @@ In this case we are in luck and we see that, next to the `0` and `11` we already
 In a next step, we want to check to capacity of the array the access is referring to. We can make use of two helper functions `dfgFrom` and `capacity` to quickly check this, using the built-in data flow analysis.
 
 ```kotlin
-[7] var expr = result.all<ArraySubscriptionExpression>().map { Triple(
+[7] var expr = result.all<SubscriptionExpression>().map { Triple(
         it.subscriptExpression.evaluate() as Int,
-        it.arrayExpression.dfgFrom<ArrayCreationExpression>().first().capacity,
+        it.arrayExpression.dfgFrom<NewArrayExpression>().first().capacity,
         it
     ) }
 [8]: expr    
-res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
-    (11, 10, {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}),
-    (5, 4, {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}),
-    (5, 4, {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}),
-    (0, 100, {"@type":"ArraySubscriptionExpression","location":"array.cpp(12:12-12:16)","type":{"@type":"ObjectType","name":"char"}})
+res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression>> = [
+    (11, 10, {"@type":"SubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}),
+    (5, 4, {"@type":"SubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}),
+    (5, 4, {"@type":"SubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}),
+    (0, 100, {"@type":"SubscriptionExpression","location":"array.cpp(12:12-12:16)","type":{"@type":"ObjectType","name":"char"}})
 ]
 ```
 
@@ -158,10 +158,10 @@ Lastly, we can make use of the `filter` function to return only those nodes wher
 
 ```kotlin
 [9] expr.filter { it.first >= it.second }
-res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
-    (11, 10, {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}), 
-    (5, 4, {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}), 
-    (5, 4, {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}})
+res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression>> = [
+    (11, 10, {"@type":"SubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}), 
+    (5, 4, {"@type":"SubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}), 
+    (5, 4, {"@type":"SubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}})
 ]
 ```
 
@@ -189,13 +189,13 @@ Because the manual analyis we have shown can be quite tedious, we already includ
 ```kotlin
 [11] :run
 
---- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 11 of a, an array of length 10 ---
+--- FINDING: Out of bounds access in NewArrayExpression when accessing index 11 of a, an array of length 10 ---
 src/test/resources/array.go:6:2: a[11]
 
 The following path was discovered that leads to 11 being 11:
 src/test/resources/array.go:6:4: 11
 
---- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 5 of c, an array of length 4 ---
+--- FINDING: Out of bounds access in NewArrayExpression when accessing index 5 of c, an array of length 4 ---
 src/test/resources/array.cpp:6:12: = c[b]
 
 The following path was discovered that leads to b being 5:

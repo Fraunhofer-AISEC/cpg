@@ -414,7 +414,7 @@ def handle_argument(self, arg: ast.arg):
     else:
         tpe = TypeBuilderKt.unknownType(self.frontend)
     # TODO variadic
-    pvd = DeclarationBuilderKt.newParamVariableDeclaration(
+    pvd = DeclarationBuilderKt.newParameterDeclaration(
         self.frontend, arg.arg, tpe, False, self.get_src_code(arg))
     self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)

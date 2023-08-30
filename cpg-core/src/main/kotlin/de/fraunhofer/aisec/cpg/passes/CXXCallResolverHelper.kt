@@ -304,7 +304,7 @@ fun resolveConstructorWithImplicitCast(
  * realizations of the Template 3. Set return type of the CallExpression and checks if it uses a
  * ParameterizedType and therefore has to be instantiated 4. Set Template Parameters Edge from the
  * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to
- * ParamVariableDeclaration in TemplateDeclaration
+ * ParameterDeclaration in TemplateDeclaration
  *
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDecl functionTemplate we have identified that should be instantiated
@@ -362,7 +362,7 @@ fun applyTemplateInstantiation(
         }
     }
 
-    // Add DFG edges from the instantiation Expression to the ParamVariableDeclaration in the
+    // Add DFG edges from the instantiation Expression to the ParameterDeclaration in the
     // Template.
     for ((declaration) in initializationSignature) {
         if (declaration is ParameterDeclaration) {
@@ -420,7 +420,7 @@ fun signatureWithImplicitCastTransformation(
  *
  * @param initialization mapping of the declaration of the template parameters to the explicit
  *   values the template is instantiated with
- * @return mapping of the parameterized types to the corresponding TypeParamDeclaration in the
+ * @return mapping of the parameterized types to the corresponding TypeParameterDeclaration in the
  *   template
  */
 fun getParameterizedSignaturesFromInitialization(
@@ -452,7 +452,7 @@ fun getParameterizedSignaturesFromInitialization(
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
  *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
  *   initialization -&gt; initialization not possible
  */
 fun getTemplateInitializationSignature(
@@ -513,7 +513,7 @@ fun getTemplateInitializationSignature(
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
  *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
  *   initialization -&gt; initialization not possible
  */
 fun constructTemplateInitializationSignatureFromTemplateParameters(
@@ -558,10 +558,10 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
  *
  * @param callParameterArg
  * @param templateParameter
- * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
- *   ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+ * @return If the TemplateParameter is an TypeParameterDeclaration, the callParameter must be an
+ *   ObjectType => returns true If the TemplateParameter is a ParameterDeclaration, the
  *   callParameterArg must be an Expression and its type must match the type of the
- *   ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+ *   ParameterDeclaration (same type or subtype) => returns true Otherwise return false
  */
 fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
@@ -622,7 +622,7 @@ fun handleImplicitTemplateParameter(
 
 /**
  * @param function FunctionDeclaration realization of the template
- * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParamDeclarations
+ * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParameterDeclarations
  *   that define them, used to backwards resolve
  * @param initializationSignature mapping between the ParamDeclaration of the template and the
  *   corresponding instantiations

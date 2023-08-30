@@ -516,8 +516,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpression {
-        val eciStatement = stmt.asExplicitConstructorInvocationStmt()
+    private fun handleConstructorCallExpression(stmt: Statement): ConstructorCallExpression {
+        val eciStatement = stmt.asConstructorCallExpressionStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
         if (currentRecord == null) {
@@ -657,8 +657,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         map[LabeledStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleLabelStatement(stmt)
         }
-        map[ExplicitConstructorInvocationStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleExplicitConstructorInvocation(stmt)
+        map[ConstructorCallExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleConstructorCallExpression(stmt)
         }
         map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleExpressionStatement(stmt)

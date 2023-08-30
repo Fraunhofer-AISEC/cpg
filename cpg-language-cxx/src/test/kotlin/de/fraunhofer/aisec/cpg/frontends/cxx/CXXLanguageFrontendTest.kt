@@ -316,7 +316,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testCompoundStatement() {
+    fun testBlockStatement() {
         val file = File("src/test/resources/compoundstmt.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val function = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
