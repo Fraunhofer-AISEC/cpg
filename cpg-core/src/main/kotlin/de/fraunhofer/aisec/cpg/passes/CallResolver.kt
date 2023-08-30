@@ -321,6 +321,11 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
+        // We need to resolve the base calls first. This might be done duplicate now
+        if (callee is MemberExpression && callee.base is CallExpression) {
+            handleCallExpression(curClass, callee.base as CallExpression)
+        }
+
         // We need to adjust certain types of the base in case of a super call and we delegate this.
         // If that is successful, we can continue with regular resolving
         if (

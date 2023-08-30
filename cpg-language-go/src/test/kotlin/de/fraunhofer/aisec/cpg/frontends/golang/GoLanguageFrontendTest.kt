@@ -1000,4 +1000,29 @@ class GoLanguageFrontendTest : BaseTest() {
         assertIs<MemberExpression>(mce)
         assertRefersTo(mce, field)
     }
+
+    @Test
+    fun testChainedCall() {
+        val topLevel = Path.of("src", "test", "resources", "golang", "chained")
+        val tu =
+            analyze(
+                listOf(
+                    topLevel.resolve("chained.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val type = tu.records["Type"]
+        assertNotNull(type)
+
+        val elem = type.methods["Elem"]
+        assertNotNull(elem)
+
+        val call = tu.calls["Elem"]
+        assertInvokes(call, elem)
+    }
 }
