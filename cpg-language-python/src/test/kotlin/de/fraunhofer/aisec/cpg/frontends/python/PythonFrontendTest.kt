@@ -476,10 +476,11 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
-        assertEquals(2, recordFoo.methods.size)
-        val fooCtor = recordFoo.methods[0] as? ConstructorDeclaration
+        assertEquals(1, recordFoo.methods.size)
+        assertEquals(1, recordFoo.constructors.size)
+        val fooCtor = recordFoo.constructors[0] as? ConstructorDeclaration
         assertNotNull(fooCtor)
-        val foobar = recordFoo.methods[1]
+        val foobar = recordFoo.methods[0] as? MethodDeclaration
         assertNotNull(foobar)
 
         assertLocalName("__init__", fooCtor)
