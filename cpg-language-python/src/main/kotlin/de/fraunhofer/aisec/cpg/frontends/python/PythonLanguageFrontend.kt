@@ -33,14 +33,18 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
+import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import jep.python.PyObject
 import kotlin.io.path.Path
+import kotlin.io.path.nameWithoutExtension
 
-@SupportsParallelParsing(false)
+@SupportsParallelParsing(false) // TODO?
+@RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<PythonAST.AST, Any>(language, ctx) {
     private val jep = JepSingleton // configure Jep
@@ -64,7 +68,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             it.eval("parsed = ast.parse(fh.read(), filename=\"$absolutePath\", type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
-            return pythonASTtoCPG(pyAST, fileContent)
+            return pythonASTtoCPG(pyAST, file.name)
         }
     }
 
@@ -102,10 +106,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         val pythonASTModule =
             fromPython(pyAST) as? PythonAST.Module
                 ?: TODO() // could be one of ast.{Module,Interactive,Expression,FunctionType}
-        val tud = newTranslationUnitDeclaration(path, null, pythonASTModule) // TODO
+        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule) // TODO
         scopeManager.resetToGlobal(tud)
-        val nsdName = Path(path).fileName.toString()
-        val nsd = newNamespaceDeclaration(nsdName, null, pythonASTModule) // TODO
+        val nsdName = Path(path).nameWithoutExtension
+        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule) // TODO
         tud.addDeclaration(nsd)
         scopeManager.enterScope(nsd)
         for (stmt in pythonASTModule.body) {

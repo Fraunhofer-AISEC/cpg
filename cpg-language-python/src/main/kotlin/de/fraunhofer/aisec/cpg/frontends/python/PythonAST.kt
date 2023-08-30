@@ -31,6 +31,11 @@ import jep.python.PyObject
  * This interface makes Python's `ast` nodes accessible to Kotlin. It does not contain any complex
  * logic but rather aims at making all Python `ast` properties accessible to Kotlin (under the same
  * name as in Python).
+ *
+ * Python's AST object are mapped as close as possible to the original. Exceptions:
+ * - `identifier` fields are mapped as Kotlin `String`s
+ * - Python's `int` is mapped to `Int`
+ * - Constants are mapped as `Any` (thus Jep's conversion to Java makes the translation)
  */
 interface PythonAST {
 

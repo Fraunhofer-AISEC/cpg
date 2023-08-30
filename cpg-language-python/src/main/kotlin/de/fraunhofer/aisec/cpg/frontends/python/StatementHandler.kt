@@ -42,8 +42,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return when (node) {
             is PythonAST.ClassDef -> handleClassDef(node)
             is PythonAST.FunctionDef -> handleFunctionDef(node)
-            is PythonAST.Pass ->
-                return newEmptyStatement(code = frontend.codeOf(node), rawNode = node)
+            is PythonAST.Pass -> return newEmptyStatement(rawNode = node)
             is PythonAST.ImportFrom -> handleImportFrom(node)
             is PythonAST.Assign -> handleAssign(node)
             is PythonAST.Return -> handleReturn(node)
@@ -73,7 +72,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleIf(node: PythonAST.If): Statement {
-        return newEmptyStatement() // TODO
+        val ret = newIfStatement(rawNode = node)
+        ret.condition = frontend.expressionHandler.handle(node.test)
+        ret.thenStatement = makeCompoundStmt(node.body)
+        ret.elseStatement = makeCompoundStmt(node.orelse)
+        return ret
     }
 
     private fun handleReturn(node: PythonAST.Return): Statement {
@@ -83,7 +86,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleAssign(node: PythonAST.Assign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         val rhs = frontend.expressionHandler.handle(node.value)
-        return newEmptyStatement() // TODO
+        if (rhs is List<*>) TODO()
+        return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
     private fun handleImportFrom(node: PythonAST.ImportFrom): Statement {
@@ -91,8 +95,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleClassDef(stmt: PythonAST.ClassDef): Statement {
-        val cls =
-            newRecordDeclaration(stmt.name, "class", code = frontend.codeOf(stmt), rawNode = stmt)
+        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(getTypeInCurrentNamespace(it)) }
 
         frontend.scopeManager.enterScope(cls)
@@ -134,21 +137,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (s.name == "__init__") {
                     newConstructorDeclaration(
                         name = s.name,
-                        code = frontend.codeOf(s),
                         recordDeclaration = recordDeclaration,
                         rawNode = s
                     )
                 } else {
                     newMethodDeclaration(
                         name = s.name,
-                        code = frontend.codeOf(s),
                         recordDeclaration = recordDeclaration,
                         isStatic = false,
                         rawNode = s
                     )
                 }
             } else {
-                newFunctionDeclaration(name = s.name, code = frontend.codeOf(s), rawNode = s)
+                newFunctionDeclaration(name = s.name, rawNode = s)
             }
         frontend.scopeManager.enterScope(result)
 
@@ -159,7 +160,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     "`posonlyargs` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    code = frontend.codeOf(s.args),
                     rawNode = s.args
                 )
             frontend.scopeManager.addDeclaration(problem)
@@ -172,7 +172,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newProblemDeclaration(
                         "Expected a receiver",
                         problemType = ProblemNode.ProblemType.TRANSLATION,
-                        code = frontend.codeOf(s.args),
                         rawNode = s.args
                     )
                 frontend.scopeManager.addDeclaration(problem)
@@ -183,7 +182,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newVariableDeclaration(
                         name = recvPythonNode.arg,
                         type = tpe,
-                        code = frontend.codeOf(recvPythonNode),
                         implicitInitializerAllowed = false,
                         rawNode = recvPythonNode
                     )
@@ -211,7 +209,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     "`vararg` is not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    code = frontend.codeOf(it),
                     rawNode = it
                 )
             frontend.scopeManager.addDeclaration(problem)
@@ -222,7 +219,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     "`kwonlyargs` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    code = frontend.codeOf(s.args),
                     rawNode = s.args
                 )
             frontend.scopeManager.addDeclaration(problem)
@@ -233,7 +229,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     "`kw_defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    code = frontend.codeOf(s.args),
                     rawNode = s.args
                 )
             frontend.scopeManager.addDeclaration(problem)
@@ -244,7 +239,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     "`kwarg` is not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    code = frontend.codeOf(it),
                     rawNode = it
                 )
             frontend.scopeManager.addDeclaration(problem)
@@ -255,7 +249,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     "`defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    code = frontend.codeOf(s.args),
                     rawNode = s.args
                 )
             frontend.scopeManager.addDeclaration(problem)
