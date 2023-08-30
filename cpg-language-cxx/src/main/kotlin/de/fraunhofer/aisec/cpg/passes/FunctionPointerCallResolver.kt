@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -63,9 +62,6 @@ class FunctionPointerCallResolver(ctx: TranslationContext) : ComponentPass(ctx) 
     override fun accept(component: Component) {
         inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         walker = ScopedWalker(scopeManager)
-        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
-            walker.collectDeclarations(currNode)
-        }
         walker.registerHandler { node, _ -> resolve(node) }
 
         for (tu in component.translationUnits) {
