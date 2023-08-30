@@ -51,24 +51,51 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is PythonAST.Expr -> handleExpressionStatement(node)
             is PythonAST.For -> handleFor(node)
             is PythonAST.While -> handleWhile(node)
+            is PythonAST.Import -> handleImport(node)
+            is PythonAST.Break -> newBreakStatement(rawNode = node)
+            is PythonAST.Continue -> newContinueStatement(rawNode = node)
             else -> TODO()
         }
     }
 
+    private fun handleImport(node: PythonAST.Import): Statement {
+        val declStmt = newDeclarationStatement(rawNode = node)
+        for (imp in node.names) {
+            val v =
+                if (imp.asname != null) {
+                    newVariableDeclaration(imp.asname, rawNode = imp) // TODO refers to original????
+                } else {
+                    newVariableDeclaration(imp.name, rawNode = imp)
+                }
+            frontend.scopeManager.addDeclaration(v)
+            declStmt.addDeclaration(v)
+        }
+        return declStmt
+    }
+
     private fun handleWhile(node: PythonAST.While): Statement {
-        return newEmptyStatement() // TODO
+        val ret = newWhileStatement(rawNode = node)
+        ret.condition = frontend.expressionHandler.handle(node.test)
+        ret.statement = makeCompoundStmt(node.body)
+        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        return ret
     }
 
     private fun handleFor(node: PythonAST.For): Statement {
-        return newEmptyStatement() // TODO
+        val ret = newForEachStatement(rawNode = node)
+        ret.iterable = frontend.expressionHandler.handle(node.iter)
+        ret.variable = frontend.expressionHandler.handle(node.target)
+        ret.statement = makeCompoundStmt(node.body)
+        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        return ret
     }
 
     private fun handleExpressionStatement(node: PythonAST.Expr): Statement {
-        return newEmptyStatement() // TODO
+        return frontend.expressionHandler.handle(node.value)
     }
 
     private fun handleAnnAssign(node: PythonAST.AnnAssign): Statement {
-        return newEmptyStatement() // TODO
+        TODO()
     }
 
     private fun handleIf(node: PythonAST.If): Statement {
@@ -80,7 +107,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleReturn(node: PythonAST.Return): Statement {
-        return newEmptyStatement() // TODO
+        val ret = newReturnStatement(rawNode = node)
+        node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
+        return ret
     }
 
     private fun handleAssign(node: PythonAST.Assign): Statement {
@@ -91,7 +120,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleImportFrom(node: PythonAST.ImportFrom): Statement {
-        return newEmptyStatement() // TODO
+        TODO()
     }
 
     private fun handleClassDef(stmt: PythonAST.ClassDef): Statement {

@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -37,7 +37,19 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is PythonAST.Name -> handleName(node)
             is PythonAST.Call -> handleCall(node)
             is PythonAST.Constant -> handleConstant(node)
+            is PythonAST.Attribute -> handleAttribute(node)
             else -> TODO()
+        }
+    }
+
+    private fun handleAttribute(node: PythonAST.Attribute): Expression {
+        val value = handle(node.value)
+        if (value is DeclaredReferenceExpression) {
+            return newDeclaredReferenceExpression(
+                value.name.append(frontend.language.namespaceDelimiter + node.attr)
+            ) // TODO???
+        } else {
+            TODO()
         }
     }
 
@@ -67,21 +79,35 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * TODO: cast, memberexpression, magic
      */
     private fun handleCall(node: PythonAST.Call): Expression {
-        val func = handle(node.func)
-        if (func is MemberExpression) TODO("OLD PYTHON CODE")
-
-        // try to resolve -> [ConstructExpression]
-        val currentScope = frontend.scopeManager.currentScope
-        val record = currentScope?.let { frontend.scopeManager.getRecordForName(it, func.name) }
         val ret =
-            if (record != null) {
-                // construct expression
-                val constructExpr =
-                    newConstructExpression((node.func as? PythonAST.Name)?.id, rawNode = node)
-                constructExpr.type = record.toType()
-                constructExpr
-            } else {
-                newCallExpression(func, rawNode = node)
+            when (node.func) {
+                is PythonAST.Attribute -> {
+                    newMemberCallExpression(
+                        frontend.expressionHandler.handle(node.func),
+                        rawNode = node
+                    )
+                }
+                else -> {
+                    val func = handle(node.func)
+
+                    // try to resolve -> [ConstructExpression]
+                    val currentScope = frontend.scopeManager.currentScope
+                    val record =
+                        currentScope?.let { frontend.scopeManager.getRecordForName(it, func.name) }
+
+                    if (record != null) {
+                        // construct expression
+                        val constructExpr =
+                            newConstructExpression(
+                                (node.func as? PythonAST.Name)?.id,
+                                rawNode = node
+                            )
+                        constructExpr.type = record.toType()
+                        constructExpr
+                    } else {
+                        newCallExpression(func, rawNode = node)
+                    }
+                }
             }
 
         for (arg in node.args) {
