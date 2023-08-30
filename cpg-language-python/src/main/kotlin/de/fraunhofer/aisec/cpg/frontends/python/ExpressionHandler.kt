@@ -38,8 +38,33 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is PythonAST.Call -> handleCall(node)
             is PythonAST.Constant -> handleConstant(node)
             is PythonAST.Attribute -> handleAttribute(node)
+            is PythonAST.BinOp -> handleBinOp(node)
             else -> TODO()
         }
+    }
+
+    private fun handleBinOp(node: PythonAST.BinOp): Expression {
+        val op =
+            when (node.op) {
+                is PythonAST.Add -> "+"
+                is PythonAST.Sub -> "-"
+                is PythonAST.Mult -> "*"
+                is PythonAST.MatMult -> "*"
+                is PythonAST.Div -> "/"
+                is PythonAST.Mod -> "%"
+                is PythonAST.Pow -> "**"
+                is PythonAST.LShift -> "<<"
+                is PythonAST.RShift -> ">>"
+                is PythonAST.BitOr -> "|"
+                is PythonAST.BitXor -> "^"
+                is PythonAST.BitAnd -> "&"
+                is PythonAST.FloorDiv -> "//"
+                else -> TODO()
+            }
+        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
+        ret.lhs = handle(node.left)
+        ret.rhs = handle(node.right)
+        return ret
     }
 
     private fun handleAttribute(node: PythonAST.Attribute): Expression {
