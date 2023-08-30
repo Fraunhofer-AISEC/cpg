@@ -377,18 +377,26 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // Loop through all the methods and adjust their receiver types
         for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
             // Add ParameterizedTypes to type
-            method.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
+            method.receiver?.let {
+                it.type = addParameterizedTypesToType(it.type, parameterizedTypes)
+            }
         }
 
         // Add parameterizedTypes to ConstructorDeclaration type and adjust their receiver types
         for (constructor in innerDeclaration.constructors) {
-            constructor.receiver?.let { addParameterizedTypesToType(it.type, parameterizedTypes) }
-
-            // We need to add the type to (first) return type as well. The function type is somehow
-            // magically updated then as well.
-            constructor.returnTypes.firstOrNull()?.let {
-                addParameterizedTypesToType(it, parameterizedTypes)
+            constructor.receiver?.let {
+                it.type = addParameterizedTypesToType(it.type, parameterizedTypes)
             }
+
+            // We need to add the type to (first) return type as well as the function type
+            constructor.returnTypes =
+                constructor.returnTypes.map { addParameterizedTypesToType(it, parameterizedTypes) }
+            constructor.type =
+                FunctionType(
+                    constructor.type.typeName,
+                    (constructor.type as? FunctionType)?.parameters ?: listOf(),
+                    constructor.returnTypes,
+                )
         }
     }
 
@@ -399,16 +407,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * @param parameterizedTypes
      */
     private fun addParameterizedTypesToType(
-        type: Type?,
+        type: Type,
         parameterizedTypes: List<ParameterizedType>
-    ) {
+    ): Type {
         if (type is ObjectType) {
-            for (parameterizedType in parameterizedTypes) {
-                type.addGeneric(parameterizedType)
-            }
+            // Because we cannot mutate the existing type (otherwise this will affect ALL usages of
+            // it), we need to create a new type with the correct generics
+            return objectType(type.name, parameterizedTypes)
         } else if (type is PointerType) {
-            addParameterizedTypesToType(type.elementType, parameterizedTypes)
+            return addParameterizedTypesToType(type.elementType, parameterizedTypes).pointer()
         }
+
+        return type
     }
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {

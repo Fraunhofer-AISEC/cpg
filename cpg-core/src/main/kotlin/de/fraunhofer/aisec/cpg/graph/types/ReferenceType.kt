@@ -68,16 +68,8 @@ class ReferenceType : Type, SecondOrderType {
         return elementType.dereference()
     }
 
-    override fun duplicate(): Type {
-        return ReferenceType(this, elementType)
-    }
-
     override fun isSimilar(t: Type?): Boolean {
         return t is ReferenceType && t.elementType == this && super.isSimilar(t)
-    }
-
-    fun refreshName() {
-        name = elementType.name.append("&")
     }
 
     override fun equals(other: Any?): Boolean {

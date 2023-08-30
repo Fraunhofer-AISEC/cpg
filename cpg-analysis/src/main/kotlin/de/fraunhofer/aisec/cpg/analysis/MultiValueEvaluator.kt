@@ -181,9 +181,8 @@ class MultiValueEvaluator : ValueEvaluator() {
         return when (expr.operatorCode) {
             "-" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Collection<*> -> input.map { n -> (n as? Number)?.negate() }
-                    is Number -> input.negate()
-                    else -> cannotEvaluate(expr, this)
+                    is Collection<*> -> input.map { n -> (n as? Number)?.unaryMinus() }
+                    else -> super.handleUnaryOp(expr, depth)
                 }
             }
             "--" -> {
@@ -191,9 +190,8 @@ class MultiValueEvaluator : ValueEvaluator() {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
-                        is Number -> input.decrement()
-                        is Collection<*> -> input.map { n -> (n as? Number)?.decrement() }
-                        else -> cannotEvaluate(expr, this)
+                        is Collection<*> -> input.map { n -> (n as? Number)?.dec() }
+                        else -> super.handleUnaryOp(expr, depth)
                     }
                 }
             }
@@ -202,15 +200,14 @@ class MultiValueEvaluator : ValueEvaluator() {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
-                        is Number -> input.increment()
-                        is Collection<*> -> input.map { n -> (n as? Number)?.increment() }
-                        else -> cannotEvaluate(expr, this)
+                        is Collection<*> -> input.map { n -> (n as? Number)?.inc() }
+                        else -> super.handleUnaryOp(expr, depth)
                     }
                 }
             }
             "*" -> evaluateInternal(expr.input, depth + 1)
             "&" -> evaluateInternal(expr.input, depth + 1)
-            else -> cannotEvaluate(expr, this)
+            else -> super.handleUnaryOp(expr, depth)
         }
     }
 
@@ -401,22 +398,22 @@ class MultiValueEvaluator : ValueEvaluator() {
         return when (expr.operatorCode) {
             "-" -> {
                 when (input) {
-                    is Collection<*> -> input.map { n -> (n as? Number)?.negate() }
-                    is Number -> input.negate()
+                    is Collection<*> -> input.map { n -> (n as? Number)?.unaryMinus() }
+                    is Number -> -input
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "--" -> {
                 when (input) {
-                    is Number -> input.decrement()
-                    is Collection<*> -> input.map { n -> (n as? Number)?.decrement() }
+                    is Number -> input.dec()
+                    is Collection<*> -> input.map { n -> (n as? Number)?.dec() }
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
                 when (input) {
-                    is Number -> input.increment()
-                    is Collection<*> -> input.map { n -> (n as? Number)?.increment() }
+                    is Number -> input.inc()
+                    is Collection<*> -> input.map { n -> (n as? Number)?.inc() }
                     else -> cannotEvaluate(expr, this)
                 }
             }

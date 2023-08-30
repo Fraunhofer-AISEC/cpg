@@ -32,20 +32,16 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.stream.Collectors
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
@@ -147,15 +143,13 @@ private constructor(
             val list =
                 sourceLocations.flatMap { file ->
                     if (file.isDirectory) {
-                        Files.find(
-                                file.toPath(),
-                                999,
-                                { _: Path?, fileAttr: BasicFileAttributes ->
-                                    fileAttr.isRegularFile
-                                }
-                            )
-                            .map { it.toFile() }
-                            .collect(Collectors.toList())
+                        val files =
+                            file
+                                .walkTopDown()
+                                .onEnter { !it.name.startsWith(".") }
+                                .filter { it.isFile && !it.name.startsWith(".") }
+                                .toList()
+                        files
                     } else {
                         val frontendClass = file.language?.frontend
                         val supportsParallelParsing =
@@ -182,8 +176,8 @@ private constructor(
 
                 PrintWriter(tmpFile).use { writer ->
                     list.forEach {
-                        val cxxExtensions = listOf(".c", ".cpp", ".cc", ".cxx")
-                        if (cxxExtensions.contains(Util.getExtension(it))) {
+                        val cxxExtensions = listOf("c", "cpp", "cc", "cxx")
+                        if (cxxExtensions.contains(it.extension)) {
                             if (ctx.config.topLevel != null) {
                                 val topLevel = ctx.config.topLevel.toPath()
                                 writer.write(
@@ -276,7 +270,12 @@ private constructor(
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
                 log.error("Error parsing ${futureToFile[future]}", e)
-                Thread.currentThread().interrupt()
+                // We previously called Thread.currentThread().interrupt here, however
+                // it is unsure, why. Therefore, instead of just removing this line, we
+                // "disabled" it and left this comment here for future generations. If
+                // we see that it is really not needed we can remove it completely at some
+                // point.
+                // Thread.currentThread().interrupt()
             }
         }
 
@@ -298,9 +297,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         for (sourceLocation in sourceLocations) {
-            log.info("Parsing {}", sourceLocation.absolutePath)
-
-            var f = parse(component, ctx, sourceLocation)
+            val f = parse(component, ctx, sourceLocation)
             if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
@@ -331,6 +328,8 @@ private constructor(
         ctx: TranslationContext,
         sourceLocation: File,
     ): LanguageFrontend<*, *>? {
+        log.info("Parsing {}", sourceLocation.absolutePath)
+
         var frontend: LanguageFrontend<*, *>? = null
         try {
             frontend = getFrontend(sourceLocation, ctx)

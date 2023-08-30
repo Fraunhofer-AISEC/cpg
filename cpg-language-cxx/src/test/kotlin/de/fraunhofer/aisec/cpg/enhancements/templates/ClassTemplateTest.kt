@@ -155,7 +155,10 @@ internal class ClassTemplateTest : BaseTest() {
         val type2 = findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "class Type2")
         val first = findByUniqueName(result.fields, "first")
         val second = findByUniqueName(result.fields, "second")
-        val receiver = pair.byNameOrNull<MethodDeclaration>("Pair")?.receiver
+        val constructor = pair.constructors["Pair"]
+        assertNotNull(constructor)
+
+        val receiver = constructor.receiver
         assertNotNull(receiver)
 
         val pairConstructorDecl =

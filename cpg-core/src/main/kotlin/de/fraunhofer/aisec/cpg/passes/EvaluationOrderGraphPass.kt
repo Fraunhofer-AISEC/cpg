@@ -102,6 +102,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[FunctionDeclaration::class.java] = {
             handleFunctionDeclaration(it as FunctionDeclaration)
         }
+        map[TupleDeclaration::class.java] = { handleTupleDeclaration(it as TupleDeclaration) }
         map[VariableDeclaration::class.java] = {
             handleVariableDeclaration(it as VariableDeclaration)
         }
@@ -236,6 +237,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
         // analyze the initializer
         createEOG(node.initializer)
+        pushToEOG(node)
+    }
+
+    protected fun handleTupleDeclaration(node: TupleDeclaration) {
+        // analyze the initializer
+        createEOG(node.initializer)
+        node.elements.forEach { createEOG(it) }
         pushToEOG(node)
     }
 

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -70,6 +71,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         isStatic: Boolean,
         signature: List<Type?>,
         returnType: Type?,
+        hint: CallExpression? = null
     ): FunctionDeclaration {
         // We assume that the start is either a record, a namespace or the translation unit
         val record = start as? RecordDeclaration
@@ -91,7 +93,9 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                     newFunctionDeclaration(name ?: "", code)
                 }
 
-            Companion.log.debug(
+            debugWithFileLocation(
+                hint,
+                log,
                 "Inferred a new {} declaration {} with parameter types {}",
                 if (inferred is MethodDeclaration) "method" else "function",
                 inferred.name,
@@ -361,7 +365,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
     /**
      * This class implements a [HasType.TypeObserver] and uses the observed type to set the
-     * [ValueDeclaration.declaredType] of a [ValueDeclaration], based on the types we see. It can be
+     * [ValueDeclaration.type] of a [ValueDeclaration], based on the types we see. It can be
      * registered on objects that are used to "start" an inference, for example a
      * [MemberExpression], which infers a [FieldDeclaration]. Once the type of the member expression
      * becomes known, we can use this information to set the type of the field.
@@ -429,7 +433,8 @@ fun TranslationUnitDeclaration.inferFunction(
             isStatic,
             call.signature,
             // TODO: Is the call's type the return value's type?
-            call.type
+            call.type,
+            call
         )
 }
 
@@ -446,7 +451,8 @@ fun NamespaceDeclaration.inferFunction(
             isStatic,
             call.signature,
             // TODO: Is the call's type the return value's type?
-            call.type
+            call.type,
+            call
         )
 }
 
@@ -463,6 +469,7 @@ fun RecordDeclaration.inferMethod(
             isStatic,
             call.signature,
             // TODO: Is the call's type the return value's type?
-            call.type
+            call.type,
+            call
         ) as MethodDeclaration
 }

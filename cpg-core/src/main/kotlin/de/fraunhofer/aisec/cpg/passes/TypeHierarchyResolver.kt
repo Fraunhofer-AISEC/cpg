@@ -105,7 +105,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         recordDeclaration: RecordDeclaration
     ): Set<RecordDeclaration> {
         val superTypeDeclarations =
-            recordDeclaration.superTypes.mapNotNull { (it as ObjectType).recordDeclaration }.toSet()
+            recordDeclaration.superTypes.mapNotNull { (it as? ObjectType)?.recordDeclaration }.toSet()
         recordDeclaration.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }

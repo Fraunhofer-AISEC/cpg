@@ -43,8 +43,4 @@ class AutoType(override var language: Language<*>?) : Type("auto", language) {
     override fun dereference(): Type {
         return unknownType()
     }
-
-    override fun duplicate(): Type {
-        return AutoType(this.language)
-    }
 }

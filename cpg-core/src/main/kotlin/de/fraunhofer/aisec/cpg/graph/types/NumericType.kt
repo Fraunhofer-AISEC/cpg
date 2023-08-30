@@ -35,11 +35,6 @@ open class NumericType(
     language: Language<*>? = null,
     val modifier: Modifier = Modifier.SIGNED
 ) : ObjectType(typeName, listOf(), true, language) {
-
-    override fun duplicate(): Type {
-        return NumericType(this.name, bitWidth, language, modifier)
-    }
-
     /**
      * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
      * neither of the signed/unsigned option.

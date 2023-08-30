@@ -171,6 +171,34 @@ fun MetadataProvider.newVariableDeclaration(
 }
 
 /**
+ * Creates a new [TupleDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun LanguageProvider.newTupleDeclaration(
+    elements: List<VariableDeclaration>,
+    initializer: Expression?,
+    rawNode: Any? = null
+): TupleDeclaration {
+    val node = TupleDeclaration()
+    node.applyMetadata(this, null, rawNode, null, true)
+
+    // Tuples always have an auto-type
+    node.type = autoType()
+
+    // Also all our elements need to have an auto-type
+    elements.forEach { it.type = autoType() }
+    node.elements = elements
+
+    node.initializer = initializer
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [TypedefDeclaration]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional

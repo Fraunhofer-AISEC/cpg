@@ -127,12 +127,7 @@ class UnresolvedDFGPassTest {
                                 param("args", t("String[]"))
                                 body {
                                     declare {
-                                        variable(
-                                            "os",
-                                            t("Optional") {
-                                                (this as ObjectType).generics = listOf(t("String"))
-                                            }
-                                        ) {
+                                        variable("os", t("Optional", listOf(t("String")))) {
                                             memberCall("getOptionalString", ref("RandomClass")) {
                                                 isStatic = true
                                             }

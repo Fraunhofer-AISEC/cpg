@@ -27,19 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasDefault
-import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a type template parameter */
-class TypeParameterDeclaration : ValueDeclaration(), HasSecondaryTypeEdge, HasDefault<Type?> {
-    /**
-     * TemplateParameters can define a default for the type parameter Since the primary type edge
-     * points to the ParameterizedType, the default edge is a secondary type edge. Therefore, the
-     * TypeResolver requires to implement the [HasSecondaryTypeEdge] to be aware of the edge to be
-     * able to merge the type nodes.
-     */
+class TypeParameterDeclaration : ValueDeclaration(), HasDefault<Type?> {
+    /** TemplateParameters can define a default for the type parameter. */
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
     @AST
     override var default: Type? = null
@@ -52,15 +46,4 @@ class TypeParameterDeclaration : ValueDeclaration(), HasSecondaryTypeEdge, HasDe
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), default)
-
-    override fun updateType(typeState: Collection<Type>) {
-        val oldType = default
-        if (oldType != null) {
-            for (t in typeState) {
-                if (t == oldType) {
-                    default = t
-                }
-            }
-        }
-    }
 }

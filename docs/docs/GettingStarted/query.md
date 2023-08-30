@@ -112,6 +112,11 @@ set of analyses and functions to use them. These are:
 
 - **min(n: Node)**: Minimal value of a node
 - **max(n: Node)**: Maximal value of a node
+- **evaluate(evaluator: ValueEvaluator)**: Evaluates the value of a node. You
+  can use different evaluators which can affect the possible results. In general,
+  it makes sense to check if the evaluation succeeded and/or transfer the types.
+  E.g., the default value evaluator could return different numbers (transferring
+  them e.g. with `toLong()` or `toFloat()` could make sense), a string, or an error.
 - **sizeof(n: Node)**: The length of an array or string
 - **dataFlow(from: Node, to: Node)**: Checks if a data flow is possible between
   the nodes `from` as a source and `to` as sink.

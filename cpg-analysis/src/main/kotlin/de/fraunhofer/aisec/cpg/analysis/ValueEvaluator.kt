@@ -175,40 +175,14 @@ open class ValueEvaluator(
     private fun handlePlus(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
             lhsValue is String -> lhsValue + rhsValue
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue + rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue + rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue + rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
 
     private fun handleMinus(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue - rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue - rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue - rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
@@ -216,40 +190,14 @@ open class ValueEvaluator(
     private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
             rhsValue == 0 -> cannotEvaluate(expr, this)
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue / rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue / rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue / rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
 
     private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue * rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue * rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue * rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
@@ -302,19 +250,19 @@ open class ValueEvaluator(
         return when (expr.operatorCode) {
             "-" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.negate()
+                    is Number -> -input
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "--" -> {
-                when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.decrement()
+                return when (val input = evaluateInternal(expr.input, depth + 1)) {
+                    is Number -> input.dec()
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.increment()
+                    is Number -> input.inc()
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -439,40 +387,6 @@ open class ValueEvaluator(
         }
 
         return list
-    }
-}
-
-internal fun Number.negate(): Number {
-    return when (this) {
-        is Int -> -this
-        is Long -> -this
-        is Short -> -this
-        is Byte -> -this
-        is Double -> -this
-        is Float -> -this
-        else -> throw UnsupportedOperationException()
-    }
-}
-
-fun Number.increment(): Number {
-    return when (this) {
-        is Double -> this + 1
-        is Float -> this + 1
-        is Int -> this + 1
-        is Long -> this + 1
-        is Short -> this + 1
-        else -> throw UnsupportedOperationException()
-    }
-}
-
-fun Number.decrement(): Number {
-    return when (this) {
-        is Double -> this - 1
-        is Float -> this - 1
-        is Int -> this - 1
-        is Long -> this - 1
-        is Short -> this - 1
-        else -> throw UnsupportedOperationException()
     }
 }
 
