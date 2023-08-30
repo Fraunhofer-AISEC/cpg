@@ -51,13 +51,10 @@ class LabelStatement : Statement(), StatementHolder {
     }
 
     override var statementEdges: MutableList<PropertyEdge<Statement>>
-        get() =
-            subStatement?.let { mutableListOf(PropertyEdge(this, it, mutableMapOf())) }
-                ?: mutableListOf()
+        get() = subStatement?.let { wrap(listOf(it), this) } ?: mutableListOf()
         set(value) {
-            subStatement = value.firstOrNull()?.end
+            subStatement = unwrap(value).firstOrNull()
         }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LabelStatement) return false
