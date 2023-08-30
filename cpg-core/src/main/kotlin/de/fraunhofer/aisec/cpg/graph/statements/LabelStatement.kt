@@ -55,6 +55,7 @@ class LabelStatement : Statement(), StatementHolder {
         set(value) {
             subStatement = unwrap(value).firstOrNull()
         }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LabelStatement) return false
