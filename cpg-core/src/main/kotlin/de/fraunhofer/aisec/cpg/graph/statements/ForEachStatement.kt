@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 
@@ -72,13 +73,13 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
             iterable = s
         } else if (statement == null) {
             statement = s
-        } else if (statement !is BlockStatement) {
-            val newStmt = newBlockStatement()
+        } else if (statement !is Block) {
+            val newStmt = newBlock()
             statement?.let { newStmt.addStatement(it) }
             newStmt.addStatement(s)
             statement = newStmt
         } else {
-            (statement as? BlockStatement)?.addStatement(s)
+            (statement as? Block)?.addStatement(s)
         }
     }
 

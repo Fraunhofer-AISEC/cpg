@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 /**
@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
  * [StatementHolder], in which [Holder] is used as a common interface.
  *
  * A primary use-case for the usage of this interface is the Node Fluent DSL in order to create node
- * objects which can either be used as a statement (e.g. in a [BlockStatement]) or as an argument
- * (e.g. of a [CallExpression]).
+ * objects which can either be used as a statement (e.g. in a [Block]) or as an argument (e.g. of a
+ * [CallExpression]).
  */
 interface Holder<NodeTypeToHold : Node> {
     /** Adds a [Node] to the list of "held" nodes. */

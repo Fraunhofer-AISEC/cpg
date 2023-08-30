@@ -26,21 +26,20 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 
 class SynchronizedStatement : Statement() {
     @AST var expression: Expression? = null
 
-    @AST var blockStatement: BlockStatement? = null
+    @AST var block: Block? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SynchronizedStatement) return false
-        return super.equals(other) &&
-            expression == other.expression &&
-            blockStatement == other.blockStatement
+        return super.equals(other) && expression == other.expression && block == other.block
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), expression, blockStatement)
+    override fun hashCode() = Objects.hash(super.hashCode(), expression, block)
 }

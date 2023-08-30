@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression
 import java.nio.file.Path
@@ -107,7 +107,7 @@ class SizeEvaluatorTest {
         assertNotNull(forLoop)
 
         val subscriptExpr =
-            ((forLoop.statement as BlockStatement).statements[0] as AssignExpression).lhs<
+            ((forLoop.statement as Block).statements[0] as AssignExpression).lhs<
                 SubscriptionExpression
             >()
 

@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.isDerivedFrom
@@ -42,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
-    /** The function body. Usually a [BlockStatement]. */
+    /** The function body. Usually a [Block]. */
     @AST var body: Statement? = null
 
     /**
@@ -172,8 +172,8 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     }
 
     fun <T> getBodyStatementAs(i: Int, clazz: Class<T>): T? {
-        if (body is BlockStatement) {
-            val statement = (body as BlockStatement).statements[i]
+        if (body is Block) {
+            val statement = (body as Block).statements[i]
             return if (clazz.isAssignableFrom(statement.javaClass)) clazz.cast(statement) else null
         }
         return null

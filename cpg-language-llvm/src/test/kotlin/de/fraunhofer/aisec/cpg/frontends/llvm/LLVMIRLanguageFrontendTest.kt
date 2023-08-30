@@ -73,7 +73,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("i32", main.type)
 
         val xVector =
-            (main.bodyOrNull<BlockStatement>(0)?.statements?.get(0) as? DeclarationStatement)
+            (main.bodyOrNull<Block>(0)?.statements?.get(0) as? DeclarationStatement)
                 ?.singleDeclaration as? VariableDeclaration
         val xInit = xVector?.initializer as? InitializerListExpression
         assertNotNull(xInit)
@@ -240,17 +240,17 @@ class LLVMIRLanguageFrontendTest {
         val onzeroLabel = main.bodyOrNull<LabelStatement>(0)
         assertNotNull(onzeroLabel)
         assertLocalName("onzero", onzeroLabel)
-        assertTrue(onzeroLabel.subStatement is BlockStatement)
+        assertTrue(onzeroLabel.subStatement is Block)
 
         val ononeLabel = main.bodyOrNull<LabelStatement>(1)
         assertNotNull(ononeLabel)
         assertLocalName("onone", ononeLabel)
-        assertTrue(ononeLabel.subStatement is BlockStatement)
+        assertTrue(ononeLabel.subStatement is Block)
 
         val defaultLabel = main.bodyOrNull<LabelStatement>(2)
         assertNotNull(defaultLabel)
         assertLocalName("otherwise", defaultLabel)
-        assertTrue(defaultLabel.subStatement is BlockStatement)
+        assertTrue(defaultLabel.subStatement is Block)
 
         // Check that the type of %a is i32
         val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
@@ -267,7 +267,7 @@ class LLVMIRLanguageFrontendTest {
         // Check that we have switch(a)
         assertSame(a, (switchStatement.selector as Reference).refersTo)
 
-        val cases = switchStatement.statement as BlockStatement
+        val cases = switchStatement.statement as Block
         // Check that the first case is case 0 -> goto onzero and that the BB is inlined
         val case1 = cases.statements[0] as CaseStatement
         assertEquals(0L, (case1.caseExpression as Literal<*>).value as Long)
@@ -318,7 +318,7 @@ class LLVMIRLanguageFrontendTest {
         val ifStatement = main.bodyOrNull<IfStatement>(0)
         assertNotNull(ifStatement)
         assertEquals("IfUnequal", (ifStatement.elseStatement!! as GotoStatement).labelName)
-        val ifBranch = (ifStatement.thenStatement as BlockStatement)
+        val ifBranch = (ifStatement.thenStatement as Block)
 
         // Check that the condition is set correctly
         val ifCondition = ifStatement.condition
@@ -326,7 +326,7 @@ class LLVMIRLanguageFrontendTest {
 
         val elseBranch =
             (ifStatement.elseStatement!! as GotoStatement).targetLabel?.subStatement
-                as BlockStatement
+                as Block
         assertEquals(2, elseBranch.statements.size)
         assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)
         assertEquals("  ret i32 %y", elseBranch.statements[1].code)
@@ -356,7 +356,7 @@ class LLVMIRLanguageFrontendTest {
 
         val ifBranchSecondStatement = ifBranch.statements[1] as? IfStatement
         assertNotNull(ifBranchSecondStatement)
-        val ifRet = ifBranchSecondStatement.thenStatement as? BlockStatement
+        val ifRet = ifBranchSecondStatement.thenStatement as? Block
         assertNotNull(ifRet)
         assertEquals(1, ifRet.statements.size)
         assertEquals("  ret i32 1", ifRet.statements[0].code)
@@ -377,7 +377,7 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
 
-        val atomicrmwStatement = foo.bodyOrNull<BlockStatement>()
+        val atomicrmwStatement = foo.bodyOrNull<Block>()
         assertNotNull(atomicrmwStatement)
 
         // Check that the value is assigned to
@@ -417,7 +417,7 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.byNameOrNull<FunctionDeclaration>("foo")
         assertNotNull(foo)
 
-        val cmpxchgStatement = foo.bodyOrNull<BlockStatement>(1)
+        val cmpxchgStatement = foo.bodyOrNull<Block>(1)
         assertNotNull(cmpxchgStatement)
         assertEquals(2, cmpxchgStatement.statements.size)
 

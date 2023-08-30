@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStatement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructorCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -319,7 +320,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         synchronizedCPG.expression =
             frontend.expressionHandler.handle(synchronizedJava.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        synchronizedCPG.blockStatement = handle(synchronizedJava.body) as BlockStatement?
+        synchronizedCPG.block = handle(synchronizedJava.body) as Block?
         return synchronizedCPG
     }
 
@@ -349,11 +350,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return continueStatement
     }
 
-    fun handleBlockStatement(stmt: Statement): BlockStatement {
+    fun handleBlockStatement(stmt: Statement): Block {
         val blockStmt = stmt.asBlockStmt()
 
         // first of, all we need a compound statement
-        val compoundStatement = this.newBlockStatement(stmt.toString())
+        val compoundStatement = this.newBlock(stmt.toString())
         frontend.scopeManager.enterScope(compoundStatement)
         for (child in blockStmt.statements) {
             val statement = handle(child)
@@ -496,7 +497,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             start = getNextTokenWith("{", tokenRangeSelector.get().end)
             end = getPreviousTokenWith("}", tokenRange.get().end)
         }
-        val compoundStatement = this.newBlockStatement(getCodeBetweenTokens(start, end))
+        val compoundStatement = this.newBlock(getCodeBetweenTokens(start, end))
         compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
         for (sentry in switchStmt.entries) {
             if (sentry.labels.isEmpty()) {
@@ -516,8 +517,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleConstructorCallExpression(stmt: Statement): ConstructorCallExpression {
-        val eciStatement = stmt.asConstructorCallExpressionStmt()
+    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpression {
+        val eciStatement = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
         if (currentRecord == null) {
@@ -657,8 +658,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         map[LabeledStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleLabelStatement(stmt)
         }
-        map[ConstructorCallExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
-            handleConstructorCallExpression(stmt)
+        map[ExplicitConstructorInvocationStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleExplicitConstructorInvocation(stmt)
         }
         map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleExpressionStatement(stmt)

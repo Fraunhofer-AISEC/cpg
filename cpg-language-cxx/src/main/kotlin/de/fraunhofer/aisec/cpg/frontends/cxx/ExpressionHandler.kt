@@ -72,7 +72,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is CPPASTDesignatedInitializer -> handleCXXDesignatedInitializer(node)
             is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
             is CPPASTDeleteExpression -> handleDeleteExpression(node)
-            is CPPASTBlockStatementExpression -> handleBlockStatementExpression(node)
+            is CPPASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
             is CPPASTLambdaExpression -> handleLambdaExpression(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
@@ -123,12 +123,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return lambda
     }
 
-    private fun handleBlockStatementExpression(
-        ctx: CPPASTBlockStatementExpression
-    ): Expression {
-        val cse = newBlock(ctx.rawSignature)
-        cse.statement = frontend.statementHandler.handle(ctx.compoundStatement)
-        return cse
+    private fun handleCompoundStatementExpression(ctx: CPPASTCompoundStatementExpression): Expression {
+        return frontend.statementHandler.handle(ctx.compoundStatement) as Expression
     }
 
     private fun handleTypeIdExpression(ctx: IASTTypeIdExpression): TypeIdExpression {

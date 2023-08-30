@@ -362,7 +362,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
                 // When the parent is a compound statement (or similar block of code), we can safely
                 // assume that we're not in such a sub-expression
-                if (parent == null || parent !is BlockStatement) {
+                if (parent == null || parent !is Block) {
                     node.rhs.addNextDFG(node)
                 }
             }

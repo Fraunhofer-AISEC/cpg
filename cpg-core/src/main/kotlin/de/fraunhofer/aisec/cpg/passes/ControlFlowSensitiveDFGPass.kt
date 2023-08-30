@@ -289,7 +289,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         reachableReturnStatements: Collection<ReturnStatement>
     ) {
         val lastStatement =
-            ((node as? FunctionDeclaration)?.body as? BlockStatement)?.statements?.lastOrNull()
+            ((node as? FunctionDeclaration)?.body as? Block)?.statements?.lastOrNull()
         if (
             lastStatement is ReturnStatement &&
                 lastStatement.isImplicit &&

@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -54,7 +54,7 @@ class WalkerTest : BaseTest() {
                 val method = MethodDeclaration()
                 method.name = Name("method${j}", record.name)
 
-                val comp = BlockStatement()
+                val comp = Block()
 
                 // Each method has a body with contains a fair amount of variable declarations
                 for (k in 0..10) {

@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -127,7 +127,7 @@ class TypePropagationTest {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val assign = (main.body as? BlockStatement)?.statements?.get(2) as? AssignExpression
+            val assign = (main.body as? Block)?.statements?.get(2) as? AssignExpression
             assertNotNull(assign)
 
             val shortVar = main.variables["shortVar"]
@@ -380,7 +380,7 @@ class TypePropagationTest {
                     .commonType
             )
 
-            val assign = (body as BlockStatement).statements<AssignExpression>(1)
+            val assign = (body as Block).statements<AssignExpression>(1)
             assertNotNull(assign)
 
             val bb = variables["bb"]
@@ -397,7 +397,7 @@ class TypePropagationTest {
                 bb.assignedTypes
             )
 
-            val returnStatement = (body as BlockStatement).statements<ReturnStatement>(3)
+            val returnStatement = (body as Block).statements<ReturnStatement>(3)
             assertNotNull(returnStatement)
 
             val returnValue = returnStatement.returnValue

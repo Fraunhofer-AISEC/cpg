@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -195,7 +195,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // Let the statement handler take care of the function body. The outcome should (always)
             // be a compound statement, holding all other statements.
             val bodyStatement = frontend.statementHandler.handle(ctx.body)
-            if (bodyStatement is BlockStatement) {
+            if (bodyStatement is Block) {
                 val statements = bodyStatement.statementEdges
 
                 // get the last statement

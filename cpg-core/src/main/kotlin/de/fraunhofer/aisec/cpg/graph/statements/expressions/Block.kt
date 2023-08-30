@@ -26,23 +26,49 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
- * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
- * connected via the INVOKES edge to its [FunctionDeclaration].
+ * A statement which contains a list of statements. A common example is a function body within a
+ * [FunctionDeclaration].
  */
-// TODO Merge and/or refactor with BlockStatement
-class Block : Expression() {
-    /** The list of arguments. */
-    @AST var statement: Statement? = null
+class Block : Expression(), StatementHolder {
+    /** The list of statements. */
+    @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
+    @AST
+    override var statementEdges = mutableListOf<PropertyEdge<Statement>>()
+
+    /**
+     * This variable helps to differentiate between static and non static initializer blocks. Static
+     * initializer blocks are executed when the enclosing declaration is first referred to, e.g.
+     * loaded into the jvm or parsed. Non static initializers are executed on Record construction.
+     *
+     * If a compound statement is part of a method body, this notion is not relevant.
+     */
+    var isStaticBlock = false
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Block) return false
-        return super.equals(other) && statement == other.statement
+        return super.equals(other) &&
+            this.statements == other.statements &&
+            PropertyEdge.propertyEqualsList(statementEdges, other.statementEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), statements)
+
+    /** Returns the [n]-th statement in this list of statements. */
+    operator fun get(n: Int): Statement {
+        return statements[n]
+    }
 }

@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -444,7 +444,7 @@ object SubgraphWalker {
             for (node in walker?.backlog ?: listOf()) {
                 if (
                     node is RecordDeclaration ||
-                        node is BlockStatement ||
+                        node is Block ||
                         node is FunctionDeclaration ||
                         node is
                             TranslationUnitDeclaration // can also be a translation unit for global

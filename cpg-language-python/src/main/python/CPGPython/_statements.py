@@ -29,7 +29,7 @@ from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import TypeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
-from de.fraunhofer.aisec.cpg.graph.statements import BlockStatement
+from de.fraunhofer.aisec.cpg.graph.statements import Block
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 from java.util import ArrayList
 import ast
@@ -464,12 +464,12 @@ def handle_for(self, stmt):
     return for_stmt
 
 
-def make_block_statement(self, stmts) -> BlockStatement:
+def make_block_statement(self, stmts) -> Block:
     if stmts is None or len(stmts) == 0:
         self.log_with_loc(
             "Expected at least one statement. Returning a dummy.",
             loglevel="WARN")
-        return StatementBuilderKt.newBlockStatement(self.frontend, "")
+        return StatementBuilderKt.newBlock(self.frontend, "")
 
     if False and len(stmts) == 1:
         """ TODO decide how to handle this... """
@@ -478,7 +478,7 @@ def make_block_statement(self, stmts) -> BlockStatement:
             s = self.wrap_declaration_to_stmt(s)
         return s
     else:
-        block_statement = StatementBuilderKt.newBlockStatement(
+        block_statement = StatementBuilderKt.newBlock(
             self.frontend, "")
         for s in stmts:
             s = self.handle_statement(s)

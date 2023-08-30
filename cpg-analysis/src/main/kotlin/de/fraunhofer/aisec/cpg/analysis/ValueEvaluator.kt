@@ -277,10 +277,7 @@ open class ValueEvaluator(
      * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
      * s.
      */
-    protected fun handleSubscriptionExpression(
-        expr: SubscriptionExpression,
-        depth: Int
-    ): Any? {
+    protected fun handleSubscriptionExpression(expr: SubscriptionExpression, depth: Int): Any? {
         val array = (expr.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
         val ile = array?.initializer as? InitializerListExpression
 

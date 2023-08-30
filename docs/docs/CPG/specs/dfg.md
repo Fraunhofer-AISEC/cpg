@@ -65,7 +65,7 @@ Interesting fields:
 ### Case 1: Normal assignment (`operatorCode: =`)
 
 The `rhs` flows to `lhs`. In some languages, it is possible to have an assignment in a subexpression (e.g. `a + (b=1)`).
-For this reason, if the assignment's ast parent is not a `BlockStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
+For this reason, if the assignment's ast parent is not a `Block` (i.e., a block of statements), we also add a DFG edge to the whole operator.
 If the `lhs` consists of multiple variables (or a tuple), we try to split up the `rhs` by the index. If we can't do this, the whole `rhs` flows to all variables in `lhs`.
 
 Scheme:
@@ -87,7 +87,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   A[assignment.rhs] -- DFG --> assignment.lhs;
-  subgraph S[If the ast parent is not a BlockStatement]
+  subgraph S[If the ast parent is not a Block
     direction LR
     assignment.rhs -- DFG --> assignment;
   end

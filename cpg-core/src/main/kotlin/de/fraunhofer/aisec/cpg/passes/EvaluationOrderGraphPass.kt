@@ -60,8 +60,8 @@ import org.slf4j.LoggerFactory
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
- * * EOG considers an opening blocking ("BlockStatement", indicated by a "{") as a separate node. A
- *   CFG will rather use the first actual executable statement within the block.
+ * * EOG considers an opening blocking ("Block", indicated by a "{") as a separate node. A CFG will
+ *   rather use the first actual executable statement within the block.
  * * For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG treats
  *   this as one "if" statement.
  * * EOG considers a method header as a node. CFG will consider the first executable statement of
@@ -120,8 +120,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
         map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
         map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[BlockStatement::class.java] = { handleBlockStatement(it as BlockStatement) }
-        map[Block::class.java] = { handleBlockStatementExpression(it as Block) }
+        map[Block::class.java] = { handleBlock(it as Block) }
         map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
         map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
         map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
@@ -266,7 +265,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? BlockStatement)?.isStaticBlock == false }
+        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
         val staticCode = code.filter { it !in nonStaticCode }
 
         pushToEOG(statementHolder as Node)
@@ -522,7 +521,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleBlockStatement(node: BlockStatement) {
+    protected fun handleBlock(node: Block) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)
@@ -574,11 +573,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val input = node.input
         createEOG(input)
 
-        pushToEOG(node)
-    }
-
-    protected fun handleBlockStatementExpression(node: Block) {
-        createEOG(node.statement)
         pushToEOG(node)
     }
 
@@ -815,7 +809,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
         createEOG(node.expression)
         pushToEOG(node)
-        createEOG(node.blockStatement)
+        createEOG(node.block)
     }
 
     protected fun handleConditionalExpression(node: ConditionalExpression) {
@@ -931,9 +925,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val compound =
             if (node.statement is DoStatement) {
                 createEOG(node.statement)
-                (node.statement as DoStatement).statement as BlockStatement
+                (node.statement as DoStatement).statement as Block
             } else {
-                node.statement as BlockStatement
+                node.statement as Block
             }
         currentPredecessors = ArrayList()
         for (subStatement in compound.statements) {

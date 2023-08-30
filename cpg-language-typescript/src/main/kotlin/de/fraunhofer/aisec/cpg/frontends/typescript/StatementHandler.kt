@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.newBlockStatement
+import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -81,8 +81,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         return returnStmt
     }
 
-    private fun handleBlock(node: TypeScriptNode): BlockStatement {
-        val block = newBlockStatement(this.frontend.codeOf(node))
+    private fun handleBlock(node: TypeScriptNode): Block {
+        val block = newBlock(this.frontend.codeOf(node))
 
         node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
 

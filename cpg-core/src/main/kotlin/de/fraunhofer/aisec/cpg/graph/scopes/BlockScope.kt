@@ -25,11 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 
-class BlockScope(blockStatement: BlockStatement) :
-    ValueDeclarationScope(blockStatement), Breakable {
+class BlockScope(blockStatement: Block) : ValueDeclarationScope(blockStatement), Breakable {
     private val breaks: MutableList<BreakStatement> = ArrayList()
 
     override fun addBreakStatement(breakStatement: BreakStatement) {

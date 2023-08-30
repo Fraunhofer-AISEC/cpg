@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.astParent
 
@@ -168,8 +168,8 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    return if (this.body is BlockStatement) {
-        return (body as? BlockStatement)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+    return if (this.body is Block) {
+        return (body as? Block)?.statements?.filterIsInstance<T>()?.getOrNull(n)
     } else {
         if (n == 0 && this.body is T) {
             this.body as T
@@ -601,7 +601,7 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
 operator fun FunctionDeclaration.get(n: Int): Statement? {
     val body = this.body
 
-    if (body is BlockStatement) {
+    if (body is Block) {
         return body[n]
     } else if (n == 0) {
         return body

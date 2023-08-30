@@ -224,17 +224,14 @@ fun LanguageFrontend<*, *>.constructor(
 }
 
 /**
- * Creates a new [BlockStatement] in the Fluent Node DSL and sets it to the
- * [FunctionDeclaration.body] of the nearest enclosing [FunctionDeclaration]. The [init] block can
- * be used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [FunctionDeclaration.body] of the
+ * nearest enclosing [FunctionDeclaration]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(FunctionDeclaration)
 
-fun LanguageFrontend<*, *>.body(
-    needsScope: Boolean = true,
-    init: BlockStatement.() -> Unit
-): BlockStatement {
-    val node = newBlockStatement()
+fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Unit): Block {
+    val node = newBlock()
 
     scopeIfNecessary(needsScope, node, init)
     body = node
@@ -595,17 +592,14 @@ fun LanguageFrontend<*, *>.whileCondition(
 }
 
 /**
- * Creates a new [BlockStatement] in the Fluent Node DSL and sets it to the
- * [IfStatement.thenStatement] of the nearest enclosing [IfStatement]. The [init] block can be used
- * to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfStatement.thenStatement] of
+ * the nearest enclosing [IfStatement]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(IfStatement)
 
-fun LanguageFrontend<*, *>.thenStmt(
-    needsScope: Boolean = true,
-    init: BlockStatement.() -> Unit
-): BlockStatement {
-    val node = newBlockStatement()
+fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
+    val node = newBlock()
     scopeIfNecessary(needsScope, node, init)
 
     thenStatement = node
@@ -632,28 +626,28 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
 // TODO: Merge the bodies together
 
 /**
- * Creates a new [BlockStatement] in the Fluent Node DSL and sets it to the
- * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [WhileStatement.statement] of the
+ * nearest enclosing [WhileStatement]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(WhileStatement)
 
-fun LanguageFrontend<*, *>.loopBody(init: BlockStatement.() -> Unit): BlockStatement {
-    val node = newBlockStatement()
+fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
+    val node = newBlock()
     init(node)
     statement = node
 
     return node
 }
 /**
- * Creates a new [BlockStatement] in the Fluent Node DSL and sets it to the
- * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [WhileStatement.statement] of the
+ * nearest enclosing [WhileStatement]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(ForEachStatement)
 
-fun LanguageFrontend<*, *>.loopBody(init: BlockStatement.() -> Unit): BlockStatement {
-    val node = newBlockStatement()
+fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
+    val node = newBlock()
     init(node)
     statement = node
 
@@ -667,8 +661,8 @@ fun LanguageFrontend<*, *>.loopBody(init: BlockStatement.() -> Unit): BlockState
  */
 context(SwitchStatement)
 
-fun LanguageFrontend<*, *>.switchBody(init: BlockStatement.() -> Unit): BlockStatement {
-    val node = newBlockStatement()
+fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
+    val node = newBlock()
     init(node)
     statement = node
 
@@ -682,11 +676,8 @@ fun LanguageFrontend<*, *>.switchBody(init: BlockStatement.() -> Unit): BlockSta
  */
 context(IfStatement)
 
-fun LanguageFrontend<*, *>.elseStmt(
-    needsScope: Boolean = true,
-    init: BlockStatement.() -> Unit
-): BlockStatement {
-    val node = newBlockStatement()
+fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
+    val node = newBlock()
     scopeIfNecessary(needsScope, node, init)
 
     elseStatement = node

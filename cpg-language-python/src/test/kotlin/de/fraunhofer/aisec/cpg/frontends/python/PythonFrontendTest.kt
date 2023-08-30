@@ -129,7 +129,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(bar)
         assertEquals(2, bar.parameters.size)
 
-        var callExpression = (foo.body as? BlockStatement)?.statements?.get(0) as? CallExpression
+        var callExpression = (foo.body as? Block)?.statements?.get(0) as? CallExpression
         assertNotNull(callExpression)
 
         assertLocalName("bar", callExpression)
@@ -146,7 +146,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertLocalName("bar", bar)
 
-        val compStmt = bar.body as? BlockStatement
+        val compStmt = bar.body as? Block
         assertNotNull(compStmt)
         assertNotNull(compStmt.statements)
 
@@ -211,7 +211,7 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["foo"]
         assertNotNull(main)
 
-        val body = main.body as? BlockStatement
+        val body = main.body as? Block
         assertNotNull(body)
 
         val sel =
@@ -261,7 +261,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("someFunc", clsfunc)
 
         assertLocalName("foo", foo)
-        val body = foo.body as? BlockStatement
+        val body = foo.body as? Block
         assertNotNull(body)
         assertNotNull(body.statements)
         assertEquals(2, body.statements.size)
@@ -302,7 +302,7 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["foo"]
         assertNotNull(main)
 
-        val body = (main.body as? BlockStatement)?.statements?.get(0) as? DeclarationStatement
+        val body = (main.body as? Block)?.statements?.get(0) as? DeclarationStatement
         assertNotNull(body)
 
         val foo = body.singleDeclaration as? VariableDeclaration
@@ -377,11 +377,11 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(methBar)
         assertLocalName("bar", methBar)
 
-        val barZ = (methBar.body as? BlockStatement)?.statements?.get(0) as? MemberExpression
+        val barZ = (methBar.body as? Block)?.statements?.get(0) as? MemberExpression
         assertNotNull(barZ)
         assertEquals(fieldZ, barZ.refersTo)
 
-        val barBaz = (methBar.body as? BlockStatement)?.statements?.get(1) as? DeclarationStatement
+        val barBaz = (methBar.body as? Block)?.statements?.get(1) as? DeclarationStatement
         assertNotNull(barBaz)
         val barBazInner = barBaz.declarations[0] as? FieldDeclaration
         assertNotNull(barBazInner)
@@ -436,14 +436,14 @@ class PythonFrontendTest : BaseTest() {
 
         // self.somevar = i
         val someVarDeclaration =
-            ((bar.body as? BlockStatement)?.statements?.get(0) as? DeclarationStatement)
+            ((bar.body as? Block)?.statements?.get(0) as? DeclarationStatement)
                 ?.declarations
                 ?.first() as? FieldDeclaration
         assertNotNull(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertEquals(i, (someVarDeclaration.initializer as? Reference)?.refersTo)
 
-        val fooMemCall = (foo.body as? BlockStatement)?.statements?.get(0) as? MemberCallExpression
+        val fooMemCall = (foo.body as? Block)?.statements?.get(0) as? MemberCallExpression
         assertNotNull(fooMemCall)
 
         val mem = fooMemCall.callee as? MemberExpression
@@ -489,10 +489,10 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(bar)
         assertLocalName("bar", bar)
 
-        assertEquals(2, (bar.body as? BlockStatement)?.statements?.size)
-        val line1 = (bar.body as? BlockStatement)?.statements?.get(0) as? DeclarationStatement
+        assertEquals(2, (bar.body as? Block)?.statements?.size)
+        val line1 = (bar.body as? Block)?.statements?.get(0) as? DeclarationStatement
         assertNotNull(line1)
-        val line2 = (bar.body as? BlockStatement)?.statements?.get(1) as? MemberCallExpression
+        val line2 = (bar.body as? Block)?.statements?.get(1) as? MemberCallExpression
         assertNotNull(line2)
 
         assertEquals(1, line1.declarations.size)
@@ -545,7 +545,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(countParam)
         assertLocalName("c", countParam)
 
-        val countStmt = (methCount.body as? BlockStatement)?.statements?.get(0) as? IfStatement
+        val countStmt = (methCount.body as? Block)?.statements?.get(0) as? IfStatement
         assertNotNull(countStmt)
 
         val ifCond = countStmt.condition as? BinaryOperator
@@ -558,7 +558,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(0, lhs.arguments.size)
 
         val ifThen =
-            (countStmt.thenStatement as? BlockStatement)?.statements?.get(0) as? CallExpression
+            (countStmt.thenStatement as? Block)?.statements?.get(0) as? CallExpression
         assertNotNull(ifThen)
         assertEquals(methCount, ifThen.invokes.first())
         assertEquals(countParam, (ifThen.arguments.first() as? Reference)?.refersTo)
@@ -585,7 +585,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("self", selfReceiver)
         assertEquals(0, meth.parameters.size) // self is receiver and not a parameter
 
-        val methBody = meth.body as? BlockStatement
+        val methBody = meth.body as? Block
         assertNotNull(methBody)
 
         val assign = methBody.statements[0] as? AssignExpression
@@ -661,7 +661,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(classFieldWithInit, (assignClsFieldOutsideFunc.rhs<Reference>())?.refersTo)
         assertEquals("=", assignClsFieldOutsideFunc.operatorCode)
 
-        val barBody = methBar.body as? BlockStatement
+        val barBody = methBar.body as? Block
         assertNotNull(barBody)
 
         // self.classFieldDeclaredInFunction = 456
@@ -789,13 +789,13 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val mainBody = (main as? FunctionDeclaration)?.body as? BlockStatement
+        val mainBody = (main as? FunctionDeclaration)?.body as? Block
         assertNotNull(mainBody)
 
         val whlStmt = mainBody.statements[3] as? WhileStatement
         assertNotNull(whlStmt)
 
-        val whlBody = whlStmt.statement as? BlockStatement
+        val whlBody = whlStmt.statement as? Block
         assertNotNull(whlBody)
 
         val xDeclaration = whlBody.statements[0] as? DeclarationStatement
@@ -804,7 +804,7 @@ class PythonFrontendTest : BaseTest() {
         val ifStatement = whlBody.statements[1] as? IfStatement
         assertNotNull(ifStatement)
 
-        val brk = ifStatement.elseStatement as? BlockStatement
+        val brk = ifStatement.elseStatement as? Block
         assertNotNull(brk)
         brk.statements[0] as? BreakStatement
     }

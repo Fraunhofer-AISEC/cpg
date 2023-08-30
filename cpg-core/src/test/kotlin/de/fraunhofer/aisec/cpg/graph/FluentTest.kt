@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -82,7 +81,7 @@ class FluentTest {
         assertLocalName("argc", argc)
         assertLocalName("int", argc.type)
 
-        val body = main.body as? BlockStatement
+        val body = main.body as? Block
         assertNotNull(body)
         assertTrue {
             body.scope is FunctionScope

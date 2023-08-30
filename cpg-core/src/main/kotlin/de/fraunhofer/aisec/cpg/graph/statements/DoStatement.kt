@@ -39,7 +39,7 @@ class DoStatement : Statement() {
 
     /**
      * The statement that is going to be executed and re-executed, until the condition evaluates to
-     * false for the first time. Usually a [BlockStatement].
+     * false for the first time. Usually a [Block].
      */
     @AST var statement: Statement? = null
 

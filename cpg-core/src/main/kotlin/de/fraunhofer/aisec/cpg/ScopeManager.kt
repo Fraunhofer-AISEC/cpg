@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -88,8 +89,8 @@ class ScopeManager : ScopeProvider {
         get() = scopeMap[null] as? GlobalScope
 
     /** The current block, according to the scope that is currently active. */
-    val currentBlock: BlockStatement?
-        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? BlockStatement
+    val currentBlock: Block?
+        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? Block
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
@@ -213,7 +214,7 @@ class ScopeManager : ScopeProvider {
      * on-the-fly, if they do not exist.
      *
      * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
-     * and the CPG node it represents, e.g. a [BlockStatement].
+     * and the CPG node it represents, e.g. a [Block].
      *
      * Afterwards, all calls to [addDeclaration] will be distributed to the
      * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
@@ -225,7 +226,7 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is BlockStatement -> BlockScope(nodeToScope)
+                    is Block -> BlockScope(nodeToScope)
                     is WhileStatement,
                     is DoStatement,
                     is AssertStatement -> LoopScope(nodeToScope as Statement)

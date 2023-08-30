@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.BlockStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement

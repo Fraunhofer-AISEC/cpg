@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -47,7 +48,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTStatement): Statement {
         return when (node) {
-            is IASTBlockStatement -> handleBlockStatement(node)
+            is IASTCompoundStatement -> handleCompoundStatement(node)
             is IASTReturnStatement -> handleReturnStatement(node)
             is IASTDeclarationStatement -> handleDeclarationStatement(node)
             is IASTExpressionStatement -> handleExpressionStatement(node)
@@ -88,7 +89,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleTryBlockStatement(tryStmt: CPPASTTryBlockStatement): TryStatement {
         val tryStatement = newTryStatement(tryStmt.toString())
         frontend.scopeManager.enterScope(tryStatement)
-        val statement = handle(tryStmt.tryBody) as BlockStatement?
+        val statement = handle(tryStmt.tryBody) as Block?
         val catchClauses =
             Arrays.stream(tryStmt.catchHandlers)
                 .map { handleCatchHandler(it) }
@@ -111,7 +112,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             decl = frontend.declarationHandler.handle(catchHandler.declaration)
         }
 
-        catchClause.body = body as? BlockStatement
+        catchClause.body = body as? Block
 
         if (decl != null) {
             catchClause.parameter = decl as? VariableDeclaration
@@ -310,8 +311,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return returnStatement
     }
 
-    private fun handleBlockStatement(ctx: IASTBlockStatement): BlockStatement {
-        val compoundStatement = newBlockStatement(ctx.rawSignature)
+    private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
+        val compoundStatement = newBlock(ctx.rawSignature)
 
         frontend.scopeManager.enterScope(compoundStatement)
 
