@@ -33,7 +33,32 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, PythonAST.expr>(::ProblemExpression, frontend) {
     override fun handleNode(node: PythonAST.expr): Expression {
         return when (node) {
+            is PythonAST.Name -> handleName(node)
+            is PythonAST.Call -> handleCall(node)
             else -> TODO()
         }
+    }
+
+    /**
+     * Handles an `ast.Call` Python node. This can be one of
+     * - [MemberCallExpression]
+     * - [ConstructExpression]
+     * - [CastExpression]
+     * - [CallExpression]
+     *
+     * ast.Call = class Call(expr) | Call(expr func, expr* args, keyword* keywords)
+     */
+    private fun handleCall(node: PythonAST.Call): Expression {
+        val func = handle(node.func)
+
+        TODO()
+    }
+
+    private fun handleName(node: PythonAST.Name): Expression {
+        return newDeclaredReferenceExpression(
+            name = node.id,
+            code = frontend.codeOf(node),
+            rawNode = node
+        )
     }
 }

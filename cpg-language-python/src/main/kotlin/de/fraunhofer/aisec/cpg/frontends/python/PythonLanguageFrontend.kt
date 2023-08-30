@@ -124,28 +124,134 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
  * @param pyObject the Python object
  * @return our Kotlin view of the Python `ast` object
  */
-fun fromPython(pyObject: Any): PythonAST.AST {
+fun fromPython(pyObject: Any?): PythonAST.AST {
     if (pyObject !is PyObject) {
         TODO("Expected a PyObject")
     } else {
 
         return when (pyObject.getAttr("__class__").toString()) {
             "<class 'ast.Module'>" -> PythonAST.Module(pyObject)
-            "<class 'ast.ClassDef'>" -> PythonAST.ClassDef(pyObject)
+
+            // statements
             "<class 'ast.FunctionDef'>" -> PythonAST.FunctionDef(pyObject)
-            "<class 'ast.arguments'>" -> PythonAST.arguments(pyObject)
-            "<class 'ast.ImportFrom'>" -> PythonAST.ImportFrom(pyObject)
-            "<class 'ast.Assign'>" -> PythonAST.Assign(pyObject)
-            "<class 'ast.If'>" -> PythonAST.If(pyObject)
-            "<class 'ast.AnnAssign'>" -> PythonAST.AnnAssign(pyObject)
-            "<class 'ast.arg'>" -> PythonAST.arg(pyObject)
-            "<class 'ast.Expr'>" -> PythonAST.Expr(pyObject)
-            "<class 'ast.Expression'>" -> PythonAST.Expression(pyObject)
-            "<class 'ast.Pass'>" -> PythonAST.Pass(pyObject)
-            "<class 'ast.For'>" -> PythonAST.For(pyObject)
+            "<class 'ast.AsyncFunctionDef'>" -> PythonAST.AsyncFunctionDef(pyObject)
+            "<class 'ast.ClassDef'>" -> PythonAST.ClassDef(pyObject)
             "<class 'ast.Return'>" -> PythonAST.Return(pyObject)
-            "<class 'ast.Name'>" -> PythonAST.Name(pyObject)
+            "<class 'ast.Delete'>" -> PythonAST.Delete(pyObject)
+            "<class 'ast.Assign'>" -> PythonAST.Assign(pyObject)
+            "<class 'ast.AugAssign'>" -> PythonAST.AugAssign(pyObject)
+            "<class 'ast.AnnAssign'>" -> PythonAST.AnnAssign(pyObject)
+            "<class 'ast.For'>" -> PythonAST.For(pyObject)
+            "<class 'ast.AsyncFor'>" -> PythonAST.AsyncFor(pyObject)
             "<class 'ast.While'>" -> PythonAST.While(pyObject)
+            "<class 'ast.If'>" -> PythonAST.If(pyObject)
+            "<class 'ast.With'>" -> PythonAST.With(pyObject)
+            "<class 'ast.AsyncWith'>" -> PythonAST.AsyncWith(pyObject)
+            "<class 'ast.Match'>" -> PythonAST.Match(pyObject)
+            "<class 'ast.Raise'>" -> PythonAST.Raise(pyObject)
+            "<class 'ast.Try'>" -> PythonAST.Try(pyObject)
+            "<class 'ast.TryStar'>" -> PythonAST.TryStar(pyObject)
+            "<class 'ast.Assert'>" -> PythonAST.Assert(pyObject)
+            "<class 'ast.Import'>" -> PythonAST.Import(pyObject)
+            "<class 'ast.ImportFrom'>" -> PythonAST.ImportFrom(pyObject)
+            "<class 'ast.Global'>" -> PythonAST.Global(pyObject)
+            "<class 'ast.Nonlocal'>" -> PythonAST.Nonlocal(pyObject)
+            "<class 'ast.Expr'>" -> PythonAST.Expr(pyObject)
+            "<class 'ast.Pass'>" -> PythonAST.Pass(pyObject)
+            "<class 'ast.Break'>" -> PythonAST.Break(pyObject)
+            "<class 'ast.Continue'>" -> PythonAST.Continue(pyObject)
+
+            // `ast.expr`
+            "<class 'ast.BoolOp'>" -> PythonAST.BoolOp(pyObject)
+            "<class 'ast.NamedExpr'>" -> PythonAST.NamedExpr(pyObject)
+            "<class 'ast.BinOp'>" -> PythonAST.BinOp(pyObject)
+            "<class 'ast.UnaryOp'>" -> PythonAST.UnaryOp(pyObject)
+            "<class 'ast.Lambda'>" -> PythonAST.Lambda(pyObject)
+            "<class 'ast.IfExp'>" -> PythonAST.IfExp(pyObject)
+            "<class 'ast.Dict'>" -> PythonAST.Dict(pyObject)
+            "<class 'ast.Set'>" -> PythonAST.Set(pyObject)
+            "<class 'ast.ListComp'>" -> PythonAST.ListComp(pyObject)
+            "<class 'ast.SetComp'>" -> PythonAST.SetComp(pyObject)
+            "<class 'ast.DictComp'>" -> PythonAST.DictComp(pyObject)
+            "<class 'ast.GeneratorExp'>" -> PythonAST.GeneratorExp(pyObject)
+            "<class 'ast.Await'>" -> PythonAST.Await(pyObject)
+            "<class 'ast.Yield'>" -> PythonAST.Yield(pyObject)
+            "<class 'ast.YieldFrom'>" -> PythonAST.YieldFrom(pyObject)
+            "<class 'ast.Compare'>" -> PythonAST.Compare(pyObject)
+            "<class 'ast.Call'>" -> PythonAST.Call(pyObject)
+            "<class 'ast.FormattedValue'>" -> PythonAST.FormattedValue(pyObject)
+            "<class 'ast.JoinedStr'>" -> PythonAST.JoinedStr(pyObject)
+            "<class 'ast.Constant'>" -> PythonAST.Constant(pyObject)
+            "<class 'ast.Attribute'>" -> PythonAST.Attribute(pyObject)
+            "<class 'ast.Subscript'>" -> PythonAST.Subscript(pyObject)
+            "<class 'ast.Starred'>" -> PythonAST.Starred(pyObject)
+            "<class 'ast.Name'>" -> PythonAST.Name(pyObject)
+            "<class 'ast.List'>" -> PythonAST.List(pyObject)
+            "<class 'ast.Tuple'>" -> PythonAST.Tuple(pyObject)
+            "<class 'ast.Slice'>" -> PythonAST.Slice(pyObject)
+
+            // `ast.boolop`
+            "<class 'ast.And'>" -> PythonAST.And(pyObject)
+            "<class 'ast.Or'>" -> PythonAST.Or(pyObject)
+
+            // `ast.cmpop`
+            "<class 'ast.Eq'>" -> PythonAST.Eq(pyObject)
+            "<class 'ast.NotEq'>" -> PythonAST.NotEq(pyObject)
+            "<class 'ast.Lt'>" -> PythonAST.Lt(pyObject)
+            "<class 'ast.LtE'>" -> PythonAST.LtE(pyObject)
+            "<class 'ast.Gt'>" -> PythonAST.Gt(pyObject)
+            "<class 'ast.GtE'>" -> PythonAST.GtE(pyObject)
+            "<class 'ast.Is'>" -> PythonAST.Is(pyObject)
+            "<class 'ast.IsNot'>" -> PythonAST.IsNot(pyObject)
+            "<class 'ast.In'>" -> PythonAST.In(pyObject)
+            "<class 'ast.NotInt'>" -> PythonAST.NotIn(pyObject)
+
+            // `ast.expr_context`
+            "<class 'ast.Load'>" -> PythonAST.Load(pyObject)
+            "<class 'ast.Store'>" -> PythonAST.Store(pyObject)
+            "<class 'ast.Del'>" -> PythonAST.Del(pyObject)
+
+            // `ast.operator`
+            "<class 'ast.Add'>" -> PythonAST.Add(pyObject)
+            "<class 'ast.Sub'>" -> PythonAST.Sub(pyObject)
+            "<class 'ast.Mult'>" -> PythonAST.Mult(pyObject)
+            "<class 'ast.MatMult'>" -> PythonAST.MatMult(pyObject)
+            "<class 'ast.Div'>" -> PythonAST.Div(pyObject)
+            "<class 'ast.Mod'>" -> PythonAST.Mod(pyObject)
+            "<class 'ast.Pow'>" -> PythonAST.Pow(pyObject)
+            "<class 'ast.LShift'>" -> PythonAST.LShift(pyObject)
+            "<class 'ast.RShift'>" -> PythonAST.RShift(pyObject)
+            "<class 'ast.BitOr'>" -> PythonAST.BitOr(pyObject)
+            "<class 'ast.BitXor'>" -> PythonAST.BitXor(pyObject)
+            "<class 'ast.BitAnd'>" -> PythonAST.BitAnd(pyObject)
+            "<class 'ast.FloorDiv'>" -> PythonAST.FloorDiv(pyObject)
+
+            // `ast.pattern`
+            "<class 'ast.MatchValue'>" -> PythonAST.MatchValue(pyObject)
+            "<class 'ast.MatchSingleton'>" -> PythonAST.MatchSingleton(pyObject)
+            "<class 'ast.MatchSequence'>" -> PythonAST.MatchSequence(pyObject)
+            "<class 'ast.MatchMapping'>" -> PythonAST.MatchMapping(pyObject)
+            "<class 'ast.MatchClass'>" -> PythonAST.MatchClass(pyObject)
+            "<class 'ast.MatchStar'>" -> PythonAST.MatchStar(pyObject)
+            "<class 'ast.MatchAs'>" -> PythonAST.MatchAs(pyObject)
+            "<class 'ast.MatchOr'>" -> PythonAST.MatchOr(pyObject)
+
+            // `ast.unaryop`
+            "<class 'ast.Invert'>" -> PythonAST.Invert(pyObject)
+            "<class 'ast.Not'>" -> PythonAST.Not(pyObject)
+            "<class 'ast.UAdd'>" -> PythonAST.UAdd(pyObject)
+            "<class 'ast.USub'>" -> PythonAST.USub(pyObject)
+
+            // misc
+            "<class 'ast.alias'>" -> PythonAST.alias(pyObject)
+            "<class 'ast.arg'>" -> PythonAST.arg(pyObject)
+            "<class 'ast.arguments'>" -> PythonAST.arguments(pyObject)
+            "<class 'ast.comprehension'>" -> PythonAST.comprehension(pyObject)
+            "<class 'ast.excepthandler'>" -> PythonAST.excepthandler(pyObject)
+            "<class 'ast.keyword'>" -> PythonAST.keyword(pyObject)
+            "<class 'ast.match_case'>" -> PythonAST.match_case(pyObject)
+            "<class 'ast.type_ignore'>" -> PythonAST.type_ignore(pyObject)
+            "<class 'ast.withitem'>" -> PythonAST.withitem(pyObject)
             else -> {
                 TODO("Implement for ${pyObject.getAttr("__class__")}")
             }
