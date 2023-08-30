@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -35,8 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
 
 class JavaCallResolverHelper {
 
@@ -46,8 +46,8 @@ class JavaCallResolverHelper {
          * JLS13 §15.12.1.
          *
          * This function basically sets the correct type of the [Reference] containing the "super"
-         * keyword. Afterwards, we can use the regular [CallResolver.resolveMemberCallee] to resolve
-         * the [MemberCallExpression].
+         * keyword. Afterwards, we can use the regular [SymbolResolver.resolveMemberCallee] to
+         * resolve the [MemberCallExpression].
          *
          * @param callee The callee of the call expression that needs to be adjusted
          * @param curClass The class containing the call
@@ -55,12 +55,10 @@ class JavaCallResolverHelper {
         fun handleSuperCall(
             callee: MemberExpression,
             curClass: RecordDeclaration,
-            scopeManager: ScopeManager,
-            recordMap: Map<Name, RecordDeclaration>
+            scopeManager: ScopeManager
         ): Boolean {
             // Because the "super" keyword still refers to "this" (but casted to another class), we
-            // still
-            // need to connect the super reference to the receiver of this method.
+            // still need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
             if (func is MethodDeclaration) {
                 (callee.base as Reference?)?.refersTo = func.receiver
@@ -70,11 +68,10 @@ class JavaCallResolverHelper {
             var target: RecordDeclaration? = null
 
             // In case the reference is just called "super", this is a direct superclass, either
-            // defined
-            // explicitly or java.lang.Object by default
+            // defined explicitly or java.lang.Object by default
             if (callee.base.name.toString() == JavaLanguage().superClassKeyword) {
                 if (curClass.superClasses.isNotEmpty()) {
-                    target = recordMap[curClass.superClasses[0].root.name]
+                    target = curClass.superClasses[0].root.recordDeclaration
                 } else {
                     Util.warnWithFileLocation(
                         callee,
@@ -86,7 +83,7 @@ class JavaCallResolverHelper {
                 // BaseName.super.call(), might either be in order to specify an enclosing class or
                 // an
                 // interface that is implemented
-                target = handleSpecificSupertype(callee, curClass, recordMap)
+                target = handleSpecificSupertype(callee, curClass)
             }
 
             if (target != null) {
@@ -112,20 +109,20 @@ class JavaCallResolverHelper {
 
         fun handleSpecificSupertype(
             callee: MemberExpression,
-            curClass: RecordDeclaration,
-            recordMap: Map<Name, RecordDeclaration>
+            curClass: RecordDeclaration
         ): RecordDeclaration? {
             val baseName = callee.base.name.parent ?: return null
 
-            if (curClass.objectType(baseName) in curClass.implementedInterfaces) {
+            val type = curClass.objectType(baseName)
+            if (type in curClass.implementedInterfaces) {
                 // Basename is an interface -> BaseName.super refers to BaseName itself
-                return recordMap[baseName]
+                return type.recordDeclaration
             } else {
                 // BaseName refers to an enclosing class -> BaseName.super is BaseName's superclass
-                val base = recordMap[baseName]
+                val base = type.recordDeclaration
                 if (base != null) {
                     if (base.superClasses.isNotEmpty()) {
-                        return recordMap[base.superClasses[0].root.name]
+                        return base.superClasses[0].root.recordDeclaration
                     } else {
                         Util.warnWithFileLocation(
                             callee,

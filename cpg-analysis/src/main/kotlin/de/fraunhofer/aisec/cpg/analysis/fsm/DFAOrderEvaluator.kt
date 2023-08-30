@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -291,7 +290,8 @@ open class DFAOrderEvaluator(
         if (
             node is MemberCallExpression &&
                 node.base is Reference &&
-                consideredBases.contains((node.base as Reference).refersTo as Declaration)
+                (node.base as Reference).refersTo != null &&
+                consideredBases.contains((node.base as Reference).refersTo!!)
         ) {
             allUsedBases.add((node.base as Reference).refersTo)
         }

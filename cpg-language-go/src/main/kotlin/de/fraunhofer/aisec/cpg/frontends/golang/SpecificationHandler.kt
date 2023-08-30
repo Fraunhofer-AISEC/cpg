@@ -115,16 +115,17 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 // A field can also have no name, which means that it is embedded. In this case, it
                 // can be accessed by the local name of its type and therefore we name the field
-                // accordingly
-                val fieldName =
+                // accordingly. We use the modifiers property to denote that this is an embedded
+                // field, so we can easily retrieve them later
+                val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {
                         // Retrieve the root type local name
-                        type.root.name.localName
+                        Pair(type.root.name.localName, listOf("embedded"))
                     } else {
-                        field.names[0].name
+                        Pair(field.names[0].name, listOf())
                     }
 
-                val decl = newFieldDeclaration(fieldName, type, rawNode = field)
+                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
             }
         }
@@ -156,6 +157,15 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 if (field.names.isNotEmpty()) {
                     val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
+
+                    frontend.scopeManager.enterScope(method)
+
+                    val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
+                    if (params != null) {
+                        frontend.declarationHandler.handleFuncParams(params)
+                    }
+
+                    frontend.scopeManager.leaveScope(method)
 
                     frontend.scopeManager.addDeclaration(method)
                 } else {
@@ -327,10 +337,12 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // list of superclasses.
             else -> {
                 val record = newRecordDeclaration(spec.name.name, "overlay")
-                frontend.typeManager.registerType(record.toType())
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)
+
+                // Register the type with the type system
+                frontend.typeManager.registerType(record.toType())
                 record
             }
         }

@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -452,14 +453,13 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testMemberCalls() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
+        val result =
+            analyze(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
+        assertNotNull(result)
 
-        assertNotNull(tu)
-
-        val p = tu.namespaces["p"]
+        val p = result.namespaces["p"]
         assertNotNull(p)
 
         val myStruct = p.records["MyStruct"]
@@ -471,22 +471,74 @@ class GoLanguageFrontendTest : BaseTest() {
         assertLocalName("MyFunc", myFunc)
 
         val body = myFunc.body as? Block
-
         assertNotNull(body)
 
-        val printf = body.statements.first() as? CallExpression
+        val printfCall = body.statements.first() as? CallExpression
+        assertNotNull(printfCall)
+        assertLocalName("Printf", printfCall)
+        assertFullName("fmt.Printf", printfCall)
 
-        assertNotNull(printf)
-        assertLocalName("Printf", printf)
-        assertFullName("fmt.Printf", printf)
-
-        val arg1 = printf.arguments[0] as? MemberCallExpression
+        val arg1 = printfCall.arguments[0] as? MemberCallExpression
 
         assertNotNull(arg1)
         assertLocalName("myOtherFunc", arg1)
         assertFullName("p.MyStruct.myOtherFunc", arg1)
 
         assertEquals(myFunc.receiver, (arg1.base as? Reference)?.refersTo)
+    }
+
+    @Test
+    fun testCorrectInference() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val result =
+            analyze(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
+
+        // Make sure, that we inferred the Printf function at the correct namespace
+        val fmt = result.namespaces["fmt"]
+        assertNotNull(fmt)
+
+        val printf = fmt.functions["Printf"]
+        assertNotNull(printf)
+        assertTrue(printf.isInferred)
+
+        val printfCall = result.calls["fmt.Printf"]
+        assertNotNull(printfCall)
+        assertLocalName("Printf", printfCall)
+        assertFullName("fmt.Printf", printfCall)
+        assertInvokes(printfCall, printf)
+    }
+
+    @Test
+    fun testQualifiedCallInMethod() {
+        val stdLib = Path.of("src", "test", "resources", "golang-std")
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("struct.go").toFile(),
+                    stdLib.resolve("fmt").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+                it.includePath(stdLib)
+            }
+        assertNotNull(result)
+
+        val fmt = result.namespaces["fmt"]
+        assertNotNull(fmt)
+
+        val printf = fmt.functions["Printf"]
+        assertNotNull(printf)
+        assertFalse(printf.isInferred)
+
+        val printfCall = result.calls["fmt.Printf"]
+        assertNotNull(printfCall)
+        assertInvokes(printfCall, printf)
     }
 
     @Test
@@ -627,6 +679,21 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(app)
 
         val tus = app.translationUnits
+
+        // fetch the function declaration from the struct TU
+        val tu2 = tus[1]
+
+        val p2 = tu2.namespaces["p"]
+        assertNotNull(p2)
+
+        val myOtherFunc = p2.methods["myOtherFunc"]
+        assertNotNull(myOtherFunc)
+        assertFalse(myOtherFunc.isImplicit)
+
+        val newMyStruct = p2.functions["NewMyStruct"]
+        assertNotNull(newMyStruct)
+
+        // and compare it with the call TU
         val tu = tus[0]
 
         val p = tu.namespaces["p"]
@@ -646,23 +713,19 @@ class GoLanguageFrontendTest : BaseTest() {
             assertEquals(objectType("p.MyStruct").pointer(), c.type)
         }
 
-        val newMyStruct = assertIs<CallExpression>(c.firstAssignment)
+        val newMyStructCall = assertIs<CallExpression>(c.firstAssignment)
+        assertInvokes(newMyStructCall, newMyStruct)
 
-        // fetch the function declaration from the other TU
-        val tu2 = tus[1]
-
-        val p2 = tu2.namespaces["p"]
-        assertNotNull(p2)
-
-        val newMyStructDef = p2.functions["NewMyStruct"]
-        assertTrue(newMyStruct.invokes.contains(newMyStructDef))
-
-        val call = body.statements[1] as? MemberCallExpression
+        val call = tu.calls["myOtherFunc"] as? MemberCallExpression
         assertNotNull(call)
 
         val base = call.base as? Reference
         assertNotNull(base)
-        assertEquals(c, base.refersTo)
+        assertRefersTo(base, c)
+
+        val myOtherFuncCall = tu.calls["myOtherFunc"]
+        assertNotNull(myOtherFuncCall)
+        assertInvokes(myOtherFuncCall, myOtherFunc)
 
         val go = main.calls["go"]
         assertNotNull(go)
@@ -1024,5 +1087,43 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val call = tu.calls["Elem"]
         assertInvokes(call, elem)
+    }
+
+    @Test
+    fun testComplexResolution() {
+        val topLevel = Path.of("src", "test", "resources", "golang", "complex_resolution")
+        val result =
+            analyze(
+                listOf(
+                    // We need to keep them in this particular order, otherwise we will not resolve
+                    // cross-package correctly yet
+                    topLevel.resolve("util/util.go").toFile(),
+                    topLevel.resolve("calls/calls.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
+
+        val meter = result.variables["util.Meter"]
+        assertNotNull(meter)
+        assertLocalName("Length", meter.type)
+
+        // All calls including the one to "funcy" (which is a dynamic invoke) should be resolved to
+        // non-inferred functions
+        val calls = result.calls
+        calls.forEach {
+            assertTrue(it.invokes.isNotEmpty(), "${it.name}'s invokes should not be empty")
+            it.invokes.forEach { func -> assertFalse(func.isInferred) }
+        }
+
+        val funcy = result.calls["funcy"]
+        assertNotNull(funcy)
+        funcy.invokeEdges.all { it.getProperty(Properties.DYNAMIC_INVOKE) == true }
+
+        val refs = result.refs.filter { it.name.localName != GoLanguage().anonymousIdentifier }
+        refs.forEach { assertNotNull(it.refersTo) }
     }
 }

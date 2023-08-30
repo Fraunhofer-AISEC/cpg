@@ -930,10 +930,10 @@ internal class EOGTest : BaseTest() {
         assertNotNull(lambda)
 
         // The "outer" EOG is assembled correctly.
-        assertTrue(lambda in lambdaVar.prevEOG)
+        assertTrue(lambda in lambdaVar.nextEOG)
         val printFunctionCall = function.calls["print_function"]
         assertNotNull(printFunctionCall)
-        assertTrue(printFunctionCall in lambda.prevEOG)
+        assertTrue(printFunctionCall in lambdaVar.prevEOG)
 
         // The "inner" EOG is assembled correctly.
         val body = (lambda.function?.body as? Block)

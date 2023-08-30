@@ -376,7 +376,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
-        enumDeclaration.superTypes = superTypes
+        enumDeclaration.superClasses.addAll(superTypes)
         return enumDeclaration
     }
 

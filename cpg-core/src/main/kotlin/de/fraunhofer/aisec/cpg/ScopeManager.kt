@@ -615,20 +615,7 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun resolveReference(ref: Reference, startScope: Scope? = currentScope): ValueDeclaration? {
-        // Unfortunately, we still have an issue about duplicate declarations because header files
-        // are included multiple times, so we need to exclude the C++ frontend (for now).
-        val language = ref.language
-        val (scope, name) =
-            if (
-                language?.name?.localName != "CLanguage" &&
-                    (language?.name?.localName != "CPPLanguage")
-            ) {
-                // For all other languages, we can extract the scope information out of the name and
-                // start our search at the dedicated scope.
-                extractScope(ref, startScope)
-            } else {
-                Pair(scope, ref.name)
-            }
+        val (scope, name) = extractScope(ref, startScope)
 
         // Try to resolve value declarations according to our criteria
         return resolve<ValueDeclaration>(scope) {
@@ -676,7 +663,7 @@ class ScopeManager : ScopeProvider {
 
         val func =
             resolve<FunctionDeclaration>(scope) {
-                it.name.lastPartsMatch(name) && it.hasSignature(call.signature)
+                it.name.lastPartsMatch(name) && it.hasSignature(call)
             }
 
         return func
@@ -686,13 +673,17 @@ class ScopeManager : ScopeProvider {
      * This function extracts a possible scope out of a [Name], e.g. if the name is fully qualified.
      * This also resolves possible name aliases (e.g. because of imports). It returns a pair of a
      * scope (if found) as well as the name, which is possibly adjusted for the aliases.
+     *
+     * Note: Currently only *fully* qualified names are properly resolved. This function will
+     * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
+     * `B` points to `A::B`, rather than to `A`.
      */
     fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
         var name: Name = node.name
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (node.name.parent != null) {
+        if (node.name.isQualified()) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
             var scopeName = node.name.parent
@@ -714,9 +705,9 @@ class ScopeManager : ScopeProvider {
                     Util.errorWithFileLocation(
                         node,
                         LOGGER,
-                        "Could not find the scope $scopeName needed to resolve the call ${node.name}. Falling back to the default (current) scope"
+                        "Could not find the scope $scopeName needed to resolve the call ${node.name}"
                     )
-                    s
+                    scope
                 } else {
                     scopes[0]
                 }
@@ -729,7 +720,7 @@ class ScopeManager : ScopeProvider {
      * Directly jumps to a given scope. Returns the previous scope. Do not forget to set the scope
      * back to the old scope after performing the actions inside this scope.
      *
-     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     * Handle with care, here be dragons. Should not be exposed outside the cpg-core module.
      */
     @PleaseBeCareful
     internal fun jumpTo(scope: Scope?): Scope? {
@@ -775,23 +766,34 @@ class ScopeManager : ScopeProvider {
         stopIfFound: Boolean = false,
         noinline predicate: (T) -> Boolean
     ): List<T> {
+        return resolve(T::class.java, searchScope, stopIfFound, predicate)
+    }
+
+    fun <T : Declaration> resolve(
+        klass: Class<T>,
+        searchScope: Scope?,
+        stopIfFound: Boolean = false,
+        predicate: (T) -> Boolean
+    ): List<T> {
         var scope = searchScope
         val declarations = mutableListOf<T>()
 
         while (scope != null) {
             if (scope is ValueDeclarationScope) {
-                declarations.addAll(scope.valueDeclarations.filterIsInstance<T>().filter(predicate))
+                declarations.addAll(
+                    scope.valueDeclarations.filterIsInstance(klass).filter(predicate)
+                )
             }
 
             if (scope is StructureDeclarationScope) {
-                var list = scope.structureDeclarations.filterIsInstance<T>().filter(predicate)
+                var list = scope.structureDeclarations.filterIsInstance(klass).filter(predicate)
 
                 // this was taken over from the old resolveStructureDeclaration.
                 // TODO(oxisto): why is this only when the list is empty?
                 if (list.isEmpty()) {
                     for (declaration in scope.structureDeclarations) {
                         if (declaration is RecordDeclaration) {
-                            list = declaration.templates.filterIsInstance<T>().filter(predicate)
+                            list = declaration.templates.filterIsInstance(klass).filter(predicate)
                         }
                     }
                 }
@@ -832,11 +834,12 @@ class ScopeManager : ScopeProvider {
     /**
      * Retrieves the [RecordDeclaration] for the given name in the given scope.
      *
-     * @param scope the scope
      * @param name the name
+     * * @param scope the scope. Default is [currentScope]
+     *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
+    fun getRecordForName(name: Name, scope: Scope? = currentScope): RecordDeclaration? {
         return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
             .firstOrNull()
     }

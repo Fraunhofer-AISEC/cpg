@@ -295,7 +295,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(usersComponent)
         assertLocalName("Users", usersComponent)
         assertEquals(1, usersComponent.constructors.size)
-        assertEquals(/*2*/ 3 /* because of a dummy node */, usersComponent.methods.size)
+        assertEquals(2, usersComponent.methods.size)
         assertEquals(/*0*/ 2 /* because of dummy nodes */, usersComponent.fields.size)
 
         val render = usersComponent.methods["render"]

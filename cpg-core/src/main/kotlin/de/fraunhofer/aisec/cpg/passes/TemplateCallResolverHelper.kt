@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordTemplateDeclaration
@@ -47,7 +48,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  */
 fun addRecursiveDefaultTemplateArgs(
     constructExpression: ConstructExpression,
-    template: RecordTemplateDeclaration
+    template: RecordTemplateDeclaration,
+    scopeManager: ScopeManager
 ) {
     var templateParameters: Int
     do {
@@ -69,7 +71,8 @@ fun addRecursiveDefaultTemplateArgs(
             template,
             constructExpression,
             templateParametersExplicitInitialization,
-            templateParameterRealDefaultInitialization
+            templateParameterRealDefaultInitialization,
+            scopeManager
         )
     } while (templateParameters != constructExpression.templateParameters.size)
 }
@@ -112,7 +115,8 @@ fun applyMissingParams(
     template: RecordTemplateDeclaration,
     constructExpression: ConstructExpression,
     templateParametersExplicitInitialization: Map<Node, Node>,
-    templateParameterRealDefaultInitialization: Map<Node, Node?>
+    templateParameterRealDefaultInitialization: Map<Node, Node?>,
+    scopeManager: ScopeManager
 ) {
     with(constructExpression) {
         val missingParams: List<Node?> =
@@ -123,6 +127,12 @@ fun applyMissingParams(
         for (m in missingParams) {
             var missingParam = m
             if (missingParam is Reference) {
+                if (missingParam.refersTo == null) {
+                    val currentScope = scopeManager.currentScope
+                    scopeManager.jumpTo(missingParam.scope)
+                    missingParam.refersTo = scopeManager.resolveReference(missingParam)
+                    scopeManager.jumpTo(currentScope)
+                }
                 missingParam = missingParam.refersTo
             }
             if (missingParam in templateParametersExplicitInitialization) {
