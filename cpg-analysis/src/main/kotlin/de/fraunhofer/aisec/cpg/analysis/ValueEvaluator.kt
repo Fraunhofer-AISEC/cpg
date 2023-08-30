@@ -91,7 +91,7 @@ open class ValueEvaluator(
             is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handleDeclaredReferenceExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
@@ -327,7 +327,7 @@ open class ValueEvaluator(
      * Tries to compute the constant value of a reference. It therefore checks the incoming data
      * flow edges.
      */
-    protected open fun handleDeclaredReferenceExpression(expr: Reference, depth: Int): Any? {
+    protected open fun handleReference(expr: Reference, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.

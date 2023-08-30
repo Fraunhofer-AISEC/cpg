@@ -77,7 +77,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handleDeclaredReferenceExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
@@ -217,7 +217,7 @@ class MultiValueEvaluator : ValueEvaluator() {
      * In contrast to the implementation of [ValueEvaluator], this one can handle more than one
      * value.
      */
-    override fun handleDeclaredReferenceExpression(expr: Reference, depth: Int): Collection<Any?> {
+    override fun handleReference(expr: Reference, depth: Int): Collection<Any?> {
         // For a reference, we are interested in its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.

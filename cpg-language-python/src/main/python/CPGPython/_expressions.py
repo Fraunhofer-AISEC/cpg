@@ -315,9 +315,9 @@ def handle_expression_impl(self, expr):
         if self.is_declaration(value):
             self.log_with_loc(
                 ("Found a new declaration. "
-                 "Wrapping it in a DeclaredReferenceExpression."),
+                 "Wrapping it in a Reference."),
                 loglevel="DEBUG")
-            value = ExpressionBuilderKt.newDeclaredReferenceExpression(
+            value = ExpressionBuilderKt.newReference(
                 self.frontend,
                 value.getName(), value.getType(), value.getCode())
         mem = ExpressionBuilderKt.newMemberExpression(

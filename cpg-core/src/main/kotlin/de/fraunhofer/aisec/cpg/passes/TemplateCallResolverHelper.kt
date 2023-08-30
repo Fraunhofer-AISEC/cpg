@@ -91,8 +91,8 @@ fun handleExplicitTemplateParameters(
         val explicit = constructExpression.templateParameters[i]
         if (template.parameters[i] is TypeParameterDeclaration) {
             templateParametersExplicitInitialization[
-                (template.parameters[i] as TypeParamDeclaration).type] = explicit
-        } else if (template.parameters[i] is ParamVariableDeclaration) {
+                (template.parameters[i] as TypeParameterDeclaration).type] = explicit
+        } else if (template.parameters[i] is ParameterDeclaration) {
             templateParametersExplicitInitialization[template.parameters[i]] = explicit
         }
     }
@@ -122,7 +122,7 @@ fun applyMissingParams(
             )
         for (m in missingParams) {
             var missingParam = m
-            if (missingParam is DeclaredReferenceExpression) {
+            if (missingParam is Reference) {
                 missingParam = missingParam.refersTo
             }
             if (missingParam in templateParametersExplicitInitialization) {

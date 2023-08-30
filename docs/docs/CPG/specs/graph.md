@@ -256,7 +256,7 @@ ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpr
 <span class="child">[TypeExpression](#etypeexpression)</span>
 <span class="child">[BinaryOperator](#ebinaryoperator)</span>
 <span class="child">[ConditionalExpression](#econditionalexpression)</span>
-<span class="child">[DeclaredReferenceExpression](#edeclaredreferenceexpression)</span>
+<span class="child">[Reference](#edeclaredreferenceexpression)</span>
 <span class="child">[InitializerListExpression](#einitializerlistexpression)</span>
 <span class="child">[DeleteExpression](#edeleteexpression)</span>
 <span class="child">[CompoundStatementExpression](#ecompoundstatementexpression)</span>
@@ -1031,17 +1031,17 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-## DeclaredReferenceExpression<a id="edeclaredreferenceexpression"></a>
+## Reference<a id="edeclaredreferenceexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[DeclaredReferenceExpression](#edeclaredreferenceexpression)</span>
+<span class="classLabel">[Reference](#edeclaredreferenceexpression)</span>
 
 ### Children
 <span class="child">[MemberExpression](#ememberexpression)</span>
 
 ### Relationships
-<span class="relationship">[REFERS_TO](#DeclaredReferenceExpressionREFERS_TO)</span>
+<span class="relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ExpressionPOSSIBLE_SUB_TYPES)</span>
 
@@ -1061,23 +1061,23 @@ ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#
 
 <span class="inherited-relationship">[TYPEDEFS](#NodeTYPEDEFS)</span>
 
-#### REFERS_TO<a id="DeclaredReferenceExpressionREFERS_TO"></a>
+#### REFERS_TO<a id="ReferenceREFERS_TO"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DeclaredReferenceExpression--"REFERS_TO¹"-->DeclaredReferenceExpressionREFERS_TO[<a href='#edeclaration'>Declaration</a>]:::outer
+Reference--"REFERS_TO¹"-->ReferenceREFERS_TO[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ## MemberExpression<a id="ememberexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="superclassLabel">[DeclaredReferenceExpression](#edeclaredreferenceexpression)</span>
+<span class="superclassLabel">[Reference](#edeclaredreferenceexpression)</span>
 <span class="classLabel">[MemberExpression](#ememberexpression)</span>
 
 ### Relationships
 <span class="relationship">[BASE](#MemberExpressionBASE)</span>
 
-<span class="inherited-relationship">[REFERS_TO](#DeclaredReferenceExpressionREFERS_TO)</span>
+<span class="inherited-relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
 
 <span class="inherited-relationship">[POSSIBLE_SUB_TYPES](#ExpressionPOSSIBLE_SUB_TYPES)</span>
 
@@ -1998,7 +1998,7 @@ ValueDeclaration--"TYPE¹"-->ValueDeclarationTYPE[<a href='#etype'>Type</a>]:::o
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ValueDeclaration--"USAGE*"-->ValueDeclarationUSAGE[<a href='#edeclaredreferenceexpression'>DeclaredReferenceExpression</a>]:::outer
+ValueDeclaration--"USAGE*"-->ValueDeclarationUSAGE[<a href='#edeclaredreferenceexpression'>Reference</a>]:::outer
 ```
 ## FieldDeclaration<a id="efielddeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>

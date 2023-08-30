@@ -227,7 +227,7 @@ class MultiValueEvaluatorTest {
             val three = newLiteral(3, primitiveType("int"))
             val four = newLiteral(4, primitiveType("int"))
 
-            val ref = newDeclaredReferenceExpression("a")
+            val ref = newReference("a")
             ref.prevDFG = mutableSetOf(three, four)
 
             val neg = newUnaryOperator("-", false, true)

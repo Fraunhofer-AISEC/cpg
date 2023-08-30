@@ -541,7 +541,7 @@ def handle_assign_impl(self, stmt):
     if not self.is_declared_reference(
             lhs) and not self.is_member_expression(lhs):
         self.log_with_loc(
-            "Expected a DeclaredReferenceExpression or MemberExpression "
+            "Expected a Reference or MemberExpression "
             "but got \"%s\". Skipping." %
             lhs.java_name, loglevel="ERROR")
         r = ExpressionBuilderKt.newArrayList(self.frontend,
@@ -576,7 +576,7 @@ def handle_assign_impl(self, stmt):
             else:
                 name = "DUMMY"
                 self.log_with_loc(
-                    "Expected a DeclaredReferenceExpression but got a "
+                    "Expected a Reference but got a "
                     "MemberExpression. Using a dummy.",
                     loglevel="ERROR")
 

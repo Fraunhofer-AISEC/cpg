@@ -38,10 +38,9 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 /**
- * This pass determines the data flows of DeclaredReferenceExpressions which refer to a
- * VariableDeclaration (not a field) while considering the control flow of a function. After this
- * path, only such data flows are left which can occur when following the control flow (in terms of
- * the EOG) of the program.
+ * This pass determines the data flows of References which refer to a VariableDeclaration (not a
+ * field) while considering the control flow of a function. After this path, only such data flows
+ * are left which can occur when following the control flow (in terms of the EOG) of the program.
  */
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)

@@ -68,7 +68,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is SubscriptionExpression -> handleArraySubscriptionExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
-            is Reference -> handleDeclaredReferenceExpression(node)
+            is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
             // We keep the logic for the InitializerListExpression in that class because the
@@ -127,7 +127,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node.refersTo == null && inferDfgForUnresolvedCalls) {
             node.addPrevDFG(node.base)
         } else {
-            handleDeclaredReferenceExpression(node)
+            handleReference(node)
         }
     }
 
@@ -314,7 +314,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - If the variable is read from, data flows from the variable declaration to this node.
      * - For a combined read and write, both edges for data flows are added.
      */
-    protected fun handleDeclaredReferenceExpression(node: Reference) {
+    protected fun handleReference(node: Reference) {
         node.refersTo?.let {
             when (node.access) {
                 AccessValues.WRITE -> node.addNextDFG(it)

@@ -557,7 +557,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         //    try {
         //      ResolvedType resolvedType = nameExpr.calculateResolvedType();
         //      if (resolvedType.isReferenceType()) {
-        //        return newDeclaredReferenceExpression(
+        //        return newReference(
         //            nameExpr.getNameAsString(),
         //            new Type(((ReferenceTypeImpl) resolvedType).getQualifiedName()),
         //            nameExpr.toString());
@@ -566,7 +566,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         //        UnsolvedSymbolException
         //            e) { // this might throw, e.g. if the type is simply not defined (i.e., syntax
         // error)
-        //      return newDeclaredReferenceExpression(
+        //      return newReference(
         //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
         //    }
         val name = this.parseName(nameExpr.nameAsString)

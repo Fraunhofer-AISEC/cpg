@@ -170,7 +170,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression",
+    "name": "de.fraunhofer.aisec.cpg.graph.Reference",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },

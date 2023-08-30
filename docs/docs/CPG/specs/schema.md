@@ -891,7 +891,7 @@ ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpr
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;">[DeclaredReferenceExpression](#edeclaredreferenceexpression)</span>	<span style="background:#dddddd;
+    padding-right: 10px;">[Reference](#edeclaredreferenceexpression)</span>	<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3417,7 +3417,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-# DeclaredReferenceExpression<a id="eDeclaredReferenceExpression"></a>
+# Reference<a id="eReference"></a>
 **Labels**:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
@@ -3446,7 +3446,7 @@ ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;">[DeclaredReferenceExpression](#edeclaredreferenceexpression)</span>	
+    padding-right: 10px;">[Reference](#edeclaredreferenceexpression)</span>	
 ## Children
 <span style="background:#dddddd;
     border-radius:5%;
@@ -3464,7 +3464,7 @@ ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;">[REFERS_TO](#DeclaredReferenceExpressionREFERS_TO)</span>	
+    padding-right: 10px;">[REFERS_TO](#ReferenceREFERS_TO)</span>	
 <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
@@ -3537,11 +3537,11 @@ ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#
     margin-bottom: 10px;
     padding-left: 10px;
     padding-right: 10px;">[TYPEDEFS](#NodeTYPEDEFS)</span>	
-### REFERS_TO<a id="DeclaredReferenceExpressionREFERS_TO"></a>
+### REFERS_TO<a id="ReferenceREFERS_TO"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DeclaredReferenceExpression--"REFERS_TO¹"-->DeclaredReferenceExpressionREFERS_TO[<a href='#edeclaration'>Declaration</a>]:::outer
+Reference--"REFERS_TO¹"-->ReferenceREFERS_TO[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 # MemberExpression<a id="eMemberExpression"></a>
 **Labels**:<span style="background:#dddddd;
@@ -3572,7 +3572,7 @@ DeclaredReferenceExpression--"REFERS_TO¹"-->DeclaredReferenceExpressionREFERS_T
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;">[DeclaredReferenceExpression](#edeclaredreferenceexpression)</span>	<span style="background:#aabbff;
+    padding-right: 10px;">[Reference](#edeclaredreferenceexpression)</span>	<span style="background:#aabbff;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3596,7 +3596,7 @@ DeclaredReferenceExpression--"REFERS_TO¹"-->DeclaredReferenceExpressionREFERS_T
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;">[REFERS_TO](#DeclaredReferenceExpressionREFERS_TO)</span>	
+    padding-right: 10px;">[REFERS_TO](#ReferenceREFERS_TO)</span>	
 <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
@@ -6598,7 +6598,7 @@ ValueDeclaration--"TYPE¹"-->ValueDeclarationTYPE[<a href='#etype'>Type</a>]:::o
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ValueDeclaration--"USAGE*"-->ValueDeclarationUSAGE[<a href='#edeclaredreferenceexpression'>DeclaredReferenceExpression</a>]:::outer
+ValueDeclaration--"USAGE*"-->ValueDeclarationUSAGE[<a href='#edeclaredreferenceexpression'>Reference</a>]:::outer
 ```
 # FieldDeclaration<a id="eFieldDeclaration"></a>
 **Labels**:<span style="background:#dddddd;
