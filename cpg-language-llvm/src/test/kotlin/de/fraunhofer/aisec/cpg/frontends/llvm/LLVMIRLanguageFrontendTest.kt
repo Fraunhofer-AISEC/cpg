@@ -650,7 +650,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(100L, (args[0] as Literal<*>).value as Long)
         assertNull((args[1] as Literal<*>).value)
 
-        val compoundStatement = foo.bodyOrNull<BlockStatement>()
+        val compoundStatement = foo.bodyOrNull<Block>()
         assertNotNull(compoundStatement)
         // First copy a to b
         val copyStatement =
@@ -687,7 +687,7 @@ class LLVMIRLanguageFrontendTest {
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
-        val mainBody = main.body as BlockStatement
+        val mainBody = main.body as Block
         val tryStatement = mainBody.statements[0] as? TryStatement
         assertNotNull(tryStatement)
 
@@ -718,10 +718,10 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("_ZTIi | ...", tryStatement.catchClauses[0])
         val ifStatement = tryStatement.catchClauses[0].body?.statements?.get(4) as? IfStatement
         assertNotNull(ifStatement)
-        assertTrue(ifStatement.thenStatement is BlockStatement)
-        assertEquals(4, (ifStatement.thenStatement as BlockStatement).statements.size)
-        assertTrue(ifStatement.elseStatement is BlockStatement)
-        assertEquals(1, (ifStatement.elseStatement as BlockStatement).statements.size)
+        assertTrue(ifStatement.thenStatement is Block)
+        assertEquals(4, (ifStatement.thenStatement as Block).statements.size)
+        assertTrue(ifStatement.elseStatement is Block)
+        assertEquals(1, (ifStatement.elseStatement as Block).statements.size)
     }
 
     @Test
@@ -753,7 +753,7 @@ class LLVMIRLanguageFrontendTest {
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
-        val mainBody = main.body as BlockStatement
+        val mainBody = main.body as Block
         val yDecl =
             (mainBody.statements[0] as DeclarationStatement).singleDeclaration
                 as VariableDeclaration
@@ -762,7 +762,7 @@ class LLVMIRLanguageFrontendTest {
         val ifStatement = mainBody.statements[3] as? IfStatement
         assertNotNull(ifStatement)
 
-        val thenStmt = ifStatement.thenStatement as? BlockStatement
+        val thenStmt = ifStatement.thenStatement as? Block
         assertNotNull(thenStmt)
         assertEquals(3, thenStmt.statements.size)
         assertNotNull(thenStmt.statements[1] as? AssignExpression)
@@ -775,7 +775,7 @@ class LLVMIRLanguageFrontendTest {
         assertSame(aDecl, (thenY.rhs.first() as Reference).refersTo)
         assertSame(yDecl, (thenY.lhs.first() as Reference).refersTo)
 
-        val elseStmt = ifStatement.elseStatement as? BlockStatement
+        val elseStmt = ifStatement.elseStatement as? Block
         assertNotNull(elseStmt)
         assertEquals(3, elseStmt.statements.size)
         val bDecl =
@@ -789,7 +789,7 @@ class LLVMIRLanguageFrontendTest {
         assertSame(yDecl, (elseY.lhs.first() as Reference).refersTo)
 
         val continueBlock =
-            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement as? BlockStatement
+            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement as? Block
         assertNotNull(continueBlock)
         assertEquals(
             yDecl,
@@ -812,7 +812,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // Test that x is initialized correctly
-        val mainBody = main.body as BlockStatement
+        val mainBody = main.body as Block
         val origX =
             ((mainBody.statements[0] as? DeclarationStatement)?.singleDeclaration
                 as? VariableDeclaration)
@@ -846,13 +846,13 @@ class LLVMIRLanguageFrontendTest {
 
         // Test the assignment of y to yMod
         val yModInit =
-            ((mainBody.statements[3] as BlockStatement).statements[0] as? DeclarationStatement)
+            ((mainBody.statements[3] as Block).statements[0] as? DeclarationStatement)
                 ?.singleDeclaration as? VariableDeclaration
         assertNotNull(yModInit)
         assertEquals("y", (yModInit.initializer as? Reference)?.name?.localName)
         assertSame(origY, (yModInit.initializer as? Reference)?.refersTo)
         // Now, test the modification of yMod[3] = 8
-        val yMod = ((mainBody.statements[3] as BlockStatement).statements[1] as? AssignExpression)
+        val yMod = ((mainBody.statements[3] as Block).statements[1] as? AssignExpression)
         assertNotNull(yMod)
         assertEquals(1, yMod.lhs.size)
         assertEquals(1, yMod.rhs.size)
@@ -926,7 +926,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // Test that x is initialized correctly
-        val mainBody = main.body as BlockStatement
+        val mainBody = main.body as Block
 
         val fenceCall = mainBody.statements[0] as? CallExpression
         assertNotNull(fenceCall)
@@ -957,7 +957,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(funcF)
 
         val tryStatement =
-            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? BlockStatement)
+            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? Block)
                 ?.statements
                 ?.firstOrNull { s -> s is TryStatement } as? TryStatement
         assertNotNull(tryStatement)
@@ -996,7 +996,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(64L, (matchesExceptionCall.arguments[2] as Literal<*>).value as Long)
         assertEquals(null, (matchesExceptionCall.arguments[3] as Literal<*>).value)
 
-        val catchBlock = ifExceptionMatches.thenStatement as? BlockStatement
+        val catchBlock = ifExceptionMatches.thenStatement as? Block
         assertNotNull(catchBlock)
         assertFullName(
             "llvm.catchpad",
@@ -1018,7 +1018,7 @@ class LLVMIRLanguageFrontendTest {
 
         val innerCatchClause =
             (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.thenStatement
-                as? BlockStatement
+                as? Block
         assertNotNull(innerCatchClause)
         assertFullName(
             "llvm.catchpad",

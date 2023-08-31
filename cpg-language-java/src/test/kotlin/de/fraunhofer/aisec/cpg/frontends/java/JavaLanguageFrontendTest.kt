@@ -339,7 +339,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(3, switchStatements.size)
 
         val switchStatement = switchStatements[0]
-        assertEquals(11, (switchStatement.statement as? BlockStatement)?.statements?.size)
+        assertEquals(11, (switchStatement.statement as? Block)?.statements?.size)
 
         val caseStatements = switchStatement.allChildren<CaseStatement>()
         assertEquals(4, caseStatements.size)
@@ -418,7 +418,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = record.methods[0]
         assertNotNull(main)
 
-        val statements = (main.body as? BlockStatement)?.statements
+        val statements = (main.body as? Block)?.statements
         assertNotNull(statements)
 
         val a = (statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
@@ -470,7 +470,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = record.methods[0]
         assertNotNull(main)
 
-        val statements = (main.body as? BlockStatement)?.statements
+        val statements = (main.body as? Block)?.statements
         assertNotNull(statements)
 
         val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration

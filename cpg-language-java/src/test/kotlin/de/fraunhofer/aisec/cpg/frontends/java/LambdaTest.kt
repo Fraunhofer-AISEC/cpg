@@ -101,7 +101,7 @@ class JavaLambdaTest {
         val applyMethod = anonymousRecord.methods["apply"]
         assertNotNull(applyMethod)
         val returnStatement =
-            (applyMethod.body as? BlockStatement)?.statements?.firstOrNull() as? ReturnStatement
+            (applyMethod.body as? Block)?.statements?.firstOrNull() as? ReturnStatement
         assertNotNull(returnStatement)
         assertEquals(
             outerVar,
