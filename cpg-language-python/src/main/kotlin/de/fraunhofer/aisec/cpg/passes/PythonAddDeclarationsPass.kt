@@ -45,8 +45,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     override fun accept(p0: Component) {
-        val walker = SubgraphWalker.IterativeGraphWalker()
-        walker.registerOnNodeVisit(::handle)
+        val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker.registerHandler { _, _, currNode -> handle(currNode) }
 
         for (tu in p0.translationUnits) {
             walker.iterate(tu)
@@ -58,8 +58,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * or not. New variables can be one of:
      * - [FieldDeclaration] if we are currently in a record
      * - [VariableDeclaratrion] otherwise
+     *
+     * TODO: loops
      */
-    private fun handle(assignExpression: Node) {
+    private fun handle(assignExpression: Node?) {
         if (assignExpression !is AssignExpression) {
             return
         }
@@ -72,14 +74,17 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
                     val decl =
                         if (scopeManager.isInRecord) {
-                            newFieldDeclaration(it.name, code = target.code) // TODO loc
+                            val field = newFieldDeclaration(it.name, code = target.code)
+                            field.location = target.location
+                            scopeManager.currentRecord?.addDeclaration(field)
+                            field
                         } else {
-                            newVariableDeclaration(it.name, code = target.code) // TODO loc
+                            val v = newVariableDeclaration(it.name, code = target.code)
+                            v.location = target.location
+                            v
                         }
-                    scopeManager.addDeclaration(decl) // TODO scope
-                    target.refersTo = decl
-                } else {
-                    target.refersTo = resolved
+                    decl.isImplicit = true
+                    scopeManager.addDeclaration(decl)
                 }
             }
         }
