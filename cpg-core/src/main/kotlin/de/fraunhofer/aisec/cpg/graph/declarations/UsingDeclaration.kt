@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import java.util.Objects
 
-// TODO: Documentation
+/** Represents a using directive used to extend the currently valid name scope. */
 class UsingDeclaration : Declaration() {
     var qualifiedName: String? = null
 

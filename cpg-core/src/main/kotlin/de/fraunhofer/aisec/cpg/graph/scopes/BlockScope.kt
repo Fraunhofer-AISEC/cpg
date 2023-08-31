@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 
+/**
+ * Scope of validity associated to a block of statements. Variables declared inside a block are not
+ * visible outside.
+ */
 class BlockScope(blockStatement: Block) : ValueDeclarationScope(blockStatement), Breakable {
     private val breaks: MutableList<BreakStatement> = ArrayList()
 
