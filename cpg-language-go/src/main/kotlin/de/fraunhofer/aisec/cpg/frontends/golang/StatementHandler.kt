@@ -304,8 +304,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
 
         val block =
-            handle(switchStmt.body) as? Block
-                ?: return newProblemExpression("missing switch body")
+            handle(switchStmt.body) as? Block ?: return newProblemExpression("missing switch body")
 
         // Because of the way we parse the statements, the case statement turns out to be the last
         // statement. However, we need it to be the first statement, so we need to switch first and
