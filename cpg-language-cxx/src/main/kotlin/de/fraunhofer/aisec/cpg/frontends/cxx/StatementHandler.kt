@@ -75,7 +75,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleProblemStatement(problemStatement: IASTProblemStatement): ProblemExpression {
-        Util.errorWithFileLocation(frontend, problemStatement, log, problemStatement.problem.message)
+        Util.errorWithFileLocation(
+            frontend,
+            problemStatement,
+            log,
+            problemStatement.problem.message
+        )
 
         return newProblemExpression(
             problemStatement.problem.message,
