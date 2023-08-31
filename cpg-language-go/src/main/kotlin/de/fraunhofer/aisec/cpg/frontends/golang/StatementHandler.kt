@@ -96,7 +96,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
-        val compound = newBlockStatement(rawNode = blockStmt)
+        val compound = newBlock(rawNode = blockStmt)
 
         frontend.scopeManager.enterScope(compound)
 
@@ -304,7 +304,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
 
         val block =
-            handle(switchStmt.body) as? BlockStatement
+            handle(switchStmt.body) as? Block
                 ?: return newProblemExpression("missing switch body")
 
         // Because of the way we parse the statements, the case statement turns out to be the last
