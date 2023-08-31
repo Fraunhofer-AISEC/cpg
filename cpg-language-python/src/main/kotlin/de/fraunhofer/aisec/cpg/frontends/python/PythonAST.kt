@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import java.net.URI
 import jep.python.PyObject
 
 /**
@@ -74,7 +73,7 @@ interface PythonAST {
      *
      * @param pyObject The Python object returned by jep.
      */
-    abstract class AST(val pyObject: PyObject, val uri: URI)
+    abstract class AST(val pyObject: PyObject)
 
     /**
      * ```
@@ -87,7 +86,7 @@ interface PythonAST {
      *
      * Note: We currently only support `Module`s.
      */
-    abstract class mod(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class mod(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -95,11 +94,11 @@ interface PythonAST {
      *  |  Module(stmt* body, type_ignore* type_ignores)
      * ```
      */
-    class Module(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+    class Module(pyObject: PyObject) : AST(pyObject) {
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
 
         val type_ignores: kotlin.collections.List<type_ignore> by lazy {
-            getList(pyObject, uri, "type_ignores")
+            getList(pyObject, "type_ignores")
         }
     }
 
@@ -135,7 +134,7 @@ interface PythonAST {
      *  |  | Continue
      * ```
      */
-    abstract class stmt(pyObject: PyObject, uri: URI) : AST(pyObject, uri), WithPythonLocation
+    abstract class stmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```
@@ -143,20 +142,20 @@ interface PythonAST {
      *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class FunctionDef(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val name: String by lazy { getSingle(pyObject, uri, "name") }
+    class FunctionDef(pyObject: PyObject) : stmt(pyObject) {
+        val name: String by lazy { getSingle(pyObject, "name") }
 
-        val args: arguments by lazy { getSingle(pyObject, uri, "args") }
+        val args: arguments by lazy { getSingle(pyObject, "args") }
 
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
 
         val decorator_list: kotlin.collections.List<expr> by lazy {
-            getList(pyObject, uri, "decorator_list")
+            getList(pyObject, "decorator_list")
         }
 
-        val returns: expr? by lazy { getSingle(pyObject, uri, "returns") }
+        val returns: expr? by lazy { getSingle(pyObject, "returns") }
 
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -165,20 +164,20 @@ interface PythonAST {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class AsyncFunctionDef(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val name: String by lazy { getSingle(pyObject, uri, "name") }
+    class AsyncFunctionDef(pyObject: PyObject) : stmt(pyObject) {
+        val name: String by lazy { getSingle(pyObject, "name") }
 
-        val args: arguments by lazy { getSingle(pyObject, uri, "args") }
+        val args: arguments by lazy { getSingle(pyObject, "args") }
 
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
 
         val decorator_list: kotlin.collections.List<expr> by lazy {
-            getList(pyObject, uri, "decorator_list")
+            getList(pyObject, "decorator_list")
         }
 
-        val returns: expr? by lazy { getSingle(pyObject, uri, "returns") }
+        val returns: expr? by lazy { getSingle(pyObject, "returns") }
 
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -187,19 +186,17 @@ interface PythonAST {
      *  |  ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list)
      * ```
      */
-    class ClassDef(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val name: String by lazy { getSingle(pyObject, uri, "name") }
+    class ClassDef(pyObject: PyObject) : stmt(pyObject) {
+        val name: String by lazy { getSingle(pyObject, "name") }
 
-        val bases: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "bases") }
+        val bases: kotlin.collections.List<expr> by lazy { getList(pyObject, "bases") }
 
-        val keywords: kotlin.collections.List<keyword> by lazy {
-            getList(pyObject, uri, "keywords")
-        }
+        val keywords: kotlin.collections.List<keyword> by lazy { getList(pyObject, "keywords") }
 
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
 
         val decorator_list: kotlin.collections.List<expr> by lazy {
-            getList(pyObject, uri, "decorator_list")
+            getList(pyObject, "decorator_list")
         }
     }
 
@@ -209,8 +206,8 @@ interface PythonAST {
      *  |  Return(expr? value)
      * ```
      */
-    class Return(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val value: expr? by lazy { getSingle(pyObject, uri, "value") }
+    class Return(pyObject: PyObject) : stmt(pyObject) {
+        val value: expr? by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -219,8 +216,8 @@ interface PythonAST {
      *  |  Delete(expr* targets)
      * ```
      */
-    class Delete(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val targets: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "targets") }
+    class Delete(pyObject: PyObject) : stmt(pyObject) {
+        val targets: kotlin.collections.List<expr> by lazy { getList(pyObject, "targets") }
     }
 
     /**
@@ -229,12 +226,12 @@ interface PythonAST {
      *  |  Assign(expr* targets, expr value, string? type_comment)
      * ```
      */
-    class Assign(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val targets: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "targets") }
+    class Assign(pyObject: PyObject) : stmt(pyObject) {
+        val targets: kotlin.collections.List<expr> by lazy { getList(pyObject, "targets") }
 
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+        val value: expr by lazy { getSingle(pyObject, "value") }
 
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -243,10 +240,10 @@ interface PythonAST {
      *  |  AugAssign(expr target, operator op, expr value)
      * ```
      */
-    class AugAssign(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val target: expr by lazy { getSingle(pyObject, uri, "target") }
-        val op: operator by lazy { getSingle(pyObject, uri, "op") }
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class AugAssign(pyObject: PyObject) : stmt(pyObject) {
+        val target: expr by lazy { getSingle(pyObject, "target") }
+        val op: operator by lazy { getSingle(pyObject, "op") }
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -255,12 +252,12 @@ interface PythonAST {
      *  |  AnnAssign(expr target, expr annotation, expr? value, int simple)
      * ```
      */
-    class AnnAssign(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val target: expr by lazy { getSingle(pyObject, uri, "target") }
-        val annotation: expr by lazy { getSingle(pyObject, uri, "annotation") }
-        val value: expr? by lazy { getSingle(pyObject, uri, "value") }
+    class AnnAssign(pyObject: PyObject) : stmt(pyObject) {
+        val target: expr by lazy { getSingle(pyObject, "target") }
+        val annotation: expr by lazy { getSingle(pyObject, "annotation") }
+        val value: expr? by lazy { getSingle(pyObject, "value") }
         val simple: Int by lazy {
-            getSingle(pyObject, uri, "simple")
+            getSingle(pyObject, "simple")
         } // TODO: is this an `Int` from Kotlins perspective?
     }
 
@@ -270,12 +267,12 @@ interface PythonAST {
      *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class For(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val target: expr by lazy { getSingle(pyObject, uri, "target") }
-        val iter: expr by lazy { getSingle(pyObject, uri, "iter") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
-        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "orelse") }
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+    class For(pyObject: PyObject) : stmt(pyObject) {
+        val target: expr by lazy { getSingle(pyObject, "target") }
+        val iter: expr by lazy { getSingle(pyObject, "iter") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
+        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, "orelse") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -284,12 +281,12 @@ interface PythonAST {
      *  |  AsyncFor(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class AsyncFor(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val target: expr by lazy { getSingle(pyObject, uri, "target") }
-        val iter: expr by lazy { getSingle(pyObject, uri, "iter") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
-        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "orelse") }
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+    class AsyncFor(pyObject: PyObject) : stmt(pyObject) {
+        val target: expr by lazy { getSingle(pyObject, "target") }
+        val iter: expr by lazy { getSingle(pyObject, "iter") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
+        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, "orelse") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -298,10 +295,10 @@ interface PythonAST {
      *  |  While(expr test, stmt* body, stmt* orelse)
      * ```
      */
-    class While(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val test: expr by lazy { getSingle(pyObject, uri, "test") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
-        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "orelse") }
+    class While(pyObject: PyObject) : stmt(pyObject) {
+        val test: expr by lazy { getSingle(pyObject, "test") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
+        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, "orelse") }
     }
 
     /**
@@ -310,10 +307,10 @@ interface PythonAST {
      *  |  If(expr test, stmt* body, stmt* orelse)
      * ```
      */
-    class If(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val test: expr by lazy { getSingle(pyObject, uri, "test") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
-        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "orelse") }
+    class If(pyObject: PyObject) : stmt(pyObject) {
+        val test: expr by lazy { getSingle(pyObject, "test") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
+        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, "orelse") }
     }
 
     /**
@@ -322,10 +319,10 @@ interface PythonAST {
      *  |  With(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class With(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val items: withitem by lazy { getSingle(pyObject, uri, "items") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+    class With(pyObject: PyObject) : stmt(pyObject) {
+        val items: withitem by lazy { getSingle(pyObject, "items") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -334,10 +331,10 @@ interface PythonAST {
      *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class AsyncWith(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val items: withitem by lazy { getSingle(pyObject, uri, "items") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+    class AsyncWith(pyObject: PyObject) : stmt(pyObject) {
+        val items: withitem by lazy { getSingle(pyObject, "items") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -346,9 +343,9 @@ interface PythonAST {
      *  |  Match(expr subject, match_case* cases)
      * ```
      */
-    class Match(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val subject: expr by lazy { getSingle(pyObject, uri, "subject") }
-        val cases: kotlin.collections.List<match_case> by lazy { getSingle(pyObject, uri, "cases") }
+    class Match(pyObject: PyObject) : stmt(pyObject) {
+        val subject: expr by lazy { getSingle(pyObject, "subject") }
+        val cases: kotlin.collections.List<match_case> by lazy { getSingle(pyObject, "cases") }
     }
 
     /**
@@ -357,9 +354,9 @@ interface PythonAST {
      *  |  Raise(expr? exc, expr? cause)
      * ```
      */
-    class Raise(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val exc: expr? by lazy { getSingle(pyObject, uri, "exc") }
-        val cause: expr? by lazy { getSingle(pyObject, uri, "cause") }
+    class Raise(pyObject: PyObject) : stmt(pyObject) {
+        val exc: expr? by lazy { getSingle(pyObject, "exc") }
+        val cause: expr? by lazy { getSingle(pyObject, "cause") }
     }
 
     /**
@@ -368,13 +365,13 @@ interface PythonAST {
      *  |  Try(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
      * ```
      */
-    class Try(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+    class Try(pyObject: PyObject) : stmt(pyObject) {
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
         val handlers: kotlin.collections.List<excepthandler> by lazy {
-            getList(pyObject, uri, "handlers")
+            getList(pyObject, "handlers")
         }
-        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "orelse") }
-        val stmt: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "stmt") }
+        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, "orelse") }
+        val stmt: kotlin.collections.List<stmt> by lazy { getList(pyObject, "stmt") }
     }
 
     /**
@@ -383,13 +380,13 @@ interface PythonAST {
      *  |  TryStar(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
      * ```
      */
-    class TryStar(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+    class TryStar(pyObject: PyObject) : stmt(pyObject) {
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
         val handlers: kotlin.collections.List<excepthandler> by lazy {
-            getList(pyObject, uri, "handlers")
+            getList(pyObject, "handlers")
         }
-        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "orelse") }
-        val finalbody: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "finalbody") }
+        val orelse: kotlin.collections.List<stmt> by lazy { getList(pyObject, "orelse") }
+        val finalbody: kotlin.collections.List<stmt> by lazy { getList(pyObject, "finalbody") }
     }
 
     /**
@@ -398,9 +395,9 @@ interface PythonAST {
      *  |  Assert(expr test, expr? msg)
      * ```
      */
-    class Assert(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val test: expr by lazy { getSingle(pyObject, uri, "test") }
-        val msg: expr? by lazy { getSingle(pyObject, uri, "msg") }
+    class Assert(pyObject: PyObject) : stmt(pyObject) {
+        val test: expr by lazy { getSingle(pyObject, "test") }
+        val msg: expr? by lazy { getSingle(pyObject, "msg") }
     }
 
     /**
@@ -409,8 +406,8 @@ interface PythonAST {
      *  |  Import(alias* names)
      * ```
      */
-    class Import(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val names: kotlin.collections.List<alias> by lazy { getList(pyObject, uri, "names") }
+    class Import(pyObject: PyObject) : stmt(pyObject) {
+        val names: kotlin.collections.List<alias> by lazy { getList(pyObject, "names") }
     }
 
     /**
@@ -419,11 +416,11 @@ interface PythonAST {
      *  |  ImportFrom(identifier? module, alias* names, int? level)
      * ```
      */
-    class ImportFrom(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val module: String? by lazy { getSingle(pyObject, uri, "module") }
-        val names: kotlin.collections.List<alias> by lazy { getList(pyObject, uri, "names") }
+    class ImportFrom(pyObject: PyObject) : stmt(pyObject) {
+        val module: String? by lazy { getSingle(pyObject, "module") }
+        val names: kotlin.collections.List<alias> by lazy { getList(pyObject, "names") }
         val level: Int? by lazy {
-            getSingle(pyObject, uri, "level")
+            getSingle(pyObject, "level")
         } // TODO: is this an `Int` from Kotlins perspective?
     }
 
@@ -433,8 +430,8 @@ interface PythonAST {
      *  |  Global(identifier* names)
      * ```
      */
-    class Global(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val names: kotlin.collections.List<String> by lazy { getList(pyObject, uri, "names") }
+    class Global(pyObject: PyObject) : stmt(pyObject) {
+        val names: kotlin.collections.List<String> by lazy { getList(pyObject, "names") }
     }
 
     /**
@@ -443,8 +440,8 @@ interface PythonAST {
      *  |  Nonlocal(identifier* names)
      * ```
      */
-    class Nonlocal(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val names: kotlin.collections.List<String> by lazy { getList(pyObject, uri, "names") }
+    class Nonlocal(pyObject: PyObject) : stmt(pyObject) {
+        val names: kotlin.collections.List<String> by lazy { getList(pyObject, "names") }
     }
 
     /**
@@ -457,8 +454,8 @@ interface PythonAST {
      *  |  Expr(expr value)
      * ```
      */
-    class Expr(pyObject: PyObject, uri: URI) : stmt(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class Expr(pyObject: PyObject) : stmt(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -467,7 +464,7 @@ interface PythonAST {
      *  |  Pass
      * ```
      */
-    class Pass(pyObject: PyObject, uri: URI) : stmt(pyObject, uri)
+    class Pass(pyObject: PyObject) : stmt(pyObject)
 
     /**
      * ```
@@ -475,7 +472,7 @@ interface PythonAST {
      *  |  Break
      * ```
      */
-    class Break(pyObject: PyObject, uri: URI) : stmt(pyObject, uri)
+    class Break(pyObject: PyObject) : stmt(pyObject)
 
     /**
      * ```
@@ -483,7 +480,7 @@ interface PythonAST {
      *  |  Continue
      * ```
      */
-    class Continue(pyObject: PyObject, uri: URI) : stmt(pyObject, uri)
+    class Continue(pyObject: PyObject) : stmt(pyObject)
 
     /**
      * Represents `ast.expr` expressions. Note: do not confuse with
@@ -492,7 +489,7 @@ interface PythonAST {
      *
      * ast.expr = class expr(AST)
      */
-    abstract class expr(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class expr(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -500,9 +497,9 @@ interface PythonAST {
      *  |  BoolOp(boolop op, expr* values)
      * ```
      */
-    class BoolOp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val op: boolop by lazy { getSingle(pyObject, uri, "op") }
-        val values: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "values") }
+    class BoolOp(pyObject: PyObject) : expr(pyObject) {
+        val op: boolop by lazy { getSingle(pyObject, "op") }
+        val values: kotlin.collections.List<expr> by lazy { getList(pyObject, "values") }
     }
 
     /**
@@ -511,9 +508,9 @@ interface PythonAST {
      *  |  NamedExpr(expr target, expr value)
      * ```
      */
-    class NamedExpr(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val target: expr by lazy { getSingle(pyObject, uri, "target") }
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class NamedExpr(pyObject: PyObject) : expr(pyObject) {
+        val target: expr by lazy { getSingle(pyObject, "target") }
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -522,10 +519,10 @@ interface PythonAST {
      *  |  BinOp(expr left, operator op, expr right)
      * ```
      */
-    class BinOp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val left: expr by lazy { getSingle(pyObject, uri, "left") }
-        val op: operator by lazy { getSingle(pyObject, uri, "op") }
-        val right: expr by lazy { getSingle(pyObject, uri, "right") }
+    class BinOp(pyObject: PyObject) : expr(pyObject) {
+        val left: expr by lazy { getSingle(pyObject, "left") }
+        val op: operator by lazy { getSingle(pyObject, "op") }
+        val right: expr by lazy { getSingle(pyObject, "right") }
     }
 
     /**
@@ -534,9 +531,9 @@ interface PythonAST {
      *  |  UnaryOp(unaryop op, expr operand)
      * ```
      */
-    class UnaryOp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val op: unaryop by lazy { getSingle(pyObject, uri, "op") }
-        val operand: expr by lazy { getSingle(pyObject, uri, "operand") }
+    class UnaryOp(pyObject: PyObject) : expr(pyObject) {
+        val op: unaryop by lazy { getSingle(pyObject, "op") }
+        val operand: expr by lazy { getSingle(pyObject, "operand") }
     }
 
     /**
@@ -545,9 +542,9 @@ interface PythonAST {
      *  |  Lambda(arguments args, expr body)
      * ```
      */
-    class Lambda(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val args: arguments by lazy { getSingle(pyObject, uri, "args") }
-        val body: expr by lazy { getSingle(pyObject, uri, "body") }
+    class Lambda(pyObject: PyObject) : expr(pyObject) {
+        val args: arguments by lazy { getSingle(pyObject, "args") }
+        val body: expr by lazy { getSingle(pyObject, "body") }
     }
 
     /**
@@ -556,10 +553,10 @@ interface PythonAST {
      *  |  IfExp(expr test, expr body, expr orelse)
      * ```
      */
-    class IfExp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val test: expr by lazy { getSingle(pyObject, uri, "test") }
-        val body: expr by lazy { getSingle(pyObject, uri, "body") }
-        val orelse: expr by lazy { getSingle(pyObject, uri, "orelse") }
+    class IfExp(pyObject: PyObject) : expr(pyObject) {
+        val test: expr by lazy { getSingle(pyObject, "test") }
+        val body: expr by lazy { getSingle(pyObject, "body") }
+        val orelse: expr by lazy { getSingle(pyObject, "orelse") }
     }
 
     /**
@@ -568,9 +565,9 @@ interface PythonAST {
      *  |  Dict(expr* keys, expr* values)
      * ```
      */
-    class Dict(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val keys: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "keys") }
-        val values: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "values") }
+    class Dict(pyObject: PyObject) : expr(pyObject) {
+        val keys: kotlin.collections.List<expr> by lazy { getList(pyObject, "keys") }
+        val values: kotlin.collections.List<expr> by lazy { getList(pyObject, "values") }
     }
 
     /**
@@ -579,8 +576,8 @@ interface PythonAST {
      *  |  Set(expr* elts)
      * ```
      */
-    class Set(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val elts: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "elts") }
+    class Set(pyObject: PyObject) : expr(pyObject) {
+        val elts: kotlin.collections.List<expr> by lazy { getList(pyObject, "elts") }
     }
 
     /**
@@ -589,10 +586,10 @@ interface PythonAST {
      *  |  ListComp(expr elt, comprehension* generators)
      * ```
      */
-    class ListComp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val elt: expr by lazy { getSingle(pyObject, uri, "elt") }
+    class ListComp(pyObject: PyObject) : expr(pyObject) {
+        val elt: expr by lazy { getSingle(pyObject, "elt") }
         val generators: kotlin.collections.List<comprehension> by lazy {
-            getList(pyObject, uri, "generators")
+            getList(pyObject, "generators")
         }
     }
 
@@ -602,10 +599,10 @@ interface PythonAST {
      *  |  SetComp(expr elt, comprehension* generators)
      * ```
      */
-    class SetComp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val elt: expr by lazy { getSingle(pyObject, uri, "elt") }
+    class SetComp(pyObject: PyObject) : expr(pyObject) {
+        val elt: expr by lazy { getSingle(pyObject, "elt") }
         val generators: kotlin.collections.List<comprehension> by lazy {
-            getList(pyObject, uri, "generators")
+            getList(pyObject, "generators")
         }
     }
 
@@ -615,11 +612,11 @@ interface PythonAST {
      *  |  DictComp(expr key, expr value, comprehension* generators)
      * ```
      */
-    class DictComp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val key: expr by lazy { getSingle(pyObject, uri, "key") }
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class DictComp(pyObject: PyObject) : expr(pyObject) {
+        val key: expr by lazy { getSingle(pyObject, "key") }
+        val value: expr by lazy { getSingle(pyObject, "value") }
         val generators: kotlin.collections.List<comprehension> by lazy {
-            getList(pyObject, uri, "generators")
+            getList(pyObject, "generators")
         }
     }
 
@@ -629,10 +626,10 @@ interface PythonAST {
      *  |  GeneratorExp(expr elt, comprehension* generators)
      * ```
      */
-    class GeneratorExp(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val elt: expr by lazy { getSingle(pyObject, uri, "elt") }
+    class GeneratorExp(pyObject: PyObject) : expr(pyObject) {
+        val elt: expr by lazy { getSingle(pyObject, "elt") }
         val generators: kotlin.collections.List<comprehension> by lazy {
-            getList(pyObject, uri, "generators")
+            getList(pyObject, "generators")
         }
     }
 
@@ -642,8 +639,8 @@ interface PythonAST {
      *  |  Await(expr value)
      * ```
      */
-    class Await(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class Await(pyObject: PyObject) : expr(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -652,8 +649,8 @@ interface PythonAST {
      *  |  Yield(expr? value)
      * ```
      */
-    class Yield(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr? by lazy { getSingle(pyObject, uri, "value") }
+    class Yield(pyObject: PyObject) : expr(pyObject) {
+        val value: expr? by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -662,8 +659,8 @@ interface PythonAST {
      *  |  YieldFrom(expr value)
      * ```
      */
-    class YieldFrom(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class YieldFrom(pyObject: PyObject) : expr(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -672,12 +669,10 @@ interface PythonAST {
      *  |  Compare(expr left, cmpop* ops, expr* comparators)
      * ```
      */
-    class Compare(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val left: expr by lazy { getSingle(pyObject, uri, "left") }
-        val ops: kotlin.collections.List<cmpop> by lazy { getList(pyObject, uri, "ops") }
-        val comparators: kotlin.collections.List<expr> by lazy {
-            getList(pyObject, uri, "comparators")
-        }
+    class Compare(pyObject: PyObject) : expr(pyObject) {
+        val left: expr by lazy { getSingle(pyObject, "left") }
+        val ops: kotlin.collections.List<cmpop> by lazy { getList(pyObject, "ops") }
+        val comparators: kotlin.collections.List<expr> by lazy { getList(pyObject, "comparators") }
     }
 
     /**
@@ -686,14 +681,12 @@ interface PythonAST {
      *  |  Call(expr func, expr* args, keyword* keywords)
      * ```
      */
-    class Call(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val func: expr by lazy { getSingle(pyObject, uri, "func") }
+    class Call(pyObject: PyObject) : expr(pyObject) {
+        val func: expr by lazy { getSingle(pyObject, "func") }
 
-        val args: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "args") }
+        val args: kotlin.collections.List<expr> by lazy { getList(pyObject, "args") }
 
-        val keywords: kotlin.collections.List<keyword> by lazy {
-            getList(pyObject, uri, "keywords")
-        }
+        val keywords: kotlin.collections.List<keyword> by lazy { getList(pyObject, "keywords") }
     }
 
     /**
@@ -702,12 +695,12 @@ interface PythonAST {
      *  |  FormattedValue(expr value, int conversion, expr? format_spec)
      * ```
      */
-    class FormattedValue(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class FormattedValue(pyObject: PyObject) : expr(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
         val conversion: Int? by lazy {
-            getSingle(pyObject, uri, "value")
+            getSingle(pyObject, "value")
         } // TODO: int in Kotlin as well?
-        val format_spec: expr? by lazy { getSingle(pyObject, uri, "format_spec") }
+        val format_spec: expr? by lazy { getSingle(pyObject, "format_spec") }
     }
 
     /**
@@ -716,8 +709,8 @@ interface PythonAST {
      *  |  JoinedStr(expr* values)
      * ```
      */
-    class JoinedStr(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val values: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "values") }
+    class JoinedStr(pyObject: PyObject) : expr(pyObject) {
+        val values: kotlin.collections.List<expr> by lazy { getList(pyObject, "values") }
     }
 
     /**
@@ -726,9 +719,9 @@ interface PythonAST {
      *  |  Constant(constant value, string? kind)
      * ```
      */
-    class Constant(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: Any? by lazy { getSingle(pyObject, uri, "value") }
-        val kind: String? by lazy { getSingle(pyObject, uri, "kind") }
+    class Constant(pyObject: PyObject) : expr(pyObject) {
+        val value: Any? by lazy { getSingle(pyObject, "value") }
+        val kind: String? by lazy { getSingle(pyObject, "kind") }
     }
 
     /**
@@ -737,10 +730,10 @@ interface PythonAST {
      *  |  Attribute(expr value, identifier attr, expr_context ctx)
      * ```
      */
-    class Attribute(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
-        val attr: String by lazy { getSingle(pyObject, uri, "attr") }
-        val ctx: expr_context by lazy { getSingle(pyObject, uri, "ctx") }
+    class Attribute(pyObject: PyObject) : expr(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
+        val attr: String by lazy { getSingle(pyObject, "attr") }
+        val ctx: expr_context by lazy { getSingle(pyObject, "ctx") }
     }
 
     /**
@@ -749,10 +742,10 @@ interface PythonAST {
      *  |  Subscript(expr value, expr slice, expr_context ctx)
      * ```
      */
-    class Subscript(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
-        val slice: expr by lazy { getSingle(pyObject, uri, "slice") }
-        val ctx: expr_context by lazy { getSingle(pyObject, uri, "ctx") }
+    class Subscript(pyObject: PyObject) : expr(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
+        val slice: expr by lazy { getSingle(pyObject, "slice") }
+        val ctx: expr_context by lazy { getSingle(pyObject, "ctx") }
     }
 
     /**
@@ -761,9 +754,9 @@ interface PythonAST {
      *  |  Starred(expr value, expr_context ctx)
      * ```
      */
-    class Starred(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
-        val ctx: expr_context by lazy { getSingle(pyObject, uri, "ctx") }
+    class Starred(pyObject: PyObject) : expr(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
+        val ctx: expr_context by lazy { getSingle(pyObject, "ctx") }
     }
 
     /**
@@ -772,9 +765,9 @@ interface PythonAST {
      *  |  Name(identifier id, expr_context ctx)
      * ```
      */
-    class Name(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val id: String by lazy { getSingle(pyObject, uri, "id") }
-        val ctx: expr_context by lazy { getSingle(pyObject, uri, "ctx") }
+    class Name(pyObject: PyObject) : expr(pyObject) {
+        val id: String by lazy { getSingle(pyObject, "id") }
+        val ctx: expr_context by lazy { getSingle(pyObject, "ctx") }
     }
 
     /**
@@ -783,9 +776,9 @@ interface PythonAST {
      *  |  List(expr* elts, expr_context ctx)
      * ```
      */
-    class List(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val elts: kotlin.collections.List<expr> by lazy { getSingle(pyObject, uri, "elts") }
-        val ctx: expr_context by lazy { getSingle(pyObject, uri, "ctx") }
+    class List(pyObject: PyObject) : expr(pyObject) {
+        val elts: kotlin.collections.List<expr> by lazy { getSingle(pyObject, "elts") }
+        val ctx: expr_context by lazy { getSingle(pyObject, "ctx") }
     }
 
     /**
@@ -794,9 +787,9 @@ interface PythonAST {
      *  |  Tuple(expr* elts, expr_context ctx)
      * ```
      */
-    class Tuple(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val elts: kotlin.collections.List<expr> by lazy { getSingle(pyObject, uri, "elts") }
-        val ctx: expr_context by lazy { getSingle(pyObject, uri, "ctx") }
+    class Tuple(pyObject: PyObject) : expr(pyObject) {
+        val elts: kotlin.collections.List<expr> by lazy { getSingle(pyObject, "elts") }
+        val ctx: expr_context by lazy { getSingle(pyObject, "ctx") }
     }
 
     /**
@@ -805,10 +798,10 @@ interface PythonAST {
      *  |  Slice(expr? lower, expr? upper, expr? step)
      * ```
      */
-    class Slice(pyObject: PyObject, uri: URI) : expr(pyObject, uri) {
-        val lower: expr? by lazy { getSingle(pyObject, uri, "lower") }
-        val upper: expr? by lazy { getSingle(pyObject, uri, "upper") }
-        val step: expr? by lazy { getSingle(pyObject, uri, "step") }
+    class Slice(pyObject: PyObject) : expr(pyObject) {
+        val lower: expr? by lazy { getSingle(pyObject, "lower") }
+        val upper: expr? by lazy { getSingle(pyObject, "upper") }
+        val step: expr? by lazy { getSingle(pyObject, "step") }
     }
 
     /**
@@ -817,7 +810,7 @@ interface PythonAST {
      *  |  boolop = And | Or
      * ```
      */
-    abstract class boolop(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class boolop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -825,14 +818,14 @@ interface PythonAST {
      *  |  And
      * ```
      */
-    class And(pyObject: PyObject, uri: URI) : boolop(pyObject, uri)
+    class And(pyObject: PyObject) : boolop(pyObject)
 
     /**
      * ```
      * ast.Or = class Or(boolop)
      *  |  Or
      */
-    class Or(pyObject: PyObject, uri: URI) : boolop(pyObject, uri)
+    class Or(pyObject: PyObject) : boolop(pyObject)
 
     /**
      * ```
@@ -840,7 +833,7 @@ interface PythonAST {
      *  |  cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
      * ```
      */
-    abstract class cmpop(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class cmpop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -848,7 +841,7 @@ interface PythonAST {
      *  |  Eq
      * ```
      */
-    class Eq(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class Eq(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -856,7 +849,7 @@ interface PythonAST {
      *  |  NotEq
      * ```
      */
-    class NotEq(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class NotEq(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -864,7 +857,7 @@ interface PythonAST {
      *  |  Lt
      * ```
      */
-    class Lt(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class Lt(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -872,7 +865,7 @@ interface PythonAST {
      *  |  LtE
      * ```
      */
-    class LtE(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class LtE(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -880,7 +873,7 @@ interface PythonAST {
      *  |  Gt
      * ```
      */
-    class Gt(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class Gt(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -888,7 +881,7 @@ interface PythonAST {
      *  |  GtE
      * ```
      */
-    class GtE(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class GtE(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -896,7 +889,7 @@ interface PythonAST {
      *  |  Is
      * ```
      */
-    class Is(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class Is(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -904,7 +897,7 @@ interface PythonAST {
      *  |  IsNot
      * ```
      */
-    class IsNot(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class IsNot(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -912,7 +905,7 @@ interface PythonAST {
      *  |  In
      * ```
      */
-    class In(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class In(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -920,7 +913,7 @@ interface PythonAST {
      *  |  NotIn
      * ```
      */
-    class NotIn(pyObject: PyObject, uri: URI) : cmpop(pyObject, uri)
+    class NotIn(pyObject: PyObject) : cmpop(pyObject)
 
     /**
      * ```
@@ -928,7 +921,7 @@ interface PythonAST {
      *  |  expr_context = Load | Store | Del
      * ```
      */
-    abstract class expr_context(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class expr_context(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -936,7 +929,7 @@ interface PythonAST {
      *  |  Load
      * ```
      */
-    class Load(pyObject: PyObject, uri: URI) : expr_context(pyObject, uri)
+    class Load(pyObject: PyObject) : expr_context(pyObject)
 
     /**
      * ```
@@ -944,7 +937,7 @@ interface PythonAST {
      *  |  Store
      * ```
      */
-    class Store(pyObject: PyObject, uri: URI) : expr_context(pyObject, uri)
+    class Store(pyObject: PyObject) : expr_context(pyObject)
 
     /**
      * ```
@@ -952,7 +945,7 @@ interface PythonAST {
      *  |  Del
      * ```
      */
-    class Del(pyObject: PyObject, uri: URI) : expr_context(pyObject, uri)
+    class Del(pyObject: PyObject) : expr_context(pyObject)
 
     /**
      * ```
@@ -960,7 +953,7 @@ interface PythonAST {
      *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
      * ```
      */
-    abstract class operator(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class operator(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -968,7 +961,7 @@ interface PythonAST {
      *  |  Add
      * ```
      */
-    class Add(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class Add(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -976,7 +969,7 @@ interface PythonAST {
      *  |  Sub
      * ```
      */
-    class Sub(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class Sub(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -984,7 +977,7 @@ interface PythonAST {
      *  |  Mult
      * ```
      */
-    class Mult(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class Mult(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -992,7 +985,7 @@ interface PythonAST {
      *  |  MatMult
      * ```
      */
-    class MatMult(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class MatMult(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1000,7 +993,7 @@ interface PythonAST {
      *  |  Div
      * ```
      */
-    class Div(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class Div(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1008,7 +1001,7 @@ interface PythonAST {
      *  |  Mod
      * ```
      */
-    class Mod(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class Mod(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1016,7 +1009,7 @@ interface PythonAST {
      *  |  Pow
      * ```
      */
-    class Pow(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class Pow(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1024,7 +1017,7 @@ interface PythonAST {
      *  |  LShift
      * ```
      */
-    class LShift(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class LShift(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1032,7 +1025,7 @@ interface PythonAST {
      *  |  RShift
      * ```
      */
-    class RShift(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class RShift(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1040,7 +1033,7 @@ interface PythonAST {
      *  |  BitOr
      * ```
      */
-    class BitOr(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class BitOr(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1048,7 +1041,7 @@ interface PythonAST {
      *  |  BitXor
      * ```
      */
-    class BitXor(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class BitXor(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1056,7 +1049,7 @@ interface PythonAST {
      *  |  BitAnd
      * ```
      */
-    class BitAnd(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class BitAnd(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1064,7 +1057,7 @@ interface PythonAST {
      *  |  FloorDiv
      * ```
      */
-    class FloorDiv(pyObject: PyObject, uri: URI) : operator(pyObject, uri)
+    class FloorDiv(pyObject: PyObject) : operator(pyObject)
 
     /**
      * ```
@@ -1079,7 +1072,7 @@ interface PythonAST {
      *  |  | MatchOr(pattern* patterns)
      * ```
      */
-    abstract class pattern(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class pattern(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1087,8 +1080,8 @@ interface PythonAST {
      *  |  MatchValue(expr value)
      * ```
      */
-    class MatchValue(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class MatchValue(pyObject: PyObject) : pattern(pyObject) {
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -1097,8 +1090,8 @@ interface PythonAST {
      *  |  MatchSingleton(constant value)
      * ```
      */
-    class MatchSingleton(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val value: Any by lazy { getSingle(pyObject, uri, "value") }
+    class MatchSingleton(pyObject: PyObject) : pattern(pyObject) {
+        val value: Any by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -1107,10 +1100,8 @@ interface PythonAST {
      *  |  MatchSequence(pattern* patterns)
      * ```
      */
-    class MatchSequence(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val patterns: kotlin.collections.List<pattern> by lazy {
-            getList(pyObject, uri, "patterns")
-        }
+    class MatchSequence(pyObject: PyObject) : pattern(pyObject) {
+        val patterns: kotlin.collections.List<pattern> by lazy { getList(pyObject, "patterns") }
     }
 
     /**
@@ -1119,12 +1110,10 @@ interface PythonAST {
      *  |  MatchMapping(expr* keys, pattern* patterns, identifier? rest)
      * ```
      */
-    class MatchMapping(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val key: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "keys") }
-        val patterns: kotlin.collections.List<pattern> by lazy {
-            getList(pyObject, uri, "patterns")
-        }
-        val rest: String? by lazy { getSingle(pyObject, uri, "rest") }
+    class MatchMapping(pyObject: PyObject) : pattern(pyObject) {
+        val key: kotlin.collections.List<expr> by lazy { getList(pyObject, "keys") }
+        val patterns: kotlin.collections.List<pattern> by lazy { getList(pyObject, "patterns") }
+        val rest: String? by lazy { getSingle(pyObject, "rest") }
     }
 
     /**
@@ -1133,16 +1122,12 @@ interface PythonAST {
      *  |  MatchClass(expr cls, pattern* patterns, identifier* kwd_attrs, pattern* kwd_patterns)
      * ```
      */
-    class MatchClass(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val cls: expr by lazy { getSingle(pyObject, uri, "cls") }
-        val patterns: kotlin.collections.List<pattern> by lazy {
-            getList(pyObject, uri, "patterns")
-        }
-        val kwd_attrs: kotlin.collections.List<String> by lazy {
-            getList(pyObject, uri, "kwd_attrs")
-        }
+    class MatchClass(pyObject: PyObject) : pattern(pyObject) {
+        val cls: expr by lazy { getSingle(pyObject, "cls") }
+        val patterns: kotlin.collections.List<pattern> by lazy { getList(pyObject, "patterns") }
+        val kwd_attrs: kotlin.collections.List<String> by lazy { getList(pyObject, "kwd_attrs") }
         val kwd_patterns: kotlin.collections.List<pattern> by lazy {
-            getList(pyObject, uri, "kwd_patterns")
+            getList(pyObject, "kwd_patterns")
         }
     }
 
@@ -1152,8 +1137,8 @@ interface PythonAST {
      *  |  MatchStar(identifier? name)
      * ```
      */
-    class MatchStar(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val name: String? by lazy { getSingle(pyObject, uri, "name") }
+    class MatchStar(pyObject: PyObject) : pattern(pyObject) {
+        val name: String? by lazy { getSingle(pyObject, "name") }
     }
 
     /**
@@ -1162,9 +1147,9 @@ interface PythonAST {
      *  |  MatchAs(pattern? pattern, identifier? name)
      * ```
      */
-    class MatchAs(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val pattern: pattern? by lazy { getSingle(pyObject, uri, "pattern") }
-        val name: String? by lazy { getSingle(pyObject, uri, "name") }
+    class MatchAs(pyObject: PyObject) : pattern(pyObject) {
+        val pattern: pattern? by lazy { getSingle(pyObject, "pattern") }
+        val name: String? by lazy { getSingle(pyObject, "name") }
     }
 
     /**
@@ -1173,10 +1158,8 @@ interface PythonAST {
      *  |  MatchOr(pattern* patterns)
      * ```
      */
-    class MatchOr(pyObject: PyObject, uri: URI) : pattern(pyObject, uri) {
-        val patterns: kotlin.collections.List<pattern> by lazy {
-            getList(pyObject, uri, "patterns")
-        }
+    class MatchOr(pyObject: PyObject) : pattern(pyObject) {
+        val patterns: kotlin.collections.List<pattern> by lazy { getList(pyObject, "patterns") }
     }
 
     /**
@@ -1185,7 +1168,7 @@ interface PythonAST {
      *  |  unaryop = Invert | Not | UAdd | USub
      * ```
      */
-    abstract class unaryop(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    abstract class unaryop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1193,7 +1176,7 @@ interface PythonAST {
      *  |  Invert
      * ```
      */
-    class Invert(pyObject: PyObject, uri: URI) : unaryop(pyObject, uri)
+    class Invert(pyObject: PyObject) : unaryop(pyObject)
 
     /**
      * ```
@@ -1201,14 +1184,14 @@ interface PythonAST {
      *  |  Not
      * ```
      */
-    class Not(pyObject: PyObject, uri: URI) : unaryop(pyObject, uri)
+    class Not(pyObject: PyObject) : unaryop(pyObject)
     /**
      * ```
      * ast.UAdd = class UAdd(unaryop)
      *  |  UAdd
      * ```
      */
-    class UAdd(pyObject: PyObject, uri: URI) : unaryop(pyObject, uri)
+    class UAdd(pyObject: PyObject) : unaryop(pyObject)
 
     /**
      * ```
@@ -1216,7 +1199,7 @@ interface PythonAST {
      *  |  USub
      * ```
      */
-    class USub(pyObject: PyObject, uri: URI) : unaryop(pyObject, uri)
+    class USub(pyObject: PyObject) : unaryop(pyObject)
 
     /**
      * ```
@@ -1224,9 +1207,9 @@ interface PythonAST {
      *  |  alias(identifier name, identifier? asname)
      * ```
      */
-    class alias(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val name: String by lazy { getSingle(pyObject, uri, "name") }
-        val asname: String? by lazy { getSingle(pyObject, uri, "asname") }
+    class alias(pyObject: PyObject) : AST(pyObject) {
+        val name: String by lazy { getSingle(pyObject, "name") }
+        val asname: String? by lazy { getSingle(pyObject, "asname") }
     }
 
     /**
@@ -1235,10 +1218,10 @@ interface PythonAST {
      *  |  arg(identifier arg, expr? annotation, string? type_comment)
      * ```
      */
-    class arg(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val arg: String by lazy { getSingle(pyObject, uri, "arg") }
-        val annotation: expr? by lazy { getSingle(pyObject, uri, "annotation") }
-        val type_comment: String? by lazy { getSingle(pyObject, uri, "type_comment") }
+    class arg(pyObject: PyObject) : AST(pyObject) {
+        val arg: String by lazy { getSingle(pyObject, "arg") }
+        val annotation: expr? by lazy { getSingle(pyObject, "annotation") }
+        val type_comment: String? by lazy { getSingle(pyObject, "type_comment") }
     }
 
     /**
@@ -1247,20 +1230,14 @@ interface PythonAST {
      *  |  arguments(arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs, expr* kw_defaults, arg? kwarg, expr* defaults)
      * ```
      */
-    class arguments(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val posonlyargs: kotlin.collections.List<arg> by lazy {
-            getList(pyObject, uri, "posonlyargs")
-        }
-        val args: kotlin.collections.List<arg> by lazy { getList(pyObject, uri, "args") }
-        val vararg: arg? by lazy { getSingle(pyObject, uri, "vararg") }
-        val kwonlyargs: kotlin.collections.List<arg> by lazy {
-            getList(pyObject, uri, "kwonlyargs")
-        }
-        val kw_defaults: kotlin.collections.List<expr> by lazy {
-            getList(pyObject, uri, "kw_defaults")
-        }
-        val kwarg: arg? by lazy { getSingle(pyObject, uri, "kwarg") }
-        val defaults: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "defaults") }
+    class arguments(pyObject: PyObject) : AST(pyObject) {
+        val posonlyargs: kotlin.collections.List<arg> by lazy { getList(pyObject, "posonlyargs") }
+        val args: kotlin.collections.List<arg> by lazy { getList(pyObject, "args") }
+        val vararg: arg? by lazy { getSingle(pyObject, "vararg") }
+        val kwonlyargs: kotlin.collections.List<arg> by lazy { getList(pyObject, "kwonlyargs") }
+        val kw_defaults: kotlin.collections.List<expr> by lazy { getList(pyObject, "kw_defaults") }
+        val kwarg: arg? by lazy { getSingle(pyObject, "kwarg") }
+        val defaults: kotlin.collections.List<expr> by lazy { getList(pyObject, "defaults") }
     }
 
     /**
@@ -1269,12 +1246,12 @@ interface PythonAST {
      *  |  comprehension(expr target, expr iter, expr* ifs, int is_async)
      * ```
      */
-    class comprehension(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val target: expr by lazy { getSingle(pyObject, uri, "target") }
-        val iter: expr by lazy { getSingle(pyObject, uri, "iter") }
-        val ifs: kotlin.collections.List<expr> by lazy { getList(pyObject, uri, "ifs") }
+    class comprehension(pyObject: PyObject) : AST(pyObject) {
+        val target: expr by lazy { getSingle(pyObject, "target") }
+        val iter: expr by lazy { getSingle(pyObject, "iter") }
+        val ifs: kotlin.collections.List<expr> by lazy { getList(pyObject, "ifs") }
         val is_async: Int by lazy {
-            getSingle(pyObject, uri, "is_async")
+            getSingle(pyObject, "is_async")
         } // TODO: is this an `Int` in Kotlin?
     }
 
@@ -1286,10 +1263,10 @@ interface PythonAST {
      *
      * TODO: excepthandler <-> ExceptHandler
      */
-    class excepthandler(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val type: expr by lazy { getSingle(pyObject, uri, "type") }
-        val name: String by lazy { getSingle(pyObject, uri, "name") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+    class excepthandler(pyObject: PyObject) : AST(pyObject) {
+        val type: expr by lazy { getSingle(pyObject, "type") }
+        val name: String by lazy { getSingle(pyObject, "name") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
     }
 
     /**
@@ -1298,9 +1275,9 @@ interface PythonAST {
      *  |  keyword(identifier? arg, expr value)
      * ```
      */
-    class keyword(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val arg: String? by lazy { getSingle(pyObject, uri, "arg") }
-        val value: expr by lazy { getSingle(pyObject, uri, "value") }
+    class keyword(pyObject: PyObject) : AST(pyObject) {
+        val arg: String? by lazy { getSingle(pyObject, "arg") }
+        val value: expr by lazy { getSingle(pyObject, "value") }
     }
 
     /**
@@ -1309,10 +1286,10 @@ interface PythonAST {
      *  |  match_case(pattern pattern, expr? guard, stmt* body)
      * ```
      */
-    class match_case(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val pattern: pattern by lazy { getSingle(pyObject, uri, "pattern") }
-        val guard: expr? by lazy { getSingle(pyObject, uri, "guard") }
-        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, uri, "body") }
+    class match_case(pyObject: PyObject) : AST(pyObject) {
+        val pattern: pattern by lazy { getSingle(pyObject, "pattern") }
+        val guard: expr? by lazy { getSingle(pyObject, "guard") }
+        val body: kotlin.collections.List<stmt> by lazy { getList(pyObject, "body") }
     }
 
     /**
@@ -1323,7 +1300,7 @@ interface PythonAST {
      *
      * TODO
      */
-    class type_ignore(pyObject: PyObject, uri: URI) : AST(pyObject, uri)
+    class type_ignore(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1331,17 +1308,17 @@ interface PythonAST {
      *  |  withitem(expr context_expr, expr? optional_vars)
      * ```
      */
-    class withitem(pyObject: PyObject, uri: URI) : AST(pyObject, uri) {
-        val context_expr: expr by lazy { getSingle(pyObject, uri, "context_expr") }
-        val optional_vars: expr? by lazy { getSingle(pyObject, uri, "optional_vars") }
+    class withitem(pyObject: PyObject) : AST(pyObject) {
+        val context_expr: expr by lazy { getSingle(pyObject, "context_expr") }
+        val optional_vars: expr? by lazy { getSingle(pyObject, "optional_vars") }
     }
 }
 
-inline fun <reified T> getSingle(pyObject: PyObject, uri: URI, identifier: String): T {
+inline fun <reified T> getSingle(pyObject: PyObject, identifier: String): T {
     val ret =
         pyObject.getAttr(identifier).let {
             if (it is PyObject) {
-                fromPython(it, uri)
+                fromPython(it)
             } else {
                 it
             }
@@ -1352,12 +1329,12 @@ inline fun <reified T> getSingle(pyObject: PyObject, uri: URI, identifier: Strin
     return ret
 }
 
-inline fun <reified T> getList(pyObject: PyObject, uri: URI, identifier: String): List<T> {
+inline fun <reified T> getList(pyObject: PyObject, identifier: String): List<T> {
     val tmp = pyObject.getAttr(identifier) as? ArrayList<*> ?: TODO("Expected a list")
     return tmp.map {
         val item =
             if (it is PyObject) {
-                fromPython(it, uri)
+                fromPython(it)
             } else {
                 it
             }
