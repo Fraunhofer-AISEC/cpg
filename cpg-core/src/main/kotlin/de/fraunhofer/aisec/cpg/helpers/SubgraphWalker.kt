@@ -289,11 +289,9 @@ object SubgraphWalker {
          * Once "parent" has been visited, we continue descending into its children. First into
          * "child1", followed by "subchild". Once we are done there, we return to "child1". At this
          * point, the exit handler notifies the user that "subchild" is being exited. Afterwards we
-         * exit "child1", and after "child2" is done, "parent" is exited. This callback is important
-         * for tracking declaration scopes, as e.g. anything declared in "child1" is also visible to
-         * "subchild", but not to "child2".
+         * exit "child1", and after "child2" is done, "parent" is exited.
          */
-        private val onScopeExit: MutableList<Consumer<Node>> = ArrayList()
+        private val onNodeExit: MutableList<Consumer<Node>> = ArrayList()
 
         /**
          * The core iterative AST traversal algorithm: In a depth-first way we descend into the
@@ -313,7 +311,7 @@ object SubgraphWalker {
                         (backlog as ArrayDeque<Node>).peek() == current
                 ) {
                     val exiting = (backlog as ArrayDeque<Node>).pop()
-                    onScopeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
+                    onNodeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
                 } else {
                     // re-place the current node as a marker for the above check to find out when we
                     // need to exit a scope
@@ -344,13 +342,13 @@ object SubgraphWalker {
             onNodeVisit2.add(callback)
         }
 
-        fun registerOnScopeExit(callback: Consumer<Node>) {
-            onScopeExit.add(callback)
+        fun registerOnNodeExit(callback: Consumer<Node>) {
+            onNodeExit.add(callback)
         }
 
         fun clearCallbacks() {
             onNodeVisit.clear()
-            onScopeExit.clear()
+            onNodeExit.clear()
         }
 
         fun getTodo(): Deque<Node> {
@@ -359,21 +357,13 @@ object SubgraphWalker {
     }
 
     /**
-     * Handles declaration scope monitoring for iterative traversals. If this is not required, use
-     * [IterativeGraphWalker] for less overhead.
-     *
-     * Declaration scopes are similar to [de.fraunhofer.aisec.cpg.ScopeManager] scopes:
-     * [ValueDeclaration]s located inside a scope (i.e. are children of the scope root) are visible
-     * to any children of the scope root. Scopes can be layered, where declarations from parent
-     * scopes are visible to the children but not the other way around.
+     * This class traverses the graph in a similar way as the [IterativeGraphWalker], but with the
+     * added feature, that a [ScopeManager] is populated with the scope information of the current
+     * node. This way, we can call functions on the supplied [scopeManager] and emulate that we are
+     * currently in the scope of the "consumed" node in the callback. This can be useful for
+     * resolving declarations or other scope-related tasks.
      */
     class ScopedWalker {
-        // declarationScope -> (parentScope, declarations)
-        private val nodeToParentBlockAndContainedValueDeclarations:
-            MutableMap<
-                Node, org.apache.commons.lang3.tuple.Pair<Node, MutableList<ValueDeclaration>>
-            > =
-            IdentityHashMap()
         private var walker: IterativeGraphWalker? = null
         private val scopeManager: ScopeManager
 
@@ -415,7 +405,6 @@ object SubgraphWalker {
         fun iterate(root: Node) {
             walker = IterativeGraphWalker()
             handlers.forEach { h -> walker?.registerOnNodeVisit { n -> handleNode(n, h) } }
-            walker?.registerOnScopeExit { exiting: Node -> leaveScope(exiting) }
             walker?.iterate(root)
         }
 
@@ -423,73 +412,14 @@ object SubgraphWalker {
             current: Node,
             handler: TriConsumer<RecordDeclaration?, Node?, Node?>
         ) {
-            scopeManager.enterScopeIfExists(current)
+            // Jump to the node's scope, if it is different from ours.
+            if (scopeManager.currentScope != current.scope) {
+                scopeManager.jumpTo(current.scope)
+            }
+
             val parent = walker?.backlog?.peek()
 
-            // TODO: actually we should not handle this in handleNode but have something similar to
-            // onScopeEnter because the method declaration already correctly sets the scope
             handler.accept(scopeManager.currentRecord, parent, current)
-        }
-
-        private fun leaveScope(exiting: Node) {
-            scopeManager.leaveScope(exiting)
-        }
-
-        fun collectDeclarations(current: Node?) {
-            if (current == null) return
-
-            var parentBlock: Node? = null
-
-            // get containing Record or Compound
-            for (node in walker?.backlog ?: listOf()) {
-                if (
-                    node is RecordDeclaration ||
-                        node is Block ||
-                        node is FunctionDeclaration ||
-                        node is
-                            TranslationUnitDeclaration // can also be a translation unit for global
-                // (C) functions
-                ) {
-                    parentBlock = node
-                    break
-                }
-            }
-            nodeToParentBlockAndContainedValueDeclarations[current] =
-                MutablePair(parentBlock, ArrayList())
-            if (current is ValueDeclaration) {
-                LOGGER.trace("Adding variable {}", current.code)
-                if (parentBlock == null) {
-                    LOGGER.warn("Parent block is empty during subgraph run")
-                } else {
-                    nodeToParentBlockAndContainedValueDeclarations[parentBlock]?.right?.add(current)
-                }
-            }
-        }
-
-        /**
-         * @param scope
-         * @param predicate
-         * @return
-         */
-        @Deprecated("""The scope manager should be used instead.
-      """)
-        fun getDeclarationForScope(
-            scope: Node,
-            predicate: Predicate<ValueDeclaration?>
-        ): Optional<out ValueDeclaration?> {
-            var currentScope = scope
-
-            // iterate all declarations from the current scope and all its parent scopes
-            while (nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
-                val entry = nodeToParentBlockAndContainedValueDeclarations[currentScope]
-                for (`val` in entry?.right ?: listOf()) {
-                    if (predicate.test(`val`)) {
-                        return Optional.of(`val`)
-                    }
-                }
-                entry?.left?.let { currentScope = it }
-            }
-            return Optional.empty()
         }
     }
 }

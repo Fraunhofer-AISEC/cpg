@@ -679,7 +679,7 @@ class ScopeManager : ScopeProvider {
      * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
      */
     @PleaseBeCareful
-    private fun jumpTo(scope: Scope?): Scope? {
+    internal fun jumpTo(scope: Scope?): Scope? {
         val oldScope = currentScope
         currentScope = scope
         return oldScope

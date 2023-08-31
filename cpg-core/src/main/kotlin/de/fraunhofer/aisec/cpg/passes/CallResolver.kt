@@ -74,7 +74,6 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
 
     override fun accept(component: Component) {
         walker = ScopedWalker(scopeManager)
-        walker.registerHandler { _, _, currNode -> walker.collectDeclarations(currNode) }
         walker.registerHandler { node, _ -> findRecords(node) }
         walker.registerHandler { node, _ -> findTemplates(node) }
         walker.registerHandler { currentClass, _, currentNode ->
