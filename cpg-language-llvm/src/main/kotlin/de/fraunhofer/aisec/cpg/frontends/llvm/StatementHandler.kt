@@ -792,15 +792,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Parses the [`cmpxchg`](https://llvm.org/docs/LangRef.html#cmpxchg-instruction) instruction.
-     * It returns a single [Statement] or a [Block] if the value is assigned to another
-     * variable. Performs the following operation atomically:
+     * It returns a single [Statement] or a [Block] if the value is assigned to another variable.
+     * Performs the following operation atomically:
      * ```
      * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
      * if(*pointer == cmp) { *pointer = new }
      * ```
      *
-     * Returns a [Block] with those two instructions or, if `lhs` doesn't exist, only the
-     * if-then statement.
+     * Returns a [Block] with those two instructions or, if `lhs` doesn't exist, only the if-then
+     * statement.
      */
     private fun handleAtomiccmpxchg(instr: LLVMValueRef): Statement {
         val instrStr = frontend.codeOf(instr)

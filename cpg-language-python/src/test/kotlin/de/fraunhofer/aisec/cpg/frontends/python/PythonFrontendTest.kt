@@ -557,8 +557,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("inc", lhs)
         assertEquals(0, lhs.arguments.size)
 
-        val ifThen =
-            (countStmt.thenStatement as? Block)?.statements?.get(0) as? CallExpression
+        val ifThen = (countStmt.thenStatement as? Block)?.statements?.get(0) as? CallExpression
         assertNotNull(ifThen)
         assertEquals(methCount, ifThen.invokes.first())
         assertEquals(countParam, (ifThen.arguments.first() as? Reference)?.refersTo)

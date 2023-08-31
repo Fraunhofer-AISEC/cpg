@@ -123,7 +123,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return lambda
     }
 
-    private fun handleCompoundStatementExpression(ctx: CPPASTCompoundStatementExpression): Expression {
+    private fun handleCompoundStatementExpression(
+        ctx: CPPASTCompoundStatementExpression
+    ): Expression {
         return frontend.statementHandler.handle(ctx.compoundStatement) as Expression
     }
 
