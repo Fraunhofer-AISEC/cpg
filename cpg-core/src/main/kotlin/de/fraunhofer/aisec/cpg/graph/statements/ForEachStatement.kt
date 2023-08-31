@@ -74,10 +74,10 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         } else if (statement == null) {
             statement = s
         } else if (statement !is Block) {
-            val newStmt = newBlock()
-            statement?.let { newStmt.addStatement(it) }
-            newStmt.addStatement(s)
-            statement = newStmt
+            val block = newBlock()
+            statement?.let { block.addStatement(it) }
+            block.addStatement(s)
+            statement = block
         } else {
             (statement as? Block)?.addStatement(s)
         }

@@ -74,24 +74,24 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleProblemStatement(problemStmt: IASTProblemStatement): ProblemExpression {
-        Util.errorWithFileLocation(frontend, problemStmt, log, problemStmt.problem.message)
+    private fun handleProblemStatement(problemStatement: IASTProblemStatement): ProblemExpression {
+        Util.errorWithFileLocation(frontend, problemStatement, log, problemStatement.problem.message)
 
         return newProblemExpression(
-            problemStmt.problem.message,
+            problemStatement.problem.message,
         )
     }
 
-    private fun handleEmptyStatement(emptyStmt: IASTNullStatement): EmptyStatement {
-        return newEmptyStatement(emptyStmt.rawSignature)
+    private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
+        return newEmptyStatement(nullStatement.rawSignature)
     }
 
-    private fun handleTryBlockStatement(tryStmt: CPPASTTryBlockStatement): TryStatement {
-        val tryStatement = newTryStatement(tryStmt.toString())
+    private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): TryStatement {
+        val tryStatement = newTryStatement(tryBlockStatement.toString())
         frontend.scopeManager.enterScope(tryStatement)
-        val statement = handle(tryStmt.tryBody) as Block?
+        val statement = handle(tryBlockStatement.tryBody) as Block?
         val catchClauses =
-            Arrays.stream(tryStmt.catchHandlers)
+            Arrays.stream(tryBlockStatement.catchHandlers)
                 .map { handleCatchHandler(it) }
                 .collect(Collectors.toList())
         tryStatement.tryBlock = statement
