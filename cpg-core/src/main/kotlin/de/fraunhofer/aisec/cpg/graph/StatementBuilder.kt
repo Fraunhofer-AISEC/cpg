@@ -97,7 +97,7 @@ fun MetadataProvider.newAssertStatement(
 }
 
 /**
- * Creates a new [ASMDeclStmt]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ASMDeclarationStatement]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.

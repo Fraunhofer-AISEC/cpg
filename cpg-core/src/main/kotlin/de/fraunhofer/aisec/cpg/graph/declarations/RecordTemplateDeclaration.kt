@@ -34,7 +34,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
 
-/** Node representing a declaration of a ClassTemplate */
+/** Node representing a declaration of a template class or struct */
 class RecordTemplateDeclaration : TemplateDeclaration() {
     /**
      * Edges pointing to all RecordDeclarations that are realized by the ClassTempalte. Before the

@@ -312,20 +312,20 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
-        val compoundStatement = newBlock(ctx.rawSignature)
+        val block = newBlock(ctx.rawSignature)
 
-        frontend.scopeManager.enterScope(compoundStatement)
+        frontend.scopeManager.enterScope(block)
 
         for (statement in ctx.statements) {
             val handled = handle(statement)
             if (handled != null) {
-                compoundStatement.addStatement(handled)
+                block.addStatement(handled)
             }
         }
 
-        frontend.scopeManager.leaveScope(compoundStatement)
+        frontend.scopeManager.leaveScope(block)
 
-        return compoundStatement
+        return block
     }
 
     private fun handleSwitchStatement(ctx: IASTSwitchStatement): SwitchStatement {
