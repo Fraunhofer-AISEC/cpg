@@ -860,7 +860,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(iter)
         assertEquals(testDeclaration, iter.refersTo)
 
-        val forBody = forStmt.statement as? BlockStatement
+        val forBody = forStmt.statement as? Block
         assertNotNull(forBody)
         assertEquals(1, forBody.statements.size)
 
@@ -900,9 +900,9 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(ifStatement)
         val ifCond = ifStatement.condition as? BinaryOperator
         assertNotNull(ifCond)
-        val ifThen = ifStatement.thenStatement as? BlockStatement
+        val ifThen = ifStatement.thenStatement as? Block
         assertNotNull(ifThen)
-        val ifElse = ifStatement.elseStatement as? BlockStatement
+        val ifElse = ifStatement.elseStatement as? Block
         assertNotNull(ifElse)
 
         // sys.version_info.minor > 9
@@ -972,7 +972,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(1, variable.size)
         assertEquals("# A comment", variable.first().comment)
 
-        val block = commentedNodes.filterIsInstance<BlockStatement>()
+        val block = commentedNodes.filterIsInstance<Block>()
         assertEquals(1, block.size)
         assertEquals("# foo", block.first().comment)
 
@@ -1021,7 +1021,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespace = tu.functions["forloop"]?.body as? BlockStatement
+        val namespace = tu.functions["forloop"]?.body as? Block
         assertNotNull(namespace)
 
         val varDefinedBeforeLoop = namespace.variables["varDefinedBeforeLoop"]

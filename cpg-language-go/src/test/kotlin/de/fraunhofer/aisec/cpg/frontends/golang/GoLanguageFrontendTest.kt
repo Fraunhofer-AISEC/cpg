@@ -121,7 +121,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val body = main.body as? BlockStatement
+        val body = main.body as? Block
         assertNotNull(body)
 
         var decl = main.variables["o"]
@@ -266,7 +266,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(myTest.returnTypes.size, type.returnTypes.size)
         assertEquals(listOf("int", "error"), type.returnTypes.map { it.name.localName })
 
-        var body = main.body as? BlockStatement
+        var body = main.body as? Block
         assertNotNull(body)
 
         var callExpression = body.calls.firstOrNull()
@@ -282,7 +282,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertLocalName("myTest", myTest)
 
-        body = myTest.body as? BlockStatement
+        body = myTest.body as? Block
         assertNotNull(body)
 
         callExpression = body.statements.first() as? CallExpression
@@ -382,7 +382,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val newMyStruct = p.functions["NewMyStruct"]
         assertNotNull(newMyStruct)
 
-        val body = newMyStruct.body as? BlockStatement
+        val body = newMyStruct.body as? Block
 
         assertNotNull(body)
 
@@ -416,7 +416,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(myFunc)
         assertLocalName("MyFunc", myFunc)
 
-        val body = myFunc.body as? BlockStatement
+        val body = myFunc.body as? Block
 
         assertNotNull(body)
 
@@ -451,7 +451,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val myFunc = p.methods["myFunc"]
         assertNotNull(myFunc)
 
-        val body = myFunc.body as? BlockStatement
+        val body = myFunc.body as? Block
         assertNotNull(body)
 
         val assign = body.statements.first() as? AssignExpression
@@ -480,7 +480,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = tu.functions["p.main"]
         assertNotNull(main)
 
-        val body = main.body as? BlockStatement
+        val body = main.body as? Block
         assertNotNull(body)
 
         val b =
@@ -516,13 +516,13 @@ class GoLanguageFrontendTest : BaseTest() {
         val myFunc = tu.functions["p.myFunc"]
         assertNotNull(myFunc)
 
-        val body = myFunc.body as? BlockStatement
+        val body = myFunc.body as? Block
         assertNotNull(body)
 
         val switch = body.statements.first() as? SwitchStatement
         assertNotNull(switch)
 
-        val list = switch.statement as? BlockStatement
+        val list = switch.statement as? Block
         assertNotNull(list)
 
         val case1 = list.statements[0] as? CaseStatement
@@ -581,7 +581,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val body = main.body as? BlockStatement
+        val body = main.body as? Block
         assertNotNull(body)
 
         val c = body.variables["c"]
@@ -634,7 +634,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val f = main.bodyOrNull<ForStatement>()
         assertNotNull(f)
         assertTrue(f.condition is BinaryOperator)
-        assertTrue(f.statement is BlockStatement)
+        assertTrue(f.statement is Block)
         assertTrue(f.initializerStatement is AssignExpression)
         assertTrue(f.iterationStatement is UnaryOperator)
 
