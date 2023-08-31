@@ -29,7 +29,7 @@ from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import TypeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
-from de.fraunhofer.aisec.cpg.graph.statements import Block
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import Block
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 from java.util import ArrayList
 import ast
