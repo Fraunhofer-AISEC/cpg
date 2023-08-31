@@ -936,7 +936,7 @@ internal class EOGTest : BaseTest() {
         assertTrue(printFunctionCall in lambda.prevEOG)
 
         // The "inner" EOG is assembled correctly.
-        val body = (lambda.function?.body as? BlockStatement)
+        val body = (lambda.function?.body as? Block)
         assertNotNull(body)
         assertEquals(1, lambda.function?.nextEOG?.size)
         assertEquals("std::cout", (lambda.function?.nextEOG?.get(0) as? Reference)?.name.toString())
@@ -974,9 +974,9 @@ internal class EOGTest : BaseTest() {
         val binOpRight = (endl.nextEOG[0] as? BinaryOperator)
         assertNotNull(binOpRight)
         assertEquals(1, binOpRight.nextEOG.size)
-        assertTrue(binOpRight.nextEOG.firstOrNull() is BlockStatement)
+        assertTrue(binOpRight.nextEOG.firstOrNull() is Block)
 
-        assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? BlockStatement)?.nextEOG?.size)
+        assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? Block)?.nextEOG?.size)
     }
 
     @Test

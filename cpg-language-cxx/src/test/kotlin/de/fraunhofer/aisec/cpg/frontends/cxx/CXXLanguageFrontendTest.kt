@@ -206,7 +206,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         with(tu) {
             assertNotNull(main)
 
-            val statement = main.body as BlockStatement
+            val statement = main.body as Block
 
             // first statement is the variable declaration
             val x =
@@ -267,7 +267,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         method = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
         assertEquals("function0(int)void", method!!.signature)
 
-        var statements = (method.body as BlockStatement).statements
+        var statements = (method.body as Block).statements
         assertFalse(statements.isEmpty())
         assertEquals(2, statements.size)
 
@@ -279,7 +279,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         method = declaration.getDeclarationAs(3, FunctionDeclaration::class.java)
         assertEquals("function2()void*", method!!.signature)
 
-        statements = (method.body as BlockStatement).statements
+        statements = (method.body as Block).statements
         assertFalse(statements.isEmpty())
         assertEquals(1, statements.size)
 
@@ -316,7 +316,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testBlockStatement() {
+    fun testBlock() {
         val file = File("src/test/resources/compoundstmt.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val function = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
@@ -325,7 +325,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val functionBody = function.body
         assertNotNull(functionBody)
 
-        val statements = (functionBody as BlockStatement).statements
+        val statements = (functionBody as Block).statements
         assertEquals(1, statements.size)
 
         val returnStatement = statements[0] as ReturnStatement
@@ -381,8 +381,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(ifStatement.condition)
         assertEquals("bool", ifStatement.condition!!.type.typeName)
         assertEquals(true, (ifStatement.condition as Literal<*>).value)
-        assertTrue((ifStatement.thenStatement as BlockStatement).statements[0] is ReturnStatement)
-        assertTrue((ifStatement.elseStatement as BlockStatement).statements[0] is ReturnStatement)
+        assertTrue((ifStatement.thenStatement as Block).statements[0] is ReturnStatement)
+        assertTrue((ifStatement.elseStatement as Block).statements[0] is ReturnStatement)
     }
 
     @Test
@@ -397,7 +397,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(switchStatements.size == 3)
 
         val switchStatement = switchStatements[0]
-        assertTrue((switchStatement.statement as BlockStatement).statements.size == 11)
+        assertTrue((switchStatement.statement as Block).statements.size == 11)
 
         val caseStatements = switchStatement.allChildren<CaseStatement>()
         assertTrue(caseStatements.size == 4)
@@ -913,7 +913,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         with(tu) {
             // get the main method
             val main = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
-            val statement = main!!.body as BlockStatement
+            val statement = main!!.body as Block
 
             // Integer i
             val i =
@@ -962,7 +962,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     private val FunctionDeclaration.statements: List<Statement>?
         get() {
-            return (this.body as? BlockStatement)?.statements
+            return (this.body as? Block)?.statements
         }
 
     @Test
@@ -971,7 +971,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cfg.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val fdecl = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
-        val body = fdecl!!.body as BlockStatement
+        val body = fdecl!!.body as Block
         val expected: MutableMap<String?, Region> = HashMap()
         expected["cout << \"bla\";"] = Region(4, 3, 4, 17)
         expected["cout << \"blubb\";"] = Region(5, 3, 5, 19)
@@ -997,9 +997,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
         assertEquals("main()int", method!!.signature)
-        assertTrue(method.body is BlockStatement)
+        assertTrue(method.body is Block)
 
-        val statements = (method.body as BlockStatement).statements
+        val statements = (method.body as Block).statements
         assertEquals(4, statements.size)
         assertTrue(statements[0] is DeclarationStatement)
         assertTrue(statements[1] is DeclarationStatement)
@@ -1215,7 +1215,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
 
-        val body = main.body as BlockStatement
+        val body = main.body as Block
         assertNotNull(body)
 
         val returnStatement = body.statements[body.statements.size - 1]

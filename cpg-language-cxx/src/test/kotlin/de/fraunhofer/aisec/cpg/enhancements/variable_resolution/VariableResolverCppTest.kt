@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -132,7 +133,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessLocalVarNameInNestedBlock() {
-        val innerBlock = forStatements?.get(1).allChildren<BlockStatement>()[""]
+        val innerBlock = forStatements?.get(1).allChildren<Block>()[""]
         val nestedDeclaration = innerBlock.variables["varName"]
         assertUsageOf(callParamMap["func1_nested_block_shadowed_local_varName"], nestedDeclaration)
     }

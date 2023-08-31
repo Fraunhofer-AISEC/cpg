@@ -214,7 +214,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is BlockStatement -> {
+        is Block -> {
             // loop through statements
             for (statement in node.statements) {
                 list.addAll(getFanciesFor(original, statement))

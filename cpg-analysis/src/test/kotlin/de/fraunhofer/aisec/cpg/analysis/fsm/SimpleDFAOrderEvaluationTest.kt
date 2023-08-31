@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import java.nio.file.Path
@@ -89,8 +90,8 @@ class SimpleDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p4Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as BlockStatement).statements[1]] = setOf("start()")
-        nodesToOp[(functionOk.body as BlockStatement).statements[2]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
@@ -110,9 +111,9 @@ class SimpleDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p4Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as BlockStatement).statements[1]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("start()")
         // We do not model the call to foo() because it does not exist in our model.
-        nodesToOp[(functionOk.body as BlockStatement).statements[3]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
@@ -134,18 +135,16 @@ class SimpleDFAOrderEvaluationTest {
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         // We model the calls to start() for the then and the else branch
         val thenBranch =
-            ((functionOk.body as BlockStatement).statements[2] as? IfStatement)?.thenStatement
-                as? BlockStatement
+            ((functionOk.body as Block).statements[2] as? IfStatement)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         val elseBranch =
-            ((functionOk.body as BlockStatement).statements[2] as? IfStatement)?.elseStatement
-                as? BlockStatement
+            ((functionOk.body as Block).statements[2] as? IfStatement)?.elseStatement as? Block
         assertNotNull(elseBranch)
         nodesToOp[elseBranch.statements[0]] = setOf("start()")
 
         // We do not model the call to foo() because it does not exist in our model.
-        nodesToOp[(functionOk.body as BlockStatement).statements[3]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
@@ -165,11 +164,11 @@ class SimpleDFAOrderEvaluationTest {
         val consideredBases = mutableSetOf(pDecl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as BlockStatement).statements[1]] = setOf("set_key()")
-        nodesToOp[(functionOk.body as BlockStatement).statements[2]] = setOf("start()")
-        nodesToOp[(functionOk.body as BlockStatement).statements[3]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("set_key()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("finish()")
         // We do not model the call to foo() because it does not exist in our model.
-        nodesToOp[(functionOk.body as BlockStatement).statements[5]] = setOf("set_key()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("set_key()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredBases, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(pDecl)
@@ -189,7 +188,7 @@ class SimpleDFAOrderEvaluationTest {
         val consideredBases = mutableSetOf(p2Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as BlockStatement).statements[1]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("start()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredBases, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p2Decl)
@@ -210,11 +209,10 @@ class SimpleDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         val thenBranch =
-            ((functionOk.body as BlockStatement).statements[1] as? IfStatement)?.thenStatement
-                as? BlockStatement
+            ((functionOk.body as Block).statements[1] as? IfStatement)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
-        nodesToOp[(functionOk.body as BlockStatement).statements[2]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
@@ -235,13 +233,12 @@ class SimpleDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         val thenBranch =
-            ((functionOk.body as BlockStatement).statements[1] as? IfStatement)?.thenStatement
-                as? BlockStatement
+            ((functionOk.body as Block).statements[1] as? IfStatement)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[thenBranch.statements[1]] = setOf("finish()")
-        nodesToOp[(functionOk.body as BlockStatement).statements[2]] = setOf("start()")
-        nodesToOp[(functionOk.body as BlockStatement).statements[4]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p4Decl)
