@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -58,10 +59,6 @@ constructor(
         return unknownType()
     }
 
-    override fun duplicate(): Type {
-        return FunctionType(typeName, parameters.toList(), returnTypes.toList(), language)
-    }
-
     companion object {
         /**
          * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
@@ -78,7 +75,8 @@ constructor(
                     func.language
                 )
 
-            return func.registerType(type)
+            val c = func.ctx ?: throw TranslationException("context not available")
+            return c.typeManager.registerType(type)
         }
     }
 }

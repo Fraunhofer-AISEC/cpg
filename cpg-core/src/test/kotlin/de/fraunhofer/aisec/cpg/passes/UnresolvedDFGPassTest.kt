@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -133,12 +132,7 @@ class UnresolvedDFGPassTest {
                                 param("args", t("String[]"))
                                 body {
                                     declare {
-                                        variable(
-                                            "os",
-                                            t("Optional") {
-                                                (this as ObjectType).generics = listOf(t("String"))
-                                            }
-                                        ) {
+                                        variable("os", t("Optional", listOf(t("String")))) {
                                             memberCall("getOptionalString", ref("RandomClass")) {
                                                 isStatic = true
                                             }

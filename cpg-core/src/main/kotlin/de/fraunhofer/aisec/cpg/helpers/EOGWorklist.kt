@@ -57,7 +57,7 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
  */
 class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Node>>(elements) {
     override fun lub(other: LatticeElement<Set<Node>>) =
-        PowersetLattice((other.elements).union(this.elements))
+        PowersetLattice(other.elements.union(this.elements))
 
     override fun duplicate() = PowersetLattice(this.elements.toSet())
 
@@ -248,9 +248,21 @@ inline fun <reified K : Node, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextNode, state) = worklist.pop()
 
-        val newState = transformation(nextNode, state.duplicate(), worklist)
+        // This should check if we're not near the beginning/end of a basic block (i.e., there are
+        // no merge points or branches of the EOG nearby). If that's the case, we just parse the
+        // whole basic block and do not want to duplicate the state. Near the beginning/end, we do
+        // want to copy the state to avoid terminating the iteration too early by messing up with
+        // the state-changing checks.
+        val insideBB =
+            (nextNode.nextEOG.size == 1 && nextNode.prevEOG.singleOrNull()?.nextEOG?.size == 1)
+        val newState =
+            transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
-            nextNode.nextEOG.forEach { if (it is K) worklist.push(it, newState.duplicate()) }
+            nextNode.nextEOG.forEach {
+                if (it is K) {
+                    worklist.push(it, newState)
+                }
+            }
         }
     }
     return worklist.mop()
@@ -271,10 +283,22 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextEdge, state) = worklist.pop()
 
-        val newState = transformation(nextEdge, state.duplicate(), worklist)
-        if (worklist.update(nextEdge, newState)) {
+        // This should check if we're not near the beginning/end of a basic block (i.e., there are
+        // no merge points or branches of the EOG nearby). If that's the case, we just parse the
+        // whole basic block and do not want to duplicate the state. Near the beginning/end, we do
+        // want to copy the state to avoid terminating the iteration too early by messing up with
+        // the state-changing checks.
+        val insideBB =
+            (nextEdge.end.nextEOG.size == 1 &&
+                nextEdge.end.prevEOG.size == 1 &&
+                nextEdge.start.nextEOG.size == 1)
+        val newState =
+            transformation(nextEdge, if (insideBB) state else state.duplicate(), worklist)
+        if (insideBB || worklist.update(nextEdge, newState)) {
             nextEdge.end.nextEOGEdges.forEach {
-                if (it is K) worklist.push(it, newState.duplicate())
+                if (it is K) {
+                    worklist.push(it, newState)
+                }
             }
         }
     }

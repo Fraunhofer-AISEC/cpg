@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * Represents a tuple of types. Primarily used in resolving function calls with multiple return
@@ -43,14 +44,10 @@ class TupleType(types: List<Type>) : Type() {
     }
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        TODO("Not yet implemented")
+        return unknownType()
     }
 
     override fun dereference(): Type {
-        TODO("Not yet implemented")
-    }
-
-    override fun duplicate(): Type {
-        return TupleType(types.map { it.duplicate() })
+        return unknownType()
     }
 }

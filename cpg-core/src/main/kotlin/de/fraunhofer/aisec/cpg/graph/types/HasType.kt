@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -102,7 +101,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * A list of [TypeObserver] objects that will be informed about type changes, usually by
      * [informObservers].
      */
-    val typeObservers: MutableList<TypeObserver>
+    val typeObservers: MutableSet<TypeObserver>
 
     /**
      * A [TypeObserver] can be used by its implementing class to observe changes to the
@@ -183,9 +182,4 @@ interface HasType : ContextProvider, LanguageProvider {
     fun unregisterTypeObserver(typeObserver: TypeObserver) {
         typeObservers -= typeObserver
     }
-}
-
-fun <T : Type> Node.registerType(type: T): T {
-    val c = ctx ?: throw TranslationException("context not available")
-    return c.typeManager.registerType(type)
 }

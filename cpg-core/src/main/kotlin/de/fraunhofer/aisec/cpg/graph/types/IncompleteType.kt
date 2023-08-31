@@ -51,10 +51,6 @@ class IncompleteType : Type {
         return this
     }
 
-    override fun duplicate(): Type {
-        return IncompleteType(this)
-    }
-
     override fun equals(other: Any?): Boolean {
         return other is IncompleteType
     }

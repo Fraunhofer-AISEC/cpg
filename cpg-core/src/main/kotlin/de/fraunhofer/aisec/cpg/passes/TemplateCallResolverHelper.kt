@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ClassTemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypeParamDeclaration
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
@@ -113,39 +114,50 @@ fun applyMissingParams(
     templateParametersExplicitInitialization: Map<Node, Node>,
     templateParameterRealDefaultInitialization: Map<Node, Node?>
 ) {
-    val missingParams: List<Node?> =
-        template.parameterDefaults.subList(
-            constructExpression.templateParameters.size,
-            template.parameterDefaults.size
-        )
-    for (m in missingParams) {
-        var missingParam = m
-        if (missingParam is DeclaredReferenceExpression) {
-            missingParam = missingParam.refersTo
-        }
-        if (missingParam in templateParametersExplicitInitialization) {
-            // If default is a previously defined template argument that has been explicitly
-            // passed
-            templateParametersExplicitInitialization[missingParam]?.let {
-                constructExpression.addTemplateParameter(
-                    it,
-                    TemplateDeclaration.TemplateInitialization.DEFAULT
-                )
+    with(constructExpression) {
+        val missingParams: List<Node?> =
+            template.parameterDefaults.subList(
+                constructExpression.templateParameters.size,
+                template.parameterDefaults.size
+            )
+        for (m in missingParams) {
+            var missingParam = m
+            if (missingParam is DeclaredReferenceExpression) {
+                missingParam = missingParam.refersTo
             }
-            // If template argument is a type add it as a generic to the type as well
-            (templateParametersExplicitInitialization[missingParam] as? TypeExpression)?.type?.let {
-                (constructExpression.type as ObjectType).addGeneric(it)
-            }
-        } else if (missingParam in templateParameterRealDefaultInitialization) {
-            // Add default of template parameter to construct declaration
-            templateParameterRealDefaultInitialization[missingParam]?.let {
-                constructExpression.addTemplateParameter(
-                    it,
-                    TemplateDeclaration.TemplateInitialization.DEFAULT
-                )
-            }
-            (templateParametersExplicitInitialization[missingParam] as? TypeExpression)?.type?.let {
-                (constructExpression.type as ObjectType).addGeneric(it)
+            if (missingParam in templateParametersExplicitInitialization) {
+                // If default is a previously defined template argument that has been explicitly
+                // passed
+                templateParametersExplicitInitialization[missingParam]?.let {
+                    constructExpression.addTemplateParameter(
+                        it,
+                        TemplateDeclaration.TemplateInitialization.DEFAULT
+                    )
+                }
+                // If template argument is a type add it as a generic to the type as well
+                (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
+                    ?.type
+                    ?.let {
+                        val type = constructExpression.type
+                        if (type is ObjectType) {
+                            constructExpression.type =
+                                objectType(type.name, listOf(it, *type.generics.toTypedArray()))
+                        }
+                    }
+            } else if (missingParam in templateParameterRealDefaultInitialization) {
+                // Add default of template parameter to construct declaration
+                templateParameterRealDefaultInitialization[missingParam]?.let {
+                    constructExpression.addTemplateParameter(
+                        it,
+                        TemplateDeclaration.TemplateInitialization.DEFAULT
+                    )
+                }
+                (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
+                    ?.type
+                    ?.let {
+                        constructExpression.type =
+                            objectType(constructExpression.type.name, listOf(it))
+                    }
             }
         }
     }

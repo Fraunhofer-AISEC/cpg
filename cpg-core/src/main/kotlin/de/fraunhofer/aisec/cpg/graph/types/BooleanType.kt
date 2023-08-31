@@ -33,9 +33,4 @@ class BooleanType(
     bitWidth: Int? = 1,
     language: Language<*>? = null,
     modifier: Modifier = Modifier.NOT_APPLICABLE
-) : NumericType(typeName, bitWidth, language, modifier) {
-
-    override fun duplicate(): Type {
-        return BooleanType(this.name, bitWidth, language, modifier)
-    }
-}
+) : NumericType(typeName, bitWidth, language, modifier)

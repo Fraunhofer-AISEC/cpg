@@ -54,6 +54,71 @@ Scheme:
     expression -- DFG --> node;
 ```
 
+
+## AssignExpression
+
+Interesting fields:
+
+* `lhs: List<Expression>`: All expressions on the left-hand side of the assignment.
+* `rhs: List<Expression>`: All expressions on the right-hand side of the assignment.
+
+### Case 1: Normal assignment (`operatorCode: =`)
+
+The `rhs` flows to `lhs`. In some languages, it is possible to have an assignment in a subexpression (e.g. `a + (b=1)`).
+For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
+If the `lhs` consists of multiple variables (or a tuple), we try to split up the `rhs` by the index. If we can't do this, the whole `rhs` flows to all variables in `lhs`.
+
+Scheme:
+```mermaid
+flowchart LR
+    node([AssignExpression]) -.- rhs(rhs);
+      rhs -- DFG --> lhs;
+    node([AssignExpression]) -.- lhs(lhs);
+```
+
+```mermaid
+flowchart LR
+  node([AssignExpression]) -.- lhs(lhs);
+  node([AssignExpression]) -.- rhs(rhs);
+  rhs -- DFG --> lhs;
+  rhs -- DFG --> node;
+```
+
+```mermaid
+flowchart LR
+  A[assignment.rhs] -- DFG --> assignment.lhs;
+  subgraph S[If the ast parent is not a CompoundStatement]
+    direction LR
+    assignment.rhs -- DFG --> assignment;
+  end
+  A --> S;
+```
+
+If size of `lhs` and `rhs` is equal:
+```mermaid
+flowchart LR
+    node([AssignExpression]) -.- rhs("rhs[i]");
+      rhs -- "for all i: DFG[i]" --> lhs;
+    node([AssignExpression]) -.- lhs("lhs[i]");
+```
+
+### Case 2: Compound assignment (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
+
+The `lhs` and the `rhs` flow to the binary operator expression, the binary operator flows to the `lhs`.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([BinaryOperator]) -.- lhs(lhs);
+    node([BinaryOperator]) -.- rhs(rhs);
+    lhs -- DFG --> node;
+    rhs -- DFG --> node;
+    node == DFG ==> lhs;
+```
+
+*Dangerous: We have to ensure that the first two operations are performed before the last one*
+
+
 ## BinaryOperator
 
 Interesting fields:
@@ -63,58 +128,6 @@ Interesting fields:
 * `rhs: Expression`: The right-hand side of the operation
 
 We have to differentiate between the operators. We can group them into three categories: 1) Assignment, 2) Assignment with a Computation and 3) Computation.
-
-### Case 1: Assignment (`operatorCode: =`)
-
-The `rhs` flows to `lhs`. In some languages, it is possible to have an assignment in a subexpression (e.g. `a + (b=1)`).
-For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
-
-Scheme:
-```mermaid
-flowchart LR
-    node([BinaryOperator]) -.- rhs(rhs);
-      rhs -- DFG --> lhs;
-    node([BinaryOperator]) -.- lhs(lhs);
-
-```
-
-```mermaid
-flowchart LR
-  node([BinaryOperator]) -.- lhs(lhs);
-  node([BinaryOperator]) -.- rhs(rhs);
-  rhs -- DFG --> lhs;
-  rhs -- DFG --> node;
-```
-
-  ```mermaid
-  flowchart LR
-    A[binaryOperator.rhs] -- DFG --> binaryOperator.lhs;
-    subgraph S[If the ast parent is not a CompoundStatement]
-      direction LR
-      binaryOperator.rhs -- DFG --> binaryOperator;
-    end
-    A --> S;
-  ```
-     
-
-### Case 2: Assignment with a Computation (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
-
-The `lhs` and the `rhs` flow to the binary operator expression, the binary operator flows to the `lhs`.
-
-Scheme:
-  ```mermaid
-  flowchart LR
-    node([BinaryOperator]) -.- lhs(lhs);
-    node([BinaryOperator]) -.- rhs(rhs);
-    lhs -- DFG --> node;
-    rhs -- DFG --> node;
-    node == DFG ==> lhs;
-  ```
-
-*Dangerous: We have to ensure that the first two operations are performed before the last one*
-
-
-### Case 3: Computation
 
 The `lhs` and the `rhs` flow to the binary operator expression.
 
@@ -150,11 +163,11 @@ Interesting fields:
 The `initializer` flows to the whole expression.
 
 Scheme:
-  ```mermaid
+```mermaid
   flowchart LR
     node([NewExpression]) -.- initializer(initializer)
     initializer -- DFG --> node
-  ```
+```
 
 ## ArraySubscriptionExpression
 
@@ -568,6 +581,26 @@ Scheme:
     node -- DFG --> R[/Node/];
     R == next read of ==> node;
 ```
+
+## TupleDeclaration
+
+Interesting fields:
+
+* `initializer: Expression?`: The value which is used to initialize a variable (if applicable).
+* `element: List<VariableDeclaration>`: The value which is used to initialize a variable (if applicable).
+
+The value of the initializer flows to the elements of the tuple declaration. The value of the variable declarations flows to all `DeclaredReferenceExpressions` which read the value before the value of the variable is written to through another reference to the variable.
+
+Scheme:
+```mermaid
+  flowchart LR
+    initializer -- "for all i: DFG[i]" --> tuple("elements[i]");
+    node([VariableDeclaration]) -.- tuple;
+    initializer -.- node;
+    tuple -- DFG --> R[/Node/];
+    R == next read of ==> tuple;
+```
+
 
 ## Assignment
 

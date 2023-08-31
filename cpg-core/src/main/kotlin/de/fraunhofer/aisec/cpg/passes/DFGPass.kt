@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -86,6 +88,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
+            is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
         }
     }
@@ -125,6 +128,18 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.addPrevDFG(node.base)
         } else {
             handleDeclaredReferenceExpression(node)
+        }
+    }
+
+    /**
+     * Adds the DFG edges for a [TupleDeclaration]. The data flows from initializer to the tuple
+     * elements.
+     */
+    protected fun handleTupleDeclaration(node: TupleDeclaration) {
+        node.initializer?.let { initializer ->
+            node.elements.withIndex().forEach {
+                it.value.addPrevDFG(initializer, mutableMapOf(Properties.INDEX to it.index))
+            }
         }
     }
 

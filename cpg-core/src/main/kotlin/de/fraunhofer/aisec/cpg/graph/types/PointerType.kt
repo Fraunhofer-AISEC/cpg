@@ -103,10 +103,6 @@ class PointerType : Type, SecondOrderType {
         name = fullTypeName
     }
 
-    override fun duplicate(): Type {
-        return PointerType(this, elementType.duplicate(), pointerOrigin)
-    }
-
     val isArray: Boolean
         get() = pointerOrigin == PointerOrigin.ARRAY
 
