@@ -39,8 +39,33 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is PythonAST.Constant -> handleConstant(node)
             is PythonAST.Attribute -> handleAttribute(node)
             is PythonAST.BinOp -> handleBinOp(node)
+            is PythonAST.Compare -> handleCompare(node)
             else -> TODO()
         }
+    }
+
+    private fun handleCompare(node: PythonAST.Compare): Expression {
+        if (node.comparators.size != 1 || node.ops.size != 1) {
+            return newProblemExpression("Multi compare is not (yet) supported.", rawNode = node)
+        }
+        val op =
+            when (node.ops.first()) {
+                is PythonAST.Eq -> "=="
+                is PythonAST.NotEq -> "!="
+                is PythonAST.Lt -> "<"
+                is PythonAST.LtE -> "<="
+                is PythonAST.Gt -> ">"
+                is PythonAST.GtE -> ">="
+                is PythonAST.Is -> "is"
+                is PythonAST.IsNot -> "is not"
+                is PythonAST.In -> "in"
+                is PythonAST.NotIn -> "not in"
+                else -> TODO()
+            }
+        val ret = newBinaryOperator(op, rawNode = node)
+        ret.lhs = handle(node.left)
+        ret.rhs = handle(node.comparators.first())
+        return ret
     }
 
     private fun handleBinOp(node: PythonAST.BinOp): Expression {
