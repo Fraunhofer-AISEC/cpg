@@ -139,6 +139,17 @@ fun LanguageFrontend<*, *>.field(
 }
 
 /**
+ * Creates a new [IncludeDeclaration] and adds it to the surrounding [TranslationUnitDeclaration].
+ */
+context(TranslationUnitDeclaration)
+
+fun LanguageFrontend<*, *>.import(name: CharSequence): IncludeDeclaration {
+    val node = newIncludeDeclaration(name)
+    (this@TranslationUnitDeclaration).addDeclaration(node)
+    return node
+}
+
+/**
  * Creates a new [FunctionDeclaration] in the Fluent Node DSL with the given [name] and optional
  * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
  * created node itself.
@@ -237,6 +248,25 @@ fun LanguageFrontend<*, *>.body(
 
     scopeIfNecessary(needsScope, node, init)
     body = node
+
+    return node
+}
+
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [FunctionDeclaration.body] of the nearest enclosing [FunctionDeclaration]. The [init] block can
+ * be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
+
+fun LanguageFrontend<*, *>.block(
+    needsScope: Boolean = true,
+    init: CompoundStatement.() -> Unit
+): CompoundStatement {
+    val node = newCompoundStatement()
+
+    scopeIfNecessary(needsScope, node, init)
+    (this@StatementHolder).addStatement(node)
 
     return node
 }
@@ -578,7 +608,7 @@ fun LanguageFrontend<*, *>.whileStmt(
  */
 context(IfStatement)
 
-fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> BinaryOperator): BinaryOperator {
+fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> Expression): Expression {
     return init(this@IfStatement)
 }
 
@@ -1092,6 +1122,22 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
 }
 
 /**
+ * Creates a new [BinaryOperator] with a `<=` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend<*, *>, ArgumentHolder)
+
+infix fun Expression.le(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator("<=")
+    node.lhs = this
+    node.rhs = rhs
+
+    (this@ArgumentHolder) += node
+
+    return node
+}
+
+/**
  * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */
@@ -1177,6 +1223,9 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
 /** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
 fun LanguageFrontend<*, *>.t(name: CharSequence, generics: List<Type> = listOf()) =
     objectType(name, generics)
+
+/** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
+fun LanguageFrontend<*, *>.void() = incompleteType()
 
 /**
  * Internally used to enter a new scope if [needsScope] is true before invoking [init] and leaving
