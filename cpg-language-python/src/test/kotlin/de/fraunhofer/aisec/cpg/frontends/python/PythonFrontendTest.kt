@@ -264,16 +264,19 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(body.statements)
         assertEquals(2, body.statements.size)
 
-        val s1 = body.statements[0] as? DeclarationStatement
+        val s1 = body.statements[0] as? AssignExpression
         assertNotNull(s1)
         val s2 = body.statements[1] as? MemberCallExpression
         assertNotNull(s2)
 
-        val c1 = s1.declarations[0] as? VariableDeclaration
+        val c1 = s1.declarations.first() as? VariableDeclaration
         assertNotNull(c1)
         assertLocalName("c1", c1)
-        val ctor = (c1.initializer as? ConstructExpression)?.constructor
-        assertEquals(ctor, cls.constructors.first())
+        val ctor = ((c1.firstAssignment) as? AssignExpression)?.rhs?.first() as? ConstructExpression
+        assertEquals(
+            ctor?.invokes as? ConstructorDeclaration,
+            cls.constructors.first() as? ConstructorDeclaration
+        )
         assertFullName("simple_class.SomeClass", c1.type)
 
         assertEquals(c1, (s2.base as? DeclaredReferenceExpression)?.refersTo)

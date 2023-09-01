@@ -71,12 +71,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val resolved = scopeManager.resolveReference(it)
 
                 if (resolved == null) {
-
                     val decl =
                         if (scopeManager.isInRecord) {
                             val field = newFieldDeclaration(it.name, code = target.code)
                             field.location = target.location
-                            scopeManager.currentRecord?.addDeclaration(field)
+                            scopeManager.currentRecord?.fields?.plus(field) // TODO do we need this?
                             field
                         } else {
                             val v = newVariableDeclaration(it.name, code = target.code)
@@ -84,6 +83,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             v
                         }
                     decl.isImplicit = true
+                    assignExpression.declarations += decl
                     scopeManager.addDeclaration(decl)
                 }
             }
