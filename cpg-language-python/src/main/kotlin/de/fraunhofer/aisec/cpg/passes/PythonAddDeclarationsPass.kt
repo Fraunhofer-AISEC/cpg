@@ -83,7 +83,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             v
                         }
                     decl.isImplicit = true
+                    assignExpression.findValue(target)?.let { it ->
+                        decl.type = it.type
+                    } // TODO why do we need this (testCtor test case for example)?
                     assignExpression.declarations += decl
+                    decl.scope = scopeManager.currentScope // TODO why do we need this?
                     scopeManager.addDeclaration(decl)
                 }
             }

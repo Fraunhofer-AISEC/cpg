@@ -494,7 +494,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("bar", bar)
 
         assertEquals(2, (bar.body as? CompoundStatement)?.statements?.size)
-        val line1 = (bar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement
+        val line1 = (bar.body as? CompoundStatement)?.statements?.get(0) as? AssignExpression
         assertNotNull(line1)
         val line2 = (bar.body as? CompoundStatement)?.statements?.get(1) as? MemberCallExpression
         assertNotNull(line2)
@@ -504,7 +504,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(fooDecl)
         assertLocalName("foo", fooDecl)
         assertFullName("class_ctor.Foo", fooDecl.type)
-        val initializer = fooDecl.initializer as? ConstructExpression
+        val initializer = fooDecl.firstAssignment as? ConstructExpression
         assertEquals(fooCtor, initializer?.constructor)
 
         assertEquals(fooDecl, (line2.base as? DeclaredReferenceExpression)?.refersTo)

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
@@ -93,14 +92,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAttribute(node: PythonAST.Attribute): Expression {
-        val value = handle(node.value)
-        if (value is DeclaredReferenceExpression) {
-            return newDeclaredReferenceExpression(
-                value.name.append(frontend.language.namespaceDelimiter + node.attr)
-            ) // TODO???
-        } else {
-            TODO()
-        }
+        return newMemberExpression(name = node.attr, base = handle(node.value), rawNode = node)
     }
 
     private fun handleConstant(node: PythonAST.Constant): Expression {
