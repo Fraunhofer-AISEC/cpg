@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Expression, PythonAST.expr>(::ProblemExpression, frontend) {
-    override fun handleNode(node: PythonAST.expr): Expression {
+    PythonHandler<Expression, PythonAST.ExprBase>(::ProblemExpression, frontend) {
+    override fun handleNode(node: PythonAST.ExprBase): Expression {
         return when (node) {
             is PythonAST.Name -> handleName(node)
             is PythonAST.Call -> handleCall(node)

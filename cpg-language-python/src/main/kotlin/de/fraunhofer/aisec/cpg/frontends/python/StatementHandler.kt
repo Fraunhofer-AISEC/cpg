@@ -37,8 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, PythonAST.stmt>(::ProblemExpression, frontend) {
-    override fun handleNode(node: PythonAST.stmt): Statement {
+    PythonHandler<Statement, PythonAST.StmtBase>(::ProblemExpression, frontend) {
+    override fun handleNode(node: PythonAST.StmtBase): Statement {
         return when (node) {
             is PythonAST.ClassDef -> handleClassDef(node)
             is PythonAST.FunctionDef -> handleFunctionDef(node)
@@ -295,7 +295,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun makeCompoundStmt(
-        stmts: List<PythonAST.stmt>,
+        stmts: List<PythonAST.StmtBase>,
         code: String? = null,
         rawNode: PythonAST.AST? = null
     ): CompoundStatement {

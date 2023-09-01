@@ -217,7 +217,7 @@ fun fromPython(pyObject: Any?): PythonAST.AST {
             "<class 'ast.Subscript'>" -> PythonAST.Subscript(pyObject)
             "<class 'ast.Starred'>" -> PythonAST.Starred(pyObject)
             "<class 'ast.Name'>" -> PythonAST.Name(pyObject)
-            "<class 'ast.List'>" -> PythonAST.List(pyObject)
+            "<class 'ast.List'>" -> PythonAST.PyList(pyObject)
             "<class 'ast.Tuple'>" -> PythonAST.Tuple(pyObject)
             "<class 'ast.Slice'>" -> PythonAST.Slice(pyObject)
 
