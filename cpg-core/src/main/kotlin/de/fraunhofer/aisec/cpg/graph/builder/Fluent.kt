@@ -599,6 +599,25 @@ fun LanguageFrontend<*, *>.whileStmt(
     return node
 }
 
+/**
+ * Creates a new [DoStatement] in the Fluent Node DSL and adds it to the
+ * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
+
+fun LanguageFrontend<*, *>.doStmt(
+    needsScope: Boolean = true,
+    init: DoStatement.() -> Unit
+): DoStatement {
+    val node = newDoStatement()
+    scopeIfNecessary(needsScope, node, init)
+
+    (this@StatementHolder) += node
+
+    return node
+}
+
 // TODO: Combine the condition functions
 
 /**
@@ -619,10 +638,19 @@ fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> Expression): Expres
  */
 context(WhileStatement)
 
-fun LanguageFrontend<*, *>.whileCondition(
-    init: WhileStatement.() -> BinaryOperator
-): BinaryOperator {
+fun LanguageFrontend<*, *>.whileCondition(init: WhileStatement.() -> Expression): Expression {
     return init(this@WhileStatement)
+}
+
+/**
+ * Configures the [DoStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [DoStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+context(DoStatement)
+
+fun LanguageFrontend<*, *>.whileCondition(init: DoStatement.() -> Expression): Expression {
+    return init(this@DoStatement)
 }
 
 /**
@@ -676,6 +704,22 @@ fun LanguageFrontend<*, *>.loopBody(init: CompoundStatement.() -> Unit): Compoun
 
     return node
 }
+
+/**
+ * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
+ * [DoStatement.statement] of the nearest enclosing [DoStatement]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
+ */
+context(DoStatement)
+
+fun LanguageFrontend<*, *>.loopBody(init: CompoundStatement.() -> Unit): CompoundStatement {
+    val node = newCompoundStatement()
+    init(node)
+    statement = node
+
+    return node
+}
+
 /**
  * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
  * [WhileStatement.statement] of the nearest enclosing [WhileStatement]. The [init] block can be

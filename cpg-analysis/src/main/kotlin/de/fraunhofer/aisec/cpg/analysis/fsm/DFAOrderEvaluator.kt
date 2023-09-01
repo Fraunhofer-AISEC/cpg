@@ -140,7 +140,7 @@ open class DFAOrderEvaluator(
         // Stores the current markings in the FSM (i.e., which base is at which FSM-node).
         val baseToFSM = mutableMapOf<String, DFA>()
         // Stores the states (i.e., nodes and their states in the fsm) to avoid endless loops.
-        val seenStates = mutableSetOf<String>()
+        val seenStates = mutableSetOf<Pair<Node, String>>()
         // Maps a node to all the paths which were followed to reach the node.
         startNode.addEogPath("")
         // Collect bases (with their eogPath) which have already been found to be incorrect due to
@@ -431,7 +431,7 @@ open class DFAOrderEvaluator(
         node: Node,
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
-        seenStates: MutableSet<String>,
+        seenStates: MutableSet<Pair<Node, String>>,
         interproceduralFlows: MutableMap<String, Boolean>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
@@ -455,8 +455,8 @@ open class DFAOrderEvaluator(
             // We still add this node but this time, we also check if have seen the state it before
             // to avoid endless loops etc.
             outNodes[0].addEogPath(eogPath)
-            val stateOfNext: String = getStateSnapshot(outNodes[0], baseToFSM)
-            if (seenStates.contains(stateOfNext)) {
+            val stateOfNext = getStateSnapshot(outNodes[0], baseToFSM)
+            if (stateOfNext in seenStates) {
                 log.debug("Node/FSM state already visited: ${stateOfNext}. Remove from next nodes.")
                 outNodes.removeAt(0)
             }
@@ -481,8 +481,8 @@ open class DFAOrderEvaluator(
             // (1) Update all entries previously removed from the baseToFSM map with
             // the new eog-path as prefix to the base
             for (i in outNodes.indices.reversed()) {
-                val stateOfNext: String = getStateSnapshot(outNodes[i], baseToFSM)
-                if (seenStates.contains(stateOfNext)) {
+                val stateOfNext = getStateSnapshot(outNodes[i], baseToFSM)
+                if (stateOfNext in seenStates) {
                     log.debug(
                         "Node/FSM state already visited: ${stateOfNext}. Remove from next nodes."
                     )
@@ -509,7 +509,7 @@ open class DFAOrderEvaluator(
      * [node]. It is used to keep track of the states which have already been analyzed and to avoid
      * getting stuck in loops.
      */
-    private fun getStateSnapshot(node: Node, baseToFSM: Map<String, DFA>): String {
+    private fun getStateSnapshot(node: Node, baseToFSM: Map<String, DFA>): Pair<Node, String> {
         val grouped =
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
@@ -519,6 +519,6 @@ open class DFAOrderEvaluator(
                 .sorted()
                 .joinToString(",")
 
-        return "$node $grouped"
+        return Pair(node, grouped)
     }
 }

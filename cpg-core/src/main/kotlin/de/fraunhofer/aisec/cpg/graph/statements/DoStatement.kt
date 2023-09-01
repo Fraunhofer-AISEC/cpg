@@ -26,12 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a conditional loop statement of the form: `do{...}while(...)`. */
-class DoStatement : Statement() {
+class DoStatement : Statement(), ArgumentHolder {
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
@@ -49,6 +50,15 @@ class DoStatement : Statement() {
             .append("condition", condition)
             .append("statement", statement)
             .toString()
+
+    override fun addArgument(expression: Expression) {
+        this.condition = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        this.condition = new
+        return true
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

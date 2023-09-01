@@ -238,6 +238,403 @@ class GraphExamples {
                 }
             }
 
+        fun getComplexOrder(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .registerPass<UnreachableEOGPass>()
+                    .registerPass<EdgeCachePass>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("ComplexOrder.java") {
+                        import("kotlin.random.URandomKt")
+                        record("Botan") {
+                            constructor {
+                                param("i", t("int"))
+                                body {}
+                            }
+                            method("create", void()) { body {} }
+                            method("finish", void()) { body {} }
+                            method("init", void()) { body {} }
+                            method("process", void()) { body {} }
+                            method("reset", void()) { body {} }
+                            method("start", void()) { body {} }
+                        }
+                        record("ComplexOrder") {
+                            method("ok_minimal1", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("init", ref("p1"))
+                                    memberCall("start", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("ok_minimal2", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("init", ref("p1"))
+                                    memberCall("start", ref("p1"))
+                                    memberCall("process", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("ok_minimal3", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("init", ref("p1"))
+                                    memberCall("start", ref("p1"))
+                                    memberCall("process", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    memberCall("reset", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("ok2", void()) {
+                                body {
+                                    declare {
+                                        variable("p2", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p2"))
+                                    memberCall("init", ref("p2"))
+                                    memberCall("start", ref("p2"))
+                                    memberCall("process", ref("p2"))
+                                    memberCall("process", ref("p2"))
+                                    memberCall("process", ref("p2"))
+                                    memberCall("process", ref("p2"))
+                                    memberCall("finish", ref("p2"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("ok3", void()) {
+                                body {
+                                    declare {
+                                        variable("p3", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p3"))
+                                    memberCall("init", ref("p3"))
+                                    memberCall("start", ref("p3"))
+                                    memberCall("process", ref("p3"))
+                                    memberCall("finish", ref("p3"))
+                                    memberCall("start", ref("p3"))
+                                    memberCall("process", ref("p3"))
+                                    memberCall("finish", ref("p3"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("ok4", void()) {
+                                body {
+                                    declare {
+                                        variable("p3", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p3"))
+                                    memberCall("init", ref("p3"))
+                                    memberCall("start", ref("p3"))
+                                    memberCall("process", ref("p3"))
+                                    memberCall("finish", ref("p3"))
+                                    memberCall("start", ref("p3"))
+                                    memberCall("process", ref("p3"))
+                                    memberCall("finish", ref("p3"))
+                                    memberCall("reset", ref("p3"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("nok1", void()) {
+                                body {
+                                    declare {
+                                        variable("p5", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("init", ref("p5"))
+                                    memberCall("start", ref("p5"))
+                                    memberCall("process", ref("p5"))
+                                    memberCall("finish", ref("p5"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("nok2", void()) {
+                                body {
+                                    declare {
+                                        variable("p6", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p6"))
+                                    memberCall("init", ref("p6"))
+                                    ifStmt {
+                                        condition { literal(false, t("boolean")) }
+                                        thenStmt {
+                                            memberCall("start", ref("p6"))
+                                            memberCall("process", ref("p6"))
+                                            memberCall("finish", ref("p6"))
+                                        }
+                                    }
+                                    memberCall("reset", ref("p6"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("nok3", void()) {
+                                body {
+                                    declare {
+                                        variable("p6", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    whileStmt {
+                                        whileCondition { literal(true, t("boolean")) }
+                                        loopBody {
+                                            memberCall("create", ref("p6"))
+                                            memberCall("init", ref("p6"))
+                                            memberCall("start", ref("p6"))
+                                            memberCall("process", ref("p6"))
+                                            memberCall("finish", ref("p6"))
+                                        }
+                                    }
+                                    memberCall("reset", ref("p6"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("nokWhile", void()) {
+                                body {
+                                    declare {
+                                        variable("p7", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p7"))
+                                    memberCall("init", ref("p7"))
+                                    whileStmt {
+                                        whileCondition {
+                                            memberCall("nextUInt", ref("URandomKt"), true) gt
+                                                literal(5, t("int"))
+                                        }
+                                        loopBody {
+                                            memberCall("start", ref("p7"))
+                                            memberCall("process", ref("p7"))
+                                            memberCall("finish", ref("p7"))
+                                        }
+                                    }
+                                    memberCall("reset", ref("p7"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("okWhile", void()) {
+                                body {
+                                    declare {
+                                        variable("p8", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p8"))
+                                    memberCall("init", ref("p8"))
+                                    memberCall("start", ref("p8"))
+                                    memberCall("process", ref("p8"))
+                                    memberCall("finish", ref("p8"))
+                                    whileStmt {
+                                        whileCondition { literal(true, t("boolean")) }
+                                        loopBody {
+                                            memberCall("start", ref("p8"))
+                                            memberCall("process", ref("p8"))
+                                            memberCall("finish", ref("p8"))
+                                        }
+                                    }
+                                    memberCall("reset", ref("p8"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("okWhile2", void()) {
+                                body {
+                                    declare {
+                                        variable("p8", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p8"))
+                                    memberCall("init", ref("p8"))
+                                    whileStmt {
+                                        whileCondition { literal(true, t("boolean")) }
+                                        loopBody {
+                                            memberCall("start", ref("p8"))
+                                            memberCall("process", ref("p8"))
+                                            memberCall("finish", ref("p8"))
+                                        }
+                                    }
+                                    memberCall("reset", ref("p8"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("okDoWhile", void()) {
+                                body {
+                                    declare {
+                                        variable("p6", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p6"))
+                                    memberCall("init", ref("p6"))
+                                    doStmt {
+                                        loopBody {
+                                            memberCall("start", ref("p6"))
+                                            memberCall("process", ref("p6"))
+                                            memberCall("finish", ref("p6"))
+                                        }
+
+                                        whileCondition {
+                                            memberCall("nextUInt", ref("URandomKt")) gt
+                                                literal(5, t("int"))
+                                        }
+                                    }
+                                    memberCall("reset", ref("p6"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("minimalInterprocUnclear", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("foo", ref("this")) { ref("p1") }
+                                    memberCall("start", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("minimalInterprocFail", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    ifStmt {
+                                        condition {
+                                            memberCall("nextUInt", ref("URandomKt")) gt
+                                                literal(5, t("int"))
+                                        }
+                                        thenStmt { memberCall("foo", ref("this")) { ref("p1") } }
+                                    }
+                                    memberCall("start", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("minimalInterprocFail2", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(1, t("int")) }
+                                        }
+                                    }
+                                    declare {
+                                        variable("p2", t("Botan")) {
+                                            construct("Botan") { literal(2, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("create", ref("p2"))
+                                    memberCall("foo", ref("this")) { ref("p2") }
+                                    memberCall("start", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("foo", void()) {
+                                param("p1", t("Botan"))
+                                body {
+                                    memberCall("init", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("bar", void()) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(1, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("minimalInterprocUnclearArgument", ref("this")) {
+                                        ref("p1")
+                                    }
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("minimalInterprocUnclearArgument", void()) {
+                                param("p1", t("Botan"))
+                                body {
+                                    memberCall("init", ref("p1"))
+                                    memberCall("start", ref("p1"))
+                                    memberCall("finish", ref("p1"))
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("minimalInterprocUnclearReturn", t("Botan")) {
+                                body {
+                                    declare {
+                                        variable("p1", t("Botan")) {
+                                            construct("Botan") { literal(1, t("int")) }
+                                        }
+                                    }
+                                    memberCall("create", ref("p1"))
+                                    memberCall("init", ref("p1"))
+                                    memberCall("start", ref("p1"))
+                                    returnStmt { ref("p1") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
             val ctx = TranslationContext(config, ScopeManager(), TypeManager())
             val language = config.languages.filterIsInstance<TestLanguage>().first()
