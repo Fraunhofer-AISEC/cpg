@@ -301,11 +301,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ): CompoundStatement {
         val result = newCompoundStatement(code, rawNode)
         for (stmt in stmts) {
-            when (val r = handle(stmt)) {
-                is Declaration -> result.addDeclaration(r)
-                is Statement -> result.addStatement(r)
-                else -> TODO()
-            }
+            result.addStatement(handle(stmt))
         }
         return result
     }

@@ -112,7 +112,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     override fun locationOf(astNode: PythonAST.AST): PhysicalLocation? {
         return if (astNode is PythonAST.WithPythonLocation) {
             PhysicalLocation(
-                URI("file:///TODO"), // TODO
+                uri,
                 Region(
                     startLine = astNode.lineno,
                     endLine = astNode.end_lineno,
@@ -133,15 +133,14 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         val pythonASTModule =
             fromPython(pyAST) as? PythonAST.Module
                 ?: TODO() // could be one of ast.{Module,Interactive,Expression,FunctionType}
-        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule) // TODO
+        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
         scopeManager.resetToGlobal(tud)
         val nsdName = Path(path).nameWithoutExtension
-        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule) // TODO
+        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
         tud.addDeclaration(nsd)
         scopeManager.enterScope(nsd)
         for (stmt in pythonASTModule.body) {
-            val handledStmt = statementHandler.handle(stmt)
-            nsd.addStatement(handledStmt)
+            nsd.statements += statementHandler.handle(stmt)
         }
         scopeManager.leaveScope(nsd)
         scopeManager.addDeclaration(nsd)
@@ -283,6 +282,9 @@ fun fromPython(pyObject: Any?): PythonAST.AST {
             "<class 'ast.match_case'>" -> PythonAST.match_case(pyObject)
             "<class 'ast.type_ignore'>" -> PythonAST.type_ignore(pyObject)
             "<class 'ast.withitem'>" -> PythonAST.withitem(pyObject)
+
+            // complex numbers
+            "<class 'complex'>" -> TODO()
             else -> {
                 TODO("Implement for ${pyObject.getAttr("__class__")}")
             }

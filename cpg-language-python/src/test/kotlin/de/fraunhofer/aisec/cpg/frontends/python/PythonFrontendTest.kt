@@ -272,11 +272,9 @@ class PythonFrontendTest : BaseTest() {
         val c1 = s1.declarations.first() as? VariableDeclaration
         assertNotNull(c1)
         assertLocalName("c1", c1)
-        val ctor = ((c1.firstAssignment) as? AssignExpression)?.rhs?.first() as? ConstructExpression
-        assertEquals(
-            ctor?.invokes as? ConstructorDeclaration,
-            cls.constructors.first() as? ConstructorDeclaration
-        )
+        val ctor = c1.firstAssignment as? ConstructExpression
+        assertNotNull(ctor)
+        assertEquals(ctor.constructor, cls.constructors.first() as? ConstructorDeclaration)
         assertFullName("simple_class.SomeClass", c1.type)
 
         assertEquals(c1, (s2.base as? DeclaredReferenceExpression)?.refersTo)
@@ -1038,25 +1036,28 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespace = tu.functions["forloop"]?.body as? CompoundStatement
-        assertNotNull(namespace)
+        val forloopFunc = tu.functions["forloop"] as? FunctionDeclaration
+        assertNotNull(forloopFunc)
 
-        val varDefinedBeforeLoop = namespace.variables["varDefinedBeforeLoop"]
+        val varDefinedBeforeLoop = forloopFunc.declarations["varDefinedBeforeLoop"]
         assertNotNull(varDefinedBeforeLoop)
 
-        val varDefinedInLoop = namespace.variables["varDefinedInLoop"]
+        val varDefinedInLoop = forloopFunc.variables["varDefinedInLoop"]
         assertNotNull(varDefinedInLoop)
 
-        val firstLoop = namespace.statements[1] as? ForEachStatement
+        val functionBody = forloopFunc.body as? CompoundStatement
+        assertNotNull(functionBody)
+
+        val firstLoop = functionBody.statements[1] as? ForEachStatement
         assertNotNull(firstLoop)
 
-        val secondLoop = namespace.statements[2] as? ForEachStatement
+        val secondLoop = functionBody.statements[2] as? ForEachStatement
         assertNotNull(secondLoop)
 
-        val fooCall = namespace.statements[3] as? CallExpression
+        val fooCall = functionBody.statements[3] as? CallExpression
         assertNotNull(fooCall)
 
-        val barCall = namespace.statements[4] as? CallExpression
+        val barCall = functionBody.statements[4] as? CallExpression
         assertNotNull(barCall)
 
         // no dataflow from var declaration to loop variable because it's a write access

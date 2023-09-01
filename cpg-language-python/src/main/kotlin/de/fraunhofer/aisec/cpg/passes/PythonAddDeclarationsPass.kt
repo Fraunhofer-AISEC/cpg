@@ -72,19 +72,24 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
                 if (resolved == null) {
                     val decl =
-                        if (scopeManager.isInRecord) {
-                            val field = newFieldDeclaration(it.name, code = target.code)
-                            field.location = target.location
-                            scopeManager.currentRecord?.fields?.plus(field) // TODO do we need this?
+                        if (scopeManager.isInRecord && !scopeManager.isInFunction) {
+                            val field = newFieldDeclaration(it.name, code = it.code)
+                            field.location = it.location
+                            scopeManager.currentRecord?.addField(field) // TODO why do we need this?
                             field
                         } else {
-                            val v = newVariableDeclaration(it.name, code = target.code)
-                            v.location = target.location
+                            val v = newVariableDeclaration(it.name, code = it.code)
+                            v.location = it.location
                             v
                         }
+                    if (scopeManager.isInFunction) {
+                        scopeManager.currentFunction?.addDeclaration(
+                            decl
+                        ) // TODO why do we need this?
+                    }
                     decl.isImplicit = true
-                    assignExpression.findValue(target)?.let { it ->
-                        decl.type = it.type
+                    assignExpression.findValue(it)?.let { value ->
+                        decl.type = value.type
                     } // TODO why do we need this (testCtor test case for example)?
                     assignExpression.declarations += decl
                     decl.scope = scopeManager.currentScope // TODO why do we need this?

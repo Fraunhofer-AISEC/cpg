@@ -101,9 +101,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             when (node.value) {
                 is String -> primitiveType("str")
                 is Boolean -> primitiveType("bool")
-                is Int -> primitiveType("int")
-                is Float -> primitiveType("float")
-                null -> objectType("None") // TODO
+                is Int,
+                is Long -> primitiveType("int")
+                is Float,
+                is Double -> primitiveType("float")
+                null -> objectType("None")
                 else -> {
                     unknownType()
                 }
