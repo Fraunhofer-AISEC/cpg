@@ -1,9 +1,11 @@
 <!doctype html>
-<html>
+<html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>Handler</title>
-<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
     if (storage == null) {
         const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
         if (osDarkSchemePreferred === true) {
@@ -16,12 +18,13 @@
         }
     }
     </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
 <script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../../styles/style.css" rel="Stylesheet">
-<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
 <link href="../../../styles/main.css" rel="Stylesheet">
 <link href="../../../styles/prism.css" rel="Stylesheet">
 <link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
 <script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
 <script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
@@ -30,26 +33,32 @@
 <script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
 <link href="../../../styles/multimodule.css" rel="Stylesheet"></head>
 <body>
-<div class="navigation-wrapper" id="navigation-wrapper">
-    <div id="leftToggler"><span class="icon-toggler"></span></div>
-    <div class="library-name">
-<a href="../../../index.html">
-<span>cpg</span>            </a>    </div>
-    <div>
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends/-handler/index.html&quot;}">main</dokka-template-command>    </div>
-    <div class="pull-right d-flex">
+    <div class="root">
+<nav class="navigation" id="navigation-wrapper">
+    <div class="navigation--inner">
+        <div class="navigation-title">
+            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
+            <div class="library-name">
+<a class="library-name--link" href="../../../index.html">
+                            cpg
+                    </a>            </div>
+            <div class="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends/-handler/index.html&quot;}">main</dokka-template-command>            </div>
+        </div>
         <div class="filter-section" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
         </div>
-        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
-        <div id="searchBar"></div>
     </div>
-</div>
-<div id="container">
-    <div id="leftColumn">
-        <div id="sideMenu"></div>
+    <div class="navigation-controls">
+        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
+        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
     </div>
-    <div id="main">
+</nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="sidebar--inner" id="sideMenu"></div>
+            </div>
+            <div id="main">
 <div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.frontends/Handler///PointingToDeclaration//1556141526">
   <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.frontends</a><span class="delimiter">/</span><span class="current">Handler</span></div>
   <div class="cover ">
@@ -57,7 +66,7 @@
     <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">Handler</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">ResultNode</a><span class="token operator"> : </span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="index.html">HandlerNode</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="index.html">L</a><span class="token operator"> : </span><a href="../-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">HandlerNode</a><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">configConstructor<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Supplier.html">Supplier</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">ResultNode</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>frontend<span class="token operator">: </span><a href="index.html">L</a></span></span><span class="token punctuation">)</span> : <a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-code-and-location-provider/index.html">CodeAndLocationProvider</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">HandlerNode</a><span class="token operator">&gt; </span>, <a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/index.html">ScopeProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-namespace-provider/index.html">NamespaceProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/index.html">ContextProvider</a></div><p class="paragraph">A <a href="index.html">Handler</a> is an abstract base class for a class that translates AST nodes from a raw ast type, usually supplied by a language parser into our generic CPG nodes.</p><p class="paragraph">It implements at least one <a href="../../de.fraunhofer.aisec.cpg.graph/-metadata-provider/index.html">MetadataProvider</a>, so that node builder extension functions (e.g., <a href="../../de.fraunhofer.aisec.cpg.graph/new-call-expression.html">newCallExpression</a> can be used directly to create appropriate nodes.</p><h4 class="">Parameters</h4><div class="table"><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><u></u></div></span></div><div><div class="title"><l> the language frontend </l></div></div></div></div></div></div></div>
   </div>
   <div class="tabbedcontent">
-    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,FUNCTION,PROPERTY">Members</button><button class="section-tab" data-togglable="CONSTRUCTOR,TYPE,FUNCTION,PROPERTY,EXTENSION_PROPERTY,EXTENSION_FUNCTION">Members &amp; Extensions</button></div>
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button><button class="section-tab" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION,EXTENSION_PROPERTY,EXTENSION_FUNCTION">Members &amp; Extensions</button></div>
     <div class="tabs-section-body">
       <div data-togglable="CONSTRUCTOR">
         <h2 class="">Constructors</h2>
@@ -91,6 +100,100 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-companion/index.html">Companion</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="-234154270%2FProperties%2F1556141526" anchor-label="ctx" id="-234154270%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/ctx.html"><span><span>ctx</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-234154270%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/ctx.html">ctx</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1838007964%2FProperties%2F1556141526" anchor-label="frontend" id="1838007964%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="frontend.html"><span><span>frontend</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1838007964%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="frontend.html">frontend</a><span class="token operator">: </span><a href="index.html">L</a></div><div class="brief "><p class="paragraph">Returns the frontend which used this handler.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-427925764%2FProperties%2F1556141526" anchor-label="language" id="-427925764%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/language.html"><span><span>language</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-427925764%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/language.html">language</a><span class="token operator">: </span><a href="../-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1206640202%2FProperties%2F1556141526" anchor-label="lastNode" id="-1206640202%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="last-node.html"><span>last</span><wbr><span><span>Node</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1206640202%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="last-node.html">lastNode</a><span class="token operator">: </span><a href="index.html">ResultNode</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">This property contains the last node this handler has successfully processed. It is safe to call, even when parsing multiple TUs in parallel, since for each TU, a dedicated <a href="../-language-frontend/index.html">LanguageFrontend</a> is spawned, and for each frontend, a dedicated set of <a href="index.html">Handler</a>s is created. Within one TU, the processing is sequential in the AST order.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1974282558%2FProperties%2F1556141526" anchor-label="namespace" id="-1974282558%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-namespace-provider/namespace.html"><span><span>namespace</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1974282558%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-namespace-provider/namespace.html">namespace</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-name/index.html">Name</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1095806800%2FProperties%2F1556141526" anchor-label="scope" id="1095806800%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/scope.html"><span><span>scope</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1095806800%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/scope.html">scope</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.scopes/-scope/index.html">Scope</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -1301,108 +1404,15 @@
           </div>
         </div>
       </div>
-      <div data-togglable="PROPERTY">
-        <h2 class="">Properties</h2>
-        <div class="table"><a data-name="-234154270%2FProperties%2F1556141526" anchor-label="ctx" id="-234154270%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/ctx.html"><span><span>ctx</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-234154270%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/ctx.html">ctx</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a><span class="token operator">?</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1838007964%2FProperties%2F1556141526" anchor-label="frontend" id="1838007964%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="frontend.html"><span><span>frontend</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1838007964%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="frontend.html">frontend</a><span class="token operator">: </span><a href="index.html">L</a></div><div class="brief "><p class="paragraph">Returns the frontend which used this handler.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-427925764%2FProperties%2F1556141526" anchor-label="language" id="-427925764%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/language.html"><span><span>language</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-427925764%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/language.html">language</a><span class="token operator">: </span><a href="../-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1206640202%2FProperties%2F1556141526" anchor-label="lastNode" id="-1206640202%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="last-node.html"><span>last</span><wbr><span><span>Node</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1206640202%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="last-node.html">lastNode</a><span class="token operator">: </span><a href="index.html">ResultNode</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">This property contains the last node this handler has successfully processed. It is safe to call, even when parsing multiple TUs in parallel, since for each TU, a dedicated <a href="../-language-frontend/index.html">LanguageFrontend</a> is spawned, and for each frontend, a dedicated set of <a href="index.html">Handler</a>s is created. Within one TU, the processing is sequential in the AST order.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1974282558%2FProperties%2F1556141526" anchor-label="namespace" id="-1974282558%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-namespace-provider/namespace.html"><span><span>namespace</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1974282558%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-namespace-provider/namespace.html">namespace</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-name/index.html">Name</a><span class="token operator">?</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1095806800%2FProperties%2F1556141526" anchor-label="scope" id="1095806800%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/scope.html"><span><span>scope</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1095806800%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/scope.html">scope</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.scopes/-scope/index.html">Scope</a><span class="token operator">?</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
       </div>
+            </div>
+        </div>
     </div>
-</div>
 </body>
 </html>
 

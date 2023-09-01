@@ -1,9 +1,11 @@
 <!doctype html>
-<html>
+<html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>de.fraunhofer.aisec.cpg.graph</title>
-<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
     if (storage == null) {
         const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
         if (osDarkSchemePreferred === true) {
@@ -16,12 +18,13 @@
         }
     }
     </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
 <script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../styles/style.css" rel="Stylesheet">
-<link href="../../styles/jetbrains-mono.css" rel="Stylesheet">
 <link href="../../styles/main.css" rel="Stylesheet">
 <link href="../../styles/prism.css" rel="Stylesheet">
 <link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../styles/font-jb-sans-auto.css" rel="Stylesheet">
 <script type="text/javascript" src="../../scripts/clipboard.js" async></script>
 <script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
@@ -30,26 +33,32 @@
 <script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
 <link href="../../styles/multimodule.css" rel="Stylesheet"></head>
 <body>
-<div class="navigation-wrapper" id="navigation-wrapper">
-    <div id="leftToggler"><span class="icon-toggler"></span></div>
-    <div class="library-name">
-<a href="../../index.html">
-<span>cpg</span>            </a>    </div>
-    <div>
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph/index.html&quot;}">main</dokka-template-command>    </div>
-    <div class="pull-right d-flex">
+    <div class="root">
+<nav class="navigation" id="navigation-wrapper">
+    <div class="navigation--inner">
+        <div class="navigation-title">
+            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
+            <div class="library-name">
+<a class="library-name--link" href="../../index.html">
+                            cpg
+                    </a>            </div>
+            <div class="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph/index.html&quot;}">main</dokka-template-command>            </div>
+        </div>
         <div class="filter-section" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
         </div>
-        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
-        <div id="searchBar"></div>
     </div>
-</div>
-<div id="container">
-    <div id="leftColumn">
-        <div id="sideMenu"></div>
+    <div class="navigation-controls">
+        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
+        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
     </div>
-    <div id="main">
+</nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="sidebar--inner" id="sideMenu"></div>
+            </div>
+            <div id="main">
 <div class="main-content" data-page-type="package" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph////PointingToDeclaration//1556141526">
   <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><span class="current">de.fraunhofer.aisec.cpg.graph</span></div>
   <div class="cover ">
@@ -536,6 +545,235 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-statement-not-found/index.html">StatementNotFound</a> : <a href="https://docs.oracle.com/javase/8/docs/api/java/lang/Exception.html">Exception</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="EXTENSION_PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="-779489822%2FProperties%2F1556141526" anchor-label="arraySize" id="-779489822%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="array-size.html"><span>array</span><wbr><span><span>Size</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-779489822%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-array-subscription-expression/index.html">ArraySubscriptionExpression</a><span class="token punctuation">.</span><a href="array-size.html">arraySize</a><span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a></div><div class="brief "><p class="paragraph">Returns the expression specifying the dimension (i.e., size) of the array during its initialization.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1178163692%2FProperties%2F1556141526" anchor-label="assignments" id="-1178163692%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="assignments.html"><span><span>assignments</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1178163692%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="assignments.html">assignments</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-assignment/index.html">Assignment</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="-assignment/index.html">Assignment</a> child edges in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2055794781%2FProperties%2F1556141526" anchor-label="callees" id="-2055794781%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="callees.html"><span><span>callees</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2055794781%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token punctuation">.</span><a href="callees.html">callees</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Set of all functions which are called from this function</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1217412771%2FProperties%2F1556141526" anchor-label="calls" id="1217412771%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="calls.html"><span><span>calls</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1217412771%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="calls.html">calls</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1995389611%2FProperties%2F1556141526" anchor-label="fields" id="1995389611%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fields.html"><span><span>fields</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1995389611%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="fields.html">fields</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1541396841%2FProperties%2F1556141526" anchor-label="firstAssignment" id="-1541396841%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="first-assignment.html"><span>first</span><wbr><span><span>Assignment</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1541396841%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a><span class="token punctuation">.</span><a href="first-assignment.html">firstAssignment</a><span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Returns the <a href="-assignment/value.html">Assignment.value</a> of the first (by EOG order beginning from) <a href="-assignment/index.html">Assignment</a> that this variable has as its <a href="-assignment/target.html">Assignment.target</a> in the scope of the variable.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2034024343%2FProperties%2F1556141526" anchor-label="functions" id="-2034024343%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="functions.html"><span><span>functions</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2034024343%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="functions.html">functions</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1639189866%2FProperties%2F1556141526" anchor-label="literals" id="-1639189866%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="literals.html"><span><span>literals</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1639189866%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="literals.html">literals</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-literal/index.html">Literal</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-literal/index.html">Literal</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="875467002%2FProperties%2F1556141526" anchor-label="mcalls" id="875467002%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mcalls.html"><span><span>mcalls</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="875467002%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="mcalls.html">mcalls</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-call-expression/index.html">MemberCallExpression</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-call-expression/index.html">MemberCallExpression</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1106733952%2FProperties%2F1556141526" anchor-label="methods" id="1106733952%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="methods.html"><span><span>methods</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1106733952%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="methods.html">methods</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-method-declaration/index.html">MethodDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-method-declaration/index.html">MethodDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1195095830%2FProperties%2F1556141526" anchor-label="namespaces" id="-1195095830%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="namespaces.html"><span><span>namespaces</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1195095830%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="namespaces.html">namespaces</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-namespace-declaration/index.html">NamespaceDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-993284772%2FProperties%2F1556141526" anchor-label="parameters" id="-993284772%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="parameters.html"><span><span>parameters</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-993284772%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="parameters.html">parameters</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-param-variable-declaration/index.html">ParamVariableDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-param-variable-declaration/index.html">ParamVariableDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1302493680%2FProperties%2F1556141526" anchor-label="records" id="-1302493680%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="records.html"><span><span>records</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1302493680%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="records.html">records</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="694578738%2FProperties%2F1556141526" anchor-label="refs" id="694578738%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="refs.html"><span><span>refs</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="694578738%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="refs.html">refs</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-declared-reference-expression/index.html">DeclaredReferenceExpression</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-declared-reference-expression/index.html">DeclaredReferenceExpression</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="78259269%2FProperties%2F1556141526" anchor-label="variables" id="78259269%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="variables.html"><span><span>variables</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="78259269%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="variables.html">variables</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -2091,243 +2329,15 @@
           </div>
         </div>
       </div>
-      <div data-togglable="EXTENSION_PROPERTY">
-        <h2 class="">Properties</h2>
-        <div class="table"><a data-name="-779489822%2FProperties%2F1556141526" anchor-label="arraySize" id="-779489822%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="array-size.html"><span>array</span><wbr><span><span>Size</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-779489822%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-array-subscription-expression/index.html">ArraySubscriptionExpression</a><span class="token punctuation">.</span><a href="array-size.html">arraySize</a><span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a></div><div class="brief "><p class="paragraph">Returns the expression specifying the dimension (i.e., size) of the array during its initialization.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1178163692%2FProperties%2F1556141526" anchor-label="assignments" id="-1178163692%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="assignments.html"><span><span>assignments</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1178163692%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="assignments.html">assignments</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-assignment/index.html">Assignment</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="-assignment/index.html">Assignment</a> child edges in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-2055794781%2FProperties%2F1556141526" anchor-label="callees" id="-2055794781%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="callees.html"><span><span>callees</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2055794781%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token punctuation">.</span><a href="callees.html">callees</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Set of all functions which are called from this function</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1217412771%2FProperties%2F1556141526" anchor-label="calls" id="1217412771%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="calls.html"><span><span>calls</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1217412771%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="calls.html">calls</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1995389611%2FProperties%2F1556141526" anchor-label="fields" id="1995389611%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="fields.html"><span><span>fields</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1995389611%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="fields.html">fields</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1541396841%2FProperties%2F1556141526" anchor-label="firstAssignment" id="-1541396841%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="first-assignment.html"><span>first</span><wbr><span><span>Assignment</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1541396841%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a><span class="token punctuation">.</span><a href="first-assignment.html">firstAssignment</a><span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Returns the <a href="-assignment/value.html">Assignment.value</a> of the first (by EOG order beginning from) <a href="-assignment/index.html">Assignment</a> that this variable has as its <a href="-assignment/target.html">Assignment.target</a> in the scope of the variable.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-2034024343%2FProperties%2F1556141526" anchor-label="functions" id="-2034024343%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="functions.html"><span><span>functions</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2034024343%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="functions.html">functions</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1639189866%2FProperties%2F1556141526" anchor-label="literals" id="-1639189866%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="literals.html"><span><span>literals</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1639189866%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="literals.html">literals</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-literal/index.html">Literal</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-literal/index.html">Literal</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="875467002%2FProperties%2F1556141526" anchor-label="mcalls" id="875467002%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="mcalls.html"><span><span>mcalls</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="875467002%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="mcalls.html">mcalls</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-call-expression/index.html">MemberCallExpression</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-call-expression/index.html">MemberCallExpression</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1106733952%2FProperties%2F1556141526" anchor-label="methods" id="1106733952%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="methods.html"><span><span>methods</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1106733952%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="methods.html">methods</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-method-declaration/index.html">MethodDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-method-declaration/index.html">MethodDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1195095830%2FProperties%2F1556141526" anchor-label="namespaces" id="-1195095830%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="namespaces.html"><span><span>namespaces</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1195095830%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="namespaces.html">namespaces</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-namespace-declaration/index.html">NamespaceDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-993284772%2FProperties%2F1556141526" anchor-label="parameters" id="-993284772%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="parameters.html"><span><span>parameters</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-993284772%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="parameters.html">parameters</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-param-variable-declaration/index.html">ParamVariableDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-param-variable-declaration/index.html">ParamVariableDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1302493680%2FProperties%2F1556141526" anchor-label="records" id="-1302493680%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="records.html"><span><span>records</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1302493680%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="records.html">records</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="694578738%2FProperties%2F1556141526" anchor-label="refs" id="694578738%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="refs.html"><span><span>refs</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="694578738%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="refs.html">refs</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-declared-reference-expression/index.html">DeclaredReferenceExpression</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-declared-reference-expression/index.html">DeclaredReferenceExpression</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="78259269%2FProperties%2F1556141526" anchor-label="variables" id="78259269%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="variables.html"><span><span>variables</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="78259269%2FProperties%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">.</span><a href="variables.html">variables</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns all <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a> children in this graph, starting with this <a href="-node/index.html">Node</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
       </div>
+            </div>
+        </div>
     </div>
-</div>
 </body>
 </html>
 

@@ -1,9 +1,11 @@
 <!doctype html>
-<html>
+<html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>de.fraunhofer.aisec.cpg.query</title>
-<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
     if (storage == null) {
         const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
         if (osDarkSchemePreferred === true) {
@@ -16,12 +18,13 @@
         }
     }
     </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
 <script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../styles/style.css" rel="Stylesheet">
-<link href="../../styles/jetbrains-mono.css" rel="Stylesheet">
 <link href="../../styles/main.css" rel="Stylesheet">
 <link href="../../styles/prism.css" rel="Stylesheet">
 <link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../styles/font-jb-sans-auto.css" rel="Stylesheet">
 <script type="text/javascript" src="../../scripts/clipboard.js" async></script>
 <script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
@@ -30,26 +33,32 @@
 <script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
 <link href="../../styles/multimodule.css" rel="Stylesheet"></head>
 <body>
-<div class="navigation-wrapper" id="navigation-wrapper">
-    <div id="leftToggler"><span class="icon-toggler"></span></div>
-    <div class="library-name">
-<a href="../../index.html">
-<span>cpg</span>            </a>    </div>
-    <div>
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.query/index.html&quot;}">main</dokka-template-command>    </div>
-    <div class="pull-right d-flex">
+    <div class="root">
+<nav class="navigation" id="navigation-wrapper">
+    <div class="navigation--inner">
+        <div class="navigation-title">
+            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
+            <div class="library-name">
+<a class="library-name--link" href="../../index.html">
+                            cpg
+                    </a>            </div>
+            <div class="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.query/index.html&quot;}">main</dokka-template-command>            </div>
+        </div>
         <div class="filter-section" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-analysis:dokkaHtmlPartial/main">jvm</button>
         </div>
-        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
-        <div id="searchBar"></div>
     </div>
-</div>
-<div id="container">
-    <div id="leftColumn">
-        <div id="sideMenu"></div>
+    <div class="navigation-controls">
+        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
+        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
     </div>
-    <div id="main">
+</nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="sidebar--inner" id="sideMenu"></div>
+            </div>
+            <div id="main">
 <div class="main-content" data-page-type="package" id="content" pageids="cpg-analysis::de.fraunhofer.aisec.cpg.query////PointingToDeclaration//439033401">
   <div class="breadcrumbs"><a href="../index.html">cpg-analysis</a><span class="delimiter">/</span><span class="current">de.fraunhofer.aisec.cpg.query</span></div>
   <div class="cover ">
@@ -86,6 +95,85 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-query-tree/index.html">T</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>value<span class="token operator">: </span><a href="-query-tree/index.html">T</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>children<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableListOf()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>stringRepresentation<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">""</span></span></span><span class="token punctuation">)</span> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-comparable/index.html">Comparable</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-query-tree/index.html">T</a><span class="token operator">&gt;</span><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Holds the <a href="-query-tree/value.html">value</a> to which the statements have been evaluated. The <a href="-query-tree/children.html">children</a> define previous steps of the evaluation, thus building a tree of all steps of the evaluation recursively until we reach the nodes of the CPG. This is necessary if we want to store all steps which are performed when evaluating a query. It helps to make the reasoning of the query more understandable to the user and gives an analyst the maximum of information available.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="EXTENSION_PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="1564320710%2FProperties%2F439033401" anchor-label="intValue" id="1564320710%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="int-value.html"><span>int</span><wbr><span><span>Value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1564320710%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="int-value.html">intValue</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Calls <a href="../de.fraunhofer.aisec.cpg.analysis/-value-evaluator/evaluate.html">ValueEvaluator.evaluate</a> for this expression, thus trying to resolve a constant value. The result is interpreted as an integer.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2142890224%2FProperties%2F439033401" anchor-label="max" id="-2142890224%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="max.html"><span><span>max</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2142890224%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="max.html">max</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-number/index.html">Number</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The maximal integer value of this expression. It uses the default argument for <code class="lang-kotlin">eval</code> of <a href="max.html">max</a></p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="629095934%2FProperties%2F439033401" anchor-label="min" id="629095934%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="min.html"><span><span>min</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="629095934%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="min.html">min</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-number/index.html">Number</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The minimal integer value of this expression. It uses the default argument for <code class="lang-kotlin">eval</code> of <a href="min.html">min</a></p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1099345413%2FProperties%2F439033401" anchor-label="size" id="1099345413%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="size.html"><span><span>size</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1099345413%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="size.html">size</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The size of this expression. It uses the default argument for <code class="lang-kotlin">eval</code> of <a href="size.html">size</a></p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1824747293%2FProperties%2F439033401" anchor-label="value" id="1824747293%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="value.html"><span><span>value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1824747293%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="value.html">value</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Calls <a href="../de.fraunhofer.aisec.cpg.analysis/-value-evaluator/evaluate.html">ValueEvaluator.evaluate</a> for this expression, thus trying to resolve a constant value.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -456,93 +544,15 @@
           </div>
         </div>
       </div>
-      <div data-togglable="EXTENSION_PROPERTY">
-        <h2 class="">Properties</h2>
-        <div class="table"><a data-name="1564320710%2FProperties%2F439033401" anchor-label="intValue" id="1564320710%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="int-value.html"><span>int</span><wbr><span><span>Value</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1564320710%2FProperties%2F439033401"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="int-value.html">intValue</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Calls <a href="../de.fraunhofer.aisec.cpg.analysis/-value-evaluator/evaluate.html">ValueEvaluator.evaluate</a> for this expression, thus trying to resolve a constant value. The result is interpreted as an integer.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-2142890224%2FProperties%2F439033401" anchor-label="max" id="-2142890224%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="max.html"><span><span>max</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2142890224%2FProperties%2F439033401"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="max.html">max</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-number/index.html">Number</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The maximal integer value of this expression. It uses the default argument for <code class="lang-kotlin">eval</code> of <a href="max.html">max</a></p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="629095934%2FProperties%2F439033401" anchor-label="min" id="629095934%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="min.html"><span><span>min</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="629095934%2FProperties%2F439033401"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="min.html">min</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-number/index.html">Number</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The minimal integer value of this expression. It uses the default argument for <code class="lang-kotlin">eval</code> of <a href="min.html">min</a></p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1099345413%2FProperties%2F439033401" anchor-label="size" id="1099345413%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="size.html"><span><span>size</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1099345413%2FProperties%2F439033401"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="size.html">size</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The size of this expression. It uses the default argument for <code class="lang-kotlin">eval</code> of <a href="size.html">size</a></p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1824747293%2FProperties%2F439033401" anchor-label="value" id="1824747293%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="value.html"><span><span>value</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1824747293%2FProperties%2F439033401"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="value.html">value</a><span class="token operator">: </span><a href="-query-tree/index.html">QueryTree</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Calls <a href="../de.fraunhofer.aisec.cpg.analysis/-value-evaluator/evaluate.html">ValueEvaluator.evaluate</a> for this expression, thus trying to resolve a constant value.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
       </div>
+            </div>
+        </div>
     </div>
-</div>
 </body>
 </html>
 
