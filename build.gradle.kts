@@ -49,7 +49,7 @@ allprojects {
 
     val dokkaPlugin by configurations
     dependencies {
-        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.8.10")
+        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.9.0")
     }
 }
 
