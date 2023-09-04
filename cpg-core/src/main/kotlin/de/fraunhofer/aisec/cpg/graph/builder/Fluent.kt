@@ -348,6 +348,23 @@ fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): Decla
 }
 
 /**
+ * Creates a new [DeclarationStatement] in the Fluent Node DSL. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
+ */
+fun LanguageFrontend<*, *>.declareVar(
+    name: String,
+    type: Type,
+    init: VariableDeclaration.() -> Unit
+): DeclarationStatement {
+    val node = (this@LanguageFrontend).newDeclarationStatement()
+    val variableDecl = newVariableDeclaration(name, type)
+    init(variableDecl)
+    node.singleDeclaration = variableDecl
+
+    return node
+}
+
+/**
  * Creates a new [VariableDeclaration] in the Fluent Node DSL and adds it to the
  * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
  * block can be used to create further sub-nodes as well as configuring the created node itself.
@@ -567,13 +584,17 @@ fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEa
 context(StatementHolder)
 
 fun LanguageFrontend<*, *>.forStmt(
-    initializer: Statement,
+    initializer: DeclarationStatement,
     condition: Expression,
     iteration: Statement,
     init: CompoundStatement.() -> Unit
 ): ForStatement {
     val node = newForStatement()
     node.initializerStatement = initializer
+    if (initializer.isSingleDeclaration()) {
+
+        scopeManager.addDeclaration(initializer.singleDeclaration, false)
+    }
     node.condition = condition
     node.iterationStatement = iteration
 
@@ -1187,6 +1208,19 @@ operator fun Expression.inc(): UnaryOperator {
 }
 
 /**
+ * Creates a new [UnaryOperator] with a `++` [UnaryOperator.operatorCode] in the Fluent Node DSL and
+ * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend<*, *>)
+
+fun Expression.incNoContext(): UnaryOperator {
+    val node = (this@LanguageFrontend).newUnaryOperator("++", true, false)
+    node.input = this
+
+    return node
+}
+
+/**
  * Creates a new [BinaryOperator] with a `==` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
@@ -1238,14 +1272,16 @@ infix fun Expression.ge(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `<` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend<*, *>, ArgumentHolder)
+context(LanguageFrontend<*, *>, Holder<out Node>)
 
 infix fun Expression.lt(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator("<")
     node.lhs = this
     node.rhs = rhs
 
-    (this@ArgumentHolder) += node
+    if (this@Holder is ArgumentHolder) {
+        this@Holder += node
+    }
 
     return node
 }

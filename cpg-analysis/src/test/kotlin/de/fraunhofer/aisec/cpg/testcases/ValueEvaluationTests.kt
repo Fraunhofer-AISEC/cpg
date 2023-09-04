@@ -27,9 +27,8 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.graph.array
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newArrayCreationExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
@@ -56,6 +55,7 @@ class ValueEvaluationTests {
                                         variable("array", t("int").array()) {
                                             val newExpr = newArrayCreationExpression()
                                             newExpr.addDimension(literal(3, t("int")))
+                                            this.initializer = newExpr
                                         }
                                     }
                                     forStmt(
@@ -148,7 +148,7 @@ class ValueEvaluationTests {
         ) =
             testFrontend(config).build {
                 translationResult {
-                    translationUnit("example.java") {
+                    translationUnit("example.cpp") {
                         function("main", t("int")) {
                             body {
                                 declare {
@@ -236,6 +236,98 @@ class ValueEvaluationTests {
                                     }
                                 }
 
+                                returnStmt { literal(0, t("int")) }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getCfExample(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .registerPass<UnreachableEOGPass>()
+                    .registerPass<EdgeCachePass>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("cfexample.cpp") {
+                        import("time.h")
+                        import("stdlib.h")
+                        function("main", t("int")) {
+                            body {
+                                call("srand") { call("time") { ref("NULL") } }
+
+                                declare { variable("b", t("int")) { literal(1, t("int")) } }
+
+                                ifStmt {
+                                    condition { call("rand") lt literal(10, t("int")) }
+                                    thenStmt { ref("b") assign { ref("b") + literal(1, t("int")) } }
+                                }
+
+                                call("println") { ref("b") } // 1, 2
+
+                                ifStmt {
+                                    condition { call("rand") gt literal(5, t("int")) }
+                                    thenStmt { ref("b") assign { ref("b") - literal(1, t("int")) } }
+                                }
+
+                                call("println") { ref("b") } // 0, 1, 2
+
+                                ifStmt {
+                                    condition { call("rand") gt literal(3, t("int")) }
+                                    thenStmt { ref("b") assign { ref("b") * literal(2, t("int")) } }
+                                }
+
+                                call("println") { ref("b") } // 0, 1, 2, 4
+
+                                ifStmt {
+                                    condition { call("rand") lt literal(4, t("int")) }
+                                    thenStmt { ref("b") assign -ref("b") }
+                                }
+
+                                call("println") { ref("b") } // -4, -2, -1, 0, 1, 2, 4
+
+                                declare {
+                                    variable("a", t("int")) {
+                                        this.initializer =
+                                            newConditionalExpression(
+                                                ref("b") lt literal(2, t("int")),
+                                                literal(3, t("int")),
+                                                literal(5, t("int")).inc()
+                                            )
+                                    }
+                                }
+
+                                call("println") { ref("a") } // 3, 6
+
+                                returnStmt { literal(0, t("int")) }
+                            }
+                        }
+
+                        function("loop", t("int")) {
+                            body {
+                                declare {
+                                    variable("array", t("int").array()) {
+                                        val creationExpr = newArrayCreationExpression()
+                                        creationExpr.addDimension(literal(6, t("int")))
+                                        this.initializer = creationExpr
+                                    }
+                                }
+
+                                forStmt(
+                                    declareVar("i", t("int")) { literal(0, t("int")) },
+                                    ref("i") lt literal(6, t("int")),
+                                    ref("i").incNoContext()
+                                ) {
+                                    ase {
+                                        ref("array")
+                                        ref("i")
+                                    } assign ref("i")
+                                }
                                 returnStmt { literal(0, t("int")) }
                             }
                         }
