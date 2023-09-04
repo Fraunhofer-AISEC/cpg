@@ -1274,6 +1274,22 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
 }
 
 /**
+ * Creates a new [AssignExpression] with a `+=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+
+infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("+=", listOf(this), listOf(rhs))
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
  * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
  * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
  */

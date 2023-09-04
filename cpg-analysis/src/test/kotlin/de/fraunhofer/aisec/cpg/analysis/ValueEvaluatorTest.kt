@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -173,15 +173,8 @@ class ValueEvaluatorTest {
 
     @Test
     fun testComplex() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("complex.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(JavaLanguage())
-            }
+            ValueEvaluationTests.getComplexExample().components.first().translationUnits.first()
 
         assertNotNull(tu)
 

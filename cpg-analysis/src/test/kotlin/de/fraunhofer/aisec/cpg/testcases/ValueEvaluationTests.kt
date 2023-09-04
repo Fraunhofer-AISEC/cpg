@@ -93,5 +93,48 @@ class ValueEvaluationTests {
                     }
                 }
             }
+
+        fun getComplexExample(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .registerPass<UnreachableEOGPass>()
+                    .registerPass<EdgeCachePass>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("complex.java") {
+                        record("MainClass") {
+                            method("main") {
+                                this.isStatic = true
+                                param("args", t("String").array())
+                                body {
+                                    declare { variable("i", t("int")) { literal(3, t("int")) } }
+                                    declare { variable("s", t("String")) }
+
+                                    ifStmt {
+                                        condition { ref("i") lt literal(2, t("int")) }
+                                        thenStmt { ref("s") assign literal("small", t("String")) }
+                                        elseStmt { ref("s") assign literal("big", t("String")) }
+                                    }
+
+                                    ref("s") assignPlus literal("!", t("String"))
+
+                                    ref("s") assign { ref("s") + literal("?", t("string")) }
+
+                                    ref("i").inc()
+
+                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+
+                                    memberCall("println", member("out", ref("System"))) { ref("i") }
+                                    returnStmt {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
