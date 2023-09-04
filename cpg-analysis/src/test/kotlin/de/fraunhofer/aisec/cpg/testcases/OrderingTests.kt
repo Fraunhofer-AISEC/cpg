@@ -634,11 +634,11 @@ class GraphExamples {
                     }
                 }
             }
-
-        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
-            val language = config.languages.filterIsInstance<TestLanguage>().first()
-            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
-        }
     }
+}
+
+fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
+    val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+    val language = config.languages.filterIsInstance<TestLanguage>().first()
+    return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
 }

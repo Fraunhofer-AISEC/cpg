@@ -560,6 +560,33 @@ fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEa
 }
 
 /**
+ * Creates a new [ForStatement] in the Fluent Node DSL and adds it to the
+ * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(StatementHolder)
+
+fun LanguageFrontend<*, *>.forStmt(
+    initializer: Statement,
+    condition: Expression,
+    iteration: Statement,
+    init: CompoundStatement.() -> Unit
+): ForStatement {
+    val node = newForStatement()
+    node.initializerStatement = initializer
+    node.condition = condition
+    node.iterationStatement = iteration
+
+    val body = newCompoundStatement()
+    init(body)
+    node.statement = body
+
+    (this@StatementHolder) += node
+
+    return node
+}
+
+/**
  * Creates a new [SwitchStatement] in the Fluent Node DSL and adds it to the
  * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
  * used to create further sub-nodes as well as configuring the created node itself.
@@ -1161,6 +1188,16 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
     node.rhs = rhs
 
     (this@ArgumentHolder) += node
+
+    return node
+}
+
+context(LanguageFrontend<*, *>)
+
+infix fun Expression.lt(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator("<")
+    node.lhs = this
+    node.rhs = rhs
 
     return node
 }
