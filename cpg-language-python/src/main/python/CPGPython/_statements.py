@@ -478,7 +478,7 @@ def make_block_statement(self, stmts) -> Block:
             s = self.wrap_declaration_to_stmt(s)
         return s
     else:
-        block_statement = StatementBuilderKt.newBlock(
+        block_statement = ExpressionBuilderKt.newBlock(
             self.frontend, "")
         for s in stmts:
             s = self.handle_statement(s)
