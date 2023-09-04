@@ -39,8 +39,23 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is PythonAST.Attribute -> handleAttribute(node)
             is PythonAST.BinOp -> handleBinOp(node)
             is PythonAST.Compare -> handleCompare(node)
+            is PythonAST.Dict -> handleDict(node)
+            is PythonAST.IfExp -> handleIfExp(node)
             else -> TODO()
         }
+    }
+
+    private fun handleIfExp(node: PythonAST.IfExp): Expression {
+        return newConditionalExpression(
+            condition = handle(node.test),
+            thenExpr = handle(node.body),
+            elseExpr = handle(node.orelse),
+            rawNode = node
+        )
+    }
+
+    private fun handleDict(node: PythonAST.Dict): Expression {
+        TODO()
     }
 
     private fun handleCompare(node: PythonAST.Compare): Expression {
