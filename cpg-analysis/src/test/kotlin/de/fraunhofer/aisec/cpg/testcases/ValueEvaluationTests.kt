@@ -86,7 +86,7 @@ class ValueEvaluationTests {
                                     memberCall("println", member("out", ref("System"))) {
                                         ref("str")
                                     }
-                                    returnStmt { literal(0, t("int")) }
+                                    returnStmt {}
                                 }
                             }
                         }
@@ -131,6 +131,112 @@ class ValueEvaluationTests {
                                     memberCall("println", member("out", ref("System"))) { ref("i") }
                                     returnStmt {}
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getExample(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .registerPass<UnreachableEOGPass>()
+                    .registerPass<EdgeCachePass>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("example.java") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("b", t("int")) {
+                                        literal(1, t("int")) + literal(1, t("int"))
+                                    }
+                                }
+                                call("println") { ref("b") }
+
+                                declare { variable("a", t("int")) { literal(1, t("int")) } }
+                                ref("a") assign literal(2, t("int"))
+                                call("println") { ref("a") }
+
+                                declare {
+                                    variable("c", t("int")) {
+                                        literal(5, t("int")) - literal(2, t("int"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("d", t("float")) {
+                                        literal(8, t("int")) / literal(3, t("int"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("e", t("float")) {
+                                        literal(7.0, t("float")) / literal(2, t("int"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("f", t("int")) {
+                                        literal(2, t("int")) * literal(5, t("int"))
+                                    }
+                                }
+
+                                declare { variable("g", t("int")) { -ref("c") } }
+
+                                call("println") {
+                                    literal("Hello ", t("String")) + literal("world", t("String"))
+                                }
+
+                                declare {
+                                    variable("h", t("bool")) {
+                                        literal(5, t("int")) lt literal(3, t("int"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("i", t("bool")) {
+                                        literal(3, t("int")) gt literal(3, t("int"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("j", t("bool")) {
+                                        literal(3, t("int")) ge literal(3.2, t("float"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("k", t("bool")) {
+                                        literal(3.1, t("float")) le literal(3, t("int"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("l", t("bool")) {
+                                        literal(3L, t("long")) ge
+                                            cast(t("float")) { literal(3.1, t("float")) }
+                                    }
+                                }
+
+                                declare {
+                                    variable("m", t("bool")) {
+                                        cast(t("char")) { literal(3, t("int")) } ge
+                                            literal(3.1, t("float"))
+                                    }
+                                }
+
+                                declare {
+                                    variable("n", t("bool")) {
+                                        literal(3, t("int")) eq literal(3.1, t("float"))
+                                    }
+                                }
+
+                                returnStmt { literal(0, t("int")) }
                             }
                         }
                     }

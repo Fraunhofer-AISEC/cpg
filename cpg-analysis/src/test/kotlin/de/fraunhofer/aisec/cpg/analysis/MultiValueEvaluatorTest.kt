@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,15 +47,7 @@ import kotlin.test.assertTrue
 class MultiValueEvaluatorTest {
     @Test
     fun testSingleValue() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("example.cpp").toFile()),
-                topLevel,
-                true
-            )
-
-        assertNotNull(tu)
+        val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)

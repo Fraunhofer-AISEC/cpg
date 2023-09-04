@@ -1024,6 +1024,48 @@ operator fun Expression.times(rhs: Expression): BinaryOperator {
 }
 
 /**
+ * Creates a new [UnaryOperator] with a `-` [UnaryOperator.operatorCode] in the Fluent Node DSL and
+ * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend<*, *>, ArgumentHolder)
+
+operator fun Expression.unaryMinus(): UnaryOperator {
+    val node = (this@LanguageFrontend).newUnaryOperator("-", false, false)
+    node.input = this
+
+    (this@ArgumentHolder) += node
+
+    // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
+    // been added to the argument holders arguments (and we do not want that). However, we cannot
+    // prevent it, so we need to remove them again
+    (this@ArgumentHolder) -= node.input
+
+    return node
+}
+
+/**
+ * Creates a new [BinaryOperator] with a `/` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend<*, *>, ArgumentHolder)
+
+operator fun Expression.div(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator("/")
+    node.lhs = this
+    node.rhs = rhs
+
+    (this@ArgumentHolder) += node
+
+    // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
+    // been added to the argument holders arguments (and we do not want that). However, we cannot
+    // prevent it, so we need to remove them again
+    (this@ArgumentHolder) -= node.lhs
+    (this@ArgumentHolder) -= node.rhs
+
+    return node
+}
+
+/**
  * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
@@ -1168,6 +1210,22 @@ context(LanguageFrontend<*, *>, ArgumentHolder)
 
 infix fun Expression.gt(rhs: Expression): BinaryOperator {
     val node = (this@LanguageFrontend).newBinaryOperator(">")
+    node.lhs = this
+    node.rhs = rhs
+
+    (this@ArgumentHolder) += node
+
+    return node
+}
+
+/**
+ * Creates a new [BinaryOperator] with a `>=` [BinaryOperator.operatorCode] in the Fluent Node DSL
+ * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend<*, *>, ArgumentHolder)
+
+infix fun Expression.ge(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator(">=")
     node.lhs = this
     node.rhs = rhs
 
