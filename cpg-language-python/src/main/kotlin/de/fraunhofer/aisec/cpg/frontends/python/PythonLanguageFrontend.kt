@@ -104,7 +104,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 mutableLines[lastLineIdx].length + physicalLocation.region.startColumn -
                     physicalLocation.region.endColumn
             mutableLines[lastLineIdx] = mutableLines[lastLineIdx].dropLast(toRemove)
-            return mutableLines.toString()
+            return mutableLines.joinToString(separator = "\n") // TODO
         }
         return null
     }

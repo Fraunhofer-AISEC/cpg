@@ -477,7 +477,7 @@ interface PythonAST {
      *
      * ast.expr = class expr(AST)
      */
-    abstract class ExprBase(pyObject: PyObject) : AST(pyObject)
+    abstract class ExprBase(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```

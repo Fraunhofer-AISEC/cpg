@@ -214,17 +214,15 @@ class PythonFrontendTest : BaseTest() {
         val body = main.body as? CompoundStatement
         assertNotNull(body)
 
-        val sel =
-            (body.statements.first() as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
+        val sel = (body.statements.first() as? AssignExpression)?.declarations?.first()
         assertNotNull(sel)
         assertLocalName("sel", sel)
         assertEquals(tu.primitiveType("bool"), sel.type)
 
-        val initializer = sel.initializer as? Literal<*>
-        assertNotNull(initializer)
-        assertEquals(tu.primitiveType("bool"), initializer.type)
-        assertEquals("True", initializer.code)
+        val firstAssignment = sel.firstAssignment as? Literal<*>
+        assertNotNull(firstAssignment)
+        assertEquals(tu.primitiveType("bool"), firstAssignment.type)
+        assertEquals("True", firstAssignment.code)
 
         val `if` = body.statements[1] as? IfStatement
         assertNotNull(`if`)
