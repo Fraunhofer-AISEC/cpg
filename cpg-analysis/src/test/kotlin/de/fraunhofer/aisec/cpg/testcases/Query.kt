@@ -174,7 +174,7 @@ class Query {
         ) =
             testFrontend(config).build {
                 translationResult {
-                    translationUnit("ComplexDataflow.java") {
+                    translationUnit("ComplexDataflow2.java") {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
@@ -213,6 +213,81 @@ class Query {
                                             member("a", ref("a", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
+
+                                    memberCall(
+                                        "highlyCriticalOperation",
+                                        ref("Dataflow", t("Dataflow"), { refersTo = this@record })
+                                    ) {
+                                        this@memberCall.isStatic = true
+                                        memberCall(
+                                            "toString",
+                                            ref("Integer", t("Integer"), makeMagic = false)
+                                        ) {
+                                            this.type = t("string")
+                                            this@memberCall.isStatic = true
+                                            isStatic = true
+                                            member("a", ref("sc", makeMagic = false))
+                                        }
+                                    }
+                                    returnStmt {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getComplexDataflow3(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .registerPass<EdgeCachePass>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("ComplexDataflow3.java") {
+                        record("Dataflow") {
+                            field("logger", t("Logger")) {
+                                // TODO: this field is static. How do we model this?
+                                this.modifiers = listOf("static")
+                                memberCall("getLogger", ref("Logger")) {
+                                    literal("DataflowLogger", t("string"))
+                                }
+                            }
+
+                            field("a", t("int")) {}
+
+                            method("highlyCriticalOperation", void()) {
+                                isStatic = true
+                                param("s", t("string"))
+                                body {
+                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("main", void()) {
+                                isStatic = true
+                                param("args", t("string").array())
+                                body {
+                                    declare {
+                                        variable("sc", t("Dataflow")) {
+                                            new { construct("Dataflow") }
+                                        }
+                                    }
+
+                                    member("a", ref("sc")) assign literal(5, t("int"))
+
+                                    memberCall("log", ref("logger")) {
+                                        member("INFO", ref("Level", makeMagic = false))
+                                        literal("put ", t("string")) +
+                                            member("a", ref("a", makeMagic = false)) +
+                                            literal(" into highlyCriticalOperation()", t("string"))
+                                    }
+
+                                    member("a", ref("sc")) assign literal(3, t("int"))
 
                                     memberCall(
                                         "highlyCriticalOperation",
