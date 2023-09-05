@@ -18,7 +18,7 @@ jobs:
   build-cpgo-osx:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -44,7 +44,7 @@ jobs:
     runs-on: [self-hosted, linux, x64, faster]
     needs: build-cpgo-osx
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - run: |
