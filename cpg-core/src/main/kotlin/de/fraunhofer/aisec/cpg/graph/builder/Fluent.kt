@@ -447,7 +447,7 @@ fun LanguageFrontend<*, *>.memberCall(
     localName: CharSequence,
     member: Expression,
     isStatic: Boolean = false,
-    init: (CallExpression.() -> Unit)? = null
+    init: (MemberCallExpression.() -> Unit)? = null
 ): MemberCallExpression {
     // Try to parse the name
     val node = newMemberCallExpression(newMemberExpression(localName, member), isStatic)

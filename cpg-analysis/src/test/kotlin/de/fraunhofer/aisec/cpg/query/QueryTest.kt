@@ -813,7 +813,7 @@ class QueryTest {
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getComplexDataflow()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(

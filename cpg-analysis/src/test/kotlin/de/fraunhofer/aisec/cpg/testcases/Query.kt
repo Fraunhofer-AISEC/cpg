@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 
 class Query {
     companion object {
@@ -83,6 +84,79 @@ class Query {
                                     memberCall("print", ref("sc")) {
                                         memberCall("test", ref("sc", makeMagic = false))
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getComplexDataflow(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .registerPass<EdgeCachePass>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("ComplexDataflow.java") {
+                        record("Dataflow") {
+                            field("logger", t("Logger")) {
+                                // TODO: this field is static. How do we model this?
+                                this.modifiers = listOf("static")
+                                memberCall("getLogger", ref("Logger")) {
+                                    literal("DataflowLogger", t("string"))
+                                }
+                            }
+
+                            field("a", t("int")) {}
+
+                            method("highlyCriticalOperation", void()) {
+                                isStatic = true
+                                param("s", t("string"))
+                                body {
+                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    returnStmt {}
+                                }
+                            }
+
+                            method("main", void()) {
+                                isStatic = true
+                                param("args", t("string").array())
+                                body {
+                                    declare {
+                                        variable("sc", t("Dataflow")) {
+                                            new { construct("Dataflow") }
+                                        }
+                                    }
+
+                                    member("a", ref("sc")) assign literal(5, t("int"))
+
+                                    memberCall(
+                                        "highlyCriticalOperation",
+                                        ref("Dataflow", t("Dataflow"), { refersTo = this@record })
+                                    ) {
+                                        this@memberCall.isStatic = true
+                                        memberCall(
+                                            "toString",
+                                            ref("Integer", t("Integer"), makeMagic = false)
+                                        ) {
+                                            this.type = t("string")
+                                            this@memberCall.isStatic = true
+                                            isStatic = true
+                                            member("a", ref("sc", makeMagic = false))
+                                        }
+                                    }
+
+                                    memberCall("log", ref("logger")) {
+                                        member("INFO", ref("Level", makeMagic = false))
+                                        literal("put ", t("string")) +
+                                            member("a", ref("a", makeMagic = false)) +
+                                            literal(" into highlyCriticalOperation()", t("string"))
+                                    }
+                                    returnStmt {}
                                 }
                             }
                         }
