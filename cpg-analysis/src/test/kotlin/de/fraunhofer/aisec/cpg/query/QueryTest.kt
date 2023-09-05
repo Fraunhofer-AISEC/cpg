@@ -803,16 +803,6 @@ class QueryTest {
 
     @Test
     fun testComplexDFGAndEOGRequirement() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/ComplexDataflow.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
         val result = Query.getComplexDataflow()
 
         val queryTreeResult =
@@ -857,17 +847,7 @@ class QueryTest {
 
     @Test
     fun testComplexDFGAndEOGRequirement2() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/ComplexDataflow2.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getComplexDataflow2()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(
