@@ -967,8 +967,8 @@ context(Holder<out Statement>)
 fun LanguageFrontend<*, *>.ref(
     name: CharSequence,
     type: Type = unknownType(),
-    init: (DeclaredReferenceExpression.() -> Unit)? = null,
-    makeMagic: Boolean = true
+    makeMagic: Boolean = true,
+    init: (DeclaredReferenceExpression.() -> Unit)? = null
 ): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
     node.type = type
