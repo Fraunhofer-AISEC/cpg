@@ -138,7 +138,10 @@ class Query {
 
                                     memberCall(
                                         "highlyCriticalOperation",
-                                        ref("Dataflow", t("Dataflow"), { refersTo = this@record })
+                                        ref("Dataflow", t("Dataflow")) {
+                                            isStatic = true
+                                            refersTo = this@record
+                                        }
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
@@ -218,7 +221,10 @@ class Query {
 
                                     memberCall(
                                         "highlyCriticalOperation",
-                                        ref("Dataflow", t("Dataflow"), { refersTo = this@record })
+                                        ref("Dataflow", t("Dataflow")) {
+                                            isStatic = true
+                                            refersTo = this@record
+                                        }
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
@@ -293,7 +299,10 @@ class Query {
 
                                     memberCall(
                                         "highlyCriticalOperation",
-                                        ref("Dataflow", t("Dataflow"), { refersTo = this@record })
+                                        ref("Dataflow", t("Dataflow")) {
+                                            isStatic = true
+                                            refersTo = this@record
+                                        }
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
