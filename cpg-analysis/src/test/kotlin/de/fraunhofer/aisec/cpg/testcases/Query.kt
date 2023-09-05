@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.newArrayCreationExpression
+import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 
 class Query {
@@ -305,6 +307,66 @@ class Query {
                                         }
                                     }
                                     returnStmt {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getArray(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("array.cpp") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("c", t("char").pointer()) {
+                                        val creationExpr = newArrayCreationExpression()
+                                        creationExpr.addDimension(literal(4, t("int")))
+                                        creationExpr.type = t("char")
+                                        this.initializer = creationExpr
+                                    }
+                                }
+
+                                declare { variable("a", t("int")) { literal(4, t("int")) } }
+
+                                declare {
+                                    variable("b", t("int")) { ref("a") + literal(1, t("int")) }
+                                }
+
+                                declare {
+                                    variable("d", t("char")) {
+                                        ase {
+                                            ref("c")
+                                            ref("b")
+                                        }
+                                    }
+                                }
+
+                                returnStmt { literal(0, t("int")) }
+                            }
+                        }
+
+                        function("some_other_function", t("char")) {
+                            declare {
+                                variable("c", t("char").pointer()) {
+                                    val creationExpr = newArrayCreationExpression()
+                                    creationExpr.addDimension(literal(100, t("int")))
+                                    creationExpr.type = t("char")
+                                    this.initializer = creationExpr
+                                }
+                            }
+                            returnStmt {
+                                ase {
+                                    ref("c")
+                                    literal(0, t("int"))
                                 }
                             }
                         }
