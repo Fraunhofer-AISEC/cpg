@@ -42,15 +42,7 @@ import org.junit.jupiter.api.Test
 class QueryTest {
     @Test
     fun testMemcpyTooLargeQuery2() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>(
@@ -74,15 +66,7 @@ class QueryTest {
 
     @Test
     fun testMemcpyTooLargeQuery() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -101,15 +85,7 @@ class QueryTest {
 
     @Test
     fun testMemcpyTooLargeQueryImplies() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(
@@ -124,15 +100,7 @@ class QueryTest {
 
     @Test
     fun testUseAfterFree() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
@@ -163,15 +131,7 @@ class QueryTest {
 
     @Test
     fun testDoubleFree() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
@@ -209,15 +169,7 @@ class QueryTest {
 
     @Test
     fun testParameterGreaterThanOrEqualConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -244,15 +196,7 @@ class QueryTest {
 
     @Test
     fun testParameterGreaterThanConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -279,15 +223,7 @@ class QueryTest {
 
     @Test
     fun testParameterLessThanOrEqualConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -314,15 +250,7 @@ class QueryTest {
 
     @Test
     fun testParameterEqualsConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -349,15 +277,7 @@ class QueryTest {
 
     @Test
     fun testParameterLessThanConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -384,15 +304,7 @@ class QueryTest {
 
     @Test
     fun testParameterNotEqualsConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -419,15 +331,7 @@ class QueryTest {
 
     @Test
     fun testParameterIn() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {

@@ -559,5 +559,60 @@ class Query {
                     }
                 }
             }
+
+        fun getVulnerable(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("assign.cpp") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("array", t("char").array()) {
+                                        literal("hello", t("char").array())
+                                    }
+                                }
+                                call("memcpy") {
+                                    ref("array")
+                                    literal("Hello world", t("char").array())
+                                    literal(11, t("int"))
+                                }
+
+                                call("printf") { ref("array") }
+
+                                call("free") { ref("array") }
+
+                                call("free") { ref("array") }
+
+                                declare { variable("a", t("short")) { literal(2, t("int")) } }
+
+                                ifStmt {
+                                    condition { ref("array") eq literal("hello", t("string")) }
+                                    thenStmt { ref("a") assign literal(0, t("int")) }
+                                }
+
+                                declare {
+                                    variable("x", t("double")) { literal(5, t("int")) / ref("a") }
+                                }
+
+                                declare {
+                                    variable("b", t("int")) { literal(2147483648, t("int")) }
+                                }
+
+                                ref("b") assign literal(2147483648, t("int"))
+
+                                declare { variable("c", t("long")) { literal(-10000, t("long")) } }
+
+                                returnStmt { literal(0, t("int")) }
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
