@@ -1315,6 +1315,16 @@ infix fun Expression.le(rhs: Expression): BinaryOperator {
     return node
 }
 
+context(LanguageFrontend<*, *>)
+
+infix fun Expression.le(rhs: Expression): BinaryOperator {
+    val node = (this@LanguageFrontend).newBinaryOperator("<=")
+    node.lhs = this
+    node.rhs = rhs
+
+    return node
+}
+
 /**
  * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].

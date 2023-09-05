@@ -531,16 +531,7 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQuery2() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array2.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArray2()
 
         val queryTreeResult =
             result.all<ArraySubscriptionExpression>(
@@ -564,16 +555,7 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQuery3() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array3.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArray3()
 
         val queryTreeResult =
             result.all<ArraySubscriptionExpression>(

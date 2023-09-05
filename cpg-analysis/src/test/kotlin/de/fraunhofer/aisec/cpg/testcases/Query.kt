@@ -382,5 +382,109 @@ class Query {
                     }
                 }
             }
+
+        fun getArray2(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("array2.cpp") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("c", t("char").pointer()) {
+                                        val creationExpr = newArrayCreationExpression()
+                                        creationExpr.addDimension(literal(4, t("int")))
+                                        creationExpr.type = t("char")
+                                        this.initializer = creationExpr
+                                    }
+                                }
+
+                                declare { variable("a", t("int")) { literal(0, t("int")) } }
+
+                                forStmt(
+                                    declareVar("i", t("int")) { literal(0, t("int")) },
+                                    ref("i") le literal(4, t("int")),
+                                    ref("i").incNoContext()
+                                ) {
+                                    ref("a") assign
+                                        {
+                                            ref("a") +
+                                                ase {
+                                                    ref("c")
+                                                    ref("i")
+                                                }
+                                        }
+                                }
+
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getArray3(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("array3.cpp") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("c", t("char").pointer()) }
+                                ifStmt {
+                                    condition { literal(5, t("int")) gt literal(4, t("int")) }
+                                    thenStmt {
+                                        ref("c") assign
+                                            {
+                                                val creationExpr = newArrayCreationExpression()
+                                                creationExpr.addDimension(literal(4, t("int")))
+                                                creationExpr.type = t("char")
+                                                creationExpr
+                                            }
+                                    }
+                                    elseStmt {
+                                        ref("c") assign
+                                            {
+                                                val creationExpr = newArrayCreationExpression()
+                                                creationExpr.addDimension(literal(5, t("int")))
+                                                creationExpr.type = t("char")
+                                                creationExpr
+                                            }
+                                    }
+                                }
+
+                                declare { variable("a", t("int")) { literal(0, t("int")) } }
+
+                                forStmt(
+                                    declareVar("i", t("int")) { literal(0, t("int")) },
+                                    ref("i") le literal(4, t("int")),
+                                    ref("i").incNoContext()
+                                ) {
+                                    ref("a") assign
+                                        {
+                                            ref("a") +
+                                                ase {
+                                                    ref("c")
+                                                    ref("i")
+                                                }
+                                        }
+                                }
+
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
