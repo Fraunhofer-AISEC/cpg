@@ -454,21 +454,11 @@ class QueryTest {
 
     @Test
     fun testAssign() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/assign.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getAssign()
 
         val queryTreeResult =
             result.all<AssignmentHolder>(
-                mustSatisfy = {
-                    it.assignments.all { (it.value.invoke() as QueryTree<Number>) < 5 }
-                }
+                mustSatisfy = { it.assignments.all { (it.value() as QueryTree<Number>) < 5 } }
             )
         assertTrue(queryTreeResult.first)
 

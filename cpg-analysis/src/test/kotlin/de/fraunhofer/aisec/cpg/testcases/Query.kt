@@ -534,5 +534,30 @@ class Query {
                     }
                 }
             }
+
+        fun getAssign(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("assign.cpp") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("a", t("int")) { literal(4, t("int")) } }
+                                // TODO: There was a commented-out line. No idea what to do with it:
+                                // int a, b = 4; // this is broken, a is missing an initializer
+
+                                ref("a") assign literal(3, t("int"))
+
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
