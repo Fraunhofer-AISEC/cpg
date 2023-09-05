@@ -42,7 +42,6 @@ publishing {
 
 dependencies {
     api(projects.cpgCore)
-    testImplementation(projects.cpgLanguageCxx)
 
     testImplementation(testFixtures(projects.cpgCore))
 }
