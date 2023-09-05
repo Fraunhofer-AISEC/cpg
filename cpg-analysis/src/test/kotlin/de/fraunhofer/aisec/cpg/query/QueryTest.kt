@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.testcases.Query
 import java.io.File
 import kotlin.test.assertEquals
@@ -556,6 +555,11 @@ class QueryTest {
     @Test
     fun testOutOfBoundsQuery3() {
         val result = Query.getArray3()
+        val subscripts =
+            MultiValueEvaluator()
+                .evaluate(
+                    result.allChildren<ArraySubscriptionExpression>().first().subscriptExpression
+                )
 
         val queryTreeResult =
             result.all<ArraySubscriptionExpression>(
@@ -597,16 +601,7 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQueryCorrect() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array_correct.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArrayCorrect()
 
         val queryTreeResult =
             result.all<ArraySubscriptionExpression>(
