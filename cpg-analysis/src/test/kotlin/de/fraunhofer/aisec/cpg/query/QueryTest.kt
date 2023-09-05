@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.testcases.Query
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -737,16 +738,7 @@ class QueryTest {
 
     @Test
     fun testDataFlowRequirement() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/Dataflow.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getDataflow()
 
         val queryTreeResult =
             result.all<CallExpression>(

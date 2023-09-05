@@ -967,7 +967,8 @@ context(Holder<out Statement>)
 fun LanguageFrontend<*, *>.ref(
     name: CharSequence,
     type: Type = unknownType(),
-    init: (DeclaredReferenceExpression.() -> Unit)? = null
+    init: (DeclaredReferenceExpression.() -> Unit)? = null,
+    makeMagic: Boolean = true
 ): DeclaredReferenceExpression {
     val node = newDeclaredReferenceExpression(name)
     node.type = type
@@ -976,10 +977,12 @@ fun LanguageFrontend<*, *>.ref(
         init(node)
     }
 
-    // Only add this to an argument holder if the nearest holder is an argument holder
-    val holder = this@Holder
-    if (holder is ArgumentHolder) {
-        holder += node
+    if (makeMagic) {
+        // Only add this to an argument holder if the nearest holder is an argument holder
+        val holder = this@Holder
+        if (holder is ArgumentHolder) {
+            holder += node
+        }
     }
 
     return node
