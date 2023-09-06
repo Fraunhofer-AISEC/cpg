@@ -27,19 +27,20 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
 @ExecuteFirst
 @RequiredFrontend(PythonLanguageFrontend::class)
-class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), NamespaceProvider {
     override fun cleanup() {
         // nothing to do
     }
@@ -57,45 +58,93 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * This function checks for each [AssignExpression] whether there is already a matching variable
      * or not. New variables can be one of:
      * - [FieldDeclaration] if we are currently in a record
-     * - [VariableDeclaratrion] otherwise
+     * - [VariableDeclaration] otherwise
      *
      * TODO: loops
      */
-    private fun handle(assignExpression: Node?) {
-        if (assignExpression !is AssignExpression) {
-            return
+    private fun handle(node: Node?) {
+        when (node) {
+            is AssignExpression -> handleAssignExpression(node)
+            is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
+            else -> {}
         }
+    }
 
-        for (target in assignExpression.lhs) {
-            (target as? DeclaredReferenceExpression)?.let {
-                val resolved = scopeManager.resolveReference(it)
-
-                if (resolved == null) {
-                    val decl =
-                        if (scopeManager.isInRecord && !scopeManager.isInFunction) {
-                            val field = newFieldDeclaration(it.name, code = it.code)
-                            field.location = it.location
+    /*
+     * Return null when not creating a new decl
+     */
+    private fun handleDeclaredReferenceExpression(
+        node: DeclaredReferenceExpression
+    ): VariableDeclaration? {
+        val resolved = scopeManager.resolveReference(node)
+        if (resolved == null) {
+            val decl =
+                if (scopeManager.isInRecord) {
+                    if (scopeManager.isInFunction) {
+                        if (
+                            node is MemberExpression &&
+                                node.base.name ==
+                                    (scopeManager.currentFunction as? MethodDeclaration)
+                                        ?.receiver
+                                        ?.name
+                        ) {
+                            val field = newFieldDeclaration(node.name, code = node.code)
+                            field.location = node.location
                             scopeManager.currentRecord?.addField(field) // TODO why do we need this?
                             field
                         } else {
-                            val v = newVariableDeclaration(it.name, code = it.code)
-                            v.location = it.location
+                            val v = newVariableDeclaration(node.name, code = node.code)
+                            v.location = node.location
+                            scopeManager.currentFunction?.addDeclaration(v)
                             v
                         }
-                    if (scopeManager.isInFunction) {
-                        scopeManager.currentFunction?.addDeclaration(
-                            decl
-                        ) // TODO why do we need this?
+                    } else {
+                        val field = newFieldDeclaration(node.name, code = node.code)
+                        field.location = node.location
+                        scopeManager.currentRecord?.addField(field) // TODO why do we need this?
+                        field
                     }
-                    decl.isImplicit = true
+                } else {
+                    if (scopeManager.isInFunction) {
+                        val v = newVariableDeclaration(node.name, code = node.code)
+                        v.location = node.location
+                        scopeManager.currentFunction
+                            ?.body
+                            ?.addDeclaration(v) // TODO why do we need this?
+                        v
+                    } else {
+                        val v = newVariableDeclaration(node.name, code = node.code)
+                        v.location = node.location
+                        v
+                    }
+                }
+
+            decl.isImplicit = true
+
+            decl.scope = scopeManager.currentScope // TODO why do we need this?
+            scopeManager.addDeclaration(decl)
+            return decl
+        } else {
+            return null
+        }
+    }
+
+    private fun handleAssignExpression(assignExpression: AssignExpression) {
+        for (target in assignExpression.lhs) {
+            (target as? DeclaredReferenceExpression)?.let {
+                val resolved = scopeManager.resolveReference(it)
+                if (resolved == null) {
+                    val decl = handleDeclaredReferenceExpression(it)
                     assignExpression.findValue(it)?.let { value ->
-                        decl.type = value.type
+                        decl?.type = value.type
                     } // TODO why do we need this (testCtor test case for example)?
-                    assignExpression.declarations += decl
-                    decl.scope = scopeManager.currentScope // TODO why do we need this?
-                    scopeManager.addDeclaration(decl)
+
+                    decl?.let { d -> assignExpression.declarations += d }
                 }
             }
         }
     }
+
+    override val namespace: Name?
+        get() = scopeManager.currentNamespace
 }

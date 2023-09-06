@@ -214,6 +214,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         implicitInitializerAllowed = false,
                         rawNode = recvPythonNode
                     )
+                frontend.scopeManager.addDeclaration(recvNode)
                 when (result) {
                     is ConstructorDeclaration -> result.receiver = recvNode
                     is MethodDeclaration -> result.receiver = recvNode

@@ -365,10 +365,10 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("z", fieldZ)
         assertLocalName("baz", fieldBaz)
 
-        assertNull(fieldX.initializer)
-        assertNotNull(fieldY.initializer)
-        assertNull(fieldZ.initializer)
-        assertNotNull(fieldBaz.initializer)
+        assertNull(fieldX.firstAssignment)
+        assertNotNull(fieldY.firstAssignment)
+        assertNull(fieldZ.firstAssignment)
+        assertNotNull(fieldBaz.firstAssignment)
 
         val methBar = recordFoo.methods[0]
         assertNotNull(methBar)
@@ -378,13 +378,12 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(barZ)
         assertEquals(fieldZ, barZ.refersTo)
 
-        val barBaz =
-            (methBar.body as? CompoundStatement)?.statements?.get(1) as? DeclarationStatement
+        val barBaz = (methBar.body as? CompoundStatement)?.statements?.get(1) as? AssignExpression
         assertNotNull(barBaz)
         val barBazInner = barBaz.declarations[0] as? FieldDeclaration
         assertNotNull(barBazInner)
         assertLocalName("baz", barBazInner)
-        assertNotNull(barBazInner.initializer)
+        assertNotNull(barBazInner.firstAssignment)
     }
 
     @Test
@@ -404,7 +403,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
-        assertEquals(1, recordFoo.fields.size)
+        assertEquals(2, recordFoo.fields.size)
         val somevar = recordFoo.fields[0]
         assertNotNull(somevar)
         assertLocalName("somevar", somevar)
