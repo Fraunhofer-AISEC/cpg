@@ -115,8 +115,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         get() = scopeManager.currentScope
 
     override fun accept(component: Component) {
-        // Add built-int functions
-        component.translationUnits += addBuiltIn()
+        // Add built-int functions, but only if one of the components contains a GoLanguage
+        if (component.translationUnits.any { it.language is GoLanguage }) {
+            component.translationUnits += addBuiltIn()
+        }
 
         val walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
