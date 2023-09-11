@@ -268,12 +268,16 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("int", constructExpression.templateParameters[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParameterEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
+            constructExpression.templateParameterEdges
+                ?.get(0)
+                ?.getProperty(Properties.INSTANTIATION)
         )
         assertLocalName("int", constructExpression.templateParameters[1])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression.templateParameterEdges?.get(1)?.getProperty(Properties.INSTANTIATION)
+            constructExpression.templateParameterEdges
+                ?.get(1)
+                ?.getProperty(Properties.INSTANTIATION)
         )
 
         val pairTypeInstantiated = constructExpression.type as ObjectType

@@ -550,7 +550,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCXXDesignatedInitializer(
         ctx: CPPASTDesignatedInitializer
-    ): InitializerExpression {
+    ): DesignatedInitializerExpression {
         val rhs = handle(ctx.operand)
         val lhs = ArrayList<Expression>()
         if (ctx.designators.isEmpty()) {
@@ -591,7 +591,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        val die = newInitializerExpression(ctx.rawSignature)
+        val die = newDesignatedInitializerExpression(ctx.rawSignature)
         die.lhs = lhs
         die.rhs = rhs
 
@@ -600,7 +600,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCDesignatedInitializer(
         ctx: CASTDesignatedInitializer
-    ): InitializerExpression {
+    ): DesignatedInitializerExpression {
         val rhs = handle(ctx.operand)
         val lhs = ArrayList<Expression>()
         if (ctx.designators.isEmpty()) {
@@ -641,7 +641,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        val die = newInitializerExpression(ctx.rawSignature)
+        val die = newDesignatedInitializerExpression(ctx.rawSignature)
         die.lhs = lhs
         die.rhs = rhs
 

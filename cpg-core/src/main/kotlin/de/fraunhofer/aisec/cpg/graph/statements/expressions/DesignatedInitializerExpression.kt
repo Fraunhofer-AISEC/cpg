@@ -34,14 +34,14 @@ import org.neo4j.ogm.annotation.Relationship
 
 // TODO Merge and/or refactor
 // TODO: Document this class!
-class InitializerExpression : Expression() {
+class DesignatedInitializerExpression : Expression() {
     @AST var rhs: Expression? = null
 
     @Relationship(value = "LHS", direction = Relationship.Direction.OUTGOING)
     @AST
     var lhsEdges: MutableList<PropertyEdge<Expression>> = mutableListOf()
 
-    var lhs: List<Expression> by PropertyEdgeDelegate(InitializerExpression::lhsEdges)
+    var lhs: List<Expression> by PropertyEdgeDelegate(DesignatedInitializerExpression::lhsEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -53,7 +53,7 @@ class InitializerExpression : Expression() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is InitializerExpression) return false
+        if (other !is DesignatedInitializerExpression) return false
         return super.equals(other) &&
             rhs == other.rhs &&
             lhs == other.lhs &&

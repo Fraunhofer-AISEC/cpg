@@ -422,7 +422,8 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     protected fun handleConstructExpression(constructExpression: ConstructExpression) {
-        if (constructExpression.instantiates != null && constructExpression.constructor != null) return
+        if (constructExpression.instantiates != null && constructExpression.constructor != null)
+            return
         val typeName = constructExpression.type.name
         val recordDeclaration = recordMap[typeName]
         constructExpression.instantiates = recordDeclaration

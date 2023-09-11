@@ -1011,23 +1011,23 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 .initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(3, initializer.initializers.size)
-        assertTrue(initializer.initializers[0] is InitializerExpression)
-        assertTrue(initializer.initializers[1] is InitializerExpression)
-        assertTrue(initializer.initializers[2] is InitializerExpression)
+        assertTrue(initializer.initializers[0] is DesignatedInitializerExpression)
+        assertTrue(initializer.initializers[1] is DesignatedInitializerExpression)
+        assertTrue(initializer.initializers[2] is DesignatedInitializerExpression)
 
-        var die = initializer.initializers[0] as InitializerExpression
+        var die = initializer.initializers[0] as DesignatedInitializerExpression
         assertTrue(die.lhs[0] is Reference)
         assertTrue(die.rhs is Literal<*>)
         assertLocalName("y", die.lhs[0])
         assertEquals(0, (die.rhs as Literal<*>).value)
 
-        die = initializer.initializers[1] as InitializerExpression
+        die = initializer.initializers[1] as DesignatedInitializerExpression
         assertTrue(die.lhs[0] is Reference)
         assertTrue(die.rhs is Literal<*>)
         assertLocalName("z", die.lhs[0])
         assertEquals(1, (die.rhs as Literal<*>).value)
 
-        die = initializer.initializers[2] as InitializerExpression
+        die = initializer.initializers[2] as DesignatedInitializerExpression
         assertTrue(die.lhs[0] is Reference)
         assertTrue(die.rhs is Literal<*>)
         assertLocalName("x", die.lhs[0])
@@ -1038,9 +1038,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 .initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(1, initializer.initializers.size)
-        assertTrue(initializer.initializers[0] is InitializerExpression)
+        assertTrue(initializer.initializers[0] is DesignatedInitializerExpression)
 
-        die = initializer.initializers[0] as InitializerExpression
+        die = initializer.initializers[0] as DesignatedInitializerExpression
         assertTrue(die.lhs[0] is Reference)
         assertTrue(die.rhs is Literal<*>)
         assertLocalName("x", die.lhs[0])
@@ -1051,16 +1051,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 .initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(2, initializer.initializers.size)
-        assertTrue(initializer.initializers[0] is InitializerExpression)
-        assertTrue(initializer.initializers[1] is InitializerExpression)
+        assertTrue(initializer.initializers[0] is DesignatedInitializerExpression)
+        assertTrue(initializer.initializers[1] is DesignatedInitializerExpression)
 
-        die = initializer.initializers[0] as InitializerExpression
+        die = initializer.initializers[0] as DesignatedInitializerExpression
         assertTrue(die.lhs[0] is Literal<*>)
         assertTrue(die.rhs is Literal<*>)
         assertEquals(3, (die.lhs[0] as Literal<*>).value)
         assertEquals(1, (die.rhs as Literal<*>).value)
 
-        die = initializer.initializers[1] as InitializerExpression
+        die = initializer.initializers[1] as DesignatedInitializerExpression
         assertTrue(die.lhs[0] is Literal<*>)
         assertTrue(die.rhs is Literal<*>)
         assertEquals(5, (die.lhs[0] as Literal<*>).value)

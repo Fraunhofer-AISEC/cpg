@@ -43,7 +43,8 @@ import java.util.*
  * b = a[:1]
  * ```
  *
- * In C/C++ this can be also part of a [InitializerExpression], as part of a GCC extension:
+ * In C/C++ this can be also part of a [DesignatedInitializerExpression], as part of a GCC
+ * extension:
  * ```c
  * int a[] = { [0...4] = 1 };
  * ```
