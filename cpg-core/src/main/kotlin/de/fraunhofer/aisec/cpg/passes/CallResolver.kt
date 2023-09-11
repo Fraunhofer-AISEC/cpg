@@ -465,16 +465,16 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleConstructorCallExpression(eci: ConstructorCallExpression) {
-        eci.containingClass?.let { containingClass ->
-            val recordDeclaration = recordMap[eci.parseName(containingClass)]
-            val signature = eci.arguments.map { it.type }
+    protected fun handleConstructorCallExpression(constructorCallExpression: ConstructorCallExpression) {
+        constructorCallExpression.containingClass?.let { containingClass ->
+            val recordDeclaration = recordMap[constructorCallExpression.parseName(containingClass)]
+            val signature = constructorCallExpression.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
                     getConstructorDeclarationForExplicitInvocation(signature, recordDeclaration)
                 val invokes = mutableListOf<FunctionDeclaration>()
                 invokes.add(constructor)
-                eci.invokes = invokes
+                constructorCallExpression.invokes = invokes
             }
         }
     }

@@ -518,7 +518,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpression {
-        val eciStatement = stmt.asExplicitConstructorInvocationStmt()
+        val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
         if (currentRecord == null) {
@@ -528,9 +528,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-        val node = this.newConstructorCallExpression(containingClass, eciStatement.toString())
+        val node = this.newConstructorCallExpression(containingClass, explicitConstructorInvocationStmt.toString())
         val arguments =
-            eciStatement.arguments
+            explicitConstructorInvocationStmt.arguments
                 .stream()
                 .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                 .map { obj: de.fraunhofer.aisec.cpg.graph.statements.Statement? ->
