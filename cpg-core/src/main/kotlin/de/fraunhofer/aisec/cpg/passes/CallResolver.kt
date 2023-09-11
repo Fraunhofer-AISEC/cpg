@@ -421,46 +421,46 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
-    protected fun handleConstructExpression(constructExpr: ConstructExpression) {
-        if (constructExpr.instantiates != null && constructExpr.constructor != null) return
-        val typeName = constructExpr.type.name
+    protected fun handleConstructExpression(constructExpression: ConstructExpression) {
+        if (constructExpression.instantiates != null && constructExpression.constructor != null) return
+        val typeName = constructExpression.type.name
         val recordDeclaration = recordMap[typeName]
-        constructExpr.instantiates = recordDeclaration
+        constructExpression.instantiates = recordDeclaration
         for (template in templateList) {
             if (
                 template is RecordTemplateDeclaration &&
                     recordDeclaration != null &&
                     recordDeclaration in template.realizations &&
-                    (constructExpr.templateParameters.size <= template.parameters.size)
+                    (constructExpression.templateParameters.size <= template.parameters.size)
             ) {
                 val defaultDifference =
-                    template.parameters.size - constructExpr.templateParameters.size
+                    template.parameters.size - constructExpression.templateParameters.size
                 if (defaultDifference <= template.parameterDefaults.size) {
                     // Check if predefined template value is used as default in next value
-                    addRecursiveDefaultTemplateArgs(constructExpr, template)
+                    addRecursiveDefaultTemplateArgs(constructExpression, template)
 
                     // Add missing defaults
                     val missingNewParams: List<Node?> =
                         template.parameterDefaults.subList(
-                            constructExpr.templateParameters.size,
+                            constructExpression.templateParameters.size,
                             template.parameterDefaults.size
                         )
                     for (missingParam in missingNewParams) {
                         if (missingParam != null) {
-                            constructExpr.addTemplateParameter(
+                            constructExpression.addTemplateParameter(
                                 missingParam,
                                 TemplateInitialization.DEFAULT
                             )
                         }
                     }
-                    constructExpr.templateInstantiation = template
+                    constructExpression.templateInstantiation = template
                     break
                 }
             }
         }
         if (recordDeclaration != null) {
-            val constructor = getConstructorDeclaration(constructExpr, recordDeclaration)
-            constructExpr.constructor = constructor
+            val constructor = getConstructorDeclaration(constructExpression, recordDeclaration)
+            constructExpression.constructor = constructor
         }
     }
 
@@ -585,35 +585,35 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     /**
-     * @param constructExpr we want to find an invocation target for
+     * @param constructExpression we want to find an invocation target for
      * @param recordDeclaration associated with the Object the ConstructExpression constructs
      * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If
      *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
      *   matches the ConstructExpression.
      */
     protected fun getConstructorDeclaration(
-        constructExpr: ConstructExpression,
+        constructExpression: ConstructExpression,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
-        val signature = constructExpr.signature
+        val signature = constructExpression.signature
         var constructorCandidate =
             getConstructorDeclarationDirectMatch(signature, recordDeclaration)
-        if (constructorCandidate == null && constructExpr.language is HasDefaultArguments) {
+        if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
             // Check for usage of default args
             constructorCandidate =
-                resolveConstructorWithDefaults(constructExpr, signature, recordDeclaration)
+                resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration)
         }
-        if (constructorCandidate == null && constructExpr.language.isCPP) { // TODO: Fix this
+        if (constructorCandidate == null && constructExpression.language.isCPP) { // TODO: Fix this
             // If we don't find any candidate and our current language is c/c++ we check if there is
             // a candidate with an implicit cast
             constructorCandidate =
-                resolveConstructorWithImplicitCast(constructExpr, recordDeclaration)
+                resolveConstructorWithImplicitCast(constructExpression, recordDeclaration)
         }
 
         return constructorCandidate
             ?: recordDeclaration
                 .startInference(ctx)
-                .createInferredConstructor(constructExpr.signature)
+                .createInferredConstructor(constructExpression.signature)
     }
 
     protected fun getConstructorDeclarationForExplicitInvocation(
@@ -631,18 +631,18 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
          *
          * @param templateParams of the VariableDeclaration/NewExpressionp
-         * @param constructExpr duplicate TemplateParameters (implicit) to preserve AST, as
+         * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
          *   ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpr: ConstructExpression
+            constructExpression: ConstructExpression
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
-                    constructExpr.addTemplateParameter(node.duplicate(true))
+                    constructExpression.addTemplateParameter(node.duplicate(true))
                 } else if (node is Literal<*>) {
-                    constructExpr.addTemplateParameter(node.duplicate(true))
+                    constructExpression.addTemplateParameter(node.duplicate(true))
                 }
             }
         }

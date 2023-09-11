@@ -604,8 +604,8 @@ A conditional evaluation of two expression, realizing the branching pattern of a
 Interesting fields:
 
 * `condition:Expression`: Executed first to decide the branch of evaluation.
-* `thenExpr:Expression`: Evaluated if `condition` evaluates to `true.`
-* `elseExpr:Expression`: Evaluated if `condition` evaluates to `false.`
+* `thenExpression:Expression`: Evaluated if `condition` evaluates to `true.`
+* `elseExpression:Expression`: Evaluated if `condition` evaluates to `false.`
 
 Scheme:
 ```mermaid
@@ -613,8 +613,8 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["condition"]
   child1 --EOG--> parent(["ConditionalExpression"])
-  parent --EOG:true--> child2["thenExpr"]
-  parent --EOG:false--> child3["elseExpr"]
+  parent --EOG:true--> child2["thenExpression"]
+  parent --EOG:false--> child3["elseExpression"]
   child2 --EOG--> next:::outer
   child3 --EOG--> next:::outer
   parent -.-> child1

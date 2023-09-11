@@ -191,18 +191,18 @@ Scheme:
 Interesting fields:
 
 * `condition: Expression`: The condition which is evaluated
-* `thenExpr: Expression`: The expression which is executed if the condition holds
-* `elseExpr: Expression`: The expression which is executed if the condition does not hold
+* `thenExpression: Expression`: The expression which is executed if the condition holds
+* `elseExpression: Expression`: The expression which is executed if the condition does not hold
 
 The `thenExpr` and the `elseExpr` flow to the `ConditionalExpression`. This means that implicit data flows are not considered.
 
 Scheme:
   ```mermaid
   flowchart LR
-    thenExpr -- DFG --> node([ConditionalExpression]);
-    thenExpr -.- node;
-    elseExpr -.- node;
-    elseExpr -- DFG --> node;
+    thenExpression -- DFG --> node([ConditionalExpression]);
+    thenExpression -.- node;
+    elseExpression -.- node;
+    elseExpression -- DFG --> node;
    ```
 
 ## Reference

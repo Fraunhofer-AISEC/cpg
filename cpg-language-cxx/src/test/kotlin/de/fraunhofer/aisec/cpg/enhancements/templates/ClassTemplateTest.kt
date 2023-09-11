@@ -104,28 +104,28 @@ internal class ClassTemplateTest : BaseTest() {
 
     private fun testClassTemplateInvocation(
         pairConstructorDeclaration: ConstructorDeclaration?,
-        constructExpr: ConstructExpression,
+        constructExpression: ConstructExpression,
         pair: RecordDeclaration?,
         pairType: ObjectType,
         template: RecordTemplateDeclaration?,
         point1: VariableDeclaration
     ) {
-        assertEquals(pairConstructorDeclaration, constructExpr.constructor)
+        assertEquals(pairConstructorDeclaration, constructExpression.constructor)
         assertNotNull(pairConstructorDeclaration)
-        assertTrue(constructExpr.invokes.contains(pairConstructorDeclaration))
-        assertEquals(pair, constructExpr.instantiates)
-        assertEquals(template, constructExpr.templateInstantiation)
-        assertLocalName("Pair", constructExpr.type)
-        assertEquals(constructExpr.type, point1.type)
-        assertNotEquals(pairType, constructExpr.type)
+        assertTrue(constructExpression.invokes.contains(pairConstructorDeclaration))
+        assertEquals(pair, constructExpression.instantiates)
+        assertEquals(template, constructExpression.templateInstantiation)
+        assertLocalName("Pair", constructExpression.type)
+        assertEquals(constructExpression.type, point1.type)
+        assertNotEquals(pairType, constructExpression.type)
 
-        val instantiatedType = constructExpr.type as? ObjectType
+        val instantiatedType = constructExpression.type as? ObjectType
         assertNotNull(instantiatedType)
         assertEquals(2, instantiatedType.generics.size)
         assertLocalName("int", instantiatedType.generics[0])
         assertLocalName("int", instantiatedType.generics[1])
 
-        val templateParameters = constructExpr.templateParameters
+        val templateParameters = constructExpression.templateParameters
         assertNotNull(templateParameters)
         assertEquals(2, templateParameters.size)
         assertLocalName("int", (templateParameters[0] as TypeExpression).type)
@@ -258,25 +258,25 @@ internal class ClassTemplateTest : BaseTest() {
         template: RecordTemplateDeclaration?,
         pair: RecordDeclaration?,
         pairConstructorDeclaration: ConstructorDeclaration?,
-        constructExpr: ConstructExpression,
+        constructExpression: ConstructExpression,
         point1: VariableDeclaration
     ) {
-        assertEquals(pair, constructExpr.instantiates)
-        assertEquals(template, constructExpr.templateInstantiation)
-        assertEquals(pairConstructorDeclaration, constructExpr.constructor)
-        assertEquals(2, constructExpr.templateParameters.size)
-        assertLocalName("int", constructExpr.templateParameters[0])
+        assertEquals(pair, constructExpression.instantiates)
+        assertEquals(template, constructExpression.templateInstantiation)
+        assertEquals(pairConstructorDeclaration, constructExpression.constructor)
+        assertEquals(2, constructExpression.templateParameters.size)
+        assertLocalName("int", constructExpression.templateParameters[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpr.templateParameterEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
+            constructExpression.templateParameterEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
         )
-        assertLocalName("int", constructExpr.templateParameters[1])
+        assertLocalName("int", constructExpression.templateParameters[1])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpr.templateParameterEdges?.get(1)?.getProperty(Properties.INSTANTIATION)
+            constructExpression.templateParameterEdges?.get(1)?.getProperty(Properties.INSTANTIATION)
         )
 
-        val pairTypeInstantiated = constructExpr.type as ObjectType
+        val pairTypeInstantiated = constructExpression.type as ObjectType
         assertEquals(pair, pairTypeInstantiated.recordDeclaration)
         assertEquals(2, pairTypeInstantiated.generics.size)
         assertLocalName("int", pairTypeInstantiated.generics[0])
