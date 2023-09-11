@@ -69,7 +69,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
-            constructorDeclaration.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
+            constructorDeclaration.thrownExceptions.map { type: ReferenceType ->
+                frontend.typeOf(type)
+            }
         )
         for (parameter in constructorDeclaration.parameters) {
             val param =

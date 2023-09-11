@@ -307,7 +307,8 @@ fun resolveConstructorWithImplicitCast(
  * ParameterDeclaration in TemplateDeclaration
  *
  * @param templateCall call to instantiate and invoke a function template
- * @param functionTemplateDeclaration functionTemplate we have identified that should be instantiated
+ * @param functionTemplateDeclaration functionTemplate we have identified that should be
+ *   instantiated
  * @param function FunctionDeclaration representing the realization of the template
  * @param initializationSignature mapping containing the all elements of the signature of the
  *   TemplateDeclaration as key and the Type/Expression the Parameter is initialized with.
@@ -444,7 +445,8 @@ fun getParameterizedSignaturesFromInitialization(
  *
  * Additionally, it fills the maps and lists mentioned below:
  *
- * @param functionTemplateDeclaration functionTemplate we have identified that should be instantiated
+ * @param functionTemplateDeclaration functionTemplate we have identified that should be
+ *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
  *   resolution [TemplateDeclaration.TemplateInitialization]
@@ -504,7 +506,8 @@ fun getTemplateInitializationSignature(
  * the instantiation of the template (Only the ones that are in defined in the instantiation => no
  * defaults or implicit). Additionally, it fills the maps and lists mentioned below:
  *
- * @param functionTemplateDeclaration functionTemplate we have identified that should be instantiated
+ * @param functionTemplateDeclaration functionTemplate we have identified that should be
+ *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends
  * * on resolution [TemplateDeclaration.TemplateInitialization]

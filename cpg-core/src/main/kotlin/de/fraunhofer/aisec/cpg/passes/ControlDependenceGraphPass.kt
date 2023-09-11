@@ -71,7 +71,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             functionDeclaration,
             PrevEOGLattice(mapOf(Pair(functionDeclaration, setOf(functionDeclaration))))
         )
-        val finalState = iterateEOG(functionDeclaration.nextEOGEdges, startState, ::handleEdge) ?: return
+        val finalState =
+            iterateEOG(functionDeclaration.nextEOGEdges, startState, ::handleEdge) ?: return
 
         val branchingNodeConditionals = getBranchingNodeConditions(functionDeclaration)
 
@@ -84,7 +85,10 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                if (k != functionDeclaration && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
+                if (
+                    k != functionDeclaration &&
+                        v.containsAll(branchingNodeConditionals[k] ?: setOf())
+                ) {
                     // We are reachable from all the branches of branch. Add this parent to the
                     // worklist or update an existing entry. Also consider already existing entries
                     // in finalDominators list and update it (if necessary)

@@ -105,5 +105,6 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
             elseExpression == other.elseExpression
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, thenExpression, elseExpression)
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), condition, thenExpression, elseExpression)
 }

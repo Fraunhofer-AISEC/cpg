@@ -1091,7 +1091,8 @@ fun Expression.conditional(
     thenExpression: Expression,
     elseExpression: Expression
 ): ConditionalExpression {
-    val node = (this@LanguageFrontend).newConditionalExpression(condition, thenExpression, elseExpression)
+    val node =
+        (this@LanguageFrontend).newConditionalExpression(condition, thenExpression, elseExpression)
 
     if (this@Holder is StatementHolder) {
         (this@Holder) += node
