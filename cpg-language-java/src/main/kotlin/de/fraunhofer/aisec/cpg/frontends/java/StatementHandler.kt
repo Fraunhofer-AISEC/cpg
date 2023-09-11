@@ -528,7 +528,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-        val node = this.newConstructorCallExpression(containingClass, explicitConstructorInvocationStmt.toString())
+        val node =
+            this.newConstructorCallExpression(
+                containingClass,
+                explicitConstructorInvocationStmt.toString()
+            )
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .stream()

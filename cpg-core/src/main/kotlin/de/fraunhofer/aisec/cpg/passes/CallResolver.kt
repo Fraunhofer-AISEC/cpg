@@ -465,7 +465,9 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleConstructorCallExpression(constructorCallExpression: ConstructorCallExpression) {
+    protected fun handleConstructorCallExpression(
+        constructorCallExpression: ConstructorCallExpression
+    ) {
         constructorCallExpression.containingClass?.let { containingClass ->
             val recordDeclaration = recordMap[constructorCallExpression.parseName(containingClass)]
             val signature = constructorCallExpression.arguments.map { it.type }
