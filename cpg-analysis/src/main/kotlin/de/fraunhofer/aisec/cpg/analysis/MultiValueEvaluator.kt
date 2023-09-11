@@ -170,8 +170,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any {
         val result = mutableSetOf<Any?>()
-        val elseResult = evaluateInternal(expr.elseExpr, depth + 1)
-        val thenResult = evaluateInternal(expr.thenExpr, depth + 1)
+        val elseResult = evaluateInternal(expr.elseExpression, depth + 1)
+        val thenResult = evaluateInternal(expr.thenExpression, depth + 1)
         if (thenResult is Collection<*>) result.addAll(thenResult) else result.add(thenResult)
         if (elseResult is Collection<*>) result.addAll(elseResult) else result.add(elseResult)
         return result

@@ -62,8 +62,8 @@ class IncludeDeclaration : Declaration() {
         }
     }
 
-    fun addProblem(problemDecl: ProblemDeclaration) {
-        val propertyEdge = PropertyEdge(this, problemDecl)
+    fun addProblem(problemDeclaration: ProblemDeclaration) {
+        val propertyEdge = PropertyEdge(this, problemDeclaration)
         propertyEdge.addProperty(Properties.INDEX, problemEdges.size)
         problemEdges.add(propertyEdge)
     }

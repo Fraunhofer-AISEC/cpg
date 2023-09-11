@@ -40,7 +40,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     @AST var condition: Expression = ProblemExpression("could not parse condition expression")
 
     @AST
-    var thenExpr: Expression? = null
+    var thenExpression: Expression? = null
         set(value) {
             field?.unregisterTypeObserver(this)
             field = value
@@ -48,7 +48,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         }
 
     @AST
-    var elseExpr: Expression? = null
+    var elseExpression: Expression? = null
         set(value) {
             field?.unregisterTypeObserver(this)
             field = value
@@ -59,8 +59,8 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("condition", condition)
-            .append("thenExpr", thenExpr)
-            .append("elseExpr", elseExpr)
+            .append("thenExpr", thenExpression)
+            .append("elseExpr", elseExpression)
             .build()
     }
 
@@ -79,8 +79,8 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     override fun typeChanged(newType: Type, src: HasType) {
         val types = mutableSetOf<Type>()
 
-        thenExpr?.type?.let { types.add(it) }
-        elseExpr?.type?.let { types.add(it) }
+        thenExpression?.type?.let { types.add(it) }
+        elseExpression?.type?.let { types.add(it) }
 
         val alternative = if (types.isNotEmpty()) types.first() else unknownType()
         this.type = types.commonType ?: alternative
@@ -88,10 +88,10 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // Merge and propagate the assigned types of our branches
-        if (src == thenExpr || src == elseExpr) {
+        if (src == thenExpression || src == elseExpression) {
             val types = mutableSetOf<Type>()
-            thenExpr?.assignedTypes?.let { types.addAll(it) }
-            elseExpr?.assignedTypes?.let { types.addAll(it) }
+            thenExpression?.assignedTypes?.let { types.addAll(it) }
+            elseExpression?.assignedTypes?.let { types.addAll(it) }
             addAssignedTypes(types)
         }
     }
@@ -101,9 +101,9 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         if (other !is ConditionalExpression) return false
         return super.equals(other) &&
             condition == other.condition &&
-            thenExpr == other.thenExpr &&
-            elseExpr == other.elseExpr
+            thenExpression == other.thenExpression &&
+            elseExpression == other.elseExpression
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, thenExpr, elseExpr)
+    override fun hashCode() = Objects.hash(super.hashCode(), condition, thenExpression, elseExpression)
 }

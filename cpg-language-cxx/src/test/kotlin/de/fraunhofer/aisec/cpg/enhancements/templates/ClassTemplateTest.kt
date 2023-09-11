@@ -92,27 +92,27 @@ internal class ClassTemplateTest : BaseTest() {
     private fun testClassTemplateConstructor(
         pair: RecordDeclaration,
         pairType: ObjectType?,
-        pairConstructorDecl: ConstructorDeclaration
+        pairConstructorDeclaration: ConstructorDeclaration
     ) {
-        assertEquals(pair, pairConstructorDecl.recordDeclaration)
-        assertTrue(pair.constructors.contains(pairConstructorDecl))
+        assertEquals(pair, pairConstructorDeclaration.recordDeclaration)
+        assertTrue(pair.constructors.contains(pairConstructorDeclaration))
 
-        val type = pairConstructorDecl.type as? FunctionType
+        val type = pairConstructorDeclaration.type as? FunctionType
         assertNotNull(type)
         assertEquals(pairType, type.returnTypes.firstOrNull())
     }
 
     private fun testClassTemplateInvocation(
-        pairConstructorDecl: ConstructorDeclaration?,
+        pairConstructorDeclaration: ConstructorDeclaration?,
         constructExpr: ConstructExpression,
         pair: RecordDeclaration?,
         pairType: ObjectType,
         template: RecordTemplateDeclaration?,
         point1: VariableDeclaration
     ) {
-        assertEquals(pairConstructorDecl, constructExpr.constructor)
-        assertNotNull(pairConstructorDecl)
-        assertTrue(constructExpr.invokes.contains(pairConstructorDecl))
+        assertEquals(pairConstructorDeclaration, constructExpr.constructor)
+        assertNotNull(pairConstructorDeclaration)
+        assertTrue(constructExpr.invokes.contains(pairConstructorDeclaration))
         assertEquals(pair, constructExpr.instantiates)
         assertEquals(template, constructExpr.templateInstantiation)
         assertLocalName("Pair", constructExpr.type)
@@ -257,13 +257,13 @@ internal class ClassTemplateTest : BaseTest() {
     private fun testStructTemplateWithSameDefaultTypeInvocation(
         template: RecordTemplateDeclaration?,
         pair: RecordDeclaration?,
-        pairConstructorDecl: ConstructorDeclaration?,
+        pairConstructorDeclaration: ConstructorDeclaration?,
         constructExpr: ConstructExpression,
         point1: VariableDeclaration
     ) {
         assertEquals(pair, constructExpr.instantiates)
         assertEquals(template, constructExpr.templateInstantiation)
-        assertEquals(pairConstructorDecl, constructExpr.constructor)
+        assertEquals(pairConstructorDeclaration, constructExpr.constructor)
         assertEquals(2, constructExpr.templateParameters.size)
         assertLocalName("int", constructExpr.templateParameters[0])
         assertEquals(

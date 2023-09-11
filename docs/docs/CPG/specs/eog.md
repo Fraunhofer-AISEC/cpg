@@ -69,11 +69,11 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `BlockStatement`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `Block`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
 
 Interesting fields:
 
-* `statements: List<Statement>`: The code inside a holder. The individual elements are distinguished by a property marking them as `staticBlock` if they are a `BlockStatement`.
+* `statements: List<Statement>`: The code inside a holder. The individual elements are distinguished by a property marking them as `staticBlock` if they are a `Block`.
 
 Scheme:
 ```mermaid
@@ -320,7 +320,7 @@ flowchart LR
 ```
 
 
-## BlockStatement
+## Block
 
 Represents an explicit block of statements.
 
@@ -334,7 +334,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["statement(i-1)"]
   child1 --EOG-->child2["statement(i)"]
-  parent(["BlockStatement"]) --EOG--> next:::outer
+  parent(["Block"]) --EOG--> next:::outer
   parent -."statements(n)".-> child1
   parent -."statements(n)".-> child2
   child2 --EOG--> parent
@@ -407,9 +407,9 @@ After the execution of the statement the control flow only proceeds with the nex
 Interesting fields:
 
 * `resources:List<Statement>`: Initialization of values needed in the block or special objects needing cleanup.
-* `tryBlock:BlockStatement`: The code that should be tried, exceptions inside lead to an eog edge to the catch clauses.
-* `finallyBlock:BlockStatement`: All EOG paths inside the `tryBlock` or the `catch` blocks will finally reach this block and evaluate it.
-* `catchBlocks:List<BlockStatementt>`: Children of `CatchClause` (omitted here), evaluated when the exception matches the clauses condition.
+* `tryBlock:Block`: The code that should be tried, exceptions inside lead to an eog edge to the catch clauses.
+* `finallyBlock:Block`: All EOG paths inside the `tryBlock` or the `catch` blocks will finally reach this block and evaluate it.
+* `catchBlocks:List<Block>`: Children of `CatchClause` (omitted here), evaluated when the exception matches the clauses condition.
 
 Scheme:
 ```mermaid
@@ -584,7 +584,7 @@ The placement of the root node between expression and executed block is such tha
 Interesting fields:
 
 * `expression: Expression`: Its evaluation returns an object that acts as a lock for synchronization.
-* `blockStatement: BlockStatement`: Code executed while the object evaluated from `expression` is locked.
+* `block: Block`: Code executed while the object evaluated from `expression` is locked.
 
 Scheme:
 ```mermaid
@@ -592,7 +592,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["expression"]
   child1 --EOG--> parent
-  parent --EOG--> child2["blockStatement"]
+  parent --EOG--> child2["block"]
   child2 --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2

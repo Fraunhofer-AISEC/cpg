@@ -316,9 +316,9 @@ class PythonFrontendTest : BaseTest() {
 
         val ifCond = initializer.condition as? Literal<*>
         assertNotNull(ifCond)
-        val thenExpr = initializer.thenExpr as? Literal<*>
+        val thenExpr = initializer.thenExpression as? Literal<*>
         assertNotNull(thenExpr)
-        val elseExpr = initializer.elseExpr as? Literal<*>
+        val elseExpr = initializer.elseExpression as? Literal<*>
         assertNotNull(elseExpr)
 
         assertEquals(tu.primitiveType("bool"), ifCond.type)

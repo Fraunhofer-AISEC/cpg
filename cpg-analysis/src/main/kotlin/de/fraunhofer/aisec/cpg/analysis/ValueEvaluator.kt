@@ -311,9 +311,9 @@ open class ValueEvaluator(
             val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
 
             return if (lhs == rhs) {
-                evaluateInternal(expr.thenExpr, depth + 1)
+                evaluateInternal(expr.thenExpression, depth + 1)
             } else {
-                evaluateInternal(expr.elseExpr, depth + 1)
+                evaluateInternal(expr.elseExpression, depth + 1)
             }
         }
 

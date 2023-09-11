@@ -121,7 +121,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        var writtenDecl: Declaration?
+        var writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState
@@ -163,11 +163,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             // operation, the prevWrite of the input's variable is this node.
             val input = (currentNode as UnaryOperator).input as Reference
             // We write to the variable in the input
-            writtenDecl = input.refersTo
+            writtenDeclaration = input.refersTo
 
-            if (writtenDecl != null) {
-                state.push(input, doubleState.declarationsState[writtenDecl])
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
+            if (writtenDeclaration != null) {
+                state.push(input, doubleState.declarationsState[writtenDeclaration])
+                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(input))
             }
         } else if (isCompoundAssignment(currentNode)) {
             // We write to the lhs, but it also serves as an input => We first get all previous
@@ -175,14 +175,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             // The write operation goes to the variable in the lhs
             val lhs = currentNode.lhs.singleOrNull()
-            writtenDecl = (lhs as? Reference)?.refersTo
+            writtenDeclaration = (lhs as? Reference)?.refersTo
 
-            if (writtenDecl != null && lhs != null) {
+            if (writtenDeclaration != null && lhs != null) {
                 // Data flows from the last writes to the lhs variable to this node
-                state.push(lhs, doubleState.declarationsState[writtenDecl])
+                state.push(lhs, doubleState.declarationsState[writtenDeclaration])
 
                 // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(lhs))
+                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(lhs))
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
@@ -209,7 +209,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 }
 
             // We wrote something to this variable declaration
-            writtenDecl =
+            writtenDeclaration =
                 when (writtenTo) {
                     is Declaration -> writtenTo
                     is Reference -> writtenTo.refersTo
@@ -238,7 +238,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                     state.push(writtenTo, PowersetLattice(setOf(iterable)))
                     // Add the variable declaration (or the reference) to the list of previous
                     // write nodes in this path
-                    state.declarationsState[writtenDecl] = PowersetLattice(setOf(writtenTo))
+                    state.declarationsState[writtenDeclaration] = PowersetLattice(setOf(writtenTo))
                 }
             }
         } else if (currentNode is FunctionDeclaration) {

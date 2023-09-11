@@ -819,11 +819,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
         val openConditionEOGs = ArrayList(currentPredecessors)
         nextEdgeProperties[Properties.BRANCH] = true
-        createEOG(node.thenExpr)
+        createEOG(node.thenExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openConditionEOGs)
         nextEdgeProperties[Properties.BRANCH] = false
-        createEOG(node.elseExpr)
+        createEOG(node.elseExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openBranchNodes)
     }

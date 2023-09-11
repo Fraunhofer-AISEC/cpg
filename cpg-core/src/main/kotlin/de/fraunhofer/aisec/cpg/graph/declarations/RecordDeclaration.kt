@@ -98,28 +98,28 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
 
     @Relationship var staticImports: MutableSet<ValueDeclaration> = HashSet()
 
-    fun addField(fieldDecl: FieldDeclaration) {
-        addIfNotContains(fieldEdges, fieldDecl)
+    fun addField(fieldDeclaration: FieldDeclaration) {
+        addIfNotContains(fieldEdges, fieldDeclaration)
     }
 
-    fun removeField(fieldDecl: FieldDeclaration) {
-        fieldEdges.removeIf { it.end == fieldDecl }
+    fun removeField(fieldDeclaration: FieldDeclaration) {
+        fieldEdges.removeIf { it.end == fieldDeclaration }
     }
 
-    fun addMethod(methodDecl: MethodDeclaration) {
-        addIfNotContains(methodEdges, methodDecl)
+    fun addMethod(methodDeclaration: MethodDeclaration) {
+        addIfNotContains(methodEdges, methodDeclaration)
     }
 
-    fun removeMethod(methodDecl: MethodDeclaration?) {
-        methodEdges.removeIf { it.end == methodDecl }
+    fun removeMethod(methodDeclaration: MethodDeclaration?) {
+        methodEdges.removeIf { it.end == methodDeclaration }
     }
 
-    fun addConstructor(constructorDecl: ConstructorDeclaration) {
-        addIfNotContains(constructorEdges, constructorDecl)
+    fun addConstructor(constructorDeclaration: ConstructorDeclaration) {
+        addIfNotContains(constructorEdges, constructorDeclaration)
     }
 
-    fun removeConstructor(constructorDecl: ConstructorDeclaration?) {
-        constructorEdges.removeIf { it.end == constructorDecl }
+    fun removeConstructor(constructorDeclaration: ConstructorDeclaration?) {
+        constructorEdges.removeIf { it.end == constructorDeclaration }
     }
 
     fun removeRecord(recordDeclaration: RecordDeclaration) {

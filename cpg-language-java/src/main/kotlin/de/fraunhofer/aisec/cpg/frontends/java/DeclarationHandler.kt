@@ -55,23 +55,23 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         lang
     ) {
     fun handleConstructorDeclaration(
-        constructorDecl: ConstructorDeclaration
+        constructorDeclaration: ConstructorDeclaration
     ): de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration {
-        val resolvedConstructor = constructorDecl.resolve()
+        val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
         val declaration =
             this.newConstructorDeclaration(
                 resolvedConstructor.name,
-                constructorDecl.toString(),
+                constructorDeclaration.toString(),
                 currentRecordDecl
             )
         frontend.scopeManager.addDeclaration(declaration)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
-            constructorDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
+            constructorDeclaration.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
         )
-        for (parameter in constructorDecl.parameters) {
+        for (parameter in constructorDeclaration.parameters) {
             val param =
                 this.newParameterDeclaration(
                     parameter.nameAsString,
@@ -92,10 +92,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         }
 
         // check, if constructor has body (i.e. it's not abstract or something)
-        val body = constructorDecl.body
+        val body = constructorDeclaration.body
         addImplicitReturn(body)
         declaration.body = frontend.statementHandler.handle(body)
-        frontend.processAnnotations(declaration, constructorDecl)
+        frontend.processAnnotations(declaration, constructorDeclaration)
         frontend.scopeManager.leaveScope(declaration)
         return declaration
     }

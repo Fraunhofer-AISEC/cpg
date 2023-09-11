@@ -106,9 +106,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                     }
                 })
 
-    fun hasSameSignature(targetFunctionDecl: FunctionDeclaration): Boolean {
-        return targetFunctionDecl.name.localName == name.localName &&
-            targetFunctionDecl.signatureTypes == signatureTypes
+    fun hasSameSignature(targetFunctionDeclaration: FunctionDeclaration): Boolean {
+        return targetFunctionDeclaration.name.localName == name.localName &&
+            targetFunctionDeclaration.signatureTypes == signatureTypes
     }
 
     fun hasSignature(targetSignature: List<Type>): Boolean {
@@ -153,12 +153,12 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
         }
     }
 
-    fun addOverriddenBy(functionDecl: FunctionDeclaration) {
-        addIfNotContains(overriddenBy, functionDecl)
+    fun addOverriddenBy(functionDeclaration: FunctionDeclaration) {
+        addIfNotContains(overriddenBy, functionDeclaration)
     }
 
-    fun addOverrides(functionDecl: FunctionDeclaration) {
-        addIfNotContains(overrides, functionDecl)
+    fun addOverrides(functionDeclaration: FunctionDeclaration) {
+        addIfNotContains(overrides, functionDeclaration)
     }
 
     fun addThrowTypes(type: Type) {
@@ -205,14 +205,14 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     val signatureTypes: List<Type>
         get() = parameters.map { it.type }
 
-    fun addParameter(parameterDecl: ParameterDeclaration) {
-        val propertyEdge = PropertyEdge(this, parameterDecl)
+    fun addParameter(parameterDeclaration: ParameterDeclaration) {
+        val propertyEdge = PropertyEdge(this, parameterDeclaration)
         propertyEdge.addProperty(Properties.INDEX, parameters.size)
         parameterEdges.add(propertyEdge)
     }
 
-    fun removeParameter(parameterDecl: ParameterDeclaration) {
-        parameterEdges.removeIf { it.end == parameterDecl }
+    fun removeParameter(parameterDeclaration: ParameterDeclaration) {
+        parameterEdges.removeIf { it.end == parameterDeclaration }
     }
 
     override fun toString(): String {

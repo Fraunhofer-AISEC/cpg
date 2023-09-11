@@ -750,9 +750,9 @@ fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
  */
 context(Holder<out Statement>)
 
-fun LanguageFrontend<*, *>.case(caseExpr: Expression? = null): CaseStatement {
+fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStatement {
     val node = newCaseStatement()
-    node.caseExpression = caseExpr
+    node.caseExpression = caseExpression
 
     // Only add this to a statement holder if the nearest holder is a statement holder
     val holder = this@Holder
@@ -1088,10 +1088,10 @@ context(LanguageFrontend<*, *>, Holder<out Node>)
 
 fun Expression.conditional(
     condition: Expression,
-    thenExpr: Expression,
-    elseExpr: Expression
+    thenExpression: Expression,
+    elseExpression: Expression
 ): ConditionalExpression {
-    val node = (this@LanguageFrontend).newConditionalExpression(condition, thenExpr, elseExpr)
+    val node = (this@LanguageFrontend).newConditionalExpression(condition, thenExpression, elseExpression)
 
     if (this@Holder is StatementHolder) {
         (this@Holder) += node

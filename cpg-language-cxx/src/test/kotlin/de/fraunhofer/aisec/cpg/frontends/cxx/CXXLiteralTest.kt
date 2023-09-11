@@ -185,10 +185,10 @@ internal class CXXLiteralTest : BaseTest() {
     private fun assertLiteral(
         expectedValue: Number,
         expectedType: Type,
-        functionDecl: FunctionDeclaration,
+        functionDeclaration: FunctionDeclaration,
         name: String
     ) {
-        val variableDeclaration = functionDecl.variables[name]
+        val variableDeclaration = functionDeclaration.variables[name]
         assertNotNull(variableDeclaration)
 
         val literal = variableDeclaration.getInitializerAs(Literal::class.java)!!

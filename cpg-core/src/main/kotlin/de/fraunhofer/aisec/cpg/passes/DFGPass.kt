@@ -332,8 +332,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * expression to the whole expression.
      */
     protected fun handleConditionalExpression(node: ConditionalExpression) {
-        node.thenExpr?.let { node.addPrevDFG(it) }
-        node.elseExpr?.let { node.addPrevDFG(it) }
+        node.thenExpression?.let { node.addPrevDFG(it) }
+        node.elseExpression?.let { node.addPrevDFG(it) }
     }
 
     /**
