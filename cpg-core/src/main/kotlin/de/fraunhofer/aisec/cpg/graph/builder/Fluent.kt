@@ -282,9 +282,9 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
 context(Holder<out Statement>)
 
 fun LanguageFrontend<*, *>.ase(
-    init: (SubscriptionExpression.() -> Unit)? = null
-): SubscriptionExpression {
-    val node = newSubscriptionExpression()
+    init: (SubscriptExpression.() -> Unit)? = null
+): SubscriptExpression {
+    val node = newSubscriptExpression()
 
     if (init != null) {
         init(node)
@@ -670,9 +670,9 @@ fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Creates a new [BlockStatement] in the Fluent Node DSL and sets it to the
- * [IfStatement.elseStatement] of the nearest enclosing [IfStatement]. The [init] block can be used
- * to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfStatement.elseStatement] of
+ * the nearest enclosing [IfStatement]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(IfStatement)
 

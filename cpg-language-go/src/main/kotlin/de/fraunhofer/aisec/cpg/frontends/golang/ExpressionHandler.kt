@@ -123,8 +123,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     private fun handleIndexExpr(
         indexExpr: GoStandardLibrary.Ast.IndexExpr
-    ): SubscriptionExpression {
-        val ase = newSubscriptionExpression(rawNode = indexExpr)
+    ): SubscriptExpression {
+        val ase = newSubscriptExpression(rawNode = indexExpr)
         ase.arrayExpression = frontend.expressionHandler.handle(indexExpr.x)
         ase.subscriptExpression = frontend.expressionHandler.handle(indexExpr.index)
 
@@ -279,14 +279,14 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles a ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modelling this as a combination of a [SubscriptionExpression] that contains a
+     * modelling this as a combination of a [SubscriptExpression] that contains a
      * [RangeExpression] as its subscriptExpression to share some code between this and an index
      * expression.
      */
     private fun handleSliceExpr(
         sliceExpr: GoStandardLibrary.Ast.SliceExpr
-    ): SubscriptionExpression {
-        val ase = newSubscriptionExpression(rawNode = sliceExpr)
+    ): SubscriptExpression {
+        val ase = newSubscriptExpression(rawNode = sliceExpr)
         ase.arrayExpression =
             frontend.expressionHandler.handle(sliceExpr.x)
                 ?: newProblemExpression("missing array expression")

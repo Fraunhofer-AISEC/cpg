@@ -643,7 +643,7 @@ fun Node.controlledBy(): List<Node> {
  * Returns the expression specifying the dimension (i.e., size) of the array during its
  * initialization.
  */
-val SubscriptionExpression.arraySize: Expression
+val SubscriptExpression.arraySize: Expression
     get() =
         (((this.arrayExpression as Reference).refersTo as VariableDeclaration).initializer
                 as NewArrayExpression)

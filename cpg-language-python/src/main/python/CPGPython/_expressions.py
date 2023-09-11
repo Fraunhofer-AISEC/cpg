@@ -329,7 +329,7 @@ def handle_expression_impl(self, expr):
     elif isinstance(expr, ast.Subscript):
         value = self.handle_expression(expr.value)
         slc = self.handle_expression(expr.slice)
-        exp = ExpressionBuilderKt.newSubscriptionExpression(
+        exp = ExpressionBuilderKt.newSubscriptExpression(
             self.frontend, self.get_src_code(expr))
         exp.setArrayExpression(value)
         exp.setSubscriptExpression(slc)

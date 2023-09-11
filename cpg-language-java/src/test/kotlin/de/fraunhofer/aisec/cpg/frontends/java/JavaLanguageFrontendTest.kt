@@ -446,7 +446,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val b = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
 
         // initializer is array subscription
-        val ase = b?.initializer as? SubscriptionExpression
+        val ase = b?.initializer as? SubscriptExpression
         assertNotNull(ase)
         assertEquals(a, (ase.arrayExpression as? Reference)?.refersTo)
         assertEquals(0, (ase.subscriptExpression as? Literal<*>)?.value)

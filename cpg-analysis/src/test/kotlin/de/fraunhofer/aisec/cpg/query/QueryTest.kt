@@ -489,7 +489,7 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<SubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) < min(it.arraySize) &&
                         min(it.subscriptExpression) >= 0
@@ -498,7 +498,7 @@ class QueryTest {
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<SubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt min(it.arraySize)) and
                         (min(it.subscriptExpression) ge 0)
@@ -521,7 +521,7 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.exists<SubscriptionExpression>(
+            result.exists<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) >= min(it.arraySize) ||
                         min(it.subscriptExpression) < 0
@@ -530,7 +530,7 @@ class QueryTest {
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.existsExtended<SubscriptionExpression>(
+            result.existsExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (it.subscriptExpression.max ge it.arraySize.min) or
                         (it.subscriptExpression.min lt 0)
@@ -554,7 +554,7 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<SubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) < min(it.arraySize) &&
                         min(it.subscriptExpression) >= 0
@@ -563,7 +563,7 @@ class QueryTest {
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<SubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt min(it.arraySize)) and
                         (min(it.subscriptExpression) ge 0)
@@ -587,7 +587,7 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<SubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) <
                         min(
@@ -601,7 +601,7 @@ class QueryTest {
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<SubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt
                         min(
@@ -630,7 +630,7 @@ class QueryTest {
         val result = analyzer.analyze().get()
 
         val queryTreeResult =
-            result.all<SubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     val max_sub = max(it.subscriptExpression)
                     val min_dim = min(it.arraySize)
@@ -641,7 +641,7 @@ class QueryTest {
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<SubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     val max_sub = max(it.subscriptExpression)
                     val min_dim = min(it.arraySize)

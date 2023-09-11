@@ -184,7 +184,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(unary)
         assertEquals("&", unary.operatorCode)
 
-        var arrayExpr = unary.input as? SubscriptionExpression
+        var arrayExpr = unary.input as? SubscriptExpression
         assertNotNull(arrayExpr)
         assertLocalName("13", arrayExpr)
         assertEquals(
@@ -192,7 +192,7 @@ class LLVMIRLanguageFrontendTest {
             (arrayExpr.subscriptExpression as? Literal<*>)?.value
         ) // should this be integer instead of long?
 
-        arrayExpr = arrayExpr.arrayExpression as? SubscriptionExpression
+        arrayExpr = arrayExpr.arrayExpression as? SubscriptExpression
         assertNotNull(arrayExpr)
         assertLocalName("5", arrayExpr)
         assertEquals(
@@ -208,7 +208,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(memberExpression)
         assertLocalName("field_2", memberExpression)
 
-        arrayExpr = memberExpression.base as? SubscriptionExpression
+        arrayExpr = memberExpression.base as? SubscriptExpression
         assertNotNull(arrayExpr)
         assertLocalName("1", arrayExpr)
         assertEquals(
@@ -838,7 +838,7 @@ class LLVMIRLanguageFrontendTest {
         val zInit =
             ((mainBody.statements[2] as? DeclarationStatement)?.singleDeclaration
                     as? VariableDeclaration)
-                ?.initializer as? SubscriptionExpression
+                ?.initializer as? SubscriptExpression
         assertNotNull(zInit)
         assertEquals(0L, (zInit.subscriptExpression as? Literal<*>)?.value)
         assertEquals("x", (zInit.arrayExpression as? Reference)?.name?.localName)
@@ -858,12 +858,12 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(1, yMod.rhs.size)
         assertEquals(
             3L,
-            ((yMod.lhs.first() as? SubscriptionExpression)?.subscriptExpression as? Literal<*>)
+            ((yMod.lhs.first() as? SubscriptExpression)?.subscriptExpression as? Literal<*>)
                 ?.value
         )
         assertSame(
             yModInit,
-            ((yMod.lhs.first() as? SubscriptionExpression)?.arrayExpression as? Reference)?.refersTo
+            ((yMod.lhs.first() as? SubscriptExpression)?.arrayExpression as? Reference)?.refersTo
         )
         assertEquals(8L, (yMod.rhs.first() as? Literal<*>)?.value)
 
@@ -875,37 +875,37 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(shuffledInit)
         assertSame(
             origX,
-            ((shuffledInit.initializers[0] as? SubscriptionExpression)?.arrayExpression
+            ((shuffledInit.initializers[0] as? SubscriptExpression)?.arrayExpression
                     as? Reference)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[1] as? SubscriptionExpression)?.arrayExpression
+            ((shuffledInit.initializers[1] as? SubscriptExpression)?.arrayExpression
                     as? Reference)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[2] as? SubscriptionExpression)?.arrayExpression
+            ((shuffledInit.initializers[2] as? SubscriptExpression)?.arrayExpression
                     as? Reference)
                 ?.refersTo
         )
         assertSame(
             1,
-            ((shuffledInit.initializers[0] as? SubscriptionExpression)?.subscriptExpression
+            ((shuffledInit.initializers[0] as? SubscriptExpression)?.subscriptExpression
                     as? Literal<*>)
                 ?.value
         )
         assertSame(
             2,
-            ((shuffledInit.initializers[1] as? SubscriptionExpression)?.subscriptExpression
+            ((shuffledInit.initializers[1] as? SubscriptExpression)?.subscriptExpression
                     as? Literal<*>)
                 ?.value
         )
         assertSame(
             3,
-            ((shuffledInit.initializers[2] as? SubscriptionExpression)?.subscriptExpression
+            ((shuffledInit.initializers[2] as? SubscriptExpression)?.subscriptExpression
                     as? Literal<*>)
                 ?.value
         )

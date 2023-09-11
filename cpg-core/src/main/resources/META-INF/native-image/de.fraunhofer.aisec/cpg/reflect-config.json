@@ -90,7 +90,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.SubscriptionExpression",
+    "name": "de.fraunhofer.aisec.cpg.graph.SubscriptExpression",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },

@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.capacity
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -53,7 +53,7 @@ class OutOfBoundsCheck {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
-                    fun visit(v: SubscriptionExpression) {
+                    fun visit(v: SubscriptExpression) {
                         val evaluator = ValueEvaluator()
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)
 

@@ -224,7 +224,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertEquals(3, initializers.size)
 
             // second statement is an expression directly
-            val ase = statement.statements[1] as SubscriptionExpression
+            val ase = statement.statements[1] as SubscriptExpression
             assertNotNull(ase)
             assertEquals(x, (ase.arrayExpression as Reference).refersTo)
             assertEquals(0, (ase.subscriptExpression as Literal<*>).value)

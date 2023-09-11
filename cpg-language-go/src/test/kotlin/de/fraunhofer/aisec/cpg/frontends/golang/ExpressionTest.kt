@@ -100,7 +100,7 @@ class ExpressionTest {
         // [:1]
         var slice =
             assertIs<RangeExpression>(
-                assertIs<SubscriptionExpression>(b.initializer).subscriptExpression
+                assertIs<SubscriptExpression>(b.initializer).subscriptExpression
             )
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
@@ -111,7 +111,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<SubscriptionExpression>(c.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(c.initializer).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -121,7 +121,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<SubscriptionExpression>(d.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(d.initializer).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -131,7 +131,7 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<SubscriptionExpression>(e.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(e.initializer).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)

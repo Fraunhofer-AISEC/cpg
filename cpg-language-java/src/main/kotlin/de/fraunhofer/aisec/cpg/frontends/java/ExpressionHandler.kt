@@ -180,9 +180,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return initList
     }
 
-    private fun handleArrayAccessExpr(expr: Expression): SubscriptionExpression {
+    private fun handleArrayAccessExpr(expr: Expression): SubscriptExpression {
         val arrayAccessExpr = expr as ArrayAccessExpr
-        val arraySubsExpression = this.newSubscriptionExpression(expr.toString())
+        val arraySubsExpression = this.newSubscriptExpression(expr.toString())
         (handle(arrayAccessExpr.name)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
             ?.let { arraySubsExpression.arrayExpression = it }

@@ -108,8 +108,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
         map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
-        map[SubscriptionExpression::class.java] = {
-            handleSubscriptionExpression(it as SubscriptionExpression)
+        map[SubscriptExpression::class.java] = {
+            handleSubscriptExpression(it as SubscriptExpression)
         }
         map[NewArrayExpression::class.java] = { handleNewArrayExpression(it as NewArrayExpression) }
         map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
@@ -416,7 +416,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleSubscriptionExpression(node: SubscriptionExpression) {
+    protected fun handleSubscriptExpression(node: SubscriptExpression) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
         createEOG(node.arrayExpression)

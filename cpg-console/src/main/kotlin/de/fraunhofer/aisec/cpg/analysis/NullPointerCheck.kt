@@ -61,7 +61,7 @@ class NullPointerCheck {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: SubscriptionExpression) {
+                    fun visit(v: SubscriptExpression) {
                         handleHasBase(v)
                     }
                 }

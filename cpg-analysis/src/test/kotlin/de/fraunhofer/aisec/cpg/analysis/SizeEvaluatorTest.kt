@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptionExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -108,7 +108,7 @@ class SizeEvaluatorTest {
 
         val subscriptExpr =
             ((forLoop.statement as Block).statements[0] as AssignExpression).lhs<
-                SubscriptionExpression
+                SubscriptExpression
             >()
 
         value = evaluator.evaluate(subscriptExpr) as Int

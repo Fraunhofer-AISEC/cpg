@@ -168,7 +168,7 @@ flowchart LR
   child --EOG--> parent
 ```
 
-## SubscriptionExpression
+## SubscriptExpression
 Array access in the form of `arrayExpression[subscriptExpression]`.
 
 Interesting fields:
@@ -182,7 +182,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
   child --EOG--> child2["subscriptExpression"]
-  parent(["SubscriptionExpression"]) --EOG--> next:::outer
+  parent(["SubscriptExpression"]) --EOG--> next:::outer
   parent -.-> child["arrayExpression"]
   parent -.-> child2
   child2 --EOG--> parent

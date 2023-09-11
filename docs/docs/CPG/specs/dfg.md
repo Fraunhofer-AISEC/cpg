@@ -169,7 +169,7 @@ Scheme:
     initializer -- DFG --> node
 ```
 
-## SubscriptionExpression
+## SubscriptExpression
 
 Interesting fields:
 
@@ -181,7 +181,7 @@ The `arrayExpression` flows to the subscription expression. This means, we do no
 Scheme:
   ```mermaid
   flowchart LR
-    arrayExpression -- DFG --> node([SubscriptionExpression]);
+    arrayExpression -- DFG --> node([SubscriptExpression]);
     arrayExpression -.- node;
   ```
 

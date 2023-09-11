@@ -65,7 +65,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is BinaryOperator -> handleBinaryOp(node, parent)
             is AssignExpression -> handleAssignExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
-            is SubscriptionExpression -> handleSubscriptionExpression(node)
+            is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
             is Reference -> handleReference(node)
@@ -337,10 +337,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to an [SubscriptionExpression]. The whole array `x` flows to the result
+     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result
      * `x[i]`.
      */
-    protected fun handleSubscriptionExpression(node: SubscriptionExpression) {
+    protected fun handleSubscriptExpression(node: SubscriptExpression) {
         node.addPrevDFG(node.arrayExpression)
     }
 

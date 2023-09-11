@@ -662,7 +662,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
                 base = base.arguments[index]
             } else if (baseType is PointerType) {
-                val arrayExpr = newSubscriptionExpression("")
+                val arrayExpr = newSubscriptExpression("")
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
@@ -1243,7 +1243,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         compoundStatement.addStatement(newArrayDecl)
 
         val decl = newArrayDecl.declarations[0] as? VariableDeclaration
-        val arrayExpr = newSubscriptionExpression(instrStr)
+        val arrayExpr = newSubscriptExpression(instrStr)
         arrayExpr.arrayExpression =
             newReference(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
@@ -1269,7 +1269,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * instruction which is modeled as access to an array at a given index.
      */
     private fun handleExtractelement(instr: LLVMValueRef): Statement {
-        val arrayExpr = newSubscriptionExpression(frontend.codeOf(instr))
+        val arrayExpr = newSubscriptExpression(frontend.codeOf(instr))
         arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 1)
 
@@ -1326,7 +1326,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (array1 is Literal<*> && array1.value == null) {
                     initializers += newLiteral(null, elementType, instrStr)
                 } else {
-                    val arrayExpr = newSubscriptionExpression(instrStr)
+                    val arrayExpr = newSubscriptExpression(instrStr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt, primitiveType("i32"), instrStr)
@@ -1338,7 +1338,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (array2 is Literal<*> && array2.value == null) {
                     initializers += newLiteral(null, elementType, instrStr)
                 } else {
-                    val arrayExpr = newSubscriptionExpression(instrStr)
+                    val arrayExpr = newSubscriptExpression(instrStr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 1)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt - array1Length, primitiveType("i32"), instrStr)

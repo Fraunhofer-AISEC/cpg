@@ -165,7 +165,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleArraySubscriptExpression(ctx: IASTArraySubscriptExpression): Expression {
-        val arraySubsExpression = newSubscriptionExpression(ctx.rawSignature)
+        val arraySubsExpression = newSubscriptExpression(ctx.rawSignature)
         handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
         handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
         return arraySubsExpression
