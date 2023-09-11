@@ -398,10 +398,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [SubscriptExpression] or an [MemberExpression],
-     * depending on whether the accessed variable is a struct or an array. Furthermore, since
-     * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
-     * we need to unwrap those into individual expressions.
+     * We try to convert it either into an [SubscriptExpression] or an [MemberExpression], depending
+     * on whether the accessed variable is a struct or an array. Furthermore, since `getelementptr`
+     * allows an (infinite) chain of sub-element access within a single instruction, we need to
+     * unwrap those into individual expressions.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =

@@ -858,8 +858,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(1, yMod.rhs.size)
         assertEquals(
             3L,
-            ((yMod.lhs.first() as? SubscriptExpression)?.subscriptExpression as? Literal<*>)
-                ?.value
+            ((yMod.lhs.first() as? SubscriptExpression)?.subscriptExpression as? Literal<*>)?.value
         )
         assertSame(
             yModInit,
@@ -875,20 +874,17 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(shuffledInit)
         assertSame(
             origX,
-            ((shuffledInit.initializers[0] as? SubscriptExpression)?.arrayExpression
-                    as? Reference)
+            ((shuffledInit.initializers[0] as? SubscriptExpression)?.arrayExpression as? Reference)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[1] as? SubscriptExpression)?.arrayExpression
-                    as? Reference)
+            ((shuffledInit.initializers[1] as? SubscriptExpression)?.arrayExpression as? Reference)
                 ?.refersTo
         )
         assertSame(
             yModInit,
-            ((shuffledInit.initializers[2] as? SubscriptExpression)?.arrayExpression
-                    as? Reference)
+            ((shuffledInit.initializers[2] as? SubscriptExpression)?.arrayExpression as? Reference)
                 ?.refersTo
         )
         assertSame(
