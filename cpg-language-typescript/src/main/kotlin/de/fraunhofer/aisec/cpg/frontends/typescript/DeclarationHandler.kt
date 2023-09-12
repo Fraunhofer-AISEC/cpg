@@ -111,7 +111,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
-        return newParamVariableDeclaration(name, type, false, this.frontend.codeOf(node))
+        return newParameterDeclaration(name, type, false, this.frontend.codeOf(node))
     }
 
     fun handleSourceFile(node: TypeScriptNode): TranslationUnitDeclaration {

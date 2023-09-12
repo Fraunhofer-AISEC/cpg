@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
@@ -171,7 +171,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     frontend.typeOf(param.type)
                 }
 
-            val p = newParamVariableDeclaration(name, type, variadic, rawNode = param)
+            val p = newParameterDeclaration(name, type, variadic, rawNode = param)
 
             frontend.scopeManager.addDeclaration(p)
 
@@ -180,7 +180,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         // Check, if the last statement is a return statement, otherwise we insert an implicit one
         val body = frontend.statementHandler.handle(funcDecl.body)
-        if (body is CompoundStatement) {
+        if (body is Block) {
             val last = body.statements.lastOrNull()
             if (last !is ReturnStatement) {
                 val ret = newReturnStatement()

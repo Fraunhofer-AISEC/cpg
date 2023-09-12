@@ -51,15 +51,11 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** C++ constexpr construct. */
     var isConstExpression = false
 
-    /**
-     * The statement that is executed, if the condition is evaluated as true. Usually a
-     * [CompoundStatement].
-     */
+    /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
     @AST var thenStatement: Statement? = null
 
     /**
-     * The statement that is executed, if the condition is evaluated as false. Usually a
-     * [CompoundStatement].
+     * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */
     @AST var elseStatement: Statement? = null
 

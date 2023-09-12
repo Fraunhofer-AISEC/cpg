@@ -95,14 +95,14 @@ internal class FunctionTemplateTest : BaseTest() {
                 true
             )
         // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
-        val functionTemplateDeclaration = result.allChildren<FunctionTemplateDeclaration>()[0]
+        val functionTemplateDecl = result.allChildren<FunctionTemplateDeclaration>()[0]
 
         // Check FunctionTemplate Parameters
-        val typeParamDeclarations = result.allChildren<TypeParamDeclaration>()
-        assertEquals(1, typeParamDeclarations.size)
+        val typeParamDecls = result.allChildren<TypeParameterDeclaration>()
+        assertEquals(1, typeParamDecls.size)
 
-        val typeParamDeclaration = typeParamDeclarations[0]
-        assertEquals(typeParamDeclaration, functionTemplateDeclaration.parameters[0])
+        val typeParamDeclaration = typeParamDecls[0]
+        assertEquals(typeParamDeclaration, functionTemplateDecl.parameters[0])
 
         val typeT = ParameterizedType("T", CPPLanguage())
         val intType = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
@@ -114,7 +114,7 @@ internal class FunctionTemplateTest : BaseTest() {
         val int2 = findByUniquePredicate(result.literals { it.value == 2 }) { it.value == 2 }
         val int3 = findByUniquePredicate(result.literals) { it.value == 3 }
         val int5 = findByUniquePredicate(result.literals) { it.value == 5 }
-        assertEquals(N, functionTemplateDeclaration.parameters[1])
+        assertEquals(N, functionTemplateDecl.parameters[1])
         assertEquals(intType, N.type)
         assertEquals(5, (N.default as Literal<*>).value)
         assertTrue(N.prevDFG.contains(int5))
@@ -122,9 +122,9 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(N.prevDFG.contains(int2))
 
         // Check the realization
-        assertEquals(1, functionTemplateDeclaration.realization.size)
+        assertEquals(1, functionTemplateDecl.realization.size)
 
-        val fixedMultiply = functionTemplateDeclaration.realization[0]
+        val fixedMultiply = functionTemplateDecl.realization[0]
         val funcType = fixedMultiply.type as? FunctionType
         assertNotNull(funcType)
         assertEquals(typeT, funcType.returnTypes.firstOrNull())
@@ -539,8 +539,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, templateDeclaration.realization.size)
         assertEquals(fixedDivision, templateDeclaration.realization[0])
         assertEquals(2, templateDeclaration.parameters.size)
-        assertTrue(templateDeclaration.parameters[0] is TypeParamDeclaration)
-        assertTrue(templateDeclaration.parameters[1] is ParamVariableDeclaration)
+        assertTrue(templateDeclaration.parameters[0] is TypeParameterDeclaration)
+        assertTrue(templateDeclaration.parameters[1] is ParameterDeclaration)
         assertEquals(1, fixedDivision.parameters.size)
         val callInt2 =
             findByUniquePredicate(result.calls) { c: CallExpression ->
@@ -565,8 +565,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, templateDeclaration.realization.size)
         assertEquals(fixedDivision, templateDeclaration.realization[0])
         assertEquals(2, templateDeclaration.parameters.size)
-        assertTrue(templateDeclaration.parameters[0] is TypeParamDeclaration)
-        assertTrue(templateDeclaration.parameters[1] is ParamVariableDeclaration)
+        assertTrue(templateDeclaration.parameters[0] is TypeParameterDeclaration)
+        assertTrue(templateDeclaration.parameters[1] is ParameterDeclaration)
         assertEquals(1, fixedDivision.parameters.size)
         val callDouble3 =
             findByUniquePredicate(result.calls) { c: CallExpression ->

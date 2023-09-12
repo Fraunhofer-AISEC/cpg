@@ -44,7 +44,7 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
 
     /**
      * The statement that is going to be executed, until the condition evaluates to false for the
-     * first time. Usually a [CompoundStatement].
+     * first time. Usually a [Block].
      */
     @AST var statement: Statement? = null
 

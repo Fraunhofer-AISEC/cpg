@@ -192,8 +192,8 @@ fun MetadataProvider.newConstructExpression(
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
     condition: Expression,
-    thenExpr: Expression?,
-    elseExpr: Expression?,
+    thenExpression: Expression?,
+    elseExpression: Expression?,
     type: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
@@ -203,8 +203,8 @@ fun MetadataProvider.newConditionalExpression(
 
     node.type = type
     node.condition = condition
-    node.thenExpr = thenExpr
-    node.elseExpr = elseExpr
+    node.thenExpression = thenExpression
+    node.elseExpression = elseExpression
 
     log(node)
     return node
@@ -252,17 +252,13 @@ fun MetadataProvider.newLambdaExpression(
 }
 
 /**
- * Creates a new [CompoundStatementExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Block]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCompoundStatementExpression(
-    code: String? = null,
-    rawNode: Any? = null
-): CompoundStatementExpression {
-    val node = CompoundStatementExpression()
+fun MetadataProvider.newBlock(code: String? = null, rawNode: Any? = null): Block {
+    val node = Block()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -300,12 +296,12 @@ fun MetadataProvider.newCallExpression(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newExplicitConstructorInvocation(
+fun MetadataProvider.newConstructorCallExpression(
     containingClass: String?,
     code: String? = null,
     rawNode: Any? = null
-): ExplicitConstructorInvocation {
-    val node = ExplicitConstructorInvocation()
+): ConstructorCallExpression {
+    val node = ConstructorCallExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.containingClass = containingClass
@@ -409,17 +405,17 @@ fun MetadataProvider.newTypeIdExpression(
 }
 
 /**
- * Creates a new [ArraySubscriptionExpression]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [SubscriptExpression]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newArraySubscriptionExpression(
+fun MetadataProvider.newSubscriptExpression(
     code: String? = null,
     rawNode: Any? = null
-): ArraySubscriptionExpression {
-    val node = ArraySubscriptionExpression()
+): SubscriptExpression {
+    val node = SubscriptExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -450,17 +446,17 @@ fun MetadataProvider.newRangeExpression(
 }
 
 /**
- * Creates a new [ArrayCreationExpression]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [NewArrayExpression]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newArrayCreationExpression(
+fun MetadataProvider.newNewArrayExpression(
     code: String? = null,
     rawNode: Any? = null
-): ArrayCreationExpression {
-    val node = ArrayCreationExpression()
+): NewArrayExpression {
+    val node = NewArrayExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -468,19 +464,19 @@ fun MetadataProvider.newArrayCreationExpression(
 }
 
 /**
- * Creates a new [DeclaredReferenceExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Reference]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDeclaredReferenceExpression(
+fun MetadataProvider.newReference(
     name: CharSequence?,
     type: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
-): DeclaredReferenceExpression {
-    val node = DeclaredReferenceExpression()
+): Reference {
+    val node = Reference()
     node.applyMetadata(this, name, rawNode, code, true)
 
     node.type = type

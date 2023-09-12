@@ -287,7 +287,7 @@ class CallResolverTest : BaseTest() {
         // Check defines edge
         assertEquals(displayDefinition, displayDeclaration.definition)
 
-        // Check defaults edge of ParamVariableDeclaration
+        // Check defaults edge of ParameterDeclaration
         assertEquals(displayDeclaration.defaultParameters, displayDefinition.defaultParameters)
 
         // Check call display(1);
@@ -368,7 +368,7 @@ class CallResolverTest : BaseTest() {
             }
         val literalStar = findByUniquePredicate(result.literals) { it.value == '*' }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 }
-        // Check defaults edge of ParamVariableDeclaration
+        // Check defaults edge of ParameterDeclaration
         assertTrue(displayFunction.defaultParameters[0] is Literal<*>)
         assertTrue(displayFunction.defaultParameters[1] is Literal<*>)
         assertEquals('*', (displayFunction.defaultParameters[0] as Literal<*>).value)

@@ -86,7 +86,7 @@ class UnreachableEOGPassTest {
         val incOp = thenDecl.end.nextEOGEdges[0]
         assertFalse(incOp.getProperty(Properties.UNREACHABLE) as Boolean)
         assertEquals(1, incOp.end.nextEOGEdges.size)
-        // The compoundStmt
+        // The block
         val thenCompound = incOp.end.nextEOGEdges[0]
         assertFalse(thenCompound.getProperty(Properties.UNREACHABLE) as Boolean)
         assertEquals(1, thenCompound.end.nextEOGEdges.size)
@@ -103,7 +103,7 @@ class UnreachableEOGPassTest {
         val decOp = elseDecl.end.nextEOGEdges[0]
         assertTrue(decOp.getProperty(Properties.UNREACHABLE) as Boolean)
         assertEquals(1, decOp.end.nextEOGEdges.size)
-        // The compoundStmt
+        // The block
         val elseCompound = decOp.end.nextEOGEdges[0]
         assertTrue(elseCompound.getProperty(Properties.UNREACHABLE) as Boolean)
         assertEquals(1, elseCompound.end.nextEOGEdges.size)

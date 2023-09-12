@@ -96,7 +96,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 if (capture.isByReference) {
                     val valueDeclaration =
                         frontend.scopeManager.resolveReference(
-                            newDeclaredReferenceExpression(capture?.identifier?.toString())
+                            newReference(capture?.identifier?.toString())
                         )
                     valueDeclaration?.let { lambda.mutableVariables.add(it) }
                 }
@@ -126,9 +126,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCompoundStatementExpression(
         ctx: CPPASTCompoundStatementExpression
     ): Expression {
-        val cse = newCompoundStatementExpression(ctx.rawSignature)
-        cse.statement = frontend.statementHandler.handle(ctx.compoundStatement)
-        return cse
+        return frontend.statementHandler.handle(ctx.compoundStatement) as Expression
     }
 
     private fun handleTypeIdExpression(ctx: IASTTypeIdExpression): TypeIdExpression {
@@ -167,7 +165,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleArraySubscriptExpression(ctx: IASTArraySubscriptExpression): Expression {
-        val arraySubsExpression = newArraySubscriptionExpression(ctx.rawSignature)
+        val arraySubsExpression = newSubscriptExpression(ctx.rawSignature)
         handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
         handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
         return arraySubsExpression
@@ -182,7 +180,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return if (ctx.isArrayAllocation) {
             t.array()
             val arrayMods = (ctx.typeId.abstractDeclarator as IASTArrayDeclarator).arrayModifiers
-            val arrayCreate = newArrayCreationExpression(code)
+            val arrayCreate = newNewArrayExpression(code)
             arrayCreate.type = t
             for (arrayMod in arrayMods) {
                 val constant = handle(arrayMod.constantExpression)
@@ -427,7 +425,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
                         .templateName
                         .toString()
-                val ref = newDeclaredReferenceExpression(name)
+                val ref = newReference(name)
                 callExpression = newCallExpression(ref, name, ctx.rawSignature, true)
                 getTemplateArguments(
                         (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
@@ -461,11 +459,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return callExpression
     }
 
-    private fun handleIdExpression(ctx: IASTIdExpression): DeclaredReferenceExpression {
+    private fun handleIdExpression(ctx: IASTIdExpression): Reference {
         // this expression could actually be a field / member expression, but somehow CDT only
         // recognizes them as a member expression if it has an explicit 'this'
         // TODO: handle this? convert the declared reference expression into a member expression?
-        return newDeclaredReferenceExpression(ctx.name.toString(), unknownType(), ctx.rawSignature)
+        return newReference(ctx.name.toString(), unknownType(), ctx.rawSignature)
     }
 
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
@@ -524,8 +522,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
-        if (rhs is UnaryOperator && rhs.input is DeclaredReferenceExpression) {
-            (rhs.input as DeclaredReferenceExpression).resolutionHelper = lhs
+        if (rhs is UnaryOperator && rhs.input is Reference) {
+            (rhs.input as Reference).resolutionHelper = lhs
         }
 
         return assign
@@ -566,11 +564,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
                     is CPPASTFieldDesignator -> {
                         oneLhs =
-                            newDeclaredReferenceExpression(
-                                des.name.toString(),
-                                unknownType(),
-                                des.getRawSignature()
-                            )
+                            newReference(des.name.toString(), unknownType(), des.getRawSignature())
                     }
                     is CPPASTArrayRangeDesignator -> {
                         oneLhs =
@@ -620,11 +614,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
                     is CPPASTFieldDesignator -> {
                         oneLhs =
-                            newDeclaredReferenceExpression(
-                                des.name.toString(),
-                                unknownType(),
-                                des.getRawSignature()
-                            )
+                            newReference(des.name.toString(), unknownType(), des.getRawSignature())
                     }
                     is CPPASTArrayRangeDesignator -> {
                         oneLhs =
@@ -779,17 +769,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     /**
      * In C++, the "this" expression is also modelled as a literal. In our case however, we want to
-     * return a [DeclaredReferenceExpression], which is then later connected to the current method's
+     * return a [Reference], which is then later connected to the current method's
      * [MethodDeclaration.receiver].
      */
-    private fun handleThisLiteral(ctx: IASTLiteralExpression): DeclaredReferenceExpression {
+    private fun handleThisLiteral(ctx: IASTLiteralExpression): Reference {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went
         // wrong, so we might have an unknown type.
         val recordType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         // We do want to make sure that the type of the expression is at least a pointer.
         val pointerType = recordType.pointer()
 
-        return newDeclaredReferenceExpression("this", pointerType, ctx.rawSignature, ctx)
+        return newReference("this", pointerType, ctx.rawSignature, ctx)
     }
 
     private val IASTLiteralExpression.valueWithSuffix: Pair<String, String>

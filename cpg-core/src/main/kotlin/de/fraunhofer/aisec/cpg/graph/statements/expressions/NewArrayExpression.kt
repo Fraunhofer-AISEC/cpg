@@ -37,7 +37,8 @@ import org.neo4j.ogm.annotation.Relationship
  * Expressions of the form `new Type[]` that represents the creation of an array, mostly used in
  * combination with a [VariableDeclaration].
  */
-class ArrayCreationExpression : Expression() {
+// TODO Merge and/or refactor with new Expression
+class NewArrayExpression : Expression() {
     /**
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
@@ -58,7 +59,7 @@ class ArrayCreationExpression : Expression() {
     var dimensionEdges = mutableListOf<PropertyEdge<Expression>>()
 
     /** Virtual property to access [dimensionEdges] without property edges. */
-    var dimensions by PropertyEdgeDelegate(ArrayCreationExpression::dimensionEdges)
+    var dimensions by PropertyEdgeDelegate(NewArrayExpression::dimensionEdges)
 
     /** Adds an [Expression] to the existing [dimensions]. */
     fun addDimension(expression: Expression) {
@@ -67,7 +68,7 @@ class ArrayCreationExpression : Expression() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ArrayCreationExpression) return false
+        if (other !is NewArrayExpression) return false
         return (super.equals(other) &&
             initializer == other.initializer &&
             dimensions == other.dimensions &&

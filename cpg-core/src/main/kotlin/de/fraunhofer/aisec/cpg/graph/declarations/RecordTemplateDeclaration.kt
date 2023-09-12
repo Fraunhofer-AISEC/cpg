@@ -34,8 +34,8 @@ import java.util.*
 import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
 
-/** Node representing a declaration of a ClassTemplate */
-class ClassTemplateDeclaration : TemplateDeclaration() {
+/** Node representing a declaration of a template class or struct */
+class RecordTemplateDeclaration : TemplateDeclaration() {
     /**
      * Edges pointing to all RecordDeclarations that are realized by the ClassTempalte. Before the
      * expansion pass there is only a single RecordDeclaration which is instantiated after the
@@ -46,7 +46,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
     val realizationEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
 
     override val realizations: List<Declaration> by
-        PropertyEdgeDelegate(ClassTemplateDeclaration::realizationEdges)
+        PropertyEdgeDelegate(RecordTemplateDeclaration::realizationEdges)
 
     fun addRealization(realizedRecord: RecordDeclaration) {
         val propertyEdge = PropertyEdge(this, realizedRecord)
@@ -59,7 +59,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
     }
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is TypeParamDeclaration || declaration is ParamVariableDeclaration) {
+        if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {
             addIfNotContains(super.parameterEdges, declaration)
         } else if (declaration is RecordDeclaration) {
             addIfNotContains(realizationEdges, declaration)
@@ -70,7 +70,7 @@ class ClassTemplateDeclaration : TemplateDeclaration() {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
-        val that = other as ClassTemplateDeclaration
+        val that = other as RecordTemplateDeclaration
         return realizations == that.realizations &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&

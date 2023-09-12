@@ -26,13 +26,13 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ClassTemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordTemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypeParamDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TypeParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  */
 fun addRecursiveDefaultTemplateArgs(
     constructExpression: ConstructExpression,
-    template: ClassTemplateDeclaration
+    template: RecordTemplateDeclaration
 ) {
     var templateParameters: Int
     do {
@@ -84,15 +84,15 @@ fun addRecursiveDefaultTemplateArgs(
  */
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
-    template: ClassTemplateDeclaration,
+    template: RecordTemplateDeclaration,
     templateParametersExplicitInitialization: MutableMap<Node, Node>
 ) {
     for (i in constructExpression.templateParameters.indices) {
         val explicit = constructExpression.templateParameters[i]
-        if (template.parameters[i] is TypeParamDeclaration) {
+        if (template.parameters[i] is TypeParameterDeclaration) {
             templateParametersExplicitInitialization[
-                (template.parameters[i] as TypeParamDeclaration).type] = explicit
-        } else if (template.parameters[i] is ParamVariableDeclaration) {
+                (template.parameters[i] as TypeParameterDeclaration).type] = explicit
+        } else if (template.parameters[i] is ParameterDeclaration) {
             templateParametersExplicitInitialization[template.parameters[i]] = explicit
         }
     }
@@ -109,7 +109,7 @@ fun handleExplicitTemplateParameters(
  *   default (no recursive)
  */
 fun applyMissingParams(
-    template: ClassTemplateDeclaration,
+    template: RecordTemplateDeclaration,
     constructExpression: ConstructExpression,
     templateParametersExplicitInitialization: Map<Node, Node>,
     templateParameterRealDefaultInitialization: Map<Node, Node?>
@@ -122,7 +122,7 @@ fun applyMissingParams(
             )
         for (m in missingParams) {
             var missingParam = m
-            if (missingParam is DeclaredReferenceExpression) {
+            if (missingParam is Reference) {
                 missingParam = missingParam.refersTo
             }
             if (missingParam in templateParametersExplicitInitialization) {
@@ -172,14 +172,14 @@ fun applyMissingParams(
  *   default (no recursive)
  */
 fun handleDefaultTemplateParameters(
-    template: ClassTemplateDeclaration,
+    template: RecordTemplateDeclaration,
     templateParameterRealDefaultInitialization: MutableMap<Node, Node?>
 ) {
     val declaredTemplateTypes = mutableListOf<Type?>()
-    val declaredNonTypeTemplate = mutableListOf<ParamVariableDeclaration>()
+    val declaredNonTypeTemplate = mutableListOf<ParameterDeclaration>()
     val parametersWithDefaults = template.parametersWithDefaults
     for (declaration in template.parameters) {
-        if (declaration is TypeParamDeclaration) {
+        if (declaration is TypeParameterDeclaration) {
             declaredTemplateTypes.add(declaration.type)
             if (
                 declaration.default !in declaredTemplateTypes &&
@@ -187,13 +187,12 @@ fun handleDefaultTemplateParameters(
             ) {
                 templateParameterRealDefaultInitialization[declaration.type] = declaration.default
             }
-        } else if (declaration is ParamVariableDeclaration) {
+        } else if (declaration is ParameterDeclaration) {
             declaredNonTypeTemplate.add(declaration)
             if (
                 declaration in parametersWithDefaults &&
-                    (declaration.default !is DeclaredReferenceExpression ||
-                        (declaration.default as DeclaredReferenceExpression?)?.refersTo !in
-                            declaredNonTypeTemplate)
+                    (declaration.default !is Reference ||
+                        (declaration.default as Reference?)?.refersTo !in declaredNonTypeTemplate)
             ) {
                 templateParameterRealDefaultInitialization[declaration] = declaration.default
             }

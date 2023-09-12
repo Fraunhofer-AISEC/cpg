@@ -304,7 +304,7 @@ fun resolveConstructorWithImplicitCast(
  * realizations of the Template 3. Set return type of the CallExpression and checks if it uses a
  * ParameterizedType and therefore has to be instantiated 4. Set Template Parameters Edge from the
  * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to
- * ParamVariableDeclaration in TemplateDeclaration
+ * ParameterDeclaration in TemplateDeclaration
  *
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
@@ -363,10 +363,10 @@ fun applyTemplateInstantiation(
         }
     }
 
-    // Add DFG edges from the instantiation Expression to the ParamVariableDeclaration in the
+    // Add DFG edges from the instantiation Expression to the ParameterDeclaration in the
     // Template.
     for ((declaration) in initializationSignature) {
-        if (declaration is ParamVariableDeclaration) {
+        if (declaration is ParameterDeclaration) {
             initializationSignature[declaration]?.let { declaration.addPrevDFG(it) }
         }
     }
@@ -421,15 +421,15 @@ fun signatureWithImplicitCastTransformation(
  *
  * @param initialization mapping of the declaration of the template parameters to the explicit
  *   values the template is instantiated with
- * @return mapping of the parameterized types to the corresponding TypeParamDeclaration in the
+ * @return mapping of the parameterized types to the corresponding TypeParameterDeclaration in the
  *   template
  */
 fun getParameterizedSignaturesFromInitialization(
     initialization: Map<Declaration?, Node?>
-): Map<ParameterizedType, TypeParamDeclaration> {
-    val parameterizedSignature: MutableMap<ParameterizedType, TypeParamDeclaration> = HashMap()
+): Map<ParameterizedType, TypeParameterDeclaration> {
+    val parameterizedSignature: MutableMap<ParameterizedType, TypeParameterDeclaration> = HashMap()
     for (templateParam in initialization.keys) {
-        if (templateParam is TypeParamDeclaration) {
+        if (templateParam is TypeParameterDeclaration) {
             parameterizedSignature[templateParam.type as ParameterizedType] = templateParam
         }
     }
@@ -454,7 +454,7 @@ fun getParameterizedSignaturesFromInitialization(
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
  *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
  *   initialization -&gt; initialization not possible
  */
 fun getTemplateInitializationSignature(
@@ -516,7 +516,7 @@ fun getTemplateInitializationSignature(
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
  *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
  *   initialization -&gt; initialization not possible
  */
 fun constructTemplateInitializationSignatureFromTemplateParameters(
@@ -535,7 +535,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
                 instantiationSignature[templateParameter] = callParameter
                 instantiationType[callParameter] =
                     TemplateDeclaration.TemplateInitialization.EXPLICIT
-                if (templateParameter is TypeParamDeclaration) {
+                if (templateParameter is TypeParameterDeclaration) {
                     explicitInstantiated.add(templateParameter.type as ParameterizedType)
                 }
                 orderedInitializationSignature[templateParameter] = i
@@ -561,19 +561,19 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
  *
  * @param callParameterArg
  * @param templateParameter
- * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
- *   ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+ * @return If the TemplateParameter is an TypeParameterDeclaration, the callParameter must be an
+ *   ObjectType => returns true If the TemplateParameter is a ParameterDeclaration, the
  *   callParameterArg must be an Expression and its type must match the type of the
- *   ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+ *   ParameterDeclaration (same type or subtype) => returns true Otherwise return false
  */
 fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
     if (callParameter is TypeExpression) {
         callParameter = callParameter.type
     }
-    return if (callParameter is Type && templateParameter is TypeParamDeclaration) {
+    return if (callParameter is Type && templateParameter is TypeParameterDeclaration) {
         callParameter is ObjectType
-    } else if (callParameter is Expression && templateParameter is ParamVariableDeclaration) {
+    } else if (callParameter is Expression && templateParameter is ParameterDeclaration) {
         callParameter.type == templateParameter.type ||
             callParameter.type.isDerivedFrom(templateParameter.type)
     } else {
@@ -625,7 +625,7 @@ fun handleImplicitTemplateParameter(
 
 /**
  * @param function FunctionDeclaration realization of the template
- * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParamDeclarations
+ * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParameterDeclarations
  *   that define them, used to backwards resolve
  * @param initializationSignature mapping between the ParamDeclaration of the template and the
  *   corresponding instantiations
@@ -635,7 +635,7 @@ fun handleImplicitTemplateParameter(
  */
 fun getCallSignature(
     function: FunctionDeclaration,
-    parameterizedTypeResolution: Map<ParameterizedType, TypeParamDeclaration>,
+    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
     initializationSignature: Map<Declaration?, Node?>
 ): List<Type> {
     val templateCallSignature = mutableListOf<Type>()

@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -82,7 +81,7 @@ class FluentTest {
         assertLocalName("argc", argc)
         assertLocalName("int", argc.type)
 
-        val body = main.body as? CompoundStatement
+        val body = main.body as? Block
         assertNotNull(body)
         assertTrue {
             body.scope is FunctionScope
@@ -130,7 +129,7 @@ class FluentTest {
         assertNotNull(printf)
         assertEquals("else", printf.arguments[0]<Literal<*>>()?.value)
 
-        var ref = condition.lhs<DeclaredReferenceExpression>()
+        var ref = condition.lhs<Reference>()
         assertNotNull(ref)
         assertLocalName("argc", ref)
 
@@ -157,7 +156,7 @@ class FluentTest {
         assertNotNull(binOp.scope)
         assertEquals("+", binOp.operatorCode)
 
-        ref = binOp.lhs as? DeclaredReferenceExpression
+        ref = binOp.lhs as? Reference
         assertNotNull(ref)
         assertNotNull(ref.scope)
         assertNull(ref.refersTo)

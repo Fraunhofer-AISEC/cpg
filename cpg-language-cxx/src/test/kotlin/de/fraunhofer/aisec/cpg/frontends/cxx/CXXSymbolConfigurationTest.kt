@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,7 +63,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
 
         // without additional symbols, the first line will look like a reference (to something we do
         // not know)
-        val dre = binaryOperator.getRhsAs(DeclaredReferenceExpression::class.java)
+        val dre = binaryOperator.getRhsAs(Reference::class.java)
         assertNotNull(dre)
         assertLocalName("HELLO_WORLD", dre)
 

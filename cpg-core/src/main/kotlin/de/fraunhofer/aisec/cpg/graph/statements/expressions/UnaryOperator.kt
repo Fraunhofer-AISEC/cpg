@@ -62,8 +62,8 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
         if (operatorCode == "++" || operatorCode == "--") {
             access = AccessValues.READWRITE
         }
-        if (input is DeclaredReferenceExpression) {
-            (input as? DeclaredReferenceExpression)?.access = access
+        if (input is Reference) {
+            (input as? Reference)?.access = access
         }
     }
 

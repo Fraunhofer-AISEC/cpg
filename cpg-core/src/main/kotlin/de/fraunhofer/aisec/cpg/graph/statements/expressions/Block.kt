@@ -23,14 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * A statement which contains a list of statements. A common example is a function body within a
  * [FunctionDeclaration].
  */
-class CompoundStatement : Statement(), StatementHolder {
+class Block : Expression(), StatementHolder {
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
@@ -59,10 +59,10 @@ class CompoundStatement : Statement(), StatementHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CompoundStatement) return false
+        if (other !is Block) return false
         return super.equals(other) &&
             this.statements == other.statements &&
-            propertyEqualsList(statementEdges, other.statementEdges)
+            PropertyEdge.propertyEqualsList(statementEdges, other.statementEdges)
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), statements)

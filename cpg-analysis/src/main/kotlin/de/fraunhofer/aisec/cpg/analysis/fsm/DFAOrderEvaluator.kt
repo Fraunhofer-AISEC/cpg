@@ -27,15 +27,15 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.astParent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -285,17 +285,15 @@ open class DFAOrderEvaluator(
     private fun callUsesInterestingBase(node: CallExpression, eogPath: String): List<String> {
         val allUsedBases =
             node.arguments
-                .map { arg -> (arg as? DeclaredReferenceExpression)?.refersTo }
+                .map { arg -> (arg as? Reference)?.refersTo }
                 .filter { arg -> arg != null && consideredBases.contains(arg) }
                 .toMutableList()
         if (
             node is MemberCallExpression &&
-                node.base is DeclaredReferenceExpression &&
-                consideredBases.contains(
-                    (node.base as DeclaredReferenceExpression).refersTo as Declaration
-                )
+                node.base is Reference &&
+                consideredBases.contains((node.base as Reference).refersTo as Declaration)
         ) {
-            allUsedBases.add((node.base as DeclaredReferenceExpression).refersTo)
+            allUsedBases.add((node.base as Reference).refersTo)
         }
 
         return allUsedBases.map { "$eogPath|${it?.name}.$it" }
@@ -346,7 +344,7 @@ open class DFAOrderEvaluator(
         // the end.
         var base = getBaseOfNode(node)
 
-        if (base is DeclaredReferenceExpression && base.refersTo != null) {
+        if (base is Reference && base.refersTo != null) {
             base = base.refersTo
         }
 
@@ -355,7 +353,7 @@ open class DFAOrderEvaluator(
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath|${base.name}.$base"
 
-            if (base is ParamVariableDeclaration) {
+            if (base is ParameterDeclaration) {
                 // The base was the parameter of the function? We have an inter-procedural flow!
                 interproceduralFlows[prefixedBase] = true
             }
@@ -393,7 +391,7 @@ open class DFAOrderEvaluator(
 
         var node: Node = list.first()
         // if the node refers to another node, return the node it refers to
-        (node as? DeclaredReferenceExpression)?.refersTo?.let { node = it }
+        (node as? Reference)?.refersTo?.let { node = it }
         return node
     }
 
@@ -407,7 +405,7 @@ open class DFAOrderEvaluator(
     private fun Node.getSuitableDFGTarget(): Node? {
         return this.nextDFG
             .filter {
-                it is DeclaredReferenceExpression ||
+                it is Reference ||
                     it is ReturnStatement ||
                     it is ConstructExpression ||
                     it is VariableDeclaration

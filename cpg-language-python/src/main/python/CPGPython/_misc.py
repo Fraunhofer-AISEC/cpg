@@ -106,7 +106,7 @@ def is_variable_declaration(self, target):
 
 
 def is_declared_reference(self, target):
-    n = CPG_JAVA + ".graph.statements.expressions.DeclaredReferenceExpression"
+    n = CPG_JAVA + ".graph.statements.expressions.Reference"
     return target is not None and target.java_name == n
 
 

@@ -315,9 +315,9 @@ def handle_expression_impl(self, expr):
         if self.is_declaration(value):
             self.log_with_loc(
                 ("Found a new declaration. "
-                 "Wrapping it in a DeclaredReferenceExpression."),
+                 "Wrapping it in a Reference."),
                 loglevel="DEBUG")
-            value = ExpressionBuilderKt.newDeclaredReferenceExpression(
+            value = ExpressionBuilderKt.newReference(
                 self.frontend,
                 value.getName(), value.getType(), value.getCode())
         mem = ExpressionBuilderKt.newMemberExpression(
@@ -329,7 +329,7 @@ def handle_expression_impl(self, expr):
     elif isinstance(expr, ast.Subscript):
         value = self.handle_expression(expr.value)
         slc = self.handle_expression(expr.slice)
-        exp = ExpressionBuilderKt.newArraySubscriptionExpression(
+        exp = ExpressionBuilderKt.newSubscriptExpression(
             self.frontend, self.get_src_code(expr))
         exp.setArrayExpression(value)
         exp.setSubscriptExpression(slc)
@@ -339,7 +339,7 @@ def handle_expression_impl(self, expr):
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.Name):
-        r = ExpressionBuilderKt.newDeclaredReferenceExpression(
+        r = ExpressionBuilderKt.newReference(
             self.frontend, expr.id,
             TypeBuilderKt.unknownType(self.frontend),
             self.get_src_code(expr))

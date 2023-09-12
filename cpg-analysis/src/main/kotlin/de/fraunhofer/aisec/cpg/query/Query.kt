@@ -359,12 +359,14 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
                     it.any { it2 ->
                         if (it2 is AssignmentHolder) {
                             it2.assignments.any { assign ->
-                                val prevMemberFrom = (from as? MemberExpression)?.prevDFG
-                                val nextMemberTo = (assign.target as? MemberExpression)?.nextDFG
+                                val prevMemberFromExpr = (from as? MemberExpression)?.prevDFG
+                                val nextMemberToExpr = (assign.target as? MemberExpression)?.nextDFG
                                 assign.target == from ||
-                                    prevMemberFrom != null &&
-                                        nextMemberTo != null &&
-                                        prevMemberFrom.any { it3 -> nextMemberTo.contains(it3) }
+                                    prevMemberFromExpr != null &&
+                                        nextMemberToExpr != null &&
+                                        prevMemberFromExpr.any { it3 ->
+                                            nextMemberToExpr.contains(it3)
+                                        }
                             }
                         } else {
                             false

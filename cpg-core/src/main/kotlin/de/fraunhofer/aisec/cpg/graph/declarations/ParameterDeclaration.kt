@@ -32,7 +32,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
-class ParamVariableDeclaration : ValueDeclaration(), HasDefault<Expression?> {
+class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
@@ -47,7 +47,7 @@ class ParamVariableDeclaration : ValueDeclaration(), HasDefault<Expression?> {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || other !is ParamVariableDeclaration) return false
+        if (other == null || other !is ParameterDeclaration) return false
         return super.equals(other) &&
             isVariadic == other.isVariadic &&
             defaultValue == other.defaultValue

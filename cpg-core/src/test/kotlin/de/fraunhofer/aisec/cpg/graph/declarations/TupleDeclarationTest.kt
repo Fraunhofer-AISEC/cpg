@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -66,7 +66,7 @@ class TupleDeclarationTest {
                         val tuple =
                             newTupleDeclaration(
                                 listOf(newVariableDeclaration("a"), newVariableDeclaration("b")),
-                                newCallExpression(newDeclaredReferenceExpression("func"))
+                                newCallExpression(newReference("func"))
                             )
                         scopeManager.addDeclaration(tuple)
                         tuple.elements.forEach { scopeManager.addDeclaration(it) }
@@ -102,7 +102,7 @@ class TupleDeclarationTest {
             assertNotNull(callPrint)
             assertIs<CallExpression>(callPrint)
 
-            val arg = callPrint.arguments<DeclaredReferenceExpression>(0)
+            val arg = callPrint.arguments<Reference>(0)
             assertNotNull(arg)
             assertRefersTo(arg, a)
             assertContains(arg.prevDFG, a)
@@ -141,9 +141,7 @@ class TupleDeclarationTest {
                                                 newVariableDeclaration("a"),
                                                 newVariableDeclaration("b")
                                             ),
-                                            newCallExpression(
-                                                newDeclaredReferenceExpression("func")
-                                            )
+                                            newCallExpression(newReference("func"))
                                         )
                                     this.addToPropertyEdgeDeclaration(tuple)
                                     scopeManager.addDeclaration(tuple)
@@ -182,7 +180,7 @@ class TupleDeclarationTest {
             assertNotNull(callPrint)
             assertIs<CallExpression>(callPrint)
 
-            val arg = callPrint.arguments<DeclaredReferenceExpression>(0)
+            val arg = callPrint.arguments<Reference>(0)
             assertNotNull(arg)
             assertRefersTo(arg, a)
             assertContains(arg.prevDFG, a)

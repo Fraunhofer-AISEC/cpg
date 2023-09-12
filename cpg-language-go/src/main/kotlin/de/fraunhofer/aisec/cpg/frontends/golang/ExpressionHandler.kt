@@ -109,7 +109,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             return literal
         }
 
-        val ref = newDeclaredReferenceExpression(ident.name, rawNode = ident)
+        val ref = newReference(ident.name, rawNode = ident)
 
         // Check, if this refers to a package import
         val import = frontend.currentTU?.getIncludeByName(ident.name)
@@ -121,10 +121,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return ref
     }
 
-    private fun handleIndexExpr(
-        indexExpr: GoStandardLibrary.Ast.IndexExpr
-    ): ArraySubscriptionExpression {
-        val ase = newArraySubscriptionExpression(rawNode = indexExpr)
+    private fun handleIndexExpr(indexExpr: GoStandardLibrary.Ast.IndexExpr): SubscriptExpression {
+        val ase = newSubscriptExpression(rawNode = indexExpr)
         ase.arrayExpression = frontend.expressionHandler.handle(indexExpr.x)
         ase.subscriptExpression = frontend.expressionHandler.handle(indexExpr.index)
 
@@ -224,7 +222,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val expression =
             // Actually make() can make more than just arrays, i.e. channels and maps
             if (args[0] is GoStandardLibrary.Ast.ArrayType) {
-                val array = newArrayCreationExpression(rawNode = callExpr)
+                val array = newNewArrayExpression(rawNode = callExpr)
 
                 // second argument is a dimension (if this is an array), usually a literal
                 if (args.size > 1) {
@@ -250,9 +248,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return expression
     }
 
-    private fun handleSelectorExpr(
-        selectorExpr: GoStandardLibrary.Ast.SelectorExpr
-    ): DeclaredReferenceExpression {
+    private fun handleSelectorExpr(selectorExpr: GoStandardLibrary.Ast.SelectorExpr): Reference {
         val base = handle(selectorExpr.x) ?: newProblemExpression("missing base")
 
         // Check, if this just a regular reference to a variable with a package scope and not a
@@ -273,7 +269,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 // resolver will then resolve this
                 val fqn = "${base.name}.${selectorExpr.sel.name}"
 
-                newDeclaredReferenceExpression(fqn, rawNode = selectorExpr)
+                newReference(fqn, rawNode = selectorExpr)
             }
 
         return ref
@@ -281,14 +277,11 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles a ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modelling this as a combination of a [ArraySubscriptionExpression] that contains a
-     * [RangeExpression] as its subscriptExpression to share some code between this and an index
-     * expression.
+     * modelling this as a combination of a [SubscriptExpression] that contains a [RangeExpression]
+     * as its subscriptExpression to share some code between this and an index expression.
      */
-    private fun handleSliceExpr(
-        sliceExpr: GoStandardLibrary.Ast.SliceExpr
-    ): ArraySubscriptionExpression {
-        val ase = newArraySubscriptionExpression(rawNode = sliceExpr)
+    private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): SubscriptExpression {
+        val ase = newSubscriptExpression(rawNode = sliceExpr)
         ase.arrayExpression =
             frontend.expressionHandler.handle(sliceExpr.x)
                 ?: newProblemExpression("missing array expression")

@@ -96,7 +96,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
-        val compound = newCompoundStatement(rawNode = blockStmt)
+        val compound = newBlock(rawNode = blockStmt)
 
         frontend.scopeManager.enterScope(compound)
 
@@ -180,7 +180,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * we create a call expression to a built-in call.
      */
     private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): CallExpression {
-        val ref = newDeclaredReferenceExpression("go")
+        val ref = newReference("go")
         val call = newCallExpression(ref, "go", rawNode = goStmt)
         call += frontend.expressionHandler.handle(goStmt.call)
 
@@ -252,7 +252,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             // TODO: not really the best way to deal with this
             // TODO: key type is always int. we could set this
             var ref = rangeStmt.key?.let { frontend.expressionHandler.handle(it) }
-            if (ref is DeclaredReferenceExpression) {
+            if (ref is Reference) {
                 val key = newVariableDeclaration(ref.name, rawNode = rangeStmt.key)
                 frontend.scopeManager.addDeclaration(key)
                 stmt.addToPropertyEdgeDeclaration(key)
@@ -260,7 +260,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
             // TODO: not really the best way to deal with this
             ref = rangeStmt.value?.let { frontend.expressionHandler.handle(it) }
-            if (ref is DeclaredReferenceExpression) {
+            if (ref is Reference) {
                 val key = newVariableDeclaration(ref.name, rawNode = rangeStmt.key)
                 frontend.scopeManager.addDeclaration(key)
                 stmt.addToPropertyEdgeDeclaration(key)
@@ -304,8 +304,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
 
         val block =
-            handle(switchStmt.body) as? CompoundStatement
-                ?: return newProblemExpression("missing switch body")
+            handle(switchStmt.body) as? Block ?: return newProblemExpression("missing switch body")
 
         // Because of the way we parse the statements, the case statement turns out to be the last
         // statement. However, we need it to be the first statement, so we need to switch first and
