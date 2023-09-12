@@ -300,7 +300,7 @@ class Schema {
             out.println("### Relationships")
 
             removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
-                out.println(
+                out.print(
                     getBoxWithClass(
                         "relationship",
                         "[${it.second}](#${ toLabel(classInfo) + it.second})"
