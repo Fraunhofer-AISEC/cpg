@@ -1,4 +1,4 @@
-<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Language-agnostic code analysis"><meta name=author content="Fraunhofer AISEC"><link href=https://fraunhofer-aisec.github.io/cpg/CPG/specs/schema/ rel=canonical><link rel=icon href=../../../assets/images/favicon.png><meta name=generator content="mkdocs-1.5.2, mkdocs-material-9.2.5"><title>CPG Schema - Code Property Graph</title><link rel=stylesheet href=../../../assets/stylesheets/main.0e669242.min.css><link rel=stylesheet href=../../../assets/stylesheets/palette.85d0ee34.min.css><link rel=stylesheet href=../../../css/timeago.css><link rel=stylesheet href=../../../stylesheets/extra.css><link rel=stylesheet href=../../../assets/fonts/Inter/inter.css><script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script><link href=../../../assets/stylesheets/glightbox.min.css rel=stylesheet><style>
+<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Language-agnostic code analysis"><meta name=author content="Fraunhofer AISEC"><link href=https://fraunhofer-aisec.github.io/cpg/CPG/specs/schema/ rel=canonical><link rel=icon href=../../../assets/images/favicon.png><meta name=generator content="mkdocs-1.5.2, mkdocs-material-9.3.1"><title>CPG Schema - Code Property Graph</title><link rel=stylesheet href=../../../assets/stylesheets/main.046329b4.min.css><link rel=stylesheet href=../../../assets/stylesheets/palette.85d0ee34.min.css><link rel=stylesheet href=../../../css/timeago.css><link rel=stylesheet href=../../../stylesheets/extra.css><link rel=stylesheet href=../../../assets/fonts/Inter/inter.css><script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script><link href=../../../assets/stylesheets/glightbox.min.css rel=stylesheet><style>
         html.glightbox-open { overflow: initial; height: 100%; }
         .gslide-title { margin-top: 0px; user-select: text; }
         .gslide-desc { color: #666; user-select: text; }
@@ -210,7 +210,7 @@ Node--"TYPEDEFS*"--&gt;NodeTYPEDEFS[&lt;a href='#etypedefdeclaration'&gt;Typedef
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ecompoundstatement>CompoundStatement</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#ecompoundstatement>BlockStatement</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -742,14 +742,14 @@ ReturnStatement--"RETURN_VALUES*"--&gt;ReturnStatementRETURN_VALUES[&lt;a href='
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#earraycreationexpression>ArrayCreationExpression</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#earraycreationexpression>NewArrayExpression</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#earraysubscriptionexpression>ArraySubscriptionExpression</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#earraysubscriptionexpression>SubscriptionExpression</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -777,7 +777,7 @@ ReturnStatement--"RETURN_VALUES*"--&gt;ReturnStatementRETURN_VALUES[&lt;a href='
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#edeclaredreferenceexpression>DeclaredReferenceExpression</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#edeclaredreferenceexpression>Reference</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -798,7 +798,7 @@ ReturnStatement--"RETURN_VALUES*"--&gt;ReturnStatementRETURN_VALUES[&lt;a href='
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ecompoundstatementexpression>CompoundStatementExpression</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#ecompoundstatementexpression>BlockStatementExpression</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -1364,7 +1364,7 @@ ArrayRangeExpression--"FLOOR¹"--&gt;ArrayRangeExpressionFLOOR[&lt;a href='#eexp
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#eexplicitconstructorinvocation>ExplicitConstructorInvocation</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#eexplicitconstructorinvocation>ConstructorCallExpression</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -1486,7 +1486,7 @@ CallExpression--"TEMPLATE_INSTANTIATION¹"--&gt;CallExpressionTEMPLATE_INSTANTIA
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 CallExpression--"ARGUMENTS*"--&gt;CallExpressionARGUMENTS[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=template_parameters_1>TEMPLATE_PARAMETERS<a id=CallExpressionTEMPLATE_PARAMETERS></a><a class=headerlink href=#template_parameters_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CallExpression--"TEMPLATE_PARAMETERS*"--&gt;CallExpressionTEMPLATE_PARAMETERS[&lt;a href='#enode'&gt;Node&lt;/a&gt;]:::outer</code></pre> <h1 id=explicitconstructorinvocation>ExplicitConstructorInvocation<a id=eExplicitConstructorInvocation></a><a class=headerlink href=#explicitconstructorinvocation title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+CallExpression--"TEMPLATE_PARAMETERS*"--&gt;CallExpressionTEMPLATE_PARAMETERS[&lt;a href='#enode'&gt;Node&lt;/a&gt;]:::outer</code></pre> <h1 id=constructorcallexpression>ConstructorCallExpression<a id=eConstructorCallExpression></a><a class=headerlink href=#constructorcallexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -1521,7 +1521,7 @@ CallExpression--"TEMPLATE_PARAMETERS*"--&gt;CallExpressionTEMPLATE_PARAMETERS[&l
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#eexplicitconstructorinvocation>ExplicitConstructorInvocation</a></span> </p> <h2 id=relationships_12>Relationships<a class=headerlink href=#relationships_12 title="Permanent link">&para;</a></h2> <p><span style="background:#dddddd;
+    padding-right: 10px;"><a href=#eexplicitconstructorinvocation>ConstructorCallExpression</a></span> </p> <h2 id=relationships_12>Relationships<a class=headerlink href=#relationships_12 title="Permanent link">&para;</a></h2> <p><span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2357,7 +2357,7 @@ AssignExpression--"RHS*"--&gt;AssignExpressionRHS[&lt;a href='#eexpression'&gt;E
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 CastExpression--"CAST_TYPE¹"--&gt;CastExpressionCAST_TYPE[&lt;a href='#etype'&gt;Type&lt;/a&gt;]:::outer</code></pre> <h3 id=expression_1>EXPRESSION<a id=CastExpressionEXPRESSION></a><a class=headerlink href=#expression_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CastExpression--"EXPRESSION¹"--&gt;CastExpressionEXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=arraycreationexpression>ArrayCreationExpression<a id=eArrayCreationExpression></a><a class=headerlink href=#arraycreationexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+CastExpression--"EXPRESSION¹"--&gt;CastExpressionEXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=newarrayexpression>NewArrayExpression<a id=eNewArrayExpression></a><a class=headerlink href=#newarrayexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2385,21 +2385,21 @@ CastExpression--"EXPRESSION¹"--&gt;CastExpressionEXPRESSION[&lt;a href='#eexpre
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#earraycreationexpression>ArrayCreationExpression</a></span> </p> <h2 id=relationships_19>Relationships<a class=headerlink href=#relationships_19 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#earraycreationexpression>NewArrayExpression</a></span> </p> <h2 id=relationships_19>Relationships<a class=headerlink href=#relationships_19 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ArrayCreationExpressionINITIALIZER>INITIALIZER</a></span> <span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#NewArrayExpressionINITIALIZER>INITIALIZER</a></span><br> <span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ArrayCreationExpressionDIMENSIONS>DIMENSIONS</a></span> <br> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#NewArrayExpressionDIMENSIONS>DIMENSIONS</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2462,11 +2462,11 @@ CastExpression--"EXPRESSION¹"--&gt;CastExpressionEXPRESSION[&lt;a href='#eexpre
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=initializer_1>INITIALIZER<a id=ArrayCreationExpressionINITIALIZER></a><a class=headerlink href=#initializer_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=initializer_1>INITIALIZER<a id=NewArrayExpressionINITIALIZER></a><a class=headerlink href=#initializer_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArrayCreationExpression--"INITIALIZER¹"--&gt;ArrayCreationExpressionINITIALIZER[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=dimensions>DIMENSIONS<a id=ArrayCreationExpressionDIMENSIONS></a><a class=headerlink href=#dimensions title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+NewArrayExpression--"INITIALIZER¹"--&gt;NewArrayExpressionINITIALIZER[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=dimensions>DIMENSIONS<a id=NewArrayExpressionDIMENSIONS></a><a class=headerlink href=#dimensions title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArrayCreationExpression--"DIMENSIONS*"--&gt;ArrayCreationExpressionDIMENSIONS[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=arraysubscriptionexpression>ArraySubscriptionExpression<a id=eArraySubscriptionExpression></a><a class=headerlink href=#arraysubscriptionexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+NewArrayExpression--"DIMENSIONS*"--&gt;NewArrayExpressionDIMENSIONS[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=subscriptionexpression>SubscriptionExpression<a id=eSubscriptionExpression></a><a class=headerlink href=#subscriptionexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2494,21 +2494,21 @@ ArrayCreationExpression--"DIMENSIONS*"--&gt;ArrayCreationExpressionDIMENSIONS[&l
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#earraysubscriptionexpression>ArraySubscriptionExpression</a></span> </p> <h2 id=relationships_20>Relationships<a class=headerlink href=#relationships_20 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#earraysubscriptionexpression>SubscriptionExpression</a></span> </p> <h2 id=relationships_20>Relationships<a class=headerlink href=#relationships_20 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ArraySubscriptionExpressionARRAY_EXPRESSION>ARRAY_EXPRESSION</a></span> <br> <span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#SubscriptionExpressionARRAY_EXPRESSION>ARRAY_EXPRESSION</a></span> <br> <span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ArraySubscriptionExpressionSUBSCRIPT_EXPRESSION>SUBSCRIPT_EXPRESSION</a></span> <br> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#SubscriptionExpressionSUBSCRIPT_EXPRESSION>SUBSCRIPT_EXPRESSION</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2571,11 +2571,11 @@ ArrayCreationExpression--"DIMENSIONS*"--&gt;ArrayCreationExpressionDIMENSIONS[&l
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=array_expression>ARRAY_EXPRESSION<a id=ArraySubscriptionExpressionARRAY_EXPRESSION></a><a class=headerlink href=#array_expression title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=array_expression>ARRAY_EXPRESSION<a id=SubscriptionExpressionARRAY_EXPRESSION></a><a class=headerlink href=#array_expression title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArraySubscriptionExpression--"ARRAY_EXPRESSION¹"--&gt;ArraySubscriptionExpressionARRAY_EXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=subscript_expression>SUBSCRIPT_EXPRESSION<a id=ArraySubscriptionExpressionSUBSCRIPT_EXPRESSION></a><a class=headerlink href=#subscript_expression title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+SubscriptionExpression--"ARRAY_EXPRESSION¹"--&gt;SubscriptionExpressionARRAY_EXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=subscript_expression>SUBSCRIPT_EXPRESSION<a id=SubscriptionExpressionSUBSCRIPT_EXPRESSION></a><a class=headerlink href=#subscript_expression title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ArraySubscriptionExpression--"SUBSCRIPT_EXPRESSION¹"--&gt;ArraySubscriptionExpressionSUBSCRIPT_EXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=typeexpression>TypeExpression<a id=eTypeExpression></a><a class=headerlink href=#typeexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+SubscriptionExpression--"SUBSCRIPT_EXPRESSION¹"--&gt;SubscriptionExpressionSUBSCRIPT_EXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=typeexpression>TypeExpression<a id=eTypeExpression></a><a class=headerlink href=#typeexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2893,7 +2893,7 @@ ConditionalExpression--"ELSE_EXPR¹"--&gt;ConditionalExpressionELSE_EXPR[&lt;a h
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ConditionalExpression--"THEN_EXPR¹"--&gt;ConditionalExpressionTHEN_EXPR[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=condition_2>CONDITION<a id=ConditionalExpressionCONDITION></a><a class=headerlink href=#condition_2 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConditionalExpression--"CONDITION¹"--&gt;ConditionalExpressionCONDITION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=declaredreferenceexpression>DeclaredReferenceExpression<a id=eDeclaredReferenceExpression></a><a class=headerlink href=#declaredreferenceexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+ConditionalExpression--"CONDITION¹"--&gt;ConditionalExpressionCONDITION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=reference>Reference<a id=eReference></a><a class=headerlink href=#reference title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2921,7 +2921,7 @@ ConditionalExpression--"CONDITION¹"--&gt;ConditionalExpressionCONDITION[&lt;a h
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#edeclaredreferenceexpression>DeclaredReferenceExpression</a></span> </p> <h2 id=children_4>Children<a class=headerlink href=#children_4 title="Permanent link">&para;</a></h2> <p><span style="background:#dddddd;
+    padding-right: 10px;"><a href=#edeclaredreferenceexpression>Reference</a></span> </p> <h2 id=children_4>Children<a class=headerlink href=#children_4 title="Permanent link">&para;</a></h2> <p><span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2935,7 +2935,7 @@ ConditionalExpression--"CONDITION¹"--&gt;ConditionalExpressionCONDITION[&lt;a h
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#DeclaredReferenceExpressionREFERS_TO>REFERS_TO</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#ReferenceREFERS_TO>REFERS_TO</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -2998,9 +2998,9 @@ ConditionalExpression--"CONDITION¹"--&gt;ConditionalExpressionCONDITION[&lt;a h
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=refers_to>REFERS_TO<a id=DeclaredReferenceExpressionREFERS_TO></a><a class=headerlink href=#refers_to title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=refers_to>REFERS_TO<a id=ReferenceREFERS_TO></a><a class=headerlink href=#refers_to title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DeclaredReferenceExpression--"REFERS_TO¹"--&gt;DeclaredReferenceExpressionREFERS_TO[&lt;a href='#edeclaration'&gt;Declaration&lt;/a&gt;]:::outer</code></pre> <h1 id=memberexpression>MemberExpression<a id=eMemberExpression></a><a class=headerlink href=#memberexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+Reference--"REFERS_TO¹"--&gt;ReferenceREFERS_TO[&lt;a href='#edeclaration'&gt;Declaration&lt;/a&gt;]:::outer</code></pre> <h1 id=memberexpression>MemberExpression<a id=eMemberExpression></a><a class=headerlink href=#memberexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3028,7 +3028,7 @@ DeclaredReferenceExpression--"REFERS_TO¹"--&gt;DeclaredReferenceExpressionREFER
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#edeclaredreferenceexpression>DeclaredReferenceExpression</a></span> <span style="background:#aabbff;
+    padding-right: 10px;"><a href=#edeclaredreferenceexpression>Reference</a></span> <span style="background:#aabbff;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3049,7 +3049,7 @@ DeclaredReferenceExpression--"REFERS_TO¹"--&gt;DeclaredReferenceExpressionREFER
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#DeclaredReferenceExpressionREFERS_TO>REFERS_TO</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#ReferenceREFERS_TO>REFERS_TO</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3314,7 +3314,7 @@ InitializerListExpression--"INITIALIZERS*"--&gt;InitializerListExpressionINITIAL
     padding-left: 10px;
     padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=operand>OPERAND<a id=DeleteExpressionOPERAND></a><a class=headerlink href=#operand title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DeleteExpression--"OPERAND¹"--&gt;DeleteExpressionOPERAND[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=compoundstatementexpression>CompoundStatementExpression<a id=eCompoundStatementExpression></a><a class=headerlink href=#compoundstatementexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+DeleteExpression--"OPERAND¹"--&gt;DeleteExpressionOPERAND[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=blockstatementexpression>BlockStatementExpression<a id=eBlockStatementExpression></a><a class=headerlink href=#blockstatementexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3342,14 +3342,14 @@ DeleteExpression--"OPERAND¹"--&gt;DeleteExpressionOPERAND[&lt;a href='#eexpress
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ecompoundstatementexpression>CompoundStatementExpression</a></span> </p> <h2 id=relationships_28>Relationships<a class=headerlink href=#relationships_28 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#ecompoundstatementexpression>BlockStatementExpression</a></span> </p> <h2 id=relationships_28>Relationships<a class=headerlink href=#relationships_28 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#CompoundStatementExpressionSTATEMENT>STATEMENT</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#BlockStatementExpressionSTATEMENT>STATEMENT</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -3412,9 +3412,9 @@ DeleteExpression--"OPERAND¹"--&gt;DeleteExpressionOPERAND[&lt;a href='#eexpress
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=statement_2>STATEMENT<a id=CompoundStatementExpressionSTATEMENT></a><a class=headerlink href=#statement_2 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=statement_2>STATEMENT<a id=BlockStatementExpressionSTATEMENT></a><a class=headerlink href=#statement_2 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CompoundStatementExpression--"STATEMENT¹"--&gt;CompoundStatementExpressionSTATEMENT[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h1 id=problemexpression>ProblemExpression<a id=eProblemExpression></a><a class=headerlink href=#problemexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+BlockStatementExpression--"STATEMENT¹"--&gt;BlockStatementExpressionSTATEMENT[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h1 id=problemexpression>ProblemExpression<a id=eProblemExpression></a><a class=headerlink href=#problemexpression title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -4284,7 +4284,7 @@ ForStatement--"STATEMENT¹"--&gt;ForStatementSTATEMENT[&lt;a href='#estatement'&
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 CatchClause--"PARAMETER¹"--&gt;CatchClausePARAMETER[&lt;a href='#evariabledeclaration'&gt;VariableDeclaration&lt;/a&gt;]:::outer</code></pre> <h3 id=body>BODY<a id=CatchClauseBODY></a><a class=headerlink href=#body title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CatchClause--"BODY¹"--&gt;CatchClauseBODY[&lt;a href='#ecompoundstatement'&gt;CompoundStatement&lt;/a&gt;]:::outer</code></pre> <h1 id=switchstatement>SwitchStatement<a id=eSwitchStatement></a><a class=headerlink href=#switchstatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+CatchClause--"BODY¹"--&gt;CatchClauseBODY[&lt;a href='#ecompoundstatement'&gt;BlockStatement&lt;/a&gt;]:::outer</code></pre> <h1 id=switchstatement>SwitchStatement<a id=eSwitchStatement></a><a class=headerlink href=#switchstatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -4566,7 +4566,7 @@ WhileStatement--"CONDITION_DECLARATION¹"--&gt;WhileStatementCONDITION_DECLARATI
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 WhileStatement--"CONDITION¹"--&gt;WhileStatementCONDITION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h3 id=statement_5>STATEMENT<a id=WhileStatementSTATEMENT></a><a class=headerlink href=#statement_5 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-WhileStatement--"STATEMENT¹"--&gt;WhileStatementSTATEMENT[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h1 id=compoundstatement>CompoundStatement<a id=eCompoundStatement></a><a class=headerlink href=#compoundstatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+WhileStatement--"STATEMENT¹"--&gt;WhileStatementSTATEMENT[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h1 id=blockstatement>BlockStatement<a id=eBlockStatement></a><a class=headerlink href=#blockstatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -4587,14 +4587,14 @@ WhileStatement--"STATEMENT¹"--&gt;WhileStatementSTATEMENT[&lt;a href='#estateme
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ecompoundstatement>CompoundStatement</a></span> </p> <h2 id=relationships_41>Relationships<a class=headerlink href=#relationships_41 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#ecompoundstatement>BlockStatement</a></span> </p> <h2 id=relationships_41>Relationships<a class=headerlink href=#relationships_41 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#CompoundStatementSTATEMENTS>STATEMENTS</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#BlockStatementSTATEMENTS>STATEMENTS</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -4643,9 +4643,9 @@ WhileStatement--"STATEMENT¹"--&gt;WhileStatementSTATEMENT[&lt;a href='#estateme
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=statements>STATEMENTS<a id=CompoundStatementSTATEMENTS></a><a class=headerlink href=#statements title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=statements>STATEMENTS<a id=BlockStatementSTATEMENTS></a><a class=headerlink href=#statements title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CompoundStatement--"STATEMENTS*"--&gt;CompoundStatementSTATEMENTS[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h1 id=continuestatement>ContinueStatement<a id=eContinueStatement></a><a class=headerlink href=#continuestatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+BlockStatement--"STATEMENTS*"--&gt;BlockStatementSTATEMENTS[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h1 id=continuestatement>ContinueStatement<a id=eContinueStatement></a><a class=headerlink href=#continuestatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -4871,7 +4871,7 @@ CompoundStatement--"STATEMENTS*"--&gt;CompoundStatementSTATEMENTS[&lt;a href='#e
     padding-left: 10px;
     padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=block_statement>BLOCK_STATEMENT<a id=SynchronizedStatementBLOCK_STATEMENT></a><a class=headerlink href=#block_statement title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SynchronizedStatement--"BLOCK_STATEMENT¹"--&gt;SynchronizedStatementBLOCK_STATEMENT[&lt;a href='#ecompoundstatement'&gt;CompoundStatement&lt;/a&gt;]:::outer</code></pre> <h3 id=expression_2>EXPRESSION<a id=SynchronizedStatementEXPRESSION></a><a class=headerlink href=#expression_2 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+SynchronizedStatement--"BLOCK_STATEMENT¹"--&gt;SynchronizedStatementBLOCK_STATEMENT[&lt;a href='#ecompoundstatement'&gt;BlockStatement&lt;/a&gt;]:::outer</code></pre> <h3 id=expression_2>EXPRESSION<a id=SynchronizedStatementEXPRESSION></a><a class=headerlink href=#expression_2 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 SynchronizedStatement--"EXPRESSION¹"--&gt;SynchronizedStatementEXPRESSION[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=trystatement>TryStatement<a id=eTryStatement></a><a class=headerlink href=#trystatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
@@ -4975,9 +4975,9 @@ SynchronizedStatement--"EXPRESSION¹"--&gt;SynchronizedStatementEXPRESSION[&lt;a
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 TryStatement--"RESOURCES*"--&gt;TryStatementRESOURCES[&lt;a href='#estatement'&gt;Statement&lt;/a&gt;]:::outer</code></pre> <h3 id=finally_block>FINALLY_BLOCK<a id=TryStatementFINALLY_BLOCK></a><a class=headerlink href=#finally_block title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"FINALLY_BLOCK¹"--&gt;TryStatementFINALLY_BLOCK[&lt;a href='#ecompoundstatement'&gt;CompoundStatement&lt;/a&gt;]:::outer</code></pre> <h3 id=try_block>TRY_BLOCK<a id=TryStatementTRY_BLOCK></a><a class=headerlink href=#try_block title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+TryStatement--"FINALLY_BLOCK¹"--&gt;TryStatementFINALLY_BLOCK[&lt;a href='#ecompoundstatement'&gt;BlockStatement&lt;/a&gt;]:::outer</code></pre> <h3 id=try_block>TRY_BLOCK<a id=TryStatementTRY_BLOCK></a><a class=headerlink href=#try_block title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"TRY_BLOCK¹"--&gt;TryStatementTRY_BLOCK[&lt;a href='#ecompoundstatement'&gt;CompoundStatement&lt;/a&gt;]:::outer</code></pre> <h3 id=catch_clauses>CATCH_CLAUSES<a id=TryStatementCATCH_CLAUSES></a><a class=headerlink href=#catch_clauses title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+TryStatement--"TRY_BLOCK¹"--&gt;TryStatementTRY_BLOCK[&lt;a href='#ecompoundstatement'&gt;BlockStatement&lt;/a&gt;]:::outer</code></pre> <h3 id=catch_clauses>CATCH_CLAUSES<a id=TryStatementCATCH_CLAUSES></a><a class=headerlink href=#catch_clauses title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 TryStatement--"CATCH_CLAUSES*"--&gt;TryStatementCATCH_CLAUSES[&lt;a href='#ecatchclause'&gt;CatchClause&lt;/a&gt;]:::outer</code></pre> <h1 id=foreachstatement>ForEachStatement<a id=eForEachStatement></a><a class=headerlink href=#foreachstatement title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
@@ -5484,14 +5484,14 @@ LabelStatement--"SUB_STATEMENT¹"--&gt;LabelStatementSUB_STATEMENT[&lt;a href='#
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#eparamvariabledeclaration>ParamVariableDeclaration</a></span> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#eparamvariabledeclaration>ParameterDeclaration</a></span> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#etypeparamdeclaration>TypeParamDeclaration</a></span> </p> <h2 id=relationships_51>Relationships<a class=headerlink href=#relationships_51 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#etypeparamdeclaration>TypeParameterDeclaration</a></span> </p> <h2 id=relationships_51>Relationships<a class=headerlink href=#relationships_51 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -5560,7 +5560,7 @@ ValueDeclaration--"POSSIBLE_SUB_TYPES*"--&gt;ValueDeclarationPOSSIBLE_SUB_TYPES[
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ValueDeclaration--"TYPE¹"--&gt;ValueDeclarationTYPE[&lt;a href='#etype'&gt;Type&lt;/a&gt;]:::outer</code></pre> <h3 id=usage>USAGE<a id=ValueDeclarationUSAGE></a><a class=headerlink href=#usage title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ValueDeclaration--"USAGE*"--&gt;ValueDeclarationUSAGE[&lt;a href='#edeclaredreferenceexpression'&gt;DeclaredReferenceExpression&lt;/a&gt;]:::outer</code></pre> <h1 id=fielddeclaration>FieldDeclaration<a id=eFieldDeclaration></a><a class=headerlink href=#fielddeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+ValueDeclaration--"USAGE*"--&gt;ValueDeclarationUSAGE[&lt;a href='#edeclaredreferenceexpression'&gt;Reference&lt;/a&gt;]:::outer</code></pre> <h1 id=fielddeclaration>FieldDeclaration<a id=eFieldDeclaration></a><a class=headerlink href=#fielddeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -6128,7 +6128,7 @@ FunctionDeclaration--"RECORDS*"--&gt;FunctionDeclarationRECORDS[&lt;a href='#ere
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 FunctionDeclaration--"RETURN_TYPES*"--&gt;FunctionDeclarationRETURN_TYPES[&lt;a href='#etype'&gt;Type&lt;/a&gt;]:::outer</code></pre> <h3 id=parameters>PARAMETERS<a id=FunctionDeclarationPARAMETERS></a><a class=headerlink href=#parameters title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"PARAMETERS*"--&gt;FunctionDeclarationPARAMETERS[&lt;a href='#eparamvariabledeclaration'&gt;ParamVariableDeclaration&lt;/a&gt;]:::outer</code></pre> <h3 id=defines_1>DEFINES<a id=FunctionDeclarationDEFINES></a><a class=headerlink href=#defines_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+FunctionDeclaration--"PARAMETERS*"--&gt;FunctionDeclarationPARAMETERS[&lt;a href='#eparamvariabledeclaration'&gt;ParameterDeclaration&lt;/a&gt;]:::outer</code></pre> <h3 id=defines_1>DEFINES<a id=FunctionDeclarationDEFINES></a><a class=headerlink href=#defines_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 FunctionDeclaration--"DEFINES¹"--&gt;FunctionDeclarationDEFINES[&lt;a href='#efunctiondeclaration'&gt;FunctionDeclaration&lt;/a&gt;]:::outer</code></pre> <h1 id=methoddeclaration>MethodDeclaration<a id=eMethodDeclaration></a><a class=headerlink href=#methoddeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
@@ -6470,7 +6470,7 @@ MethodDeclaration--"RECORD_DECLARATION¹"--&gt;MethodDeclarationRECORD_DECLARATI
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h1 id=paramvariabledeclaration>ParamVariableDeclaration<a id=eParamVariableDeclaration></a><a class=headerlink href=#paramvariabledeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h1 id=parameterdeclaration>ParameterDeclaration<a id=eParameterDeclaration></a><a class=headerlink href=#parameterdeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -6498,14 +6498,14 @@ MethodDeclaration--"RECORD_DECLARATION¹"--&gt;MethodDeclarationRECORD_DECLARATI
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#eparamvariabledeclaration>ParamVariableDeclaration</a></span> </p> <h2 id=relationships_59>Relationships<a class=headerlink href=#relationships_59 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#eparamvariabledeclaration>ParameterDeclaration</a></span> </p> <h2 id=relationships_59>Relationships<a class=headerlink href=#relationships_59 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#ParamVariableDeclarationDEFAULT>DEFAULT</a></span> <br> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#ParameterDeclarationDEFAULT>DEFAULT</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -6568,9 +6568,9 @@ MethodDeclaration--"RECORD_DECLARATION¹"--&gt;MethodDeclarationRECORD_DECLARATI
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=default>DEFAULT<a id=ParamVariableDeclarationDEFAULT></a><a class=headerlink href=#default title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=default>DEFAULT<a id=ParameterDeclarationDEFAULT></a><a class=headerlink href=#default title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ParamVariableDeclaration--"DEFAULT¹"--&gt;ParamVariableDeclarationDEFAULT[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=typeparamdeclaration>TypeParamDeclaration<a id=eTypeParamDeclaration></a><a class=headerlink href=#typeparamdeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+ParameterDeclaration--"DEFAULT¹"--&gt;ParameterDeclarationDEFAULT[&lt;a href='#eexpression'&gt;Expression&lt;/a&gt;]:::outer</code></pre> <h1 id=typeparameterdeclaration>TypeParameterDeclaration<a id=eTypeParameterDeclaration></a><a class=headerlink href=#typeparameterdeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -6598,14 +6598,14 @@ ParamVariableDeclaration--"DEFAULT¹"--&gt;ParamVariableDeclarationDEFAULT[&lt;a
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#etypeparamdeclaration>TypeParamDeclaration</a></span> </p> <h2 id=relationships_60>Relationships<a class=headerlink href=#relationships_60 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
+    padding-right: 10px;"><a href=#etypeparamdeclaration>TypeParameterDeclaration</a></span> </p> <h2 id=relationships_60>Relationships<a class=headerlink href=#relationships_60 title="Permanent link">&para;</a></h2> <p><span style="background:#aaffbb;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#TypeParamDeclarationDEFAULT>DEFAULT</a></span> <br> <span style="background:#dddddd;
+    padding-right: 10px;"><a href=#TypeParameterDeclarationDEFAULT>DEFAULT</a></span> <br> <span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -6668,9 +6668,9 @@ ParamVariableDeclaration--"DEFAULT¹"--&gt;ParamVariableDeclarationDEFAULT[&lt;a
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=default_1>DEFAULT<a id=TypeParamDeclarationDEFAULT></a><a class=headerlink href=#default_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=default_1>DEFAULT<a id=TypeParameterDeclarationDEFAULT></a><a class=headerlink href=#default_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TypeParamDeclaration--"DEFAULT¹"--&gt;TypeParamDeclarationDEFAULT[&lt;a href='#etype'&gt;Type&lt;/a&gt;]:::outer</code></pre> <h1 id=templatedeclaration>TemplateDeclaration<a id=eTemplateDeclaration></a><a class=headerlink href=#templatedeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
+TypeParameterDeclaration--"DEFAULT¹"--&gt;TypeParameterDeclarationDEFAULT[&lt;a href='#etype'&gt;Type&lt;/a&gt;]:::outer</code></pre> <h1 id=templatedeclaration>TemplateDeclaration<a id=eTemplateDeclaration></a><a class=headerlink href=#templatedeclaration title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
     line-height: 26px;
     display: inline-block;
@@ -8899,7 +8899,7 @@ TupleType--"TYPES*"--&gt;TupleTypeTYPES[&lt;a href='#etype'&gt;Type&lt;/a&gt;]::
     text-align: center;
     margin-bottom: 10px;
     padding-left: 10px;
-    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=reference>REFERENCE<a id=ReferenceTypeREFERENCE></a><a class=headerlink href=#reference title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
+    padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=reference_1>REFERENCE<a id=ReferenceTypeREFERENCE></a><a class=headerlink href=#reference_1 title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ReferenceType--"REFERENCE¹"--&gt;ReferenceTypeREFERENCE[&lt;a href='#etype'&gt;Type&lt;/a&gt;]:::outer</code></pre> <h1 id=functiontype>FunctionType<a id=eFunctionType></a><a class=headerlink href=#functiontype title="Permanent link">&para;</a></h1> <p><strong>Labels</strong>:<span style="background:#dddddd;
     border-radius:5%;
@@ -9202,4 +9202,4 @@ Component--"TRANSLATION_UNITS*"--&gt;ComponentTRANSLATION_UNITS[&lt;a href='#etr
     padding-left: 10px;
     padding-right: 10px;"><a href=#NodeTYPEDEFS>TYPEDEFS</a></span> </p> <h3 id=members>MEMBERS<a id=AnnotationMEMBERS></a><a class=headerlink href=#members title="Permanent link">&para;</a></h3> <pre class=mermaid><code>flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Annotation--"MEMBERS*"--&gt;AnnotationMEMBERS[&lt;a href='#eannotationmember'&gt;AnnotationMember&lt;/a&gt;]:::outer</code></pre> <hr> <div class=md-source-file> <small> Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago"><span class=timeago datetime=2023-08-28T11:42:39+00:00 locale=en></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date">2023-08-28</span> <br> Created: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago"><span class=timeago datetime=2023-08-28T11:42:39+00:00 locale=en></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date">2023-08-28</span> </small> </div> </article> </div> </div> <button type=button class="md-top md-icon" data-md-component=top hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg> Back to top </button> </main> <footer class=md-footer> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> <div class=md-copyright__highlight> <p> <a href=https://www.aisec.fraunhofer.de/en/data_protection.html>Privacy Policy</a>, <a href=#__consent>Change cookie settings</a> </p> Copyright &copy; 2023 Fraunhofer AISEC </div> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> <div class=md-social> <a href=https://github.com/Fraunhofer-AISEC target=_blank rel=noopener title="Visit us on GitHub to get involved." class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 496 512"><!-- Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg> </a> <a href=mailto:cpg@aisec.fraunhofer.de target=_blank rel=noopener title="Email us about the CPG project." class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v208c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V176L294.4 339.2a63.9 63.9 0 0 1-76.8 0L0 176z"/></svg> </a> <a href=https://twitter.com/FraunhoferAISEC target=_blank rel=noopener title="Follow Fraunhofer AISEC on Twitter." class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg> </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <div class=md-consent data-md-component=consent id=__consent hidden> <div class=md-consent__overlay></div> <aside class=md-consent__inner> <form class="md-consent__form md-grid md-typeset" name=consent> <h4>Consent</h4> <p>We use external services to enrich information presented on our website. This information is not essential for the operation of this website. You can opt-in, if you want to see additional information. Your choice will be saved in a cookie.</p> <input class=md-toggle type=checkbox id=__settings> <div class=md-consent__settings> <ul class=task-list> <li class=task-list-item> <label class=task-list-control> <input type=checkbox name=github> <span class=task-list-indicator></span> GitHub </label> </li> </ul> </div> <div class=md-consent__controls> <button type=reset class="md-button md-button--primary">Reject</button> <button class="md-button md-button--primary">Accept</button> <label class=md-button for=__settings>Manage settings</label> </div> </form> </aside> </div> <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout(function(){document.querySelector("[data-md-component=consent]").hidden=!1},250);var action,form=document.forms.consent;for(action of["submit","reset"])form.addEventListener(action,function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map(function(e){return[e,!0]}))),location.hash="",location.reload()})</script> <script id=__config type=application/json>{"base": "../../..", "features": ["content.code.annotate", "content.tooltips", "navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script> <script src=../../../assets/javascripts/bundle.78eede0e.min.js></script> <script src=../../../js/timeago.min.js></script> <script src=../../../js/timeago_mkdocs_material.js></script> <script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body> </html>
+Annotation--"MEMBERS*"--&gt;AnnotationMEMBERS[&lt;a href='#eannotationmember'&gt;AnnotationMember&lt;/a&gt;]:::outer</code></pre> <hr> <div class=md-source-file> <small> Last update: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago"><span class=timeago datetime=2023-09-12T10:03:28+00:00 locale=en></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date">2023-09-12</span> <br> Created: <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago"><span class=timeago datetime=2023-09-12T10:03:28+00:00 locale=en></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date">2023-09-12</span> </small> </div> </article> </div> </div> <button type=button class="md-top md-icon" data-md-component=top hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg> Back to top </button> </main> <footer class=md-footer> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> <div class=md-copyright__highlight> <p> <a href=https://www.aisec.fraunhofer.de/en/data_protection.html>Privacy Policy</a>, <a href=#__consent>Change cookie settings</a> </p> Copyright &copy; 2023 Fraunhofer AISEC </div> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> <div class=md-social> <a href=https://github.com/Fraunhofer-AISEC target=_blank rel=noopener title="Visit us on GitHub to get involved." class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 496 512"><!-- Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg> </a> <a href=mailto:cpg@aisec.fraunhofer.de target=_blank rel=noopener title="Email us about the CPG project." class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v208c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V176L294.4 339.2a63.9 63.9 0 0 1-76.8 0L0 176z"/></svg> </a> <a href=https://twitter.com/FraunhoferAISEC target=_blank rel=noopener title="Follow Fraunhofer AISEC on Twitter." class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg> </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <div class=md-consent data-md-component=consent id=__consent hidden> <div class=md-consent__overlay></div> <aside class=md-consent__inner> <form class="md-consent__form md-grid md-typeset" name=consent> <h4>Consent</h4> <p>We use external services to enrich information presented on our website. This information is not essential for the operation of this website. You can opt-in, if you want to see additional information. Your choice will be saved in a cookie.</p> <input class=md-toggle type=checkbox id=__settings> <div class=md-consent__settings> <ul class=task-list> <li class=task-list-item> <label class=task-list-control> <input type=checkbox name=github> <span class=task-list-indicator></span> GitHub </label> </li> </ul> </div> <div class=md-consent__controls> <button type=reset class="md-button md-button--primary">Reject</button> <button class="md-button md-button--primary">Accept</button> <label class=md-button for=__settings>Manage settings</label> </div> </form> </aside> </div> <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout(function(){document.querySelector("[data-md-component=consent]").hidden=!1},250);var action,form=document.forms.consent;for(action of["submit","reset"])form.addEventListener(action,function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map(function(e){return[e,!0]}))),location.hash="",location.reload()})</script> <script id=__config type=application/json>{"base": "../../..", "features": ["content.code.annotate", "content.tooltips", "navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script> <script src=../../../assets/javascripts/bundle.dff1b7c8.min.js></script> <script src=../../../js/timeago.min.js></script> <script src=../../../js/timeago_mkdocs_material.js></script> <script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body> </html>
