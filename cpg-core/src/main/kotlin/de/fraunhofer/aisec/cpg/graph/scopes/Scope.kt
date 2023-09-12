@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.helpers.NameConverter
+import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity

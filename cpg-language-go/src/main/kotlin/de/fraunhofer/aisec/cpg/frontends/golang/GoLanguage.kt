@@ -25,16 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGenerics
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
+import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics {
+class GoLanguage :
+    Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics, HasStructs {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class
@@ -42,6 +42,13 @@ class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, Has
     override val disjunctiveOperators = listOf("||")
     override val startCharacter = '['
     override val endCharacter = ']'
+
+    /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://go.dev/ref/spec#Operators_and_punctuation
+     */
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&^=", "&=", "|=", "^=")
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
@@ -101,11 +108,4 @@ class GoLanguage : Language<GoLanguageFrontend>(), HasShortCircuitOperators, Has
             // https://pkg.go.dev/builtin#string
             "string" to StringType("string", this)
         )
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): GoLanguageFrontend {
-        return GoLanguageFrontend(this, config, scopeManager)
-    }
 }

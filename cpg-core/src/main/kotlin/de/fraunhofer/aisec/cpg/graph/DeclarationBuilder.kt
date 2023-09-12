@@ -30,10 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
@@ -66,10 +65,11 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
     code: String? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
+    localNameOnly: Boolean = false
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode, code, localNameOnly)
 
     log(node)
     return node
@@ -129,14 +129,14 @@ fun MetadataProvider.newConstructorDeclaration(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newParamVariableDeclaration(
+fun MetadataProvider.newParameterDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     variadic: Boolean = false,
     code: String? = null,
     rawNode: Any? = null
-): ParamVariableDeclaration {
-    val node = ParamVariableDeclaration()
+): ParameterDeclaration {
+    val node = ParameterDeclaration()
     node.applyMetadata(this, name, rawNode, code, localNameOnly = true)
 
     node.type = type
@@ -155,7 +155,7 @@ fun MetadataProvider.newParamVariableDeclaration(
 @JvmOverloads
 fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
@@ -165,6 +165,34 @@ fun MetadataProvider.newVariableDeclaration(
 
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [TupleDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun LanguageProvider.newTupleDeclaration(
+    elements: List<VariableDeclaration>,
+    initializer: Expression?,
+    rawNode: Any? = null
+): TupleDeclaration {
+    val node = TupleDeclaration()
+    node.applyMetadata(this, null, rawNode, null, true)
+
+    // Tuples always have an auto-type
+    node.type = autoType()
+
+    // Also all our elements need to have an auto-type
+    elements.forEach { it.type = autoType() }
+    node.elements = elements
+
+    node.initializer = initializer
 
     log(node)
     return node
@@ -194,18 +222,18 @@ fun MetadataProvider.newTypedefDeclaration(
 }
 
 /**
- * Creates a new [TypeParamDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [TypeParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTypeParamDeclaration(
+fun MetadataProvider.newTypeParameterDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
-): TypeParamDeclaration {
-    val node = TypeParamDeclaration()
+): TypeParameterDeclaration {
+    val node = TypeParameterDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
@@ -276,18 +304,18 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
 }
 
 /**
- * Creates a new [ClassTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [RecordTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newClassTemplateDeclaration(
+fun MetadataProvider.newRecordTemplateDeclaration(
     name: CharSequence?,
     code: String? = null,
     rawNode: Any? = null
-): ClassTemplateDeclaration {
-    val node = ClassTemplateDeclaration()
+): RecordTemplateDeclaration {
+    val node = RecordTemplateDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
     log(node)
@@ -325,7 +353,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     modifiers: List<String>? = listOf(),
     code: String? = null,
     location: PhysicalLocation? = null,
@@ -341,7 +369,7 @@ fun MetadataProvider.newFieldDeclaration(
     node.location = location
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
-        if (initializer is ArrayCreationExpression) {
+        if (initializer is NewArrayExpression) {
             node.isArray = true
         }
         node.initializer = initializer
@@ -414,18 +442,18 @@ fun MetadataProvider.newNamespaceDeclaration(
 }
 
 /**
- * Creates a new [UsingDirective]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [UsingDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newUsingDirective(
+fun MetadataProvider.newUsingDeclaration(
     code: String? = null,
     qualifiedName: CharSequence?,
     rawNode: Any? = null
-): UsingDirective {
-    val node = UsingDirective()
+): UsingDeclaration {
+    val node = UsingDeclaration()
     node.applyMetadata(this, qualifiedName, rawNode, code)
 
     node.qualifiedName = qualifiedName.toString()

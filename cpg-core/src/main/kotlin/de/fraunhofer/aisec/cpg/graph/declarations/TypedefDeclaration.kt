@@ -33,10 +33,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
 class TypedefDeclaration : Declaration() {
     /** The already existing type that is to be aliased */
-    var type: Type = UnknownType.getUnknownType()
+    var type: Type = UnknownType.getUnknownType(null)
 
     /** The newly created alias to be defined */
-    var alias: Type = UnknownType.getUnknownType()
+    var alias: Type = UnknownType.getUnknownType(null)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -47,6 +47,9 @@ class TypedefDeclaration : Declaration() {
     override fun hashCode() = Objects.hash(super.hashCode(), type, alias)
 
     override fun toString(): String {
-        return ToStringBuilder(this).append("type", type).append("alias", alias).toString()
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .append("type", type)
+            .append("alias", alias)
+            .toString()
     }
 }

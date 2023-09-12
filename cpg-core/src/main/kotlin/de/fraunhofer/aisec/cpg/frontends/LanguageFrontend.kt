@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -46,24 +45,28 @@ import org.slf4j.LoggerFactory
  * More information can be found in the
  * [github wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
  */
-abstract class LanguageFrontend(
-    override val language: Language<out LanguageFrontend>,
-    val config: TranslationConfiguration,
-    scopeManager: ScopeManager,
+abstract class LanguageFrontend<in AstNode, TypeNode>(
+    /** The language this frontend works for. */
+    override val language: Language<out LanguageFrontend<AstNode, TypeNode>>,
+
+    /**
+     * The translation context, which contains all necessary managers used in this frontend parsing
+     * process. Note, that different contexts could passed to frontends, e.g., in parallel parsing
+     * to supply different managers to different frontends.
+     */
+    final override var ctx: TranslationContext,
 ) :
     ProcessedListener(),
-    CodeAndLocationProvider,
+    CodeAndLocationProvider<AstNode>,
     LanguageProvider,
     ScopeProvider,
-    NamespaceProvider {
-    var scopeManager: ScopeManager = scopeManager
-        set(scopeManager) {
-            field = scopeManager
-            field.lang = this
-        }
+    NamespaceProvider,
+    ContextProvider {
+    val scopeManager: ScopeManager = ctx.scopeManager
+    val typeManager: TypeManager = ctx.typeManager
+    val config: TranslationConfiguration = ctx.config
 
     init {
-        // this.scopeManager = scopeManager
         this.scopeManager.lang = this
     }
 
@@ -72,8 +75,8 @@ abstract class LanguageFrontend(
     @Throws(TranslationException::class)
     fun parseAll(): List<TranslationUnitDeclaration> {
         val units = ArrayList<TranslationUnitDeclaration>()
-        for (component in config.softwareComponents.keys) {
-            for (sourceFile in config.softwareComponents[component]!!) {
+        for (componentFiles in config.softwareComponents.values) {
+            for (sourceFile in componentFiles) {
                 units.add(parse(sourceFile))
             }
         }
@@ -86,9 +89,21 @@ abstract class LanguageFrontend(
      * This function returns a [TranslationResult], but rather than parsing source code, the
      * function [init] is used to build nodes in the Node Fluent DSL.
      */
-    fun build(init: LanguageFrontend.() -> TranslationResult): TranslationResult {
+    fun build(init: LanguageFrontend<*, *>.() -> TranslationResult): TranslationResult {
         return init(this)
     }
+
+    /**
+     * This function serves as an entry-point to type parsing in the language frontend. It needs to
+     * return a [Type] object based on the ast type object used by the language frontend, e.g., the
+     * parser.
+     *
+     * A language frontend will usually de-construct the ast type object, e.g., in case of pointer
+     * or array types and then either recursively call this function or call other helper functions
+     * similar to this one. Ideally, they should share the [typeOf] name, but have different method
+     * signatures.
+     */
+    abstract fun typeOf(type: TypeNode): Type
 
     /**
      * Returns the raw code of the ast node, generic for java or c++ ast nodes.
@@ -97,7 +112,7 @@ abstract class LanguageFrontend(
      * @param astNode the ast node
      * @return the source code </T>
      */
-    abstract fun <T> getCodeFromRawNode(astNode: T): String?
+    abstract fun codeOf(astNode: AstNode): String?
 
     /**
      * Returns the [Region] of the code with line and column, index starting at 1, generic for java
@@ -107,20 +122,19 @@ abstract class LanguageFrontend(
      * @param astNode the ast node
      * @return the location </T>
      */
-    abstract fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation?
-    override fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?) {
-        if (cpgNode is Node && astNode != null) {
-            if (config.codeInNodes) {
-                // only set code, if it's not already set or empty
-                val code = getCodeFromRawNode<S?>(astNode)
-                if (code != null) {
-                    (cpgNode as Node).code = code
-                } else {
-                    log.warn("Unexpected: No code for node {}", astNode)
-                }
+    abstract fun locationOf(astNode: AstNode): PhysicalLocation?
+
+    override fun setCodeAndLocation(cpgNode: Node, astNode: AstNode) {
+        if (config.codeInNodes) {
+            // only set code, if it's not already set or empty
+            val code = codeOf(astNode)
+            if (code != null) {
+                cpgNode.code = code
+            } else {
+                log.warn("Unexpected: No code for node {}", astNode)
             }
-            (cpgNode as Node).location = getLocationFromRawNode<S?>(astNode)
         }
+        cpgNode.location = locationOf(astNode)
     }
 
     /**
@@ -219,7 +233,7 @@ abstract class LanguageFrontend(
         clearProcessed()
     }
 
-    abstract fun <S, T> setComment(s: S, ctx: T)
+    abstract fun setComment(node: Node, astNode: AstNode)
 
     companion object {
         // Allow non-Java frontends to access the logger (i.e. jep)

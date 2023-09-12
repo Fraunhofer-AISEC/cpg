@@ -31,5 +31,6 @@ package de.fraunhofer.aisec.cpg
  */
 class ConfigurationException : Exception {
     constructor(message: String) : super(message)
+
     constructor(ex: Exception) : super(ex)
 }

@@ -1,8 +1,8 @@
 import java.util.Arrays;
 
-class ExplicitConstructorInvocationStmt {
+class ConstructorCallExpressionStmt {
 
-	public ExplicitConstructorInvocationStmt(){
+	public ConstructorCallExpressionStmt(){
 		super();
 	}
 

@@ -27,18 +27,19 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.passes.PassTarget
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** The top most declaration, representing a translation unit, for example a file. */
-class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHolder {
+class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHolder, PassTarget {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
@@ -62,11 +63,8 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
     override val declarations: List<Declaration>
         get() = unwrap(declarationEdges)
 
-    override var statements: List<Statement>
-        get() = unwrap(statementEdges)
-        set(value) {
-            statementEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this as Node)
-        }
+    override var statements: List<Statement> by
+        PropertyEdgeDelegate(TranslationUnitDeclaration::statementEdges)
 
     val includes: List<IncludeDeclaration>
         get() = unwrap(includeEdges)

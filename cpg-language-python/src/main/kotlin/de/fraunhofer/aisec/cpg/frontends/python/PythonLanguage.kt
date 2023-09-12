@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -42,6 +40,13 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
+
+    /**
+     * All operators which perform and assignment and an operation using lhs and rhs. See
+     * https://docs.python.org/3/library/operator.html#in-place-operators
+     */
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
     @Transient
@@ -72,35 +77,26 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
             "str" to StringType("str", this, listOf())
         )
 
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): PythonLanguageFrontend {
-        return PythonLanguageFrontend(this, config, scopeManager)
-    }
-
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+        val unknownType = UnknownType.getUnknownType(this)
         if (
             operation.operatorCode == "/" &&
-                operation.lhs.propagationType is NumericType &&
-                operation.rhs.propagationType is NumericType
+                operation.lhs.type is NumericType &&
+                operation.rhs.type is NumericType
         ) {
             // In Python, the / operation automatically casts the result to a float
-            return getSimpleTypeOf("float")!!
+            return getSimpleTypeOf("float") ?: unknownType
         } else if (
             operation.operatorCode == "//" &&
-                operation.lhs.propagationType is NumericType &&
-                operation.rhs.propagationType is NumericType
+                operation.lhs.type is NumericType &&
+                operation.rhs.type is NumericType
         ) {
-            if (
-                operation.lhs.propagationType is IntegerType &&
-                    operation.rhs.propagationType is IntegerType
-            ) {
+            return if (operation.lhs.type is IntegerType && operation.rhs.type is IntegerType) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                return getSimpleTypeOf("int")!!
+                getSimpleTypeOf("int") ?: unknownType
             } else {
-                return getSimpleTypeOf("float")!!
+                getSimpleTypeOf("float") ?: unknownType
             }
         }
 

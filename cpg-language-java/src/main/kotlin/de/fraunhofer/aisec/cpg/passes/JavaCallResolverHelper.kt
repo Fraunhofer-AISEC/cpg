@@ -30,10 +30,11 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver.Companion.LOGGER
 
@@ -44,9 +45,9 @@ class JavaCallResolverHelper {
          * Handle calls in the form of `super.call()` or `ClassName.super.call()`, conforming to
          * JLS13 §15.12.1.
          *
-         * This function basically sets the correct type of the [DeclaredReferenceExpression]
-         * containing the "super" keyword. Afterwards, we can use the regular
-         * [CallResolver.resolveMemberCallee] to resolve the [MemberCallExpression].
+         * This function basically sets the correct type of the [Reference] containing the "super"
+         * keyword. Afterwards, we can use the regular [CallResolver.resolveMemberCallee] to resolve
+         * the [MemberCallExpression].
          *
          * @param callee The callee of the call expression that needs to be adjusted
          * @param curClass The class containing the call
@@ -62,7 +63,7 @@ class JavaCallResolverHelper {
             // need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
             if (func is MethodDeclaration) {
-                (callee.base as DeclaredReferenceExpression?)?.refersTo = func.receiver
+                (callee.base as Reference?)?.refersTo = func.receiver
             }
 
             // In the next step we can "cast" the base to the correct type, by setting the base
@@ -91,12 +92,17 @@ class JavaCallResolverHelper {
             if (target != null) {
                 val superType = target.toType()
                 // Explicitly set the type of the call's base to the super type, basically "casting"
-                // the
-                // "this" object to the super class
+                // the "this" object to the super class
                 callee.base.type = superType
-                // And set the possible subtypes, to ensure, that really only our super type is in
-                // there
-                callee.base.updatePossibleSubtypes(listOf(superType))
+
+                val refersTo = (callee.base as? Reference)?.refersTo
+                if (refersTo is HasType) {
+                    refersTo.type = superType
+                    refersTo.assignedTypes = mutableSetOf(superType)
+                }
+
+                // Make sure that really only our super class is in the list of assigned types
+                callee.base.assignedTypes = mutableSetOf(superType)
 
                 return true
             }
@@ -111,9 +117,7 @@ class JavaCallResolverHelper {
         ): RecordDeclaration? {
             val baseName = callee.base.name.parent ?: return null
 
-            if (
-                TypeParser.createFrom(baseName, curClass.language) in curClass.implementedInterfaces
-            ) {
+            if (curClass.objectType(baseName) in curClass.implementedInterfaces) {
                 // Basename is an interface -> BaseName.super refers to BaseName itself
                 return recordMap[baseName]
             } else {

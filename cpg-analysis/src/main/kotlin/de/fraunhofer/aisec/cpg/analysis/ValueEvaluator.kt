@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import kotlin.UnsupportedOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -77,26 +77,30 @@ open class ValueEvaluator(
         return evaluateInternal(node as? Node, 0)
     }
 
+    fun clearPath() {
+        path.clear()
+    }
+
     /** Tries to evaluate this node. Anything can happen. */
     protected open fun evaluateInternal(node: Node?, depth: Int): Any? {
         // Add the expression to the current path
         node?.let { this.path += it }
 
         when (node) {
-            is ArrayCreationExpression -> return evaluateInternal(node.initializer, depth + 1)
+            is NewArrayExpression -> return evaluateInternal(node.initializer, depth + 1)
             is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is ArraySubscriptionExpression -> return handleArraySubscriptionExpression(node, depth)
+            is SubscriptExpression -> return handleSubscriptExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
-            is AssignExpression -> return handleAssignExpression(node)
+            is AssignExpression -> return handleAssignExpression(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -105,8 +109,19 @@ open class ValueEvaluator(
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */
-    private fun handleAssignExpression(node: AssignExpression): Any? {
-        if (node.usedAsExpression) {
+    protected open fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+        // Handle compound assignments. Only possible with single values
+        val lhs = node.lhs.singleOrNull()
+        val rhs = node.rhs.singleOrNull()
+        if (lhs != null && rhs != null && node.isCompoundAssignment) {
+            // Resolve rhs
+            val rhsValue = evaluateInternal(rhs, depth + 1)
+
+            // Resolve lhs
+            val lhsValue = evaluateInternal(lhs, depth + 1)
+
+            return computeBinaryOpEffect(lhsValue, rhsValue, node)
+        } else if (node.usedAsExpression) {
             return node.expressionValue
         }
 
@@ -127,12 +142,19 @@ open class ValueEvaluator(
         return computeBinaryOpEffect(lhsValue, rhsValue, expr)
     }
 
+    /**
+     * Computes the effect of basic "binary" operators.
+     *
+     * Note: this is both used by a [BinaryOperator] with basic arithmetic operations as well as
+     * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
+     */
     protected fun computeBinaryOpEffect(
         lhsValue: Any?,
         rhsValue: Any?,
-        expr: BinaryOperator
+        has: HasOperatorCode?,
     ): Any? {
-        return when (expr.operatorCode) {
+        val expr = has as? Expression
+        return when (has?.operatorCode) {
             "+",
             "+=" -> handlePlus(lhsValue, rhsValue, expr)
             "-",
@@ -146,93 +168,41 @@ open class ValueEvaluator(
             "<" -> handleLess(lhsValue, rhsValue, expr)
             "<=" -> handleLEq(lhsValue, rhsValue, expr)
             "==" -> handleEq(lhsValue, rhsValue, expr)
-            else -> cannotEvaluate(expr, this)
+            else -> cannotEvaluate(expr as Node, this)
         }
     }
 
-    private fun handlePlus(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handlePlus(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
             lhsValue is String -> lhsValue + rhsValue
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue + (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue + rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue + rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue + rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleMinus(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleMinus(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue - (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue - rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue - rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue - rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue - rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
             rhsValue == 0 -> cannotEvaluate(expr, this)
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue / (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue / rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue / rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue / rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
-            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Int && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Long && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Short && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
-                lhsValue * (rhsValue as Number).toDouble()
-            lhsValue is Byte && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Double && rhsValue is Number -> lhsValue * rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue * rhsValue.toDouble()
+            lhsValue is Number && rhsValue is Number -> lhsValue * rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) > 0
         } else {
@@ -240,7 +210,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) >= 0
         } else {
@@ -248,7 +218,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) < 0
         } else {
@@ -256,7 +226,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) <= 0
         } else {
@@ -264,7 +234,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) == 0
         } else {
@@ -280,19 +250,19 @@ open class ValueEvaluator(
         return when (expr.operatorCode) {
             "-" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.negate()
+                    is Number -> -input
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "--" -> {
-                when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.decrement()
+                return when (val input = evaluateInternal(expr.input, depth + 1)) {
+                    is Number -> input.dec()
                     else -> cannotEvaluate(expr, this)
                 }
             }
             "++" -> {
                 when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.increment()
+                    is Number -> input.inc()
                     else -> cannotEvaluate(expr, this)
                 }
             }
@@ -307,12 +277,8 @@ open class ValueEvaluator(
      * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
      * s.
      */
-    protected fun handleArraySubscriptionExpression(
-        expr: ArraySubscriptionExpression,
-        depth: Int
-    ): Any? {
-        val array =
-            (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration
+    protected fun handleSubscriptExpression(expr: SubscriptExpression, depth: Int): Any? {
+        val array = (expr.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
         val ile = array?.initializer as? InitializerListExpression
 
         ile?.let {
@@ -331,7 +297,7 @@ open class ValueEvaluator(
             return (array.initializer as Literal<*>).value
         }
 
-        if (expr.arrayExpression is ArraySubscriptionExpression) {
+        if (expr.arrayExpression is SubscriptExpression) {
             return evaluateInternal(expr.arrayExpression, depth + 1)
         }
 
@@ -345,9 +311,9 @@ open class ValueEvaluator(
             val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
 
             return if (lhs == rhs) {
-                evaluateInternal(expr.thenExpr, depth + 1)
+                evaluateInternal(expr.thenExpression, depth + 1)
             } else {
-                evaluateInternal(expr.elseExpr, depth + 1)
+                evaluateInternal(expr.elseExpression, depth + 1)
             }
         }
 
@@ -358,10 +324,7 @@ open class ValueEvaluator(
      * Tries to compute the constant value of a reference. It therefore checks the incoming data
      * flow edges.
      */
-    protected open fun handleDeclaredReferenceExpression(
-        expr: DeclaredReferenceExpression,
-        depth: Int
-    ): Any? {
+    protected open fun handleReference(expr: Reference, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
@@ -388,10 +351,7 @@ open class ValueEvaluator(
      * If a reference has READWRITE access, ignore any "self-references", e.g. from a
      * plus/minus/div/times-assign or a plusplus/minusminus, etc.
      */
-    protected fun filterSelfReferences(
-        ref: DeclaredReferenceExpression,
-        inDFG: List<Node>
-    ): List<Node> {
+    protected fun filterSelfReferences(ref: Reference, inDFG: List<Node>): List<Node> {
         var list = inDFG
 
         // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach
@@ -411,53 +371,19 @@ open class ValueEvaluator(
             // Remove the self reference
             list =
                 list.filter {
-                    !((it is BinaryOperator && it.lhs == ref) ||
+                    !((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         } else if (ref.access == AccessValues.READWRITE && !isCase2) {
             // Consider only the self reference
             list =
                 list.filter {
-                    ((it is BinaryOperator && it.lhs == ref) ||
+                    ((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         }
 
         return list
-    }
-}
-
-internal fun Number.negate(): Number {
-    return when (this) {
-        is Int -> -this
-        is Long -> -this
-        is Short -> -this
-        is Byte -> -this
-        is Double -> -this
-        is Float -> -this
-        else -> throw UnsupportedOperationException()
-    }
-}
-
-fun Number.increment(): Number {
-    return when (this) {
-        is Double -> this + 1
-        is Float -> this + 1
-        is Int -> this + 1
-        is Long -> this + 1
-        is Short -> this + 1
-        else -> throw UnsupportedOperationException()
-    }
-}
-
-fun Number.decrement(): Number {
-    return when (this) {
-        is Double -> this - 1
-        is Float -> this - 1
-        is Int -> this - 1
-        is Long -> this - 1
-        is Short -> this - 1
-        else -> throw UnsupportedOperationException()
     }
 }
 

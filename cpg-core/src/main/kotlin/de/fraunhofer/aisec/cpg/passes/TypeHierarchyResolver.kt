@@ -25,20 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 
 /**
- * Transitively [RecordDeclaration] nodes with their supertypes' records.
+ * Transitively connect [RecordDeclaration] nodes with their supertypes' records.
  *
  * Supertypes are all interfaces a class implements and the superclass it inherits from (including
  * all of their respective supertypes). The JavaParser provides us with initial info about direct
@@ -54,12 +56,13 @@ import java.util.*
  * at places where it is crucial to have parsed all [RecordDeclaration]s. Otherwise, type
  * information in the graph might not be fully correct
  */
-open class TypeHierarchyResolver : Pass() {
+@DependsOn(TypeResolver::class)
+open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
 
-    override fun accept(translationResult: TranslationResult) {
-        for (tu in translationResult.translationUnits) {
+    override fun accept(component: Component) {
+        for (tu in component.translationUnits) {
             findRecordsAndEnums(tu)
         }
         for (recordDecl in recordMap.values) {
@@ -69,40 +72,43 @@ open class TypeHierarchyResolver : Pass() {
         }
         for (enumDecl in enums) {
             val directSupertypeRecords =
-                enumDecl.superTypes.mapNotNull { s: Type -> recordMap[s.name] }.toSet()
+                enumDecl.superTypes.mapNotNull { (it as? ObjectType)?.recordDeclaration }.toSet()
             val allSupertypes =
                 directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
             enumDecl.superTypeDeclarations = allSupertypes
         }
-
-        translationResult.translationUnits.forEach { SubgraphWalker.refreshType(it) }
     }
 
     protected fun findRecordsAndEnums(node: Node) {
         // Using a visitor to avoid loops in the AST
         node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(child: Node) {
-                    if (child is RecordDeclaration) {
-                        recordMap.putIfAbsent(child.name, child)
-                    } else if (child is EnumDeclaration) {
-                        enums.add(child)
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    if (t is RecordDeclaration) {
+                        recordMap.putIfAbsent(t.name, t)
+                    } else if (t is EnumDeclaration) {
+                        enums.add(t)
                     }
                 }
             }
         )
     }
 
-    private fun getAllMethodsFromSupertypes(
+    protected fun getAllMethodsFromSupertypes(
         supertypeRecords: Set<RecordDeclaration>
     ): List<MethodDeclaration> {
         return supertypeRecords.map { it.methods }.flatten()
     }
 
-    protected fun findSupertypeRecords(recordDecl: RecordDeclaration): Set<RecordDeclaration> {
-        val superTypeDeclarations = recordDecl.superTypes.mapNotNull { recordMap[it.name] }.toSet()
-        recordDecl.superTypeDeclarations = superTypeDeclarations
+    protected fun findSupertypeRecords(
+        recordDeclaration: RecordDeclaration
+    ): Set<RecordDeclaration> {
+        val superTypeDeclarations =
+            recordDeclaration.superTypes
+                .mapNotNull { (it as? ObjectType)?.recordDeclaration }
+                .toSet()
+        recordDeclaration.superTypeDeclarations = superTypeDeclarations
         return superTypeDeclarations
     }
 

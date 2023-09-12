@@ -54,7 +54,7 @@ class UnreachableEOGandDFGTest {
                 topLevel,
                 true
             ) {
-                it.registerLanguage<JavaLanguage>().registerPass(UnreachableEOGPass())
+                it.registerLanguage<JavaLanguage>().registerPass<UnreachableEOGPass>()
             }
     }
 

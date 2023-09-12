@@ -123,7 +123,7 @@ open class QueryTree<T>(
         return QueryTree(result, mutableListOf(this, other), "${this.value} is ${other.value}")
     }
 
-    /** Checks if the value is a member of the type of [oter]. */
+    /** Checks if the value is a member of the type of [other]. */
     infix fun IS(other: Class<*>): QueryTree<Boolean> {
         val result = other.isInstance(this.value)
         return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} is $other")
@@ -278,7 +278,7 @@ fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: Boolean): QueryTree<Boolean> {
     val result = !arg
-    return QueryTree(result, mutableListOf(QueryTree(arg)), "! ${arg}")
+    return QueryTree(result, mutableListOf(QueryTree(arg)), "! $arg")
 }
 
 /**

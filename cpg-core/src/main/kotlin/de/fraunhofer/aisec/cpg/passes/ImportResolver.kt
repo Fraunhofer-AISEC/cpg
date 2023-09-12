@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -38,7 +36,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
-open class ImportResolver : Pass() {
+open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 
@@ -47,8 +45,8 @@ open class ImportResolver : Pass() {
         importables.clear()
     }
 
-    override fun accept(result: TranslationResult) {
-        for (tu in result.translationUnits) {
+    override fun accept(component: Component) {
+        for (tu in component.translationUnits) {
             findImportables(tu)
         }
         for (recordDecl in records) {
@@ -59,9 +57,11 @@ open class ImportResolver : Pass() {
         }
     }
 
-    protected fun getStaticImports(recordDecl: RecordDeclaration): MutableSet<ValueDeclaration> {
+    protected fun getStaticImports(
+        recordDeclaration: RecordDeclaration
+    ): MutableSet<ValueDeclaration> {
         val partitioned =
-            recordDecl.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
+            recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
         val staticImports = mutableSetOf<ValueDeclaration>()
         val importPattern = Pattern.compile("(?<base>.*)\\.(?<member>.*)")
@@ -155,14 +155,14 @@ open class ImportResolver : Pass() {
     protected fun findImportables(node: Node) {
         // Using a visitor to avoid loops in the AST
         node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(child: Node) {
-                    if (child is RecordDeclaration) {
-                        records.add(child)
-                        importables.putIfAbsent(child.name.toString(), child)
-                    } else if (child is EnumDeclaration) {
-                        importables.putIfAbsent(child.name.toString(), child)
+            Strategy::AST_FORWARD,
+            object : IVisitor<Node>() {
+                override fun visit(t: Node) {
+                    if (t is RecordDeclaration) {
+                        records.add(t)
+                        importables.putIfAbsent(t.name.toString(), t)
+                    } else if (t is EnumDeclaration) {
+                        importables.putIfAbsent(t.name.toString(), t)
                     }
                 }
             }

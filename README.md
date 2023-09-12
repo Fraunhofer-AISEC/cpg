@@ -10,14 +10,15 @@ A code property graph (CPG) is a representation of source code in form of a labe
 
 This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ source code [JavaParser](https://javaparser.org/) for parsing Java. In contrast to compiler AST generators, both are "forgiving" parsers that can cope with incomplete or even semantically incorrect source code. That makes it possible to analyze source code even without being able to compile it (due to missing dependencies or minor syntax errors). Furthermore, it uses [LLVM](https://llvm.org) through the [javacpp](https://github.com/bytedeco/javacpp) project to parse LLVM IR. Note that the LLVM IR parser is *not* forgiving, i.e., the LLVM IR code needs to be at least considered valid by LLVM. The necessary native libraries are shipped by the javacpp project for most platforms.
 
-
 ## Specifications
 
 In order to improve some formal aspects of our library, we created several specifications of our core concepts. Currently, the following specifications exist:
-* [Dataflow Graph](./cpg-core/specifications/dfg.md)
-* [Language and Language Frontend](./cpg-core/specifications/language.md)
+* [Dataflow Graph](https://fraunhofer-aisec.github.io/cpg/CPG/specs/dfg/)
+* [Evaluation Order Graph](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/)
+* [Graph Model in neo4j](https://fraunhofer-aisec.github.io/cpg/CPG/specs/graph/)
+* [Language and Language Frontend](https://fraunhofer-aisec.github.io/cpg/CPG/impl/language/)
 
-We aim to provide more specifications over time and also include them in a new generated documentation site.
+We aim to provide more specifications over time.
 
 ## Usage
 
@@ -113,9 +114,10 @@ val translationConfig = TranslationConfiguration
 
 ### Experimental Languages
 
-Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included as gradle submodules by default.
-To include them as submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
-We provide a sample file [here](./gradle.properties.example).
+Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included in the `cpg-core` module but have separate gradle submodules.
+C/CPP and Java are currently required by some of the modules (e.g. `cpg-analysis`) and thus, disabling them can lead to compile errors!
+To include the desired submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+We provide a sample file with all languages switched on [here](./gradle.properties.example).
 Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
 
 #### Golang

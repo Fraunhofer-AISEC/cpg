@@ -25,11 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.Node
+import org.apache.commons.lang3.builder.ToStringBuilder
+
 abstract class NumberSet {
     abstract fun min(): Long
+
     abstract fun max(): Long
+
     abstract fun addValue(value: Long)
+
     abstract fun maybe(value: Long): Boolean
+
     abstract fun clear()
 }
 
@@ -45,15 +52,19 @@ class Interval : NumberSet() {
             max = value
         }
     }
+
     override fun min(): Long {
         return min
     }
+
     override fun max(): Long {
         return max
     }
+
     override fun maybe(value: Long): Boolean {
         return value in min..max
     }
+
     override fun clear() {
         min = Long.MAX_VALUE
         max = Long.MIN_VALUE
@@ -64,16 +75,37 @@ class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberS
     override fun addValue(value: Long) {
         values.add(value)
     }
+
     override fun min(): Long {
         return values.minOrNull() ?: Long.MAX_VALUE
     }
+
     override fun max(): Long {
         return values.maxOrNull() ?: Long.MIN_VALUE
     }
+
     override fun maybe(value: Long): Boolean {
         return value in values
     }
+
     override fun clear() {
         values.clear()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ConcreteNumberSet
+
+        return values == other.values
+    }
+
+    override fun hashCode(): Int {
+        return values.hashCode()
+    }
+
+    override fun toString(): String {
+        return ToStringBuilder(this, Node.TO_STRING_STYLE).append(values).toString()
     }
 }

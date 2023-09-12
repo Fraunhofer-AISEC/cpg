@@ -26,13 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.newCallExpression
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.function.Supplier
-import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -47,24 +44,37 @@ import org.slf4j.LoggerFactory
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend </L></T></S>
  */
-abstract class Handler<S : Node, T, L : LanguageFrontend>(
-    protected val configConstructor: Supplier<S>,
+abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<HandlerNode, *>>(
+    protected val configConstructor: Supplier<ResultNode>,
     /** Returns the frontend which used this handler. */
-    var frontend: L
-) : LanguageProvider, CodeAndLocationProvider, ScopeProvider, NamespaceProvider {
-    protected val map = HashMap<Class<out T>, HandlerInterface<S, T>>()
+    val frontend: L
+) :
+    LanguageProvider by frontend,
+    CodeAndLocationProvider<HandlerNode> by frontend,
+    ScopeProvider by frontend,
+    NamespaceProvider by frontend,
+    ContextProvider by frontend {
+    protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
 
     /**
-     * Searches for a handler matching the most specific superclass of [T]. The created map should
-     * thus contain a handler for every semantically different AST node and can reuse handler code
-     * as long as the handled AST nodes have a common ancestor.
+     * This property contains the last node this handler has successfully processed. It is safe to
+     * call, even when parsing multiple TUs in parallel, since for each TU, a dedicated
+     * [LanguageFrontend] is spawned, and for each frontend, a dedicated set of [Handler]s is
+     * created. Within one TU, the processing is sequential in the AST order.
+     */
+    var lastNode: ResultNode? = null
+
+    /**
+     * Searches for a handler matching the most specific superclass of [HandlerNode]. The created
+     * map should thus contain a handler for every semantically different AST node and can reuse
+     * handler code as long as the handled AST nodes have a common ancestor.
      *
      * @param ctx The AST node, whose handler is matched with respect to the AST node class.
      * @return most specific handler.
      */
-    open fun handle(ctx: T): S? {
-        var ret: S?
+    open fun handle(ctx: HandlerNode): ResultNode? {
+        var ret: ResultNode?
         if (ctx == null) {
             log.error(
                 "ctx is NULL. This can happen when ast children are optional in ${this.javaClass}. Called by ${Thread.currentThread().stackTrace[2]}"
@@ -72,17 +82,6 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
             return null
         }
 
-        // If we do not want to load includes into the CPG and the current fileLocation was included
-        if (!frontend.config.loadIncludes && ctx is ASTNode) {
-            val astNode = ctx as ASTNode
-            if (
-                astNode.fileLocation != null &&
-                    astNode.fileLocation.contextInclusionStatement != null
-            ) {
-                log.debug("Skip parsing include file ${astNode.containingFilename}")
-                return null
-            }
-        }
         var toHandle: Class<*> = ctx.javaClass
         var handler = map[toHandle]
         while (handler == null) {
@@ -92,7 +91,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
                 handler != null && // always ok to handle as generic literal expr
                 !ctx.javaClass.simpleName.contains("LiteralExpr")
             ) {
-                errorWithFileLocation<T>(
+                errorWithFileLocation(
                     frontend,
                     ctx,
                     log,
@@ -110,13 +109,13 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
                 // we will
                 // set the location here.
                 if (s.location == null) {
-                    frontend.setCodeAndLocation<S, T>(s, ctx)
+                    frontend.setCodeAndLocation(s, ctx)
                 }
-                frontend.setComment<S, T>(s, ctx)
+                frontend.setComment(s, ctx)
             }
             ret = s
         } else {
-            errorWithFileLocation<T>(
+            errorWithFileLocation(
                 frontend,
                 ctx,
                 log,
@@ -132,7 +131,7 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
 
         // In case the node is empty, we report a problem
         if (ret == null) {
-            errorWithFileLocation<T>(
+            errorWithFileLocation(
                 frontend,
                 ctx,
                 log,
@@ -140,7 +139,12 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
             )
             ret = configConstructor.get()
         }
-        frontend.process(ctx, ret)
+
+        if (ret != null) {
+            frontend.process(ctx, ret)
+            lastNode = ret
+        }
+
         return ret
     }
 
@@ -166,19 +170,6 @@ abstract class Handler<S : Node, T, L : LanguageFrontend>(
         }
         return null
     }
-
-    /** Returns the language which this handler is parsing. */
-    override val language: Language<L>
-        get() = frontend.language as Language<L>
-
-    override fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?) {
-        frontend.setCodeAndLocation<N, S>(cpgNode, astNode)
-    }
-
-    override val scope: Scope?
-        get() = frontend.scope
-    override val namespace: Name?
-        get() = frontend.namespace
 
     companion object {
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Handler::class.java)

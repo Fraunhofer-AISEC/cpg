@@ -36,6 +36,7 @@ import java.util.*
 import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
+import kotlin.reflect.jvm.isAccessible
 import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
@@ -84,6 +85,7 @@ open class PropertyEdge<T : Node> : Persistable {
 
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
+
     fun getProperty(property: Properties): Any? {
         return properties.getOrDefault(property, null)
     }
@@ -100,7 +102,7 @@ open class PropertyEdge<T : Node> : Persistable {
     }
 
     fun addProperties(propertyMap: Map<Properties, Any?>?) {
-        properties.putAll(propertyMap!!)
+        propertyMap?.let { properties.putAll(it) }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -161,15 +163,21 @@ open class PropertyEdge<T : Node> : Persistable {
          * @return List of PropertyEdges with the targets of the nodes and index property.
          */
         @JvmStatic
-        fun <T : Node> transformIntoOutgoingPropertyEdgeList(
+        fun <T : Node> wrap(
             nodes: List<T>,
-            commonRelationshipNode: Node
+            commonRelationshipNode: Node,
+            outgoing: Boolean = true
         ): MutableList<PropertyEdge<T>> {
             val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (n in nodes) {
-                var propertyEdge = PropertyEdge(commonRelationshipNode, n)
+                val propertyEdge =
+                    if (outgoing) {
+                        PropertyEdge(commonRelationshipNode, n)
+                    } else {
+                        PropertyEdge(n, commonRelationshipNode)
+                    }
                 propertyEdge.addProperty(Properties.INDEX, propertyEdges.size)
-                propertyEdges.add(propertyEdge)
+                propertyEdges.add(propertyEdge as PropertyEdge<T>)
             }
             return propertyEdges
         }
@@ -246,7 +254,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 } else {
                     obj.start
                 }
-            } else if (obj is Collection<*> && !obj.isEmpty()) {
+            } else if (obj is Collection<*> && obj.isNotEmpty()) {
                 return unwrapPropertyEdgeCollection(obj, outgoing)
             }
             return obj
@@ -296,10 +304,10 @@ open class PropertyEdge<T : Node> : Persistable {
         ): List<PropertyEdge<T>> {
             val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (propertyEdge in propertyEdges) {
-                if (end && !propertyEdge.end.equals(element)) {
+                if (end && propertyEdge.end != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
-                if (!end && !propertyEdge.start.equals(element)) {
+                if (!end && propertyEdge.start != element) {
                     newPropertyEdges.add(propertyEdge)
                 }
             }
@@ -365,10 +373,28 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
 
     operator fun setValue(thisRef: S, property: KProperty<*>, value: List<T>) {
         if (edge is KMutableProperty1) {
-            edge.setter.call(
-                thisRef,
-                PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, thisRef as Node)
-            )
+            val callable = edge.setter
+            callable.isAccessible = true
+            edge.setter.call(thisRef, PropertyEdge.wrap(value, thisRef as Node, outgoing))
+        }
+    }
+}
+
+/** Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List]. */
+@Transient
+class PropertyEdgeSetDelegate<T : Node, S : Node>(
+    val edge: KProperty1<S, Collection<PropertyEdge<T>>>,
+    val outgoing: Boolean = true
+) {
+    operator fun getValue(thisRef: S, property: KProperty<*>): MutableSet<T> {
+        return PropertyEdge.unwrap(edge.get(thisRef).toList(), outgoing).toMutableSet()
+    }
+
+    operator fun setValue(thisRef: S, property: KProperty<*>, value: MutableSet<T>) {
+        if (edge is KMutableProperty1) {
+            val callable = edge.setter
+            callable.isAccessible = true
+            edge.setter.call(thisRef, PropertyEdge.wrap(value.toList(), thisRef as Node, outgoing))
         }
     }
 }

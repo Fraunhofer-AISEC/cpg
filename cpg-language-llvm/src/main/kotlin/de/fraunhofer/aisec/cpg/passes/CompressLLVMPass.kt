@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.newDeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -41,9 +40,9 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-class CompressLLVMPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        val flatAST = SubgraphWalker.flattenAST(t)
+class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
+    override fun accept(component: Component) {
+        val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<GotoStatement>()
         // Get all LabelStatements which are only referenced from a single GotoStatement
@@ -59,7 +58,7 @@ class CompressLLVMPass : Pass() {
         // prevents to treat the final goto in the case or default statement as a normal
         // compound
         // statement which would lead to inlining the instructions BB but we want to keep the BB
-        // inside a CompoundStatement.
+        // inside a Block.
         for (node in
             flatAST.sortedBy { n ->
                 when (n) {
@@ -84,8 +83,7 @@ class CompressLLVMPass : Pass() {
                         (node.thenStatement as GotoStatement).targetLabel?.subStatement
                 }
                 // Replace the else-statement with the basic block it jumps to iff we found that
-                // its
-                // goto statement is the only one jumping to the target
+                // its goto statement is the only one jumping to the target
                 if (
                     node.elseStatement in gotosToReplace &&
                         node !in
@@ -99,7 +97,7 @@ class CompressLLVMPass : Pass() {
             } else if (node is SwitchStatement) {
                 // Iterate over all statements in a body of the switch/case and replace a goto
                 // statement if it is the only one jumping to the target
-                val caseBodyStatements = node.statement as CompoundStatement
+                val caseBodyStatements = node.statement as Block
                 val newStatements = caseBodyStatements.statements.toMutableList()
                 for (i in 0 until newStatements.size) {
                     val subStatement =
@@ -111,7 +109,7 @@ class CompressLLVMPass : Pass() {
                         subStatement?.let { newStatements[i] = it }
                     }
                 }
-                (node.statement as CompoundStatement).statements = newStatements
+                (node.statement as Block).statements = newStatements
             } else if (
                 node is TryStatement &&
                     node.catchClauses.size == 1 &&
@@ -140,22 +138,21 @@ class CompressLLVMPass : Pass() {
             } else if (
                 node is TryStatement &&
                     node.catchClauses.size == 1 &&
-                    node.catchClauses[0].body?.statements?.get(0) is CompoundStatement
+                    node.catchClauses[0].body?.statements?.get(0) is Block
             ) {
                 // A compound statement which is wrapped in the catchClause. We can simply move
                 // it
                 // one layer up and make
                 // the compound statement the body of the catch clause.
-                val innerCompound =
-                    node.catchClauses[0].body?.statements?.get(0) as? CompoundStatement
+                val innerCompound = node.catchClauses[0].body?.statements?.get(0) as? Block
                 innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
                 fixThrowStatementsForCatch(node.catchClauses[0])
             } else if (node is TryStatement && node.catchClauses.isNotEmpty()) {
                 for (catch in node.catchClauses) {
                     fixThrowStatementsForCatch(catch)
                 }
-            } else if (node is CompoundStatement) {
-                // Get the last statement in a CompoundStatement and replace a goto statement
+            } else if (node is Block) {
+                // Get the last statement in a Block and replace a goto statement
                 // iff it is the only one jumping to the target
                 val goto = node.statements.lastOrNull()
                 if (
@@ -168,7 +165,7 @@ class CompressLLVMPass : Pass() {
                 ) {
                     val subStatement = goto.targetLabel?.subStatement
                     val newStatements = node.statements.dropLast(1).toMutableList()
-                    newStatements.addAll((subStatement as CompoundStatement).statements)
+                    newStatements.addAll((subStatement as Block).statements)
                     node.statements = newStatements
                 }
             }
@@ -199,7 +196,7 @@ class CompressLLVMPass : Pass() {
                 catch.parameter = error
             }
             val exceptionReference =
-                catch.newDeclaredReferenceExpression(
+                catch.newReference(
                     catch.parameter?.name,
                     catch.parameter?.type ?: UnknownType.getUnknownType(catch.language),
                     ""
@@ -215,7 +212,7 @@ class CompressLLVMPass : Pass() {
         val worklist: Queue<Node> = LinkedList()
         worklist.add(node.body)
         val alreadyChecked = LinkedHashSet<Node>()
-        while (!worklist.isEmpty()) {
+        while (worklist.isNotEmpty()) {
             val currentNode = worklist.remove()
             alreadyChecked.add(currentNode)
             // We exclude sub-try statements as they would mess up with the results

@@ -27,14 +27,10 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -42,8 +38,6 @@ import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import kotlin.test.*
-import org.apache.commons.lang3.reflect.FieldUtils
-import org.mockito.Mockito
 
 object TestUtils {
 
@@ -137,7 +131,6 @@ object TestUtils {
                 .disableCleanup()
                 .debugParser(true)
                 .failOnError(true)
-                .typeSystemActiveInFrontend(false)
                 .useParallelFrontends(true)
                 .defaultLanguages()
         if (usePasses) {
@@ -194,13 +187,6 @@ object TestUtils {
         }
     }
 
-    @Throws(IllegalAccessException::class)
-    fun disableTypeManagerCleanup() {
-        val spy = Mockito.spy(TypeManager.getInstance())
-        Mockito.doNothing().`when`(spy).cleanup()
-        FieldUtils.writeStaticField(TypeManager::class.java, "instance", spy, true)
-    }
-
     /**
      * Compare the given parameter `toCompare` to the start- or end-line of the given node. If the
      * node has no location `false` is returned. `startLine` is used to specify if the start-line or
@@ -224,8 +210,8 @@ object TestUtils {
      * Asserts, that the expression given in [expression] refers to the expected declaration [b].
      */
     fun assertRefersTo(expression: Expression?, b: Declaration?) {
-        if (expression is DeclaredReferenceExpression) {
-            assertEquals(b, (expression as DeclaredReferenceExpression?)?.refersTo)
+        if (expression is Reference) {
+            assertEquals(b, (expression as Reference?)?.refersTo)
         } else {
             fail("not a reference")
         }
@@ -235,15 +221,16 @@ object TestUtils {
      * Asserts, that the call expression given in [call] refers to the expected function declaration
      * [func].
      */
-    fun assertInvokes(call: CallExpression, func: FunctionDeclaration?) {
+    fun assertInvokes(call: CallExpression?, func: FunctionDeclaration?) {
+        assertNotNull(call)
         assertContains(call.invokes, func)
     }
 
     /**
      * Asserts equality or containing of the expected usedNode in the usingNode. If
-     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [DeclaredReferenceExpression] where
-     * [DeclaredReferenceExpression.refersTo] is or contains `usedNode`. If this is not the case,
-     * usage can also be interpreted as equality of the two.
+     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [Reference] where [Reference.refersTo] is
+     * or contains `usedNode`. If this is not the case, usage can also be interpreted as equality of
+     * the two.
      *
      * @param usingNode
      * - The node that shows usage of another node.
@@ -253,11 +240,11 @@ object TestUtils {
      */
     fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
         assertNotNull(usingNode)
-        if (usingNode !is DeclaredReferenceExpression && !ENFORCE_REFERENCES) {
+        if (usingNode !is Reference && !ENFORCE_REFERENCES) {
             assertSame(usedNode, usingNode)
         } else {
-            assertTrue(usingNode is DeclaredReferenceExpression)
-            val reference = usingNode as? DeclaredReferenceExpression
+            assertTrue(usingNode is Reference)
+            val reference = usingNode as? Reference
             assertEquals(usedNode, reference?.refersTo)
         }
     }
@@ -285,22 +272,30 @@ object TestUtils {
             assertUsageOf(usingNode, usedMember)
         } else {
             assertTrue(usingNode is MemberExpression)
-            val memberExpression = usingNode as MemberExpression?
-            assertNotNull(memberExpression)
+            val memberExpressionExpression = usingNode as MemberExpression?
+            assertNotNull(memberExpressionExpression)
 
-            val base = memberExpression.base
+            val base = memberExpressionExpression.base
             assertUsageOf(base, usedBase)
-            assertUsageOf(memberExpression.refersTo, usedMember)
+            assertUsageOf(memberExpressionExpression.refersTo, usedMember)
         }
     }
 }
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
     assertNotNull(node)
-    asserter.assertEquals(message, fqn, node.name.toString())
+    assertEquals(fqn, node.name.toString(), message)
 }
 
 fun assertLocalName(localName: String, node: Node?, message: String? = null) {
     assertNotNull(node)
-    asserter.assertEquals(message, localName, node.name.localName)
+    assertEquals(localName, node.name.localName, message)
+}
+
+/**
+ * Asserts that a) the expression in [expr] is a [Literal] and b) that it's value is equal to
+ * [expected].
+ */
+fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
+    assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }

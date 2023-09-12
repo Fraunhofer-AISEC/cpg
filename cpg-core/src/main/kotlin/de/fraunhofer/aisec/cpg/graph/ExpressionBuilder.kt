@@ -26,12 +26,14 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 /**
  * Creates a new [Literal]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
@@ -42,7 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 @JvmOverloads
 fun <T> MetadataProvider.newLiteral(
     value: T,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null,
 ): Literal<T> {
@@ -57,10 +59,12 @@ fun <T> MetadataProvider.newLiteral(
 }
 
 /**
- * Creates a new [BinaryOperator]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [BinaryOperator] or a [ShortCircuitOperator] if the language implements
+ * [HasShortCircuitOperators] and if the [operatorCode] is contained in
+ * [HasShortCircuitOperators.operatorCodes]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newBinaryOperator(
@@ -68,7 +72,17 @@ fun MetadataProvider.newBinaryOperator(
     code: String? = null,
     rawNode: Any? = null
 ): BinaryOperator {
-    val node = BinaryOperator()
+    val node =
+        if (
+            this is LanguageProvider &&
+                (this.language as? HasShortCircuitOperators)
+                    ?.operatorCodes
+                    ?.contains(operatorCode) == true
+        ) {
+            ShortCircuitOperator()
+        } else {
+            BinaryOperator()
+        }
     node.applyMetadata(this, operatorCode, rawNode, code, true)
 
     node.operatorCode = operatorCode
@@ -86,16 +100,16 @@ fun MetadataProvider.newBinaryOperator(
  */
 @JvmOverloads
 fun MetadataProvider.newUnaryOperator(
-    operatorType: String,
+    operatorCode: String,
     postfix: Boolean,
     prefix: Boolean,
     code: String? = null,
     rawNode: Any? = null
 ): UnaryOperator {
     val node = UnaryOperator()
-    node.applyMetadata(this, operatorType, rawNode, code, true)
+    node.applyMetadata(this, operatorCode, rawNode, code, true)
 
-    node.operatorCode = operatorType
+    node.operatorCode = operatorCode
     node.isPostfix = postfix
     node.isPrefix = prefix
 
@@ -138,7 +152,7 @@ fun MetadataProvider.newAssignExpression(
 @JvmOverloads
 fun MetadataProvider.newNewExpression(
     code: String? = null,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     rawNode: Any? = null
 ): NewExpression {
     val node = NewExpression()
@@ -178,19 +192,19 @@ fun MetadataProvider.newConstructExpression(
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
     condition: Expression,
-    thenExpr: Expression?,
-    elseExpr: Expression?,
-    type: Type = UnknownType.getUnknownType(),
+    thenExpression: Expression?,
+    elseExpression: Expression?,
+    type: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): ConditionalExpression {
     val node = ConditionalExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
-    node.condition = condition
-    node.thenExpr = thenExpr
-    node.elseExpr = elseExpr
     node.type = type
+    node.condition = condition
+    node.thenExpression = thenExpression
+    node.elseExpression = elseExpression
 
     log(node)
     return node
@@ -238,17 +252,13 @@ fun MetadataProvider.newLambdaExpression(
 }
 
 /**
- * Creates a new [CompoundStatementExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Block]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCompoundStatementExpression(
-    code: String? = null,
-    rawNode: Any? = null
-): CompoundStatementExpression {
-    val node = CompoundStatementExpression()
+fun MetadataProvider.newBlock(code: String? = null, rawNode: Any? = null): Block {
+    val node = Block()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -286,12 +296,12 @@ fun MetadataProvider.newCallExpression(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newExplicitConstructorInvocation(
+fun MetadataProvider.newConstructorCallExpression(
     containingClass: String?,
     code: String? = null,
     rawNode: Any? = null
-): ExplicitConstructorInvocation {
-    val node = ExplicitConstructorInvocation()
+): ConstructorCallExpression {
+    val node = ConstructorCallExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.containingClass = containingClass
@@ -338,7 +348,7 @@ fun MetadataProvider.newMemberCallExpression(
 fun MetadataProvider.newMemberExpression(
     name: CharSequence?,
     base: Expression,
-    memberType: Type = UnknownType.getUnknownType(),
+    memberType: Type = unknownType(),
     operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null
@@ -378,8 +388,8 @@ fun MetadataProvider.newCastExpression(code: String? = null, rawNode: Any? = nul
 @JvmOverloads
 fun MetadataProvider.newTypeIdExpression(
     operatorCode: String,
-    type: Type = UnknownType.getUnknownType(),
-    referencedType: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
+    referencedType: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): TypeIdExpression {
@@ -395,17 +405,17 @@ fun MetadataProvider.newTypeIdExpression(
 }
 
 /**
- * Creates a new [ArraySubscriptionExpression]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [SubscriptExpression]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newArraySubscriptionExpression(
+fun MetadataProvider.newSubscriptExpression(
     code: String? = null,
     rawNode: Any? = null
-): ArraySubscriptionExpression {
-    val node = ArraySubscriptionExpression()
+): SubscriptExpression {
+    val node = SubscriptExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
@@ -413,63 +423,63 @@ fun MetadataProvider.newArraySubscriptionExpression(
 }
 
 /**
- * Creates a new [ArrayCreationExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [RangeExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newArrayCreationExpression(
+fun MetadataProvider.newRangeExpression(
+    floor: Expression? = null,
+    ceiling: Expression? = null,
     code: String? = null,
     rawNode: Any? = null
-): ArrayCreationExpression {
-    val node = ArrayCreationExpression()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [DeclaredReferenceExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newDeclaredReferenceExpression(
-    name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
-    code: String? = null,
-    rawNode: Any? = null
-): DeclaredReferenceExpression {
-    val node = DeclaredReferenceExpression()
-    node.applyMetadata(this, name, rawNode, code, true)
-
-    node.type = type
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [ArrayRangeExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newArrayRangeExpression(
-    floor: Expression?,
-    ceil: Expression?,
-    code: String? = null,
-    rawNode: Any? = null
-): ArrayRangeExpression {
-    val node = ArrayRangeExpression()
+): RangeExpression {
+    val node = RangeExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     node.floor = floor
-    node.ceiling = ceil
+    node.ceiling = ceiling
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [NewArrayExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newNewArrayExpression(
+    code: String? = null,
+    rawNode: Any? = null
+): NewArrayExpression {
+    val node = NewArrayExpression()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [Reference]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newReference(
+    name: CharSequence?,
+    type: Type = unknownType(),
+    code: String? = null,
+    rawNode: Any? = null
+): Reference {
+    val node = Reference()
+    node.applyMetadata(this, name, rawNode, code, true)
+
+    node.type = type
 
     log(node)
     return node
@@ -517,11 +527,14 @@ fun MetadataProvider.newExpressionList(code: String? = null, rawNode: Any? = nul
  */
 @JvmOverloads
 fun MetadataProvider.newInitializerListExpression(
+    targetType: Type = unknownType(),
     code: String? = null,
     rawNode: Any? = null
 ): InitializerListExpression {
     val node = InitializerListExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    node.type = targetType
 
     log(node)
     return node
@@ -554,7 +567,7 @@ fun MetadataProvider.newDesignatedInitializerExpression(
 @JvmOverloads
 fun MetadataProvider.newTypeExpression(
     name: CharSequence?,
-    type: Type = UnknownType.getUnknownType(),
+    type: Type = unknownType(),
     rawNode: Any? = null
 ): TypeExpression {
     val node = TypeExpression()
@@ -586,15 +599,24 @@ fun MetadataProvider.newProblemExpression(
     return node
 }
 
+fun MetadataProvider.newProblemType(code: String? = null, rawNode: Any? = null): ProblemType {
+    val node = ProblemType()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+
+    log(node)
+    return node
+}
+
 fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     val duplicate = Literal<T>()
+    duplicate.ctx = this.ctx
     duplicate.language = this.language
     duplicate.value = this.value
     duplicate.type = this.type
+    duplicate.assignedTypes = this.assignedTypes
     duplicate.code = this.code
     duplicate.location = this.location
     duplicate.locals = this.locals
-    duplicate.possibleSubTypes = this.possibleSubTypes
     duplicate.argumentIndex = this.argumentIndex
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment
@@ -610,6 +632,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
+    duplicate.ctx = this.ctx
     duplicate.name = this.name.clone()
     duplicate.language = this.language
     duplicate.type = this.type

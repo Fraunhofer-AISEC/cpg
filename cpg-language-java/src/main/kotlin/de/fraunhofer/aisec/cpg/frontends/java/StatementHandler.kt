@@ -38,7 +38,21 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ExplicitConstructorInvocation
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStatement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructorCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -46,9 +60,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
 import java.util.stream.Collectors
-import kotlin.collections.ArrayList
-import kotlin.collections.MutableList
-import kotlin.collections.mapNotNull
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
@@ -63,7 +74,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val expression = frontend.expressionHandler.handle(stmt.asExpressionStmt().expression)
 
         // update expression's code and location to match the statement
-        frontend.setCodeAndLocation(expression, stmt)
+        if (expression != null) {
+            frontend.setCodeAndLocation(expression, stmt)
+        }
+
         return expression
     }
 
@@ -132,7 +146,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         assertStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        thenStatement.ifPresent { statement: Expression? ->
+        thenStatement.ifPresent {
             assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
         }
         return assertStatement
@@ -159,7 +173,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val variable = frontend.expressionHandler.handle(forEachStmt.variable)
         val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
         if (variable !is DeclarationStatement) {
-            log.error("Expected a DeclarationStatement but received: {}", variable!!.name)
+            log.error("Expected a DeclarationStatement but received: {}", variable?.name)
         } else {
             statement.variable = variable
         }
@@ -189,31 +203,34 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val initExprList = this.newExpressionList()
             for (initExpr in forStmt.initialization) {
                 val s = frontend.expressionHandler.handle(initExpr)
-
-                // make sure location is set
-                frontend.setCodeAndLocation(s, initExpr)
-                s?.let { initExprList.addExpression(it) }
+                s?.let {
+                    // make sure location is set
+                    frontend.setCodeAndLocation(it, initExpr)
+                    initExprList.addExpression(it)
+                }
 
                 // can not update location
-                if (s!!.location == null) {
+                if (s?.location == null) {
                     continue
                 }
                 if (ofExprList == null) {
                     ofExprList = s.location
                 }
-                ofExprList!!.region = frontend.mergeRegions(ofExprList.region, s.location!!.region)
+                ofExprList?.region?.let { ofRegion ->
+                    s.location?.region?.let {
+                        ofExprList?.region = frontend.mergeRegions(ofRegion, it)
+                    }
+                }
             }
 
             // set code and location of init list
-            if (statement.location != null && ofExprList != null) {
-                val initCode =
-                    frontend.getCodeOfSubregion(
-                        statement,
-                        statement.location!!.region,
-                        ofExprList.region
-                    )
-                initExprList.location = ofExprList
-                initExprList.code = initCode
+            statement.location?.let { location ->
+                ofExprList?.let {
+                    val initCode =
+                        frontend.getCodeOfSubregion(statement, location.region, it.region)
+                    initExprList.location = ofExprList
+                    initExprList.code = initCode
+                }
             }
             statement.initializerStatement = initExprList
         } else if (forStmt.initialization.size == 1) {
@@ -230,7 +247,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         // and in
         // cpp StatementHandler
         if (statement.condition == null) {
-            val literal: Literal<*> = this.newLiteral(true, this.parseType("boolean"), "true")
+            val literal: Literal<*> = this.newLiteral(true, this.primitiveType("boolean"), "true")
             statement.condition = literal
         }
         if (forStmt.update.size > 1) {
@@ -240,31 +257,34 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val iterationExprList = this.newExpressionList()
             for (updateExpr in forStmt.update) {
                 val s = frontend.expressionHandler.handle(updateExpr)
-
-                // make sure location is set
-                frontend.setCodeAndLocation(s, updateExpr)
-                s?.let { iterationExprList.addExpression(it) }
+                s?.let {
+                    // make sure location is set
+                    frontend.setCodeAndLocation(s, updateExpr)
+                    iterationExprList.addExpression(it)
+                }
 
                 // can not update location
-                if (s!!.location == null) {
+                if (s?.location == null) {
                     continue
                 }
                 if (ofExprList == null) {
                     ofExprList = s.location
                 }
-                ofExprList!!.region = frontend.mergeRegions(ofExprList.region, s.location!!.region)
+                ofExprList?.region?.let { ofRegion ->
+                    s.location?.region?.let {
+                        ofExprList.region = frontend.mergeRegions(ofRegion, it)
+                    }
+                }
             }
 
             // set code and location of init list
-            if (statement.location != null && ofExprList != null) {
-                val updateCode =
-                    frontend.getCodeOfSubregion(
-                        statement,
-                        statement.location!!.region,
-                        ofExprList.region
-                    )
-                iterationExprList.location = ofExprList
-                iterationExprList.code = updateCode
+            statement.location?.let { location ->
+                ofExprList?.let {
+                    val updateCode =
+                        frontend.getCodeOfSubregion(statement, location.region, it.region)
+                    iterationExprList.location = ofExprList
+                    iterationExprList.code = updateCode
+                }
             }
             statement.iterationStatement = iterationExprList
         } else if (forStmt.update.size == 1) {
@@ -300,7 +320,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         synchronizedCPG.expression =
             frontend.expressionHandler.handle(synchronizedJava.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        synchronizedCPG.blockStatement = handle(synchronizedJava.body) as CompoundStatement?
+        synchronizedCPG.block = handle(synchronizedJava.body) as Block?
         return synchronizedCPG
     }
 
@@ -330,15 +350,15 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return continueStatement
     }
 
-    fun handleBlockStatement(stmt: Statement): CompoundStatement {
+    fun handleBlockStatement(stmt: Statement): Block {
         val blockStmt = stmt.asBlockStmt()
 
         // first of, all we need a compound statement
-        val compoundStatement = this.newCompoundStatement(stmt.toString())
+        val compoundStatement = this.newBlock(stmt.toString())
         frontend.scopeManager.enterScope(compoundStatement)
         for (child in blockStmt.statements) {
             val statement = handle(child)
-            compoundStatement.addStatement(statement!!)
+            statement?.let { compoundStatement.addStatement(it) }
         }
         frontend.setCodeAndLocation(compoundStatement, stmt)
         frontend.scopeManager.leaveScope(compoundStatement)
@@ -349,7 +369,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         caseExpression: Expression?,
         sEntry: SwitchEntry
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
-        val parentLocation = frontend.getLocationFromRawNode(sEntry)
+        val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
         var caseTokens = Pair<JavaToken?, JavaToken?>(null, null)
         if (optionalTokenRange.isEmpty) {
@@ -448,7 +468,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val newCode = StringBuilder(startToken.text)
         var current = startToken
         do {
-            current = current!!.nextToken.orElse(null)
+            current = current?.nextToken?.orElse(null)
             if (current == null) {
                 break
             }
@@ -477,7 +497,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             start = getNextTokenWith("{", tokenRangeSelector.get().end)
             end = getPreviousTokenWith("}", tokenRange.get().end)
         }
-        val compoundStatement = this.newCompoundStatement(getCodeBetweenTokens(start, end))
+        val compoundStatement = this.newBlock(getCodeBetweenTokens(start, end))
         compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
         for (sentry in switchStmt.entries) {
             if (sentry.labels.isEmpty()) {
@@ -487,7 +507,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 compoundStatement.addStatement(handleCaseDefaultStatement(caseExp, sentry))
             }
             for (subStmt in sentry.statements) {
-                compoundStatement.addStatement(handle(subStmt)!!)
+                compoundStatement.addStatement(
+                    handle(subStmt) ?: ProblemExpression("Could not parse statement")
+                )
             }
         }
         switchStatement.statement = compoundStatement
@@ -495,10 +517,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(
-        stmt: Statement
-    ): ExplicitConstructorInvocation {
-        val eciStatement = stmt.asExplicitConstructorInvocationStmt()
+    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpression {
+        val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
         if (currentRecord == null) {
@@ -508,9 +528,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-        val node = this.newExplicitConstructorInvocation(containingClass, eciStatement.toString())
+        val node =
+            this.newConstructorCallExpression(
+                containingClass,
+                explicitConstructorInvocationStmt.toString()
+            )
         val arguments =
-            eciStatement.arguments
+            explicitConstructorInvocationStmt.arguments
                 .stream()
                 .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                 .map { obj: de.fraunhofer.aisec.cpg.graph.statements.Statement? ->
@@ -561,7 +585,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     ): de.fraunhofer.aisec.cpg.graph.statements.CatchClause {
         val cClause = this.newCatchClause(catchCls.toString())
         frontend.scopeManager.enterScope(cClause)
-        val possibleTypes: MutableList<Type> = ArrayList()
+        val possibleTypes = mutableSetOf<Type>()
         val concreteType: Type
         if (catchCls.parameter.type is UnionType) {
             for (t in (catchCls.parameter.type as UnionType).elements) {
@@ -569,7 +593,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             // we do not know which of the exceptions was actually thrown, so we assume this might
             // be any
-            concreteType = this.parseType("java.lang.Throwable")
+            concreteType = this.objectType("java.lang.Throwable")
             concreteType.typeOrigin = Type.Origin.GUESSED
         } else {
             concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)
@@ -582,7 +606,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 catchCls.parameter.toString(),
                 false
             )
-        parameter.possibleSubTypes = possibleTypes
+        parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body
         cClause.parameter = parameter
@@ -596,91 +620,70 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     init {
-        map[IfStmt::class.java] = HandlerInterface { stmt: Statement -> handleIfStatement(stmt) }
-        map[AssertStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.IfStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
+                handleIfStatement(stmt)
+            }
+        map[com.github.javaparser.ast.stmt.AssertStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleAssertStatement(stmt)
             }
-        map[WhileStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.WhileStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleWhileStatement(stmt)
             }
-        map[DoStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.DoStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleDoStatement(stmt)
             }
-        map[ForEachStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.ForEachStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleForEachStatement(stmt)
             }
-        map[ForStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.ForStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleForStatement(stmt)
             }
-        map[BreakStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.BreakStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleBreakStatement(stmt)
             }
-        map[ContinueStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.ContinueStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleContinueStatement(stmt)
             }
-        map[ReturnStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.ReturnStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleReturnStatement(stmt)
             }
-        map[BlockStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleBlockStatement(stmt)
-            }
-        map[LabeledStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleLabelStatement(stmt)
-            }
-        map[ExplicitConstructorInvocationStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleExplicitConstructorInvocation(stmt)
-            }
-        map[ExpressionStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleExpressionStatement(stmt)
-            }
-        map[SwitchStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[BlockStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleBlockStatement(stmt)
+        }
+        map[LabeledStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleLabelStatement(stmt)
+        }
+        map[ExplicitConstructorInvocationStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleExplicitConstructorInvocation(stmt)
+        }
+        map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleExpressionStatement(stmt)
+        }
+        map[com.github.javaparser.ast.stmt.SwitchStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleSwitchStatement(stmt)
             }
-        map[EmptyStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.EmptyStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleEmptyStatement(stmt)
             }
-        map[SynchronizedStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.SynchronizedStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleSynchronizedStatement(stmt)
             }
-        map[TryStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
+        map[com.github.javaparser.ast.stmt.TryStmt::class.java] =
+            HandlerInterface { stmt: Statement ->
                 handleTryStatement(stmt)
             }
-        map[ThrowStmt::class.java] =
-            HandlerInterface<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement> {
-                stmt: Statement ->
-                handleThrowStmt(stmt)
-            }
+        map[ThrowStmt::class.java] = HandlerInterface { stmt: Statement -> handleThrowStmt(stmt) }
     }
 }

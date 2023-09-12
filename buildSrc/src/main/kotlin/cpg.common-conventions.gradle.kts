@@ -6,13 +6,11 @@ plugins {
 
     `java-library`
     jacoco
-    kotlin("jvm")
-    id("org.jetbrains.dokka")
     signing
     `maven-publish`
+    kotlin("jvm")
+    id("org.jetbrains.dokka")
 }
-
-group = "de.fraunhofer.aisec"
 
 java {
     withSourcesJar()
@@ -79,20 +77,6 @@ publishing {
             }
         }
     }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
 }
 
 signing {
@@ -120,7 +104,7 @@ kotlin {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xcontext-receivers")
     }
 }
 

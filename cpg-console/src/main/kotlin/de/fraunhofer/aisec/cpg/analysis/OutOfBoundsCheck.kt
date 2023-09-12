@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.capacity
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -52,8 +52,8 @@ class OutOfBoundsCheck {
         for (tu in result.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
-                object : IVisitor<Node?>() {
-                    fun visit(v: ArraySubscriptionExpression) {
+                object : IVisitor<Node>() {
+                    fun visit(v: SubscriptExpression) {
                         val evaluator = ValueEvaluator()
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)
 
@@ -61,9 +61,8 @@ class OutOfBoundsCheck {
                             // check, if we know that the array was initialized with a fixed length
                             // TODO(oxisto): it would be nice to have a helper that follows the expr
                             val decl =
-                                (v.arrayExpression as? DeclaredReferenceExpression)?.refersTo
-                                    as? VariableDeclaration
-                            (decl?.initializer as? ArrayCreationExpression)?.let {
+                                (v.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
+                            (decl?.initializer as? NewArrayExpression)?.let {
                                 val capacity = it.capacity
 
                                 if (resolvedIndex >= capacity) {

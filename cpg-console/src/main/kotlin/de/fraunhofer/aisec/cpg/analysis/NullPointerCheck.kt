@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.Companion.locationLink
 import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStringBuilder
 import org.jline.utils.AttributedStyle.*
@@ -52,7 +52,7 @@ class NullPointerCheck {
         for (tu in result.translationUnits) {
             tu.accept(
                 Strategy::AST_FORWARD,
-                object : IVisitor<Node?>() {
+                object : IVisitor<Node>() {
                     fun visit(v: MemberCallExpression) {
                         handleHasBase(v)
                     }
@@ -61,7 +61,7 @@ class NullPointerCheck {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: ArraySubscriptionExpression) {
+                    fun visit(v: SubscriptExpression) {
                         handleHasBase(v)
                     }
                 }
@@ -131,7 +131,7 @@ class NullPointerCheck {
                 }
             }
         } catch (ex: Throwable) {
-            log.error("Exception while running check: {}", ex)
+            log.error("Exception while running check", ex)
         }
     }
 }

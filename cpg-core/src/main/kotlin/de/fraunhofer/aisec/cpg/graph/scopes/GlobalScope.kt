@@ -25,24 +25,40 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+
+/**
+ * This should ideally only be called once. It constructs a new global scope, which is not
+ * associated to any AST node. However, depending on the language, a language frontend can
+ * explicitly set the ast node using [ScopeManager.resetToGlobal] if the language needs a global
+ * scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique list of
+ * global variables.
+ */
 class GlobalScope : StructureDeclarationScope(null) {
+
     /**
-     * This should ideally only be called once. It constructs a new global scope, which is not
-     * associated to any AST node. However, depending on the language, a language frontend can
-     * explicitly set the ast node using [ScopeManager.resetToGlobal] if the language needs a global
-     * scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique
-     * list of global variables.
+     * Because the way we currently handle parallel parsing in [TranslationManager.parseParallel],
+     * we end up with multiple [GlobalScope] objects, one for each [TranslationUnitDeclaration]. In
+     * the end, we need to merge all these different scopes into one final global scope. To be
+     * somewhat consistent with the behaviour of [TranslationManager.parseSequentially], we assign
+     * the *last* translation unit declaration we see to the AST node of the [GlobalScope]. This is
+     * not completely ideal, but the best we can do for now.
      */
     fun mergeFrom(others: Collection<GlobalScope>) {
         for (other in others) {
             structureDeclarations.addAll(other.structureDeclarations)
             valueDeclarations.addAll(other.valueDeclarations)
             typedefs.putAll(other.typedefs)
-            // TODO what to do with astNode?
             for (child in other.children) {
                 child.parent = this
                 children.add(child)
             }
         }
+
+        // We set the AST node of the global scope to the last declaration we see (this might not be
+        // 100 % deterministic).
+        this.astNode = others.lastOrNull()?.astNode
     }
 }

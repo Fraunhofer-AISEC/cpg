@@ -27,8 +27,11 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Represents an assignment of a group of expressions (in the simplest case: one) from the right
@@ -47,26 +50,28 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
  * from the (first) rhs to the [AssignExpression] itself.
  */
-class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
+class AssignExpression :
+    Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
 
-    var operatorCode: String = "="
+    override var operatorCode: String = "="
 
-    @AST var lhs: List<Expression> = listOf()
+    @AST
+    var lhs: List<Expression> = listOf()
+        set(value) {
+            field = value
+            if (operatorCode == "=") {
+                field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
+            } else {
+                field.forEach { (it as? Reference)?.access = AccessValues.READWRITE }
+            }
+        }
 
     @AST
     var rhs: List<Expression> = listOf()
         set(value) {
-            // Unregister any old type listeners
-            field.forEach { it.unregisterTypeListener(this) }
+            field.forEach { it.unregisterTypeObserver(this) }
             field = value
-            // Register this statement as a type listener for each expression
-            value.forEach {
-                it.registerTypeListener(this)
-
-                if (it is DeclaredReferenceExpression) {
-                    it.access = AccessValues.WRITE
-                }
-            }
+            value.forEach { it.registerTypeObserver(this) }
         }
 
     /**
@@ -74,7 +79,7 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
      * support that. In the regular case, an assignment is a simple statement and does not hold any
      * value itself.
      */
-    val usedAsExpression = false
+    var usedAsExpression = false
 
     /**
      * If this node is used an expression, this property contains a reference of the [Expression]
@@ -92,12 +97,12 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
     /**
      * We also support compound assignments in this class, but only if the appropriate compound
-     * operator is set and only if there is a single-value expression on both side.
+     * operator is set and only if there is a single-value expression on both sides.
      */
     val isCompoundAssignment: Boolean
         get() {
-            return arrayOf("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=")
-                .contains(operatorCode) && isSingleValue
+            return operatorCode in (language?.compoundAssignmentOperators ?: setOf()) &&
+                isSingleValue
         }
 
     /**
@@ -110,88 +115,47 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
      */
     override var declarations = mutableListOf<VariableDeclaration>()
 
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-
-        val type = src.type
-
-        // There are now two possibilities: Either, we have a tuple type, that we need to
-        // deconstruct, or we have a singular type
-        if (type is TupleType) {
-            val targets = findTargets(src)
-            if (targets.size == type.types.size) {
-                // Set the corresponding type on the left-side
-                type.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.type = t }
-            }
-        } else {
-            findTargets(src).forEach { it.type = src.propagationType }
-        }
-
-        // If this is used as an expression, we also set the type accordingly
-        if (usedAsExpression) {
-            expressionValue?.propagationType?.let { setType(it, root) }
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-
-        // Basically, we need to find out which index on the rhs this variable belongs to and set
-        // the corresponding subtypes on the lhs.
-        val idx = rhs.indexOf(src)
-        if (idx == -1) {
-            return
-        }
-
-        // Set the subtypes
-        lhs.getOrNull(idx)?.setPossibleSubTypes(src.possibleSubTypes, root)
-    }
-
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
-    fun findValue(lhsExpr: HasType): Expression? {
-        if (lhs.size > 1) {
-            return rhs.singleOrNull()
+    fun findValue(lhsExpression: HasType): Expression? {
+        return if (lhs.size > 1) {
+            rhs.singleOrNull()
         } else {
             // Basically, we need to find out which index on the lhs this variable belongs to and
             // find the corresponding index on the rhs.
-            val idx = lhs.indexOf(lhsExpr)
+            val idx = lhs.indexOf(lhsExpression)
             if (idx == -1) {
-                return null
+                null
+            } else {
+                rhs.getOrNull(idx)
             }
-
-            return rhs.getOrNull(idx)
         }
     }
 
     /** Finds the targets(s) (within [lhs]) that are assigned to the particular [rhs] expression. */
-    fun findTargets(rhsExpr: HasType): List<Expression> {
-        val type = rhsExpr.type
+    fun findTargets(rhsExpression: HasType): List<Expression> {
+        val type = rhsExpression.type
 
         // There are now two possibilities: Either, we have a tuple type, that we need to
         // deconstruct, or we have a singular type
-        if (type is TupleType) {
+        return if (type is TupleType) {
             // We need to see if there is enough room on the left side. Currently, we only support
             // languages that do not allow to mix tuple and non-tuple types luckily, so we can just
             // assume that all arguments on the left side are assignment targets
             if (lhs.size != type.types.size) {
-                println("Tuple type size on RHS does not match number of LHS expressions")
-                return listOf()
+                log.info("Tuple type size on RHS does not match number of LHS expressions")
+                listOf()
+            } else {
+                lhs
             }
-
-            return lhs
         } else {
             // Basically, we need to find out which index on the rhs this variable belongs to and
             // find the corresponding index on the rhs.
-            val idx = rhs.indexOf(rhsExpr)
+            val idx = rhs.indexOf(rhsExpression)
             if (idx == -1) {
-                return listOf()
+                listOf()
+            } else {
+                listOfNotNull(lhs.getOrNull(idx))
             }
-
-            return listOfNotNull(lhs.getOrNull(idx))
         }
     }
 
@@ -205,4 +169,63 @@ class AssignExpression : Expression(), AssignmentHolder, HasType.TypeListener {
 
             return list
         }
+
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(Node::class.java)
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Double-check, if the src is really from the rhs
+        if (!rhs.contains(src)) {
+            return
+        }
+
+        // There are now two possibilities: Either, we have a tuple type, that we need to
+        // deconstruct, or we have a singular type. Now, its getting tricky. We do NOT want
+        // to propagate the type to the declared type, but only to the "assigned" type
+        if (newType is TupleType) {
+            val targets = findTargets(src)
+            if (targets.size == newType.types.size) {
+                // Set the corresponding type on the left-side
+                newType.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.addAssignedType(t) }
+            }
+        } else {
+            findTargets(src).forEach { it.addAssignedType(newType) }
+        }
+
+        // If this is used as an expression, we also set the type accordingly
+        if (usedAsExpression) {
+            expressionValue?.type?.let { type = it }
+        }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Double-check, if the src is really from the rhs
+        if (!rhs.contains(src)) {
+            return
+        }
+
+        // Propagate any assigned types from the source to the target
+        findTargets(src).forEach { it.addAssignedTypes(assignedTypes) }
+    }
+
+    override fun addArgument(expression: Expression) {
+        if (lhs.isEmpty()) {
+            lhs = listOf(expression)
+        } else {
+            rhs = listOf(expression)
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        return if (lhs == listOf(old)) {
+            lhs = listOf(new)
+            true
+        } else if (rhs == listOf(old)) {
+            rhs = listOf(new)
+            true
+        } else {
+            false
+        }
+    }
 }

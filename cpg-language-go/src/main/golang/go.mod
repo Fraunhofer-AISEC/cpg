@@ -1,8 +1,8 @@
 module cpg
 
-go 1.19
+go 1.20
 
 require (
-	golang.org/x/mod v0.8.0
-	tekao.net/jnigi v0.0.0-20221227053512-56e0101fa996
+	github.com/mattn/go-pointer v0.0.1
+	golang.org/x/mod v0.12.0
 )

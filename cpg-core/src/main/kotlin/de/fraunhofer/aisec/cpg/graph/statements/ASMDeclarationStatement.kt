@@ -24,5 +24,5 @@
  *
  */
 package de.fraunhofer.aisec.cpg.graph.statements
-
+// TODO Merge and/or refactor
 class ASMDeclarationStatement : DeclarationStatement()

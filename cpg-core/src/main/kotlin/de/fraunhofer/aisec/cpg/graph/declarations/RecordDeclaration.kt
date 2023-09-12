@@ -25,18 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import java.util.stream.Collectors
-import java.util.stream.Stream
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
@@ -90,7 +85,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
      *
      * @return the list of implemented interfaces
      */
-    @Transient var implementedInterfaces: List<Type> = ArrayList()
+    @Transient var implementedInterfaces = mutableListOf<Type>()
 
     @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
 
@@ -118,6 +113,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     fun removeMethod(methodDeclaration: MethodDeclaration?) {
         methodEdges.removeIf { it.end == methodDeclaration }
     }
+
     fun addConstructor(constructorDeclaration: ConstructorDeclaration) {
         addIfNotContains(constructorEdges, constructorDeclaration)
     }
@@ -129,6 +125,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
     fun removeRecord(recordDeclaration: RecordDeclaration) {
         recordEdges.removeIf { it.end == recordDeclaration }
     }
+
     fun removeTemplate(templateDeclaration: TemplateDeclaration?) {
         templateEdges.removeIf { it.end == templateDeclaration }
     }
@@ -143,6 +140,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             list.addAll(templates)
             return list
         }
+
     val superTypes: List<Type>
         /**
          * Combines both implemented interfaces and extended classes. This is most commonly what you
@@ -150,10 +148,7 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
          *
          * @return concatenation of [.getSuperClasses] and [.getImplementedInterfaces]
          */
-        get() =
-            Stream.of(superClasses, implementedInterfaces)
-                .flatMap { obj: List<Type> -> obj.stream() }
-                .collect(Collectors.toList())
+        get() = superClasses + implementedInterfaces
 
     /**
      * Adds a type to the list of super classes for this record declaration.
@@ -177,22 +172,22 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o !is RecordDeclaration) return false
-        return super.equals(o) &&
-            kind == o.kind &&
-            fields == o.fields &&
-            propertyEqualsList(fieldEdges, o.fieldEdges) &&
-            methods == o.methods &&
-            propertyEqualsList(methodEdges, o.methodEdges) &&
-            constructors == o.constructors &&
-            propertyEqualsList(constructorEdges, o.constructorEdges) &&
-            records == o.records &&
-            propertyEqualsList(recordEdges, o.recordEdges) &&
-            superClasses == o.superClasses &&
-            implementedInterfaces == o.implementedInterfaces &&
-            superTypeDeclarations == o.superTypeDeclarations
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RecordDeclaration) return false
+        return super.equals(other) &&
+            kind == other.kind &&
+            fields == other.fields &&
+            propertyEqualsList(fieldEdges, other.fieldEdges) &&
+            methods == other.methods &&
+            propertyEqualsList(methodEdges, other.methodEdges) &&
+            constructors == other.constructors &&
+            propertyEqualsList(constructorEdges, other.constructorEdges) &&
+            records == other.records &&
+            propertyEqualsList(recordEdges, other.recordEdges) &&
+            superClasses == other.superClasses &&
+            implementedInterfaces == other.implementedInterfaces &&
+            superTypeDeclarations == other.superTypeDeclarations
     }
 
     override fun hashCode() = super.hashCode() // TODO: Which fields can be safely added?
@@ -213,13 +208,14 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
      * @return the type
      */
     fun toType(): Type {
-        val type = TypeParser.createFrom(name, language)
+        val type = objectType(name)
         if (type is ObjectType) {
             // as a shortcut, directly set the record declaration. This will be otherwise done
             // later by a pass, but for some frontends we need this immediately, so we set
             // this here.
             type.recordDeclaration = this
         }
+        type.superTypes.addAll(this.superTypes)
         return type
     }
 }

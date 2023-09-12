@@ -26,14 +26,14 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.frontends.TestHandler
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.nio.file.Path
@@ -63,7 +63,7 @@ class MultiValueEvaluatorTest {
         assertNotNull(b)
 
         var value = b.evaluate()
-        assertEquals(2L, value)
+        assertEquals(2, value)
 
         val printB = main.bodyOrNull<CallExpression>()
         assertNotNull(printB)
@@ -71,7 +71,7 @@ class MultiValueEvaluatorTest {
         val evaluator = MultiValueEvaluator()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(value.min(), value.max())
-        assertEquals(2L, value.min())
+        assertEquals(2, value.min())
 
         val path = evaluator.path
         assertEquals(5, path.size)
@@ -87,13 +87,13 @@ class MultiValueEvaluatorTest {
         assertNotNull(c)
 
         value = evaluator.evaluate(c)
-        assertEquals(3L, value)
+        assertEquals(3, value)
 
         val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
         assertNotNull(d)
 
         value = evaluator.evaluate(d)
-        assertEquals(2L, value)
+        assertEquals(2, value)
 
         val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
         assertNotNull(e)
@@ -103,13 +103,13 @@ class MultiValueEvaluatorTest {
         val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
         assertNotNull(f)
         value = evaluator.evaluate(f)
-        assertEquals(10L, value)
+        assertEquals(10, value)
 
         val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
         assertNotNull(g)
         value = evaluator.evaluate(g) as ConcreteNumberSet
         assertEquals(value.min(), value.max())
-        assertEquals(-3L, value.min())
+        assertEquals(-3, value.min())
 
         val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
         assertNotNull(i)
@@ -167,21 +167,25 @@ class MultiValueEvaluatorTest {
 
         printB = main.bodyOrNull<CallExpression>(1)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2), value.values)
 
         printB = main.bodyOrNull<CallExpression>(2)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 4), value.values)
 
         printB = main.bodyOrNull<CallExpression>(3)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(-4, -2, -1, 0, 1, 2, 4), value.values)
 
         printB = main.bodyOrNull<CallExpression>(4)
         assertNotNull(printB)
+        evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(3, 6), value.values)
     }
@@ -195,7 +199,7 @@ class MultiValueEvaluatorTest {
                 topLevel,
                 true
             ) {
-                it.registerPass(EdgeCachePass())
+                it.registerPass<EdgeCachePass>()
             }
 
         assertNotNull(tu)
@@ -207,9 +211,52 @@ class MultiValueEvaluatorTest {
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()
-        val iVar = ((forLoop.statement as CompoundStatement).statements[0] as BinaryOperator).rhs
+        val iVarList = ((forLoop.statement as Block).statements[0] as AssignExpression).rhs
+        assertEquals(1, iVarList.size)
+        val iVar = iVarList.first()
         val value = evaluator.evaluate(iVar) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 3, 4, 5), value.values)
+    }
+
+    @Test
+    fun testHandleUnary() {
+        val evaluator = MultiValueEvaluator()
+
+        with(TestHandler(TestLanguageFrontend())) {
+            // Construct a fake DFG flow
+            val three = newLiteral(3, primitiveType("int"))
+            val four = newLiteral(4, primitiveType("int"))
+
+            val ref = newReference("a")
+            ref.prevDFG = mutableSetOf(three, four)
+
+            val neg = newUnaryOperator("-", false, true)
+            neg.input = ref
+            assertEquals(ConcreteNumberSet(mutableSetOf(-3, -4)), evaluator.evaluate(neg))
+
+            neg.input = newLiteral(3.5, primitiveType("double"))
+            assertEquals(-3.5, evaluator.evaluate(neg))
+
+            val plusplus = newUnaryOperator("++", true, false)
+            plusplus.input = newLiteral(3, primitiveType("int"))
+            assertEquals(4, evaluator.evaluate(plusplus))
+
+            plusplus.input = newLiteral(3.5, primitiveType("double"))
+            assertEquals(4.5, evaluator.evaluate(plusplus))
+
+            plusplus.input = newLiteral(3.5f, primitiveType("float"))
+            assertEquals(4.5f, evaluator.evaluate(plusplus))
+
+            val minusminus = newUnaryOperator("--", true, false)
+            minusminus.input = newLiteral(3, primitiveType("int"))
+            assertEquals(2, evaluator.evaluate(minusminus))
+
+            minusminus.input = newLiteral(3.5, primitiveType("double"))
+            assertEquals(2.5, evaluator.evaluate(minusminus))
+
+            minusminus.input = newLiteral(3.5f, primitiveType("float"))
+            assertEquals(2.5f, evaluator.evaluate(minusminus))
+        }
     }
 
     @Test

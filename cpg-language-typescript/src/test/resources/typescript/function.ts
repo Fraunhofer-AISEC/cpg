@@ -1,7 +1,7 @@
 /*
  Block comment on a function
 */
-function someFunction(): Number {
+function someFunction(): number {
     // Comment on a variable
     const i = someOtherFunction("hello");
 
@@ -9,6 +9,6 @@ function someFunction(): Number {
 }
 
 // Comment on a Function
-function someOtherFunction(s: String): Number {
+function someOtherFunction(s: string): number {
     return s.length;
 }

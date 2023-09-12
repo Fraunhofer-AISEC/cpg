@@ -30,17 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.processing.IVisitor
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Consumer
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
@@ -76,7 +73,7 @@ class ScopeManager : ScopeProvider {
      * The language frontend tied to the scope manager. Can be used to implement language specific
      * scope resolution or lookup.
      */
-    var lang: LanguageFrontend? = null
+    var lang: LanguageFrontend<*, *>? = null
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
@@ -92,8 +89,8 @@ class ScopeManager : ScopeProvider {
         get() = scopeMap[null] as? GlobalScope
 
     /** The current block, according to the scope that is currently active. */
-    val currentBlock: CompoundStatement?
-        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? CompoundStatement
+    val currentBlock: Block?
+        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? Block
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
@@ -173,7 +170,10 @@ class ScopeManager : ScopeProvider {
                 }
             }
 
-            scopeMap.putAll(manager.scopeMap)
+            // We need to make sure that we do not put the "null" key (aka the global scope) of the
+            // individual scope manager into our map, otherwise we would overwrite our merged global
+            // scope.
+            scopeMap.putAll(manager.scopeMap.filter { it.key != null })
 
             // free the maps, just to clear up some things. this scope manager will not be used
             // anymore
@@ -198,7 +198,7 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode!!.name.toString()] = scope
+            fqnScopeMap[scope.astNode?.name.toString()] = scope
         }
         currentScope?.let {
             it.children.add(scope)
@@ -214,7 +214,7 @@ class ScopeManager : ScopeProvider {
      * on-the-fly, if they do not exist.
      *
      * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
-     * and the CPG node it represents, e.g. a [CompoundStatement].
+     * and the CPG node it represents, e.g. a [Block].
      *
      * Afterwards, all calls to [addDeclaration] will be distributed to the
      * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
@@ -226,7 +226,7 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is CompoundStatement -> BlockScope(nodeToScope)
+                    is Block -> BlockScope(nodeToScope)
                     is WhileStatement,
                     is DoStatement,
                     is AssertStatement -> LoopScope(nodeToScope as Statement)
@@ -441,7 +441,9 @@ class ScopeManager : ScopeProvider {
 
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
-        return scopeMap[node]
+        return if (node is TranslationUnitDeclaration) {
+            globalScope
+        } else scopeMap[node]
     }
 
     /** This function looks up scope by its FQN. This only works for [NameScope]s */
@@ -458,7 +460,9 @@ class ScopeManager : ScopeProvider {
         if (breakStatement.label == null) {
             val scope = firstScopeOrNull { scope: Scope? -> scope?.isBreakable() == true }
             if (scope == null) {
-                LOGGER.error(
+                Util.errorWithFileLocation(
+                    breakStatement,
+                    LOGGER,
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
                         "to an incorrect graph. The source code is not valid or incomplete."
                 )
@@ -466,9 +470,9 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Breakable).addBreakStatement(breakStatement)
         } else {
-            val labelStatement = getLabelStatement(breakStatement.label!!)
-            if (labelStatement?.subStatement != null) {
-                val scope = lookupScope(labelStatement.subStatement!!)
+            val labelStatement = getLabelStatement(breakStatement.label)
+            labelStatement?.subStatement?.let {
+                val scope = lookupScope(it)
                 (scope as Breakable?)?.addBreakStatement(breakStatement)
             }
         }
@@ -491,9 +495,9 @@ class ScopeManager : ScopeProvider {
             }
             (scope as Continuable).addContinueStatement(continueStatement)
         } else {
-            val labelStatement = getLabelStatement(continueStatement.label!!)
-            if (labelStatement?.subStatement != null) {
-                val scope = lookupScope(labelStatement.subStatement!!)
+            val labelStatement = getLabelStatement(continueStatement.label)
+            labelStatement?.subStatement?.let {
+                val scope = lookupScope(it)
                 (scope as Continuable?)?.addContinueStatement(continueStatement)
             }
         }
@@ -512,7 +516,8 @@ class ScopeManager : ScopeProvider {
      * This function is internal to the scope manager and primarily used by [addBreakStatement] and
      * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
      */
-    private fun getLabelStatement(labelString: String): LabelStatement? {
+    private fun getLabelStatement(labelString: String?): LabelStatement? {
+        if (labelString == null) return null
         var labelStatement: LabelStatement?
         var searchScope = currentScope
         while (searchScope != null) {
@@ -592,18 +597,16 @@ class ScopeManager : ScopeProvider {
      * TODO: We should merge this function with [.resolveFunction]
      */
     @JvmOverloads
-    fun resolveReference(
-        ref: DeclaredReferenceExpression,
-        scope: Scope? = currentScope
-    ): ValueDeclaration? {
+    fun resolveReference(ref: Reference, scope: Scope? = currentScope): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
                 if (
                     it.name.lastPartsMatch(ref.name)
                 ) { // TODO: This place is likely to make things fail
+                    var helper = ref.resolutionHelper
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
-                    if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
-                        val fptrType = (ref as HasType).type as FunctionPointerType
+                    if (helper?.type is FunctionPointerType && it is FunctionDeclaration) {
+                        val fptrType = helper.type as FunctionPointerType
                         // TODO(oxisto): This is the third place where function pointers are
                         //   resolved. WHY?
                         // TODO(oxisto): Support multiple return values
@@ -635,13 +638,19 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionDeclaration> {
+        val s = extractScope(call, scope)
+
+        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
+    }
+
+    fun extractScope(node: Node, scope: Scope? = currentScope): Scope? {
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (call.language != null && call.name.parent != null) {
+        if (node.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = call.name.parent
+            val scopeName = node.name.parent
 
             // TODO: proper scope selection
 
@@ -649,26 +658,51 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
-                    LOGGER.error(
-                        "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
-                        scopeName,
-                        call.name
+                    Util.errorWithFileLocation(
+                        node,
+                        LOGGER,
+                        "Could not find the scope $scopeName needed to resolve the call ${node.name}. Falling back to the default (current) scope"
                     )
-                    currentScope
+                    s
                 } else {
                     scopes[0]
                 }
         }
 
-        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
+        return s
+    }
+
+    /**
+     * Directly jumps to a given scope. Returns the previous scope. Do not forget to set the scope
+     * back to the old scope after performing the actions inside this scope.
+     *
+     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     */
+    @PleaseBeCareful
+    internal fun jumpTo(scope: Scope?): Scope? {
+        val oldScope = currentScope
+        currentScope = scope
+        return oldScope
+    }
+
+    /**
+     * This function can be used to execute multiple statements contained in [init] in the scope of
+     * [scope]. The specified scope will be selected using [jumpTo]. The last expression in [init]
+     * will also be used as a return value of this function. This can be useful, if you create
+     * objects, such as a [Node] inside this scope and want to return it to the calling function.
+     */
+    fun <T : Any> withScope(scope: Scope?, init: () -> T): T {
+        val oldScope = jumpTo(scope)
+        val ret = init()
+        jumpTo(oldScope)
+
+        return ret
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f: FunctionDeclaration ->
-            f.name.lastPartsMatch(call.name)
-        }
+        return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
     }
 
     /**
@@ -739,9 +773,7 @@ class ScopeManager : ScopeProvider {
         call: CallExpression,
         scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c: FunctionTemplateDeclaration ->
-            c.name.lastPartsMatch(call.name)
-        }
+        return resolve(scope, true) { c -> c.name.lastPartsMatch(call.name) }
     }
 
     /**
@@ -759,37 +791,4 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
-
-    fun activateTypes(node: Node) {
-        val num = AtomicInteger()
-        val typeCache = TypeManager.getInstance().typeCache
-        node.accept(
-            { Strategy.AST_FORWARD(it) },
-            object : IVisitor<Node?>() {
-                override fun visit(n: Node) {
-                    if (n is HasType) {
-                        val typeNode = n as HasType
-                        typeCache.getOrDefault(typeNode, emptyList()).forEach { t: Type? ->
-                            (n as HasType).type =
-                                TypeManager.getInstance()
-                                    .resolvePossibleTypedef(t, this@ScopeManager)
-                        }
-                        typeCache.remove(n as HasType)
-                        num.getAndIncrement()
-                    }
-                }
-            }
-        )
-        LOGGER.debug("Activated {} nodes for {}", num, node.name)
-
-        // For some nodes it may happen that they are not reachable via AST, but we still need to
-        // set their type to the requested value
-        typeCache.forEach { (n: HasType, types: List<Type>) ->
-            types.forEach(
-                Consumer { t: Type? ->
-                    n.type = TypeManager.getInstance().resolvePossibleTypedef(t, this)
-                }
-            )
-        }
-    }
 }

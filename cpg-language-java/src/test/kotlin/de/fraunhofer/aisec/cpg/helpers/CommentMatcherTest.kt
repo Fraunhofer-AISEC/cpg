@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -59,7 +59,7 @@ class CommentMatcherTest {
         // The class should have 2 comments: The javadoc and "Class comment"
         val tu = result.translationUnits.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
-        classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
+        classDeclaration.comment = "" // Reset the comment of the ClassDeclaration
 
         val comment = "This comment clearly belongs to the class."
         CommentMatcher().matchCommentToNode(comment, Region(2, 4, 2, 46), tu)
@@ -79,7 +79,7 @@ class CommentMatcherTest {
 
         // 2 line comment in the constructor
         val constructor = classDeclaration.constructors.first()
-        val constructorAssignment = (constructor.body as CompoundStatement).statements[0]
+        val constructorAssignment = (constructor.body as Block).statements[0]
         assertNull(constructor.comment)
         constructorAssignment.comment = ""
 
@@ -93,7 +93,7 @@ class CommentMatcherTest {
 
         val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
         assertNull(mainMethod.comment)
-        val forLoop = (mainMethod.body as CompoundStatement).statements[0] as ForStatement
+        val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
         forLoop.comment = null
 
         val comment6 = "for loop"
@@ -101,16 +101,15 @@ class CommentMatcherTest {
         assertEquals(
             comment6,
             forLoop.comment
-        ) // It doesn't put the whole comment, only the part that amtches
+        ) // It doesn't put the whole comment, only the part that matches
 
         // TODO IMHO the comment "i decl" should belong to the declaration statement of i. But
-        // somehow,
-        // the comment matcher puts it to the loop condition.
+        // somehow, the comment matcher puts it to the loop condition.
         val comment7 = "i decl"
         CommentMatcher().matchCommentToNode(comment7, Region(16, 26, 16, 32), tu)
         // assertEquals(comment7, forLoop.initializerStatement.comment)
 
-        val printStatement = (forLoop.statement as CompoundStatement).statements.first()
+        val printStatement = (forLoop.statement as Block).statements.first()
         printStatement.comment = null
         val comment8 = "Crazy print"
         val comment9 = "Comment which belongs to nothing"
@@ -118,7 +117,7 @@ class CommentMatcherTest {
         CommentMatcher().matchCommentToNode(comment9, Region(18, 16, 18, 48), tu)
         assertTrue(printStatement.comment?.contains(comment8) == true)
         // TODO The second comment doesn't belong to the print but to the loop body
-        assertTrue((forLoop.statement as? CompoundStatement)?.comment?.contains(comment9) == true)
+        assertTrue((forLoop.statement as? Block)?.comment?.contains(comment9) == true)
 
         assertNull(mainMethod.comment)
     }

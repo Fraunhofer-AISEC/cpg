@@ -46,7 +46,7 @@ class Name(
     constructor(
         localName: String,
         parent: Name? = null,
-        language: Language<out LanguageFrontend>?
+        language: Language<*>?
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
     /**
@@ -131,14 +131,16 @@ fun LanguageProvider?.parseName(fqn: CharSequence) =
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
+    // We can take a shortcut, if this is already a name
+    if (fqn is Name) {
+        return fqn
+    }
+
     val parts = fqn.split(delimiter, *splitDelimiters)
 
     var name: Name? = null
     for (part in parts) {
-        val localName = part.replace(")", "").replace("*", "")
-        if (localName.isNotEmpty()) {
-            name = Name(localName, name, delimiter)
-        }
+        name = Name(part, name, delimiter)
     }
 
     // Actually this should not occur, but otherwise the compiler won't let us return a

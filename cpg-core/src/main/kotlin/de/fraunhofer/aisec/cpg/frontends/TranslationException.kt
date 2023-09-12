@@ -34,5 +34,6 @@ package de.fraunhofer.aisec.cpg.frontends
  */
 class TranslationException : Exception {
     constructor(ex: Exception) : super(ex)
+
     constructor(message: String) : super(message)
 }

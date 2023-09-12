@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -71,7 +72,7 @@ interface HasTemplates : HasGenerics {
         curClass: RecordDeclaration?,
         templateCall: CallExpression,
         applyInference: Boolean,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
@@ -97,7 +98,7 @@ interface HasComplexCallResolution : LanguageTrait {
      */
     fun refineNormalCallResolution(
         call: CallExpression,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration>
 
@@ -113,7 +114,7 @@ interface HasComplexCallResolution : LanguageTrait {
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>,
         call: CallExpression,
-        scopeManager: ScopeManager,
+        ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: CallResolver
     ): List<FunctionDeclaration>
@@ -130,7 +131,8 @@ interface HasComplexCallResolution : LanguageTrait {
     fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern
+        namePattern: Pattern,
+        ctx: TranslationContext
     ): List<FunctionDeclaration>
 }
 
@@ -202,8 +204,22 @@ interface HasUnknownType : LanguageTrait {
  * evaluation if the logical result is already known: '&&', '||' in Java or 'and','or' in Python
  */
 interface HasShortCircuitOperators : LanguageTrait {
-    // '&&', 'and', '^'
+    /**
+     * Operations which only execute the rhs of a binary operation if the lhs is `true`. Typically,
+     * these are `&&`, `and` or `^`
+     */
     val conjunctiveOperators: List<String>
-    // '||', 'or', 'v'
+
+    /**
+     * Operations which only execute the rhs of a binary operation if the lhs is `false`. Typically,
+     * these are `||`, `or` or `v`
+     */
     val disjunctiveOperators: List<String>
+
+    /**
+     * The union of [conjunctiveOperators] and [disjunctiveOperators], i.e., all binary operators of
+     * this language which result in some kind of branching behavior.
+     */
+    val operatorCodes: Set<String>
+        get() = conjunctiveOperators.union(disjunctiveOperators)
 }

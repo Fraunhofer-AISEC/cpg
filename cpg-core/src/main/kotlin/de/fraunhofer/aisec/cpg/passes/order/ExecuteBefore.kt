@@ -35,4 +35,4 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class ExecuteBefore(val other: KClass<out Pass>)
+annotation class ExecuteBefore(val other: KClass<out Pass<*>>)

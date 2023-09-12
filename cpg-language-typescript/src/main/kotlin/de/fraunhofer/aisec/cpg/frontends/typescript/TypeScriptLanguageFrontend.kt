@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -36,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -58,24 +58,19 @@ import java.nio.file.StandardCopyOption
  */
 class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager,
-) : LanguageFrontend(language, config, scopeManager) {
+    ctx: TranslationContext
+) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(language, ctx) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
     val expressionHandler = ExpressionHandler(this)
     val typeHandler = TypeHandler(this)
 
-    var currentFileContent: String? = null
+    private var currentFileContent: String? = null
 
-    val mapper = jacksonObjectMapper()
+    private val mapper = jacksonObjectMapper()
 
     companion object {
-        @JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
-
-        @JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
-
         private val parserFile: File = createTempFile("parser", ".js")
 
         init {
@@ -113,6 +108,10 @@ class TypeScriptLanguageFrontend(
         return translationUnit
     }
 
+    override fun typeOf(type: TypeScriptNode): Type {
+        return typeHandler.handleNode(type)
+    }
+
     /**
      * Extracts comments from the file with a regular expression and calls a best effort approach
      * function that matches them to the closes ast node in the cpg.
@@ -125,19 +124,19 @@ class TypeScriptLanguageFrontend(
         // the parser does not support comments so we
         // use a regex as best effort approach. We may recognize something as a comment, which is
         // acceptable.
-        val matches: Sequence<MatchResult> =
-            Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(currentFileContent!!)
-        matches.toList().forEach {
-            val groups = it.groups
+        val matches: Sequence<MatchResult>? =
+            currentFileContent?.let {
+                Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(it)
+            }
+        matches?.toList()?.forEach { result ->
+            val groups = result.groups
             groups[0]?.let {
-                var comment = it.value
-
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
 
                 // We only want the actual comment text and therefore take the value we captured in
                 // the first, or second group.
                 // Only as a last resort we take the entire match, although this should never occurs
-                comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
+                var comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
 
                 comment = comment.trim()
 
@@ -145,45 +144,35 @@ class TypeScriptLanguageFrontend(
 
                 FrontendUtils.matchCommentToNode(
                     comment,
-                    commentRegion ?: translationUnit.location!!.region,
+                    commentRegion ?: translationUnit.location?.region ?: Region(),
                     translationUnit
                 )
             }
         }
     }
 
-    override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
-        return if (astNode is TypeScriptNode) {
-            return astNode.code
-        } else {
-            null
-        }
+    override fun codeOf(astNode: TypeScriptNode): String? {
+        return astNode.code
     }
 
-    override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        return if (astNode is TypeScriptNode) {
+    override fun locationOf(astNode: TypeScriptNode): PhysicalLocation {
+        var position = astNode.location.pos
 
-            var position = astNode.location.pos
-
-            // Correcting node positions as we have noticed that the parser computes wrong
-            // positions, it is apparent when a file starts with a comment
-            astNode.code?.let {
-                val code = it
-                currentFileContent?.let { position = it.indexOf(code, position) }
-            }
-
-            // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
-            // should hold, only exceptions are mispositioned empty ast elements
-            val region =
-                getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
-            return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
-        } else {
-            null
+        // Correcting node positions as we have noticed that the parser computes wrong
+        // positions, it is apparent when a file starts with a comment
+        astNode.code?.let { code ->
+            currentFileContent?.let { position = it.indexOf(code, position) }
         }
+
+        // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
+        // should hold, only exceptions are mispositioned empty ast elements
+        val region =
+            getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
+        return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
     }
 
     fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
-        val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
+        val lineNumberReader = LineNumberReader(FileReader(file))
 
         // Start and end position given by the parser are sometimes including spaces in front of the
         // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
@@ -194,24 +183,26 @@ class TypeScriptLanguageFrontend(
         lineNumberReader.skip((end - start).toLong())
         val endLine = lineNumberReader.lineNumber + 1
 
-        val translationUnitSignature = currentFileContent!!
-        val region: Region? =
-            FrontendUtils.parseColumnPositionsFromFile(
-                translationUnitSignature,
-                end - start,
-                start,
-                startLine,
-                endLine
-            )
+        val translationUnitSignature = currentFileContent
+        val region =
+            translationUnitSignature?.let {
+                FrontendUtils.parseColumnPositionsFromFile(
+                    it,
+                    end - start,
+                    start,
+                    startLine,
+                    endLine
+                )
+            }
         return region
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+    override fun setComment(node: Node, astNode: TypeScriptNode) {
         // not implemented
     }
 
     internal fun getIdentifierName(node: TypeScriptNode) =
-        this.getCodeFromRawNode(node.firstChild("Identifier")) ?: ""
+        node.firstChild("Identifier")?.let { this.codeOf(it) } ?: ""
 
     fun processAnnotations(node: Node, astNode: TypeScriptNode) {
         // filter for decorators
@@ -223,25 +214,23 @@ class TypeScriptLanguageFrontend(
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {
         // a decorator can contain a call expression with additional arguments
-        val call = node.firstChild("CallExpression")
-        if (call != null) {
-            val call = this.expressionHandler.handle(call) as CallExpression
+        val callExpr = node.firstChild("CallExpression")
+        return if (callExpr != null) {
+            val call = this.expressionHandler.handle(callExpr) as CallExpression
 
-            val annotation = newAnnotation(call.name.localName, this.getCodeFromRawNode(node) ?: "")
+            val annotation = newAnnotation(call.name.localName, this.codeOf(node) ?: "")
 
             annotation.members =
                 call.arguments.map { newAnnotationMember("", it, it.code ?: "") }.toMutableList()
 
             call.disconnectFromGraph()
 
-            return annotation
+            annotation
         } else {
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            val annotation = newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
-
-            return annotation
+            newAnnotation(name, this.codeOf(node) ?: "")
         }
     }
 }

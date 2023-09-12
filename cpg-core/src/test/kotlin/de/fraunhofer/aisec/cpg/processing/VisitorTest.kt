@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.records
@@ -74,9 +73,9 @@ class VisitorTest : BaseTest() {
     fun testAllEogNodeVisitor() {
         val nodeList: MutableList<Node> = ArrayList()
         // val recordDeclaration = namespace?.getDeclarationAs(0, RecordDeclaration::class.java)
-        assertNotNull(recordDecl)
+        assertNotNull(recordDeclaration)
 
-        val method = recordDecl!!.byNameOrNull<MethodDeclaration>("method")
+        val method = recordDeclaration!!.byNameOrNull<MethodDeclaration>("method")
         assertNotNull(method)
 
         val firstStmt = method.bodyOrNull<Statement>()
@@ -97,10 +96,10 @@ class VisitorTest : BaseTest() {
     /** Visits all nodes along AST. */
     @Test
     fun testAllAstNodeVisitor() {
-        assertNotNull(recordDecl)
+        assertNotNull(recordDeclaration)
 
         val nodeList = mutableListOf<Node>()
-        recordDecl!!.accept(
+        recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(n: Node) {
@@ -118,22 +117,23 @@ class VisitorTest : BaseTest() {
     /** Visits only ReturnStatement nodes. */
     @Test
     fun testReturnStmtVisitor() {
-        val returnStmts: MutableList<ReturnStatement> = ArrayList()
-        assertNotNull(recordDecl)
+        val returnStatements: MutableList<ReturnStatement> = ArrayList()
+        assertNotNull(recordDeclaration)
 
-        recordDecl!!.accept(
+        recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 fun visit(r: ReturnStatement) {
-                    returnStmts.add(r)
+                    returnStatements.add(r)
                 }
             }
         )
-        assertEquals(2, returnStmts.size)
+        assertEquals(2, returnStatements.size)
     }
 
     companion object {
-        private var recordDecl: RecordDeclaration? = null
+        private var recordDeclaration: RecordDeclaration? = null
+
         @BeforeAll
         @JvmStatic
         @Throws(
@@ -144,7 +144,7 @@ class VisitorTest : BaseTest() {
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()
-            recordDecl = cpg.records.firstOrNull()
+            recordDeclaration = cpg.records.firstOrNull()
         }
     }
 }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 
 /** An assignment holder is a node that intentionally contains assignment edges. */
 interface AssignmentHolder {

@@ -25,16 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import kotlin.test.*
 
@@ -43,7 +44,7 @@ class TypePropagationTest {
     fun testBinopTypePropagation() {
         val result =
             TestLanguageFrontend().build {
-                translationResult(TranslationConfiguration.builder().build()) {
+                translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
                             body {
@@ -61,13 +62,22 @@ class TypePropagationTest {
                 }
             }
 
-        val binaryOp =
-            (((result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)
-                        as? DeclarationStatement)
-                    ?.singleDeclaration as? VariableDeclaration)
-                ?.initializer
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
+        val intVar = result.variables["intVar"]
+        assertNotNull(intVar)
+        assertLocalName("int", intVar.type)
+
+        val intVarRef = result.refs["intVar"]
+        assertNotNull(intVarRef)
+        assertLocalName("int", intVarRef.type)
+
+        val addResult = result.variables["addResult"]
+        assertNotNull(addResult)
+
+        val binaryOp = addResult.initializer
         assertNotNull(binaryOp)
+
         assertTrue(binaryOp.type is IntegerType)
         assertEquals("int", (binaryOp.type as IntegerType).name.toString())
         assertEquals(32, (binaryOp.type as IntegerType).bitWidth)
@@ -75,50 +85,350 @@ class TypePropagationTest {
 
     @Test
     fun testAssignTypePropagation() {
-        // TODO: This test is related to issue 1071 (it models case 2).
-        val scopeManager = ScopeManager()
+        val frontend = TestLanguageFrontend()
+
+        /**
+         * This roughly represents the following program in C:
+         * ```c
+         * int main() {
+         *   int intVar;
+         *   short shortVar;
+         *   shortVar = intVar;
+         *   return shortVar;
+         * }
+         * ```
+         *
+         * `shortVar` and `intVar` should hold `short` and `int` as their respective [HasType.type].
+         * The assignment will then propagate `int` as the [HasType.assignedTypes] to `shortVar`.
+         */
         val result =
-            TestLanguageFrontend(scopeManager).build {
-                translationResult(TranslationConfiguration.builder().build()) {
+            frontend.build {
+                translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
                             body {
                                 declare { variable("intVar", t("int")) {} }
                                 declare { variable("shortVar", t("short")) {} }
                                 ref("shortVar") assign ref("intVar")
-                                returnStmt { literal(0) }
+                                returnStmt { ref("shortVar") }
                             }
                         }
                     }
                 }
             }
-        VariableUsageResolver().accept(result)
 
-        val binaryOp =
-            (result.functions["main"]?.body as? CompoundStatement)?.statements?.get(2)
-                as? BinaryOperator
-        assertNotNull(binaryOp)
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
+        EvaluationOrderGraphPass(result.finalCtx)
+            .accept(result.components.first().translationUnits.first())
+        ControlFlowSensitiveDFGPass(result.finalCtx)
+            .accept(result.components.first().translationUnits.first())
 
-        val rhs = binaryOp.rhs as? DeclaredReferenceExpression
-        assertNotNull(rhs)
-        assertTrue(rhs.type is IntegerType)
-        assertEquals("int", (rhs.type as IntegerType).name.toString())
-        assertEquals(32, (rhs.type as IntegerType).bitWidth)
+        with(frontend) {
+            val main = result.functions["main"]
+            assertNotNull(main)
 
-        assertTrue(binaryOp.type is IntegerType)
-        assertEquals("short", (binaryOp.type as IntegerType).name.toString())
-        assertEquals(16, (binaryOp.type as IntegerType).bitWidth)
+            val assign = (main.body as? Block)?.statements?.get(2) as? AssignExpression
+            assertNotNull(assign)
 
-        val lhs = binaryOp.lhs as? DeclaredReferenceExpression
-        assertNotNull(lhs)
-        assertTrue(lhs.type is IntegerType)
-        assertEquals("short", (lhs.type as IntegerType).name.toString())
-        assertEquals(16, (lhs.type as IntegerType).bitWidth)
+            val shortVar = main.variables["shortVar"]
+            assertNotNull(shortVar)
+            // At this point, shortVar should only have "short" as type and assigned types
+            assertEquals(primitiveType("short"), shortVar.type)
+            assertEquals(setOf(primitiveType("short")), shortVar.assignedTypes)
 
-        val refersTo = lhs.refersTo as? VariableDeclaration
-        assertNotNull(refersTo)
-        assertTrue(refersTo.type is IntegerType)
-        assertEquals("short", (refersTo.type as IntegerType).name.toString())
-        assertEquals(16, (refersTo.type as IntegerType).bitWidth)
+            val rhs = assign.rhs.firstOrNull() as? Reference
+            assertNotNull(rhs)
+            assertIs<IntegerType>(rhs.type)
+            assertLocalName("int", rhs.type)
+            assertEquals(32, (rhs.type as IntegerType).bitWidth)
+
+            val shortVarRefLhs = assign.lhs.firstOrNull() as? Reference
+            assertNotNull(shortVarRefLhs)
+            // At this point, shortVar was target of an assignment of an int variable, however, the
+            // int gets truncated into a short, so only short is part of the assigned types.
+            assertEquals(primitiveType("short"), shortVarRefLhs.type)
+            assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
+
+            val shortVarRefReturnValue =
+                main.allChildren<ReturnStatement>().firstOrNull()?.returnValue
+            assertNotNull(shortVarRefReturnValue)
+            // Finally, the assigned types should propagate along the DFG
+            assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
+
+            val refersTo = shortVarRefLhs.refersTo as? VariableDeclaration
+            assertNotNull(refersTo)
+            assertIs<IntegerType>(refersTo.type)
+            assertLocalName("short", refersTo.type)
+            assertEquals(16, (refersTo.type as IntegerType).bitWidth)
+        }
+    }
+
+    @Test
+    fun testNewPropagation() {
+        val frontend = TestLanguageFrontend()
+
+        /**
+         * This roughly represents the following C++ code:
+         * ```cpp
+         * int main() {
+         *   BaseClass *b = new DerivedClass();
+         *   b.doSomething();
+         * }
+         * ```
+         */
+        val result =
+            frontend.build {
+                translationResult {
+                    translationUnit("test") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("b", t("BaseClass").pointer()) {
+                                        new {
+                                            construct("DerivedClass")
+                                            type = t("DerivedClass").pointer()
+                                        }
+                                    }
+                                }
+                                call("b.doSomething")
+                            }
+                        }
+                    }
+                }
+            }
+
+        VariableUsageResolver(result.finalCtx).accept(result.components.first())
+
+        with(frontend) {
+            val main = result.functions["main"]
+            assertNotNull(main)
+
+            val b = main.variables["b"]
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
+            assertEquals(
+                setOf(
+                    objectType("BaseClass").pointer(),
+                    objectType("DerivedClass").pointer(),
+                ),
+                b.assignedTypes
+            )
+
+            val bRef = main.refs["b"]
+            assertNotNull(bRef)
+            assertEquals(b.type, bRef.type)
+            assertEquals(b.assignedTypes, bRef.assignedTypes)
+        }
+    }
+
+    @Test
+    fun testComplexPropagation() {
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
+
+        /**
+         * This is a more complex scenario in which we want to follow some of the data-flows and see
+         * how the types propagate.
+         *
+         * This roughly represents the following C++ code:
+         * ```cpp
+         * class BaseClass {
+         *   virtual void doSomething();
+         * };
+         * class DerivedClassA : public BaseClass {
+         *   void doSomething();
+         * };
+         * class DerivedClassB : public BaseClass {
+         *   void doSomething();
+         * };
+         *
+         * BaseClass *create(bool flip)
+         * {
+         *   // Create memory for a pointer to the base class
+         *   BaseClass *b;
+         *   // Create either DerivedClassA or DerivedClassB. This should assign both to the assigned types
+         *   b = (flip == true) ? (BaseClass *)new DerivedClassA() : (BaseClass *)new DerivedClassB();
+         *
+         *   // Create a new array of pointers and assign our base class pointer to it
+         *   auto bb = {b}
+         *
+         *   // Return the first element again with an array subscription expression
+         *   return bb[0];
+         * }
+         *
+         * int main() {
+         *   // Call the create function. We don't know which of the derived classes we return
+         *   BaseClass *b = create(random);
+         *   b->doSomething();
+         * }
+         * ```
+         */
+        val result =
+            frontend.build {
+                translationResult {
+                    translationUnit("test") {
+                        record("BaseClass") { method("doSomething") }
+                        record("DerivedClassA") {
+                            superClasses = mutableListOf(t("BaseClass"))
+                            method("doSomething")
+                        }
+                        record("DerivedClassB") {
+                            superClasses = mutableListOf(t("BaseClass"))
+                            method("doSomething")
+                        }
+                        function("create", t("BaseClass").pointer().pointer()) {
+                            param("flip", t("bool"))
+                            body {
+                                declare { variable("b", t("BaseClass").pointer()) }
+                                ref("b") assign
+                                    {
+                                        conditional(
+                                            ref("flip") eq literal(true),
+                                            cast(t("BaseClass").pointer()) {
+                                                new {
+                                                    construct("DerivedClassA")
+                                                    type = t("DerivedClassA").pointer()
+                                                }
+                                            },
+                                            cast(t("BaseClass").pointer()) {
+                                                new {
+                                                    construct("DerivedClassB")
+                                                    type = t("DerivedClassB").pointer()
+                                                }
+                                            },
+                                        )
+                                    }
+                                declare {
+                                    variable("bb", autoType()) {
+                                        ile(t("BaseClass").pointer().array()) { ref("b") }
+                                    }
+                                }
+                                returnStmt {
+                                    ase {
+                                        ref("bb")
+                                        literal(1)
+                                    }
+                                }
+                            }
+                        }
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("random", t("bool")) }
+                                declare {
+                                    variable("b", t("BaseClass").pointer()) {
+                                        call("create") { ref("random") }
+                                    }
+                                }
+                                call("b.doSomething")
+                            }
+                        }
+                    }
+                }
+            }
+
+        val baseClass = result.records["BaseClass"]
+        assertNotNull(baseClass)
+
+        val derivedClassA = result.records["DerivedClassA"]
+        assertNotNull(derivedClassA)
+        assertContains(derivedClassA.superTypeDeclarations, baseClass)
+
+        val derivedClassB = result.records["DerivedClassB"]
+        assertNotNull(derivedClassB)
+        assertContains(derivedClassB.superTypeDeclarations, baseClass)
+
+        val create = result.functions["create"]
+        assertNotNull(create)
+
+        with(create) {
+            val b = variables["b"]
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
+
+            val bRefs = refs("b")
+            bRefs.forEach {
+                // The "type" of a reference must always be the same as its declaration
+                assertEquals(b.type, it.type)
+                // The assigned types should now contain both classes and the base class
+                assertEquals(
+                    setOf(
+                        objectType("BaseClass").pointer(),
+                        objectType("DerivedClassA").pointer(),
+                        objectType("DerivedClassB").pointer()
+                    ),
+                    it.assignedTypes
+                )
+            }
+
+            val baseClassType = (b.type as? PointerType)?.elementType
+            assertNotNull(baseClassType)
+
+            assertEquals(
+                baseClassType.array(),
+                setOf(
+                        baseClassType.array(),
+                        derivedClassA.toType().array(),
+                        derivedClassB.toType().array(),
+                    )
+                    .commonType
+            )
+
+            val assign = (body as Block).statements<AssignExpression>(1)
+            assertNotNull(assign)
+
+            val bb = variables["bb"]
+            assertNotNull(bb)
+            // Auto type based on the initializer's type
+            assertEquals(objectType("BaseClass").pointer().array(), bb.type)
+            // Assigned types should additionally contain our two derived classes
+            assertEquals(
+                setOf(
+                    objectType("BaseClass").pointer().array(),
+                    objectType("DerivedClassA").pointer().array(),
+                    objectType("DerivedClassB").pointer().array()
+                ),
+                bb.assignedTypes
+            )
+
+            val returnStatement = (body as Block).statements<ReturnStatement>(3)
+            assertNotNull(returnStatement)
+
+            val returnValue = returnStatement.returnValue
+            assertNotNull(returnValue)
+            assertEquals(objectType("BaseClass").pointer(), returnValue.type)
+            // The assigned types should now contain both classes and the base class in a non-array
+            // form, since we are using a single element of the array
+            assertEquals(
+                setOf(
+                    objectType("BaseClass").pointer(),
+                    objectType("DerivedClassA").pointer(),
+                    objectType("DerivedClassB").pointer()
+                ),
+                returnValue.assignedTypes
+            )
+
+            // At this point we stop for now since we do not properly propagate the types across
+            // functions (yet)
+        }
+
+        val main = result.functions["main"]
+        assertNotNull(main)
+
+        with(main) {
+            val createCall = main.calls["create"]
+            assertNotNull(createCall)
+            assertContains(createCall.invokes, create)
+
+            val b = main.variables["b"]
+            assertNotNull(b)
+            assertEquals(objectType("BaseClass").pointer(), b.type)
+        }
     }
 }

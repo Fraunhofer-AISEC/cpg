@@ -332,6 +332,7 @@ class Schema {
                 "  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;"
         )
     }
+
     private fun closeMermaid(out: PrintWriter) {
         out.println("```")
     }

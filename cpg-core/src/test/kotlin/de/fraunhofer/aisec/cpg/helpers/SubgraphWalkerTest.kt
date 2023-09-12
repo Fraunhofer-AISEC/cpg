@@ -63,7 +63,6 @@ internal class SubgraphWalkerTest : BaseTest() {
                         .disableCleanup()
                         .debugParser(true)
                         .failOnError(true)
-                        .typeSystemActiveInFrontend(false)
                         .useParallelFrontends(true)
                         .defaultLanguages()
                         .registerLanguage(TestLanguage("."))
