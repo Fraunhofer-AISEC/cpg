@@ -449,6 +449,7 @@ class Application : Callable<Int> {
             printSchema(mutuallyExclusiveParameters.files)
             return EXIT_SUCCESS
         }
+
         if (mutuallyExclusiveParameters.listPasses) {
             log.info("List of passes:")
             passList.iterator().forEach { log.info("- $it") }
@@ -456,6 +457,7 @@ class Application : Callable<Int> {
             log.info("End of list. Stopping.")
             return EXIT_SUCCESS
         }
+
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
