@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.underlyingType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -141,7 +142,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         scopeManager.resetToGlobal(builtin)
 
         val len = newFunctionDeclaration("len", localNameOnly = true)
-        len.parameters = listOf(newParamVariableDeclaration("v", GoLanguage().autoType()))
+        len.parameters = listOf(newParameterDeclaration("v", GoLanguage().autoType()))
         len.type =
             typeManager.registerType(
                 FunctionType(funcTypeName(len.signatureTypes, len.returnTypes))
@@ -156,8 +157,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         val append = newFunctionDeclaration("append", localNameOnly = true)
         append.parameters =
             listOf(
-                newParamVariableDeclaration("slice", GoLanguage().autoType().array()),
-                newParamVariableDeclaration("elems", GoLanguage().autoType(), variadic = true),
+                newParameterDeclaration("slice", GoLanguage().autoType().array()),
+                newParameterDeclaration("elems", GoLanguage().autoType(), variadic = true),
             )
         append.returnTypes = listOf(GoLanguage().autoType().array())
         append.type =
