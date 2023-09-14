@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,25 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements.expressions
+package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.graph.HasDefault
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import java.util.*
+import org.neo4j.ogm.annotation.Relationship
 
-/**
- * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
- * connected via the INVOKES edge to its [FunctionDeclaration].
- */
-class CompoundStatementExpression : Expression() {
-    /** The list of arguments. */
-    @AST var statement: Statement? = null
+/** A declaration of a type template parameter */
+class TypeParameterDeclaration : ValueDeclaration(), HasDefault<Type?> {
+    /** TemplateParameters can define a default for the type parameter. */
+    @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
+    @AST
+    override var default: Type? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CompoundStatementExpression) return false
-        return super.equals(other) && statement == other.statement
+        if (other == null || javaClass != other.javaClass) return false
+        val that = other as TypeParameterDeclaration
+        return super.equals(that) && default == that.default
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), default)
 }

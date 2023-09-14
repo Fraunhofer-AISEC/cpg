@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -174,7 +174,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
         // Loop through the target variables (left-hand side)
         for (expr in assign.lhs) {
-            if (expr is DeclaredReferenceExpression) {
+            if (expr is Reference) {
                 // And try to resolve it
                 val ref = scopeManager.resolveReference(expr)
                 if (ref == null) {
@@ -231,7 +231,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
         val callee = call.callee
-        if (parent != null && callee is DeclaredReferenceExpression && call.arguments.size == 1) {
+        if (parent != null && callee is Reference && call.arguments.size == 1) {
             val language = parent.language ?: GoLanguage()
 
             // First, check if this is a built-in type

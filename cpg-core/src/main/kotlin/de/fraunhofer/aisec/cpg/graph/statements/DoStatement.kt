@@ -40,7 +40,7 @@ class DoStatement : Statement(), ArgumentHolder {
 
     /**
      * The statement that is going to be executed and re-executed, until the condition evaluates to
-     * false for the first time. Usually a [CompoundStatement].
+     * false for the first time. Usually a [Block].
      */
     @AST var statement: Statement? = null
 

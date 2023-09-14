@@ -70,7 +70,7 @@ class ExpressionTest {
         val cast = s.initializer as? CastExpression
         assertNotNull(cast)
         assertFullName("main.MyStruct", cast.castType)
-        assertSame(f, (cast.expression as? DeclaredReferenceExpression)?.refersTo)
+        assertSame(f, (cast.expression as? Reference)?.refersTo)
 
         val ignored = main.variables("_")
         ignored.forEach { assertIs<CastExpression>(it.initializer) }
@@ -100,7 +100,7 @@ class ExpressionTest {
         // [:1]
         var slice =
             assertIs<RangeExpression>(
-                assertIs<ArraySubscriptionExpression>(b.initializer).subscriptExpression
+                assertIs<SubscriptExpression>(b.initializer).subscriptExpression
             )
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
@@ -111,7 +111,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<ArraySubscriptionExpression>(c.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(c.initializer).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -121,7 +121,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<ArraySubscriptionExpression>(d.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(d.initializer).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -131,7 +131,7 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<ArraySubscriptionExpression>(e.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(e.initializer).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)

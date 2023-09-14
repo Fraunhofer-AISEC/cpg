@@ -91,9 +91,8 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
 
     /**
      * The expression that is being "called". This is currently not yet used in the [CallResolver]
-     * but will be in the future. In most cases, this is a [DeclaredReferenceExpression] and its
-     * [DeclaredReferenceExpression.refersTo] is intentionally left empty. It is not filled by the
-     * [VariableUsageResolver].
+     * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
+     * is intentionally left empty. It is not filled by the [VariableUsageResolver].
      */
     @AST var callee: Expression? = null
 

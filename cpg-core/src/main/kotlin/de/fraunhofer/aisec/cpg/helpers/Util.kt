@@ -374,19 +374,19 @@ object Util {
      *
      * @param n
      * @param branchingExp
-     * @param branchingDecl
+     * @param branchingDeclaration
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
         n: Node,
         branchingExp: Node?,
-        branchingDecl: Node?
+        branchingDeclaration: Node?
     ) {
         var conditionNodes = mutableListOf<Node>()
         if (branchingExp != null) {
             conditionNodes = mutableListOf()
             conditionNodes.add(branchingExp)
-        } else if (branchingDecl != null) {
-            conditionNodes = getAdjacentDFGNodes(branchingDecl, true)
+        } else if (branchingDeclaration != null) {
+            conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
         }
         conditionNodes.forEach { n.addPrevDFG(it) }
     }

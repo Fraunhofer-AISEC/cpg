@@ -32,12 +32,12 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test
@@ -125,7 +125,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testVarNameOfFirstLoopAccessed() {
-        val asReference = callParamMap["func1_first_loop_varName"] as? DeclaredReferenceExpression
+        val asReference = callParamMap["func1_first_loop_varName"] as? Reference
         assertNotNull(asReference)
         val vDeclaration = forStatements?.first().variables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)
@@ -133,7 +133,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testAccessLocalVarNameInNestedBlock() {
-        val innerBlock = forStatements?.get(1).allChildren<CompoundStatement>()[""]
+        val innerBlock = forStatements?.get(1).allChildren<Block>()[""]
         val nestedDeclaration = innerBlock.variables["varName"]
         assertUsageOf(callParamMap["func1_nested_block_shadowed_local_varName"], nestedDeclaration)
     }

@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
@@ -759,7 +759,7 @@ internal class EOGTest : BaseTest() {
             result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
         val a =
             result.refs[
-                    { l: DeclaredReferenceExpression ->
+                    { l: Reference ->
                         l.location?.region?.startLine == 8 && l.name.localName == "a"
                     }]
         assertNotNull(a)

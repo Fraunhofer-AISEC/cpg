@@ -32,6 +32,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
+// TODO Merge and/or refactor
 // TODO: Document this class!
 class DesignatedInitializerExpression : Expression() {
     @AST var rhs: Expression? = null

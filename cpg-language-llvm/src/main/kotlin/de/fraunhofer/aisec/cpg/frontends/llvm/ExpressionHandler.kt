@@ -61,7 +61,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
             LLVMPoisonValueValueKind -> {
-                newDeclaredReferenceExpression("poison", frontend.typeOf(value), "poison")
+                newReference("poison", frontend.typeOf(value), "poison")
             }
             LLVMConstantTokenNoneValueKind ->
                 newLiteral(null, unknownType(), frontend.codeOf(value))
@@ -80,7 +80,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMFunctionValueKind -> handleFunction(value)
             LLVMGlobalAliasValueKind -> {
                 val name = frontend.getNameOf(value).first
-                newDeclaredReferenceExpression(name, frontend.typeOf(value), frontend.codeOf(value))
+                newReference(name, frontend.typeOf(value), frontend.codeOf(value))
             }
             LLVMMetadataAsValueValueKind,
             LLVMInlineAsmValueKind -> {
@@ -113,9 +113,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                         }
                     newLiteral(operandName, cpgType, operandName)
                 } else if (LLVMIsUndef(value) == 1) {
-                    newDeclaredReferenceExpression("undef", cpgType, "undef")
+                    newReference("undef", cpgType, "undef")
                 } else if (LLVMIsPoison(value) == 1) {
-                    newDeclaredReferenceExpression("poison", cpgType, "poison")
+                    newReference("poison", cpgType, "poison")
                 } else {
                     log.error("Unknown expression {}", kind)
                     newProblemExpression(
@@ -128,13 +128,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    /** Returns a [DeclaredReferenceExpression] for a function (pointer). */
+    /** Returns a [Reference] for a function (pointer). */
     private fun handleFunction(valueRef: LLVMValueRef): Expression {
-        return newDeclaredReferenceExpression(
-            valueRef.name,
-            frontend.typeOf(valueRef),
-            frontend.codeOf(valueRef)
-        )
+        return newReference(valueRef.name, frontend.typeOf(valueRef), frontend.codeOf(valueRef))
     }
 
     /**
@@ -152,7 +148,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
         val type = frontend.typeOf(valueRef)
 
-        val ref = newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
+        val ref = newReference(name, type, "${type.typeName} $name")
 
         // try to resolve the reference. actually the valueRef is already referring to the resolved
         // variable because we obtain it using LLVMGetOperand, so we just need to look it up in the
@@ -402,10 +398,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
-     * depending on whether the accessed variable is a struct or an array. Furthermore, since
-     * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
-     * we need to unwrap those into individual expressions.
+     * We try to convert it either into an [SubscriptExpression] or an [MemberExpression], depending
+     * on whether the accessed variable is a struct or an array. Furthermore, since `getelementptr`
+     * allows an (infinite) chain of sub-element access within a single instruction, we need to
+     * unwrap those into individual expressions.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =
@@ -452,7 +448,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                         (operand.value as Long).toInt()
                     } else {
                         // The index is some variable and thus unknown.
-                        operand as DeclaredReferenceExpression
+                        operand as Reference
                     }
                 } else {
                     indices.get(idx.toLong())
@@ -461,7 +457,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // check, if the current base type is a pointer -> then we need to handle this as an
             // array access
             if (baseType is PointerType) {
-                val arrayExpr = newArraySubscriptionExpression("")
+                val arrayExpr = newSubscriptExpression("")
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
@@ -512,7 +508,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                         // We won't find a field because it's accessed by a variable index.
                         // We indicate this with this array-like notation for now.
                         field = null
-                        "[${(operand as DeclaredReferenceExpression).name.localName}]"
+                        "[${(operand as Reference).name.localName}]"
                     }
 
                 // our new base-type is the type of the field

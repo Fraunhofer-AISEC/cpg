@@ -35,11 +35,8 @@ import java.util.*
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
-    /**
-     * The array on which the access is happening. This is most likely a
-     * [DeclaredReferenceExpression].
-     */
+class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+    /** The array on which the access is happening. This is most likely a [Reference]. */
     @AST
     var arrayExpression: Expression = ProblemExpression("could not parse array expression")
         set(value) {
@@ -51,8 +48,8 @@ class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver,
 
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
-     * This can for example be a reference to another variable ([DeclaredReferenceExpression]), a
-     * [Literal] or a [RangeExpression].
+     * This can for example be a reference to another variable ([Reference]), a [Literal] or a
+     * [RangeExpression].
      */
     @AST var subscriptExpression: Expression = ProblemExpression("could not parse index expression")
 
@@ -116,7 +113,7 @@ class ArraySubscriptionExpression : Expression(), HasBase, HasType.TypeObserver,
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ArraySubscriptionExpression) return false
+        if (other !is SubscriptExpression) return false
         return super.equals(other) &&
             arrayExpression == other.arrayExpression &&
             subscriptExpression == other.subscriptExpression

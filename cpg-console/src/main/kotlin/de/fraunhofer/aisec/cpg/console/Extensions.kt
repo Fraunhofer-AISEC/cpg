@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.console
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -191,7 +190,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is DeclaredReferenceExpression -> {
+        is Reference -> {
             // also color it, if it's on its own
             if (original == node) {
                 node.location?.let { styles.identifier?.let { id -> list += Pair(id, it.region) } }
@@ -215,7 +214,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is CompoundStatement -> {
+        is Block -> {
             // loop through statements
             for (statement in node.statements) {
                 list.addAll(getFanciesFor(original, statement))
@@ -245,7 +244,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 
             return list
         }
-        is ArrayCreationExpression -> {
+        is NewArrayExpression -> {
             fancyWord("new", node, list, styles.keyword)
 
             // check for primitive types

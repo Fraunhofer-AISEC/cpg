@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -75,7 +75,7 @@ internal class CXXIncludeTest : BaseTest() {
         val returnStatement = doSomething.getBodyStatementAs(0, ReturnStatement::class.java)
         assertNotNull(returnStatement)
 
-        val ref = returnStatement.returnValue as DeclaredReferenceExpression
+        val ref = returnStatement.returnValue as Reference
         assertNotNull(ref)
 
         val someField = someClass.fields["someField"]

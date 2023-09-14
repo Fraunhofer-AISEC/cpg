@@ -295,7 +295,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         for (param in ctx.parameters) {
             val arg = frontend.parameterDeclarationHandler.handle(param)
 
-            if (arg is ParamVariableDeclaration) {
+            if (arg is ParameterDeclaration) {
                 // check for void type parameters
                 if (arg.type is IncompleteType) {
                     if (arg.name.isNotEmpty()) {
@@ -334,7 +334,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs = newParamVariableDeclaration("va_args", unknownType(), true, "")
+            val varargs = newParameterDeclaration("va_args", unknownType(), true, "")
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -478,12 +478,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * Handles template parameters that are types
      *
      * @param ctx
-     * @return TypeParamDeclaration with its name
+     * @return TypeParameterDeclaration with its name
      */
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
-    ): TypeParamDeclaration {
-        return newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature, ctx)
+    ): TypeParameterDeclaration {
+        return newTypeParameterDeclaration(ctx.rawSignature, ctx.rawSignature, ctx)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {

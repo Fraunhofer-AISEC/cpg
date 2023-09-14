@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -80,10 +81,10 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
@@ -101,11 +102,11 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
@@ -123,12 +124,12 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[6]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[6]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
@@ -146,14 +147,14 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p2Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[6]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[7]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[8]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[6]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[7]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[8]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p2Decl)
@@ -171,14 +172,14 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[6]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[7]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[8]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[6]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[7]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[8]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
@@ -196,15 +197,15 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
         val nodes = mutableMapOf<Node, Set<String>>()
-        nodes[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodes[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodes[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodes[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
-        nodes[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
-        nodes[(functionOk.body as CompoundStatement).statements[6]] = setOf("start()")
-        nodes[(functionOk.body as CompoundStatement).statements[7]] = setOf("process()")
-        nodes[(functionOk.body as CompoundStatement).statements[8]] = setOf("finish()")
-        nodes[(functionOk.body as CompoundStatement).statements[9]] = setOf("reset()")
+        nodes[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodes[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodes[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodes[(functionOk.body as Block).statements[4]] = setOf("process()")
+        nodes[(functionOk.body as Block).statements[5]] = setOf("finish()")
+        nodes[(functionOk.body as Block).statements[6]] = setOf("start()")
+        nodes[(functionOk.body as Block).statements[7]] = setOf("process()")
+        nodes[(functionOk.body as Block).statements[8]] = setOf("finish()")
+        nodes[(functionOk.body as Block).statements[9]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodes)
         val everythingOk = orderEvaluator.evaluateOrder(p3Decl)
@@ -222,10 +223,10 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p5Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p5Decl)
@@ -243,18 +244,17 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
 
         val thenBranch =
-            ((functionOk.body as CompoundStatement).statements[3] as? IfStatement)?.thenStatement
-                as? CompoundStatement
+            ((functionOk.body as Block).statements[3] as? IfStatement)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[thenBranch.statements[1]] = setOf("process()")
         nodesToOp[thenBranch.statements[2]] = setOf("finish()")
 
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p6Decl)
@@ -274,8 +274,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         val loopBody =
-            ((functionOk.body as CompoundStatement).statements[1] as? WhileStatement)?.statement
-                as? CompoundStatement
+            ((functionOk.body as Block).statements[1] as? WhileStatement)?.statement as? Block
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("create()")
         nodesToOp[loopBody.statements[1]] = setOf("init()")
@@ -283,7 +282,7 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[loopBody.statements[3]] = setOf("process()")
         nodesToOp[loopBody.statements[4]] = setOf("finish()")
 
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p6Decl)
@@ -302,17 +301,16 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p7Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
         val loopBody =
-            ((functionOk.body as CompoundStatement).statements[3] as? WhileStatement)?.statement
-                as? CompoundStatement
+            ((functionOk.body as Block).statements[3] as? WhileStatement)?.statement as? Block
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
         nodesToOp[loopBody.statements[2]] = setOf("finish()")
 
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p7Decl)
@@ -330,17 +328,16 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p7Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
         val loopBody =
-            ((functionOk.body as CompoundStatement).statements[3] as? WhileStatement)?.statement
-                as? CompoundStatement
+            ((functionOk.body as Block).statements[3] as? WhileStatement)?.statement as? Block
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
         nodesToOp[loopBody.statements[2]] = setOf("finish()")
 
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p7Decl)
@@ -358,20 +355,19 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p8Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("process()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("process()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("finish()")
         val loopBody =
-            ((functionOk.body as CompoundStatement).statements[6] as? WhileStatement)?.statement
-                as? CompoundStatement
+            ((functionOk.body as Block).statements[6] as? WhileStatement)?.statement as? Block
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
         nodesToOp[loopBody.statements[2]] = setOf("finish()")
 
-        nodesToOp[(functionOk.body as CompoundStatement).statements[7]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[7]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p8Decl)
@@ -389,17 +385,15 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        val loopBody =
-            ((functionOk.body as CompoundStatement).statements[3] as DoStatement).statement
-                as? CompoundStatement
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        val loopBody = ((functionOk.body as Block).statements[3] as DoStatement).statement as? Block
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")
         nodesToOp[loopBody.statements[2]] = setOf("finish()")
 
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("reset()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("reset()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p6Decl)
@@ -417,9 +411,9 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("finish()")
 
         val afterInterprocNodes = mutableListOf<Node>()
         val withoutInterprocNodes = mutableListOf<Node>()
@@ -437,7 +431,7 @@ class ComplexDFAOrderEvaluationTest {
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
             afterInterprocNodes,
-            (functionOk.body as CompoundStatement).statements[3],
+            (functionOk.body as Block).statements[3],
             "Expected start() node in list of unknown nodes"
         )
         assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
@@ -453,9 +447,9 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl)
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[0]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[0]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("finish()")
 
         val afterInterprocNodes = mutableListOf<Node>()
         val withoutInterprocNodes = mutableListOf<Node>()
@@ -470,13 +464,12 @@ class ComplexDFAOrderEvaluationTest {
             )
         // We cannot use p1Decl as start of the analysis because it has no nextEOG edges. Instead,
         // we want to start with the first instruction of the function.
-        val everythingOk =
-            orderEvaluator.evaluateOrder((functionOk.body as CompoundStatement).statements[0])
+        val everythingOk = orderEvaluator.evaluateOrder((functionOk.body as Block).statements[0])
 
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
             afterInterprocNodes,
-            (functionOk.body as CompoundStatement).statements[0],
+            (functionOk.body as Block).statements[0],
             "Expected init() node in list of unknown nodes"
         )
         assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
@@ -492,9 +485,9 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("init()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
 
         val possibleInterprocFailures = mutableListOf<Node>()
         val withoutInterprocNodes = mutableListOf<Node>()
@@ -512,7 +505,7 @@ class ComplexDFAOrderEvaluationTest {
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
             possibleInterprocFailures,
-            (functionOk.body as CompoundStatement).statements[3],
+            (functionOk.body as Block).statements[3],
             "Expected start() node in list of unknown nodes"
         )
         assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
@@ -528,9 +521,9 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("finish()")
 
         val afterInterprocNodes = mutableListOf<Node>()
         val withoutInterprocNodes = mutableListOf<Node>()
@@ -548,12 +541,12 @@ class ComplexDFAOrderEvaluationTest {
         assertFalse(everythingOk, "Expected incorrect order")
         assertContains(
             afterInterprocNodes,
-            (functionOk.body as CompoundStatement).statements[3],
+            (functionOk.body as Block).statements[3],
             "Expected start() node in list of unknown nodes"
         )
         assertContains(
             withoutInterprocNodes,
-            (functionOk.body as CompoundStatement).statements[3],
+            (functionOk.body as Block).statements[3],
             "Expected start() node in list of unknown nodes"
         )
     }
@@ -568,9 +561,9 @@ class ComplexDFAOrderEvaluationTest {
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
-        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = setOf("create()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = setOf("start()")
-        nodesToOp[(functionOk.body as CompoundStatement).statements[6]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[2]] = setOf("create()")
+        nodesToOp[(functionOk.body as Block).statements[5]] = setOf("start()")
+        nodesToOp[(functionOk.body as Block).statements[6]] = setOf("finish()")
 
         val afterInterprocNodes = mutableListOf<Node>()
         val withoutInterprocNodes = mutableListOf<Node>()
@@ -589,7 +582,7 @@ class ComplexDFAOrderEvaluationTest {
         assertTrue(afterInterprocNodes.isEmpty(), "All nodes clearly violate the rule")
         assertContains(
             withoutInterprocNodes,
-            (functionOk.body as CompoundStatement).statements[5],
+            (functionOk.body as Block).statements[5],
             "Expected start() node in list of unknown nodes"
         )
     }
@@ -636,14 +629,14 @@ class ComplexDFAOrderEvaluationTest {
         ) {
             val lastNode = fsm.executionTrace.last().cpgNode as CallExpression
             var baseOfLastNode = getBaseOfNode(lastNode)
-            if (baseOfLastNode is DeclaredReferenceExpression) {
+            if (baseOfLastNode is Reference) {
                 baseOfLastNode = baseOfLastNode.refersTo
             }
             val returnStatements =
                 lastNode.followNextEOG { edge ->
                     edge.end is ReturnStatement &&
-                        ((edge.end as ReturnStatement).returnValue as? DeclaredReferenceExpression)
-                            ?.refersTo == baseOfLastNode
+                        ((edge.end as ReturnStatement).returnValue as? Reference)?.refersTo ==
+                            baseOfLastNode
                 }
             if (returnStatements?.isNotEmpty() == true) {
                 // There was a return statement returning the respective variable. The flow of

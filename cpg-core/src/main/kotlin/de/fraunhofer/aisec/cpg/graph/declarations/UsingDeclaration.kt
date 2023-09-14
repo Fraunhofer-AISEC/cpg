@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,25 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasDefault
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.*
-import org.neo4j.ogm.annotation.Relationship
+import java.util.Objects
 
-/** A declaration of a type template parameter */
-class TypeParamDeclaration : ValueDeclaration(), HasDefault<Type?> {
-    /** TemplateParameters can define a default for the type parameter. */
-    @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    @AST
-    override var default: Type? = null
+/** Represents a using directive used to extend the currently valid name scope. */
+class UsingDeclaration : Declaration() {
+    var qualifiedName: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || javaClass != other.javaClass) return false
-        val that = other as TypeParamDeclaration
-        return super.equals(that) && default == that.default
+        if (other !is UsingDeclaration) return false
+        return super.equals(other) && qualifiedName == other.qualifiedName
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), default)
+    override fun hashCode() = Objects.hash(super.hashCode(), qualifiedName)
 }

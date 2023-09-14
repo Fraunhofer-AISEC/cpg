@@ -210,8 +210,8 @@ object TestUtils {
      * Asserts, that the expression given in [expression] refers to the expected declaration [b].
      */
     fun assertRefersTo(expression: Expression?, b: Declaration?) {
-        if (expression is DeclaredReferenceExpression) {
-            assertEquals(b, (expression as DeclaredReferenceExpression?)?.refersTo)
+        if (expression is Reference) {
+            assertEquals(b, (expression as Reference?)?.refersTo)
         } else {
             fail("not a reference")
         }
@@ -228,9 +228,9 @@ object TestUtils {
 
     /**
      * Asserts equality or containing of the expected usedNode in the usingNode. If
-     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [DeclaredReferenceExpression] where
-     * [DeclaredReferenceExpression.refersTo] is or contains `usedNode`. If this is not the case,
-     * usage can also be interpreted as equality of the two.
+     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [Reference] where [Reference.refersTo] is
+     * or contains `usedNode`. If this is not the case, usage can also be interpreted as equality of
+     * the two.
      *
      * @param usingNode
      * - The node that shows usage of another node.
@@ -240,11 +240,11 @@ object TestUtils {
      */
     fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
         assertNotNull(usingNode)
-        if (usingNode !is DeclaredReferenceExpression && !ENFORCE_REFERENCES) {
+        if (usingNode !is Reference && !ENFORCE_REFERENCES) {
             assertSame(usedNode, usingNode)
         } else {
-            assertTrue(usingNode is DeclaredReferenceExpression)
-            val reference = usingNode as? DeclaredReferenceExpression
+            assertTrue(usingNode is Reference)
+            val reference = usingNode as? Reference
             assertEquals(usedNode, reference?.refersTo)
         }
     }
@@ -272,12 +272,12 @@ object TestUtils {
             assertUsageOf(usingNode, usedMember)
         } else {
             assertTrue(usingNode is MemberExpression)
-            val memberExpression = usingNode as MemberExpression?
-            assertNotNull(memberExpression)
+            val memberExpressionExpression = usingNode as MemberExpression?
+            assertNotNull(memberExpressionExpression)
 
-            val base = memberExpression.base
+            val base = memberExpressionExpression.base
             assertUsageOf(base, usedBase)
-            assertUsageOf(memberExpression.refersTo, usedMember)
+            assertUsageOf(memberExpressionExpression.refersTo, usedMember)
         }
     }
 }

@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
@@ -67,7 +67,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         set(value) {
             field?.unregisterTypeObserver(this)
             field = value
-            if (value is DeclaredReferenceExpression) {
+            if (value is Reference) {
                 value.resolutionHelper = this
             }
             value?.registerTypeObserver(this)

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -73,25 +72,25 @@ class JavaLambdaTest {
         assertNotNull(mapBody)
         val outerVar = result.variables["outerVar"]
         assertNotNull(outerVar)
-        assertEquals(outerVar, (mapBody.lhs as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(outerVar, (mapBody.lhs as? Reference)?.refersTo)
 
         val testfunctionArg =
             result.calls { it.name.localName == "testFunction" }[0].arguments.first()
-        assertTrue(testfunctionArg is DeclaredReferenceExpression)
+        assertTrue(testfunctionArg is Reference)
         assertTrue(
             (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
         )
 
         val testfunctionBody = mapArg.function?.body as? BinaryOperator
         assertNotNull(testfunctionBody)
-        assertEquals(outerVar, (testfunctionBody.lhs as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(outerVar, (testfunctionBody.lhs as? Reference)?.refersTo)
 
         val lambdaVar = result.variables["lambdaVar"]
         assertNotNull(lambdaVar)
-        val constructExpression =
+        val constructExpr =
             (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression
-        assertNotNull(constructExpression)
-        val anonymousRecord = constructExpression.instantiates as? RecordDeclaration
+        assertNotNull(constructExpr)
+        val anonymousRecord = constructExpr.instantiates as? RecordDeclaration
         assertNotNull(anonymousRecord)
         assertTrue(anonymousRecord.isImplicit)
         assertEquals(1, anonymousRecord.superClasses.size)
@@ -101,13 +100,13 @@ class JavaLambdaTest {
 
         val applyMethod = anonymousRecord.methods["apply"]
         assertNotNull(applyMethod)
-        val returnStmt =
-            (applyMethod.body as? CompoundStatement)?.statements?.firstOrNull() as? ReturnStatement
-        assertNotNull(returnStmt)
+        val returnStatement =
+            (applyMethod.body as? Block)?.statements?.firstOrNull() as? ReturnStatement
+        assertNotNull(returnStatement)
         assertEquals(
             outerVar,
-            (((returnStmt.returnValue as? BinaryOperator)?.lhs as? BinaryOperator)?.lhs
-                    as? DeclaredReferenceExpression)
+            (((returnStatement.returnValue as? BinaryOperator)?.lhs as? BinaryOperator)?.lhs
+                    as? Reference)
                 ?.refersTo
         )
     }

@@ -23,19 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
 
-// TODO: Documentation
-class UsingDirective : Declaration() {
-    var qualifiedName: String? = null
+// TODO Merge and/or refactor
+class ConstructorCallExpression : CallExpression() {
+    var containingClass: String? = null
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("invokes", invokes)
+            .toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is UsingDirective) return false
-        return super.equals(other) && qualifiedName == other.qualifiedName
+        if (other !is ConstructorCallExpression) return false
+        return super.equals(other) && containingClass == other.containingClass
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), qualifiedName)
+    override fun hashCode() = Objects.hash(super.hashCode(), containingClass)
 }

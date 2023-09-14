@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
@@ -204,8 +204,7 @@ class MultiValueEvaluatorTest {
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()
-        val iVarList =
-            ((forLoop.statement as CompoundStatement).statements[0] as AssignExpression).rhs
+        val iVarList = ((forLoop.statement as Block).statements[0] as AssignExpression).rhs
         assertEquals(1, iVarList.size)
         val iVar = iVarList.first()
         val value = evaluator.evaluate(iVar) as ConcreteNumberSet
@@ -221,7 +220,7 @@ class MultiValueEvaluatorTest {
             val three = newLiteral(3, primitiveType("int"))
             val four = newLiteral(4, primitiveType("int"))
 
-            val ref = newDeclaredReferenceExpression("a")
+            val ref = newReference("a")
             ref.prevDFG = mutableSetOf(three, four)
 
             val neg = newUnaryOperator("-", false, true)

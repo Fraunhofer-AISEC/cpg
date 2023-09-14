@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newArrayCreationExpression
+import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 
@@ -337,7 +337,7 @@ class Query {
                             body {
                                 declare {
                                     variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayCreationExpression()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(4, t("int")))
                                         creationExpr.type = t("char")
                                         this.initializer = creationExpr
@@ -366,7 +366,7 @@ class Query {
                         function("some_other_function", t("char")) {
                             declare {
                                 variable("c", t("char").pointer()) {
-                                    val creationExpr = newArrayCreationExpression()
+                                    val creationExpr = newNewArrayExpression()
                                     creationExpr.addDimension(literal(100, t("int")))
                                     creationExpr.type = t("char")
                                     this.initializer = creationExpr
@@ -398,7 +398,7 @@ class Query {
                             body {
                                 declare {
                                     variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayCreationExpression()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(4, t("int")))
                                         creationExpr.type = t("char")
                                         this.initializer = creationExpr
@@ -448,7 +448,7 @@ class Query {
                                     thenStmt {
                                         ref("c") assign
                                             run {
-                                                val creationExpr = newArrayCreationExpression()
+                                                val creationExpr = newNewArrayExpression()
                                                 creationExpr.addDimension(literal(4, t("int")))
                                                 creationExpr.type = t("char")
                                                 (creationExpr)
@@ -457,7 +457,7 @@ class Query {
                                     elseStmt {
                                         ref("c") assign
                                             run {
-                                                val creationExpr = newArrayCreationExpression()
+                                                val creationExpr = newNewArrayExpression()
                                                 creationExpr.addDimension(literal(5, t("int")))
                                                 creationExpr.type = t("char")
                                                 (creationExpr)
@@ -504,7 +504,7 @@ class Query {
                             body {
                                 declare {
                                     variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayCreationExpression()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(4, t("int")))
                                         creationExpr.type = t("char")
                                         this.initializer = creationExpr

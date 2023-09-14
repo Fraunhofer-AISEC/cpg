@@ -133,11 +133,11 @@ class TypeScriptLanguageFrontendTest {
             tu.getDeclarationsByName("doJsx", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(doJsx)
 
-        val returnStmt = doJsx.getBodyStatementAs(0, ReturnStatement::class.java)
-        assertNotNull(returnStmt)
+        val returnStatement = doJsx.getBodyStatementAs(0, ReturnStatement::class.java)
+        assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
-        val jsx = returnStmt.returnValue as? ExpressionList
+        val jsx = returnStatement.returnValue as? ExpressionList
         assertNotNull(jsx)
 
         val tag = jsx.expressions.firstOrNull()
@@ -204,7 +204,7 @@ class TypeScriptLanguageFrontendTest {
         val fetch = chainedCall.base as? CallExpression
         assertNotNull(fetch)
 
-        val refArg = fetch.arguments.first() as? DeclaredReferenceExpression
+        val refArg = fetch.arguments.first() as? Reference
         assertNotNull(refArg)
 
         assertLocalName("apiUrl", refArg)
@@ -218,7 +218,7 @@ class TypeScriptLanguageFrontendTest {
         var keyValue = objectArg.initializers.first() as? KeyValueExpression
         assertNotNull(keyValue)
 
-        assertLocalName("method", keyValue.key as? DeclaredReferenceExpression)
+        assertLocalName("method", keyValue.key as? Reference)
         assertEquals("POST", (keyValue.value as? Literal<*>)?.value)
 
         keyValue = objectArg.initializers.last() as? KeyValueExpression
@@ -301,11 +301,11 @@ class TypeScriptLanguageFrontendTest {
         val render = usersComponent.methods["render"]
         assertNotNull(render)
 
-        val returnStmt = render.getBodyStatementAs(1, ReturnStatement::class.java)
-        assertNotNull(returnStmt)
+        val returnStatement = render.getBodyStatementAs(1, ReturnStatement::class.java)
+        assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
-        val jsx = returnStmt.returnValue as? ExpressionList
+        val jsx = returnStatement.returnValue as? ExpressionList
         assertNotNull(jsx)
 
         val tag = jsx.expressions.firstOrNull()

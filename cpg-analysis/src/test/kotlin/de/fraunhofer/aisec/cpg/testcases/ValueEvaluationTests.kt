@@ -53,7 +53,7 @@ class ValueEvaluationTests {
                                 body {
                                     declare {
                                         variable("array", t("int").array()) {
-                                            val newExpr = newArrayCreationExpression()
+                                            val newExpr = newNewArrayExpression()
                                             newExpr.addDimension(literal(3, t("int")))
                                             this.initializer = newExpr
                                         }
@@ -312,7 +312,7 @@ class ValueEvaluationTests {
                             body {
                                 declare {
                                     variable("array", t("int").array()) {
-                                        val creationExpr = newArrayCreationExpression()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(6, t("int")))
                                         this.initializer = creationExpr
                                     }

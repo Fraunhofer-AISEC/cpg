@@ -41,11 +41,10 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
- * expression `a = b`, which itself is an [AssignExpression], contains two
- * [DeclaredReferenceExpression]s, one for the variable `a` and one for variable `b`, which have
- * been previously been declared.
+ * expression `a = b`, which itself is an [AssignExpression], contains two [Reference]s, one for the
+ * variable `a` and one for variable `b`, which have been previously been declared.
  */
-open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
+open class Reference : Expression(), HasType.TypeObserver {
     /**
      * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
      * this expression.
@@ -82,8 +81,8 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
 
     /**
      * This is a MAJOR workaround needed to resolve function pointers, until we properly re-design
-     * the call resolver. When this [DeclaredReferenceExpression] contains a function pointer
-     * reference that is assigned to a variable (or to another reference), we need to set
+     * the call resolver. When this [Reference] contains a function pointer reference that is
+     * assigned to a variable (or to another reference), we need to set
      */
     var resolutionHelper: HasType? = null
 
@@ -134,7 +133,7 @@ open class DeclaredReferenceExpression : Expression(), HasType.TypeObserver {
         if (this === other) {
             return true
         }
-        if (other !is DeclaredReferenceExpression) {
+        if (other !is Reference) {
             return false
         }
         return super.equals(other) && refersTo == other.refersTo

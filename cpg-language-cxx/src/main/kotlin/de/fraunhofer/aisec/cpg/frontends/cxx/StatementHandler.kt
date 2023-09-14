@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -73,24 +74,29 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleProblemStatement(problemStmt: IASTProblemStatement): ProblemExpression {
-        Util.errorWithFileLocation(frontend, problemStmt, log, problemStmt.problem.message)
+    private fun handleProblemStatement(problemStatement: IASTProblemStatement): ProblemExpression {
+        Util.errorWithFileLocation(
+            frontend,
+            problemStatement,
+            log,
+            problemStatement.problem.message
+        )
 
         return newProblemExpression(
-            problemStmt.problem.message,
+            problemStatement.problem.message,
         )
     }
 
-    private fun handleEmptyStatement(emptyStmt: IASTNullStatement): EmptyStatement {
-        return newEmptyStatement(emptyStmt.rawSignature)
+    private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
+        return newEmptyStatement(nullStatement.rawSignature)
     }
 
-    private fun handleTryBlockStatement(tryStmt: CPPASTTryBlockStatement): TryStatement {
-        val tryStatement = newTryStatement(tryStmt.toString())
+    private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): TryStatement {
+        val tryStatement = newTryStatement(tryBlockStatement.toString())
         frontend.scopeManager.enterScope(tryStatement)
-        val statement = handle(tryStmt.tryBody) as CompoundStatement?
+        val statement = handle(tryBlockStatement.tryBody) as Block?
         val catchClauses =
-            Arrays.stream(tryStmt.catchHandlers)
+            Arrays.stream(tryBlockStatement.catchHandlers)
                 .map { handleCatchHandler(it) }
                 .collect(Collectors.toList())
         tryStatement.tryBlock = statement
@@ -111,7 +117,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             decl = frontend.declarationHandler.handle(catchHandler.declaration)
         }
 
-        catchClause.body = body as? CompoundStatement
+        catchClause.body = body as? Block
 
         if (decl != null) {
             catchClause.parameter = decl as? VariableDeclaration
@@ -310,21 +316,21 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return returnStatement
     }
 
-    private fun handleCompoundStatement(ctx: IASTCompoundStatement): CompoundStatement {
-        val compoundStatement = newCompoundStatement(ctx.rawSignature)
+    private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
+        val block = newBlock(ctx.rawSignature)
 
-        frontend.scopeManager.enterScope(compoundStatement)
+        frontend.scopeManager.enterScope(block)
 
         for (statement in ctx.statements) {
             val handled = handle(statement)
             if (handled != null) {
-                compoundStatement.addStatement(handled)
+                block.addStatement(handled)
             }
         }
 
-        frontend.scopeManager.leaveScope(compoundStatement)
+        frontend.scopeManager.leaveScope(block)
 
-        return compoundStatement
+        return block
     }
 
     private fun handleSwitchStatement(ctx: IASTSwitchStatement): SwitchStatement {

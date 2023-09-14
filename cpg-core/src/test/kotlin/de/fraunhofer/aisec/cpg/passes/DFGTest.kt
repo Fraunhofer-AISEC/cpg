@@ -138,8 +138,8 @@ class DFGTest {
         val varB = TestUtils.findByUniqueName(result.variables, "b")
         assertNotNull(varB)
 
-        val lhsA = binaryOperatorAssignment.lhs.first() as DeclaredReferenceExpression
-        val rhsA = binaryOperatorAddition.lhs as DeclaredReferenceExpression
+        val lhsA = binaryOperatorAssignment.lhs.first() as Reference
+        val rhsA = binaryOperatorAddition.lhs as Reference
         val b = TestUtils.findByUniqueName(result.refs, "b")
         assertNotNull(b)
 
@@ -148,7 +148,7 @@ class DFGTest {
 
         val literal1 = result.literals[{ it.value == 1 }]
         assertNotNull(literal1)
-        // a and b flow to the DeclaredReferenceExpressions in (a+b)
+        // a and b flow to the References in (a+b)
         assertEquals(1, varA.nextDFG.size)
         assertEquals(1, varB.nextDFG.size)
         assertTrue(varA.nextDFG.contains(rhsA))
@@ -368,10 +368,10 @@ class DFGTest {
         val b = result.variables["b"]
         assertNotNull(b)
 
-        val ab = b.prevEOG[0] as DeclaredReferenceExpression
+        val ab = b.prevEOG[0] as Reference
         val literal4 = result.literals[{ it.value == 4 }]
         assertNotNull(literal4)
-        val a4 = ab.prevDFG.first { it is DeclaredReferenceExpression }
+        val a4 = ab.prevDFG.first { it is Reference }
         assertTrue(literal4.nextDFG.contains(a4))
         assertEquals(1, ab.prevDFG.size)
     }
@@ -394,7 +394,7 @@ class DFGTest {
         assertEquals(
             1,
             a2.nextDFG.size
-        ) // Outgoing DFG Edges only to the DeclaredReferenceExpression in the assignment to b
+        ) // Outgoing DFG Edges only to the Reference in the assignment to b
         assertEquals(
             b.initializer!!,
             a2.nextDFG.first(),
@@ -403,7 +403,7 @@ class DFGTest {
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)
         assertEquals(2, refersTo.nextDFG.size) // The print and assignment to b
-        // Outgoing DFG Edge to the DeclaredReferenceExpression in the assignment of b
+        // Outgoing DFG Edge to the Reference in the assignment of b
         assertTrue(refersTo.nextDFG.contains(b.initializer!!))
 
         // Test Else-Block with System.out.println()
@@ -419,7 +419,7 @@ class DFGTest {
         assertEquals(1, aPrintln.nextEOG.size)
         assertEquals(println, aPrintln.nextEOG[0])
 
-        val ab = b.prevEOG[0] as DeclaredReferenceExpression
+        val ab = b.prevEOG[0] as Reference
         assertTrue(refersTo.nextDFG.contains(ab))
         assertTrue(a2.nextDFG.contains(ab))
     }
@@ -435,7 +435,7 @@ class DFGTest {
         val b = result.variables["b"]
         assertNotNull(b)
 
-        val ab = b.prevEOG[0] as DeclaredReferenceExpression
+        val ab = b.prevEOG[0] as Reference
         val a10 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 8) }]
         val a11 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 11) }]
         val a12 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 14) }]

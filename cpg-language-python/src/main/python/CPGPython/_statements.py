@@ -29,7 +29,7 @@ from de.fraunhofer.aisec.cpg.graph import NodeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import TypeBuilderKt
 from de.fraunhofer.aisec.cpg.graph import StatementBuilderKt
 from de.fraunhofer.aisec.cpg.graph import ExpressionBuilderKt
-from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import Block
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 from java.util import ArrayList
 import ast
@@ -117,7 +117,7 @@ def handle_statement_impl(self, stmt):
             whl_stmt.setConditionDeclaration(expr)
         else:
             whl_stmt.setCondition(expr)
-        body = self.make_compound_statement(stmt.body)
+        body = self.make_block_statement(stmt.body)
         whl_stmt.setStatement(body)
         if stmt.orelse is not None and len(stmt.orelse) != 0:
             self.log_with_loc(
@@ -131,11 +131,11 @@ def handle_statement_impl(self, stmt):
         # Condition
         if_stmt.setCondition(self.handle_expression(stmt.test))
         # Then
-        body = self.make_compound_statement(stmt.body)
+        body = self.make_block_statement(stmt.body)
         if_stmt.setThenStatement(body)
         # Else
         if stmt.orelse is not None and len(stmt.orelse) != 0:
-            orelse = self.make_compound_statement(stmt.orelse)
+            orelse = self.make_block_statement(stmt.orelse)
             if_stmt.setElseStatement(orelse)
         return if_stmt
 
@@ -233,8 +233,8 @@ def handle_statement_impl(self, stmt):
     elif isinstance(stmt, ast.Try):
         s = StatementBuilderKt.newTryStatement(self.frontend,
                                                self.get_src_code(stmt))
-        try_block = self.make_compound_statement(stmt.body)
-        finally_block = self.make_compound_statement(stmt.finalbody)
+        try_block = self.make_block_statement(stmt.body)
+        finally_block = self.make_block_statement(stmt.finalbody)
         if stmt.orelse is not None and len(stmt.orelse) != 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         if len(stmt.handlers) != 0:
@@ -337,7 +337,7 @@ def handle_function_or_method(self, node, record=None):
             loglevel="ERROR")
 
     if len(node.body) > 0:
-        f.setBody(self.make_compound_statement(node.body))
+        f.setBody(self.make_block_statement(node.body))
 
     annotations = []
     for decorator in node.decorator_list:
@@ -414,7 +414,7 @@ def handle_argument(self, arg: ast.arg):
     else:
         tpe = TypeBuilderKt.unknownType(self.frontend)
     # TODO variadic
-    pvd = DeclarationBuilderKt.newParamVariableDeclaration(
+    pvd = DeclarationBuilderKt.newParameterDeclaration(
         self.frontend, arg.arg, tpe, False, self.get_src_code(arg))
     self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
@@ -455,7 +455,7 @@ def handle_for(self, stmt):
 
     for_stmt.setVariable(target)
 
-    body = self.make_compound_statement(stmt.body)
+    body = self.make_block_statement(stmt.body)
     for_stmt.setStatement(body)
 
     if stmt.orelse is not None and len(stmt.orelse) != 0:
@@ -464,12 +464,12 @@ def handle_for(self, stmt):
     return for_stmt
 
 
-def make_compound_statement(self, stmts) -> CompoundStatement:
+def make_block_statement(self, stmts) -> Block:
     if stmts is None or len(stmts) == 0:
         self.log_with_loc(
             "Expected at least one statement. Returning a dummy.",
             loglevel="WARN")
-        return StatementBuilderKt.newCompoundStatement(self.frontend, "")
+        return StatementBuilderKt.newBlock(self.frontend, "")
 
     if False and len(stmts) == 1:
         """ TODO decide how to handle this... """
@@ -478,17 +478,17 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
             s = self.wrap_declaration_to_stmt(s)
         return s
     else:
-        compound_statement = StatementBuilderKt.newCompoundStatement(
+        block_statement = ExpressionBuilderKt.newBlock(
             self.frontend, "")
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
                 s = self.wrap_declaration_to_stmt(s)
-            compound_statement.addStatement(s)
+            block_statement.addStatement(s)
         if len(stmts) > 0:
-            self.add_mul_loc_infos(stmts[0], stmts[-1], compound_statement)
+            self.add_mul_loc_infos(stmts[0], stmts[-1], block_statement)
 
-        return compound_statement
+        return block_statement
 
 
 def handle_assign(self, stmt):
@@ -541,7 +541,7 @@ def handle_assign_impl(self, stmt):
     if not self.is_declared_reference(
             lhs) and not self.is_member_expression(lhs):
         self.log_with_loc(
-            "Expected a DeclaredReferenceExpression or MemberExpression "
+            "Expected a Reference or MemberExpression "
             "but got \"%s\". Skipping." %
             lhs.java_name, loglevel="ERROR")
         r = ExpressionBuilderKt.newArrayList(self.frontend,
@@ -576,7 +576,7 @@ def handle_assign_impl(self, stmt):
             else:
                 name = "DUMMY"
                 self.log_with_loc(
-                    "Expected a DeclaredReferenceExpression but got a "
+                    "Expected a Reference but got a "
                     "MemberExpression. Using a dummy.",
                     loglevel="ERROR")
 

@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -46,17 +46,17 @@ import org.slf4j.LoggerFactory
  * Creates new connections between the place where a variable is declared and where it is used.
  *
  * A field access is modeled with a [MemberExpression]. After AST building, its base and member
- * references are set to [DeclaredReferenceExpression] stubs. This pass resolves those references
- * and makes the member point to the appropriate [FieldDeclaration] and the base to the "this"
- * [FieldDeclaration] of the containing class. It is also capable of resolving references to fields
- * that are inherited from a superclass and thus not declared in the actual base class. When base or
- * member declarations are not found in the graph, a new "inferred" [FieldDeclaration] is being
- * created that is then used to collect all usages to the same unknown declaration.
- * [DeclaredReferenceExpression] stubs are removed from the graph after being resolved.
+ * references are set to [Reference] stubs. This pass resolves those references and makes the member
+ * point to the appropriate [FieldDeclaration] and the base to the "this" [FieldDeclaration] of the
+ * containing class. It is also capable of resolving references to fields that are inherited from a
+ * superclass and thus not declared in the actual base class. When base or member declarations are
+ * not found in the graph, a new "inferred" [FieldDeclaration] is being created that is then used to
+ * collect all usages to the same unknown declaration. [Reference] stubs are removed from the graph
+ * after being resolved.
  *
- * Accessing a local variable is modeled directly with a [DeclaredReferenceExpression]. This step of
- * the pass doesn't remove the [DeclaredReferenceExpression] nodes like in the field usage case but
- * rather makes their "refersTo" point to the appropriate [ValueDeclaration].
+ * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
+ * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
+ * to the appropriate [ValueDeclaration].
  */
 @DependsOn(TypeHierarchyResolver::class)
 open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
@@ -89,7 +89,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
 
     /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
     protected fun resolveMethodFunctionPointer(
-        reference: DeclaredReferenceExpression,
+        reference: Reference,
         type: FunctionPointerType
     ): ValueDeclaration {
         val parent = reference.name.parent
@@ -112,7 +112,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     ) {
         val language = current?.language
 
-        if (current !is DeclaredReferenceExpression || current is MemberExpression) return
+        if (current !is Reference || current is MemberExpression) return
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -223,8 +223,8 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
 
         var baseTarget: Declaration? = null
-        if (current.base is DeclaredReferenceExpression) {
-            val base = current.base as DeclaredReferenceExpression
+        if (current.base is Reference) {
+            val base = current.base as Reference
             if (
                 current.language is HasSuperClasses &&
                     base.name.toString() == (current.language as HasSuperClasses).superClassKeyword
@@ -264,7 +264,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
                     base.type = objectType
                 }
             } else {
-                baseTarget = resolveBase(current.base as DeclaredReferenceExpression)
+                baseTarget = resolveBase(current.base as Reference)
                 base.refersTo = baseTarget
             }
             if (baseTarget is EnumDeclaration) {
@@ -298,7 +298,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         current.refersTo = resolveMember(baseType, current)
     }
 
-    protected fun resolveBase(reference: DeclaredReferenceExpression): Declaration? {
+    protected fun resolveBase(reference: Reference): Declaration? {
         val declaration = scopeManager.resolveReference(reference)
         if (declaration != null) {
             return declaration
@@ -314,10 +314,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
         }
     }
 
-    protected fun resolveMember(
-        containingClass: Type,
-        reference: DeclaredReferenceExpression
-    ): ValueDeclaration? {
+    protected fun resolveMember(containingClass: Type, reference: Reference): ValueDeclaration? {
         if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
             // this in the call resolver instead
@@ -346,10 +343,7 @@ open class VariableUsageResolver(ctx: TranslationContext) : SymbolResolverPass(c
     }
 
     // TODO(oxisto): Move to inference class
-    protected fun handleUnknownField(
-        base: Type,
-        ref: DeclaredReferenceExpression
-    ): FieldDeclaration? {
+    protected fun handleUnknownField(base: Type, ref: Reference): FieldDeclaration? {
         val name = ref.name
 
         // unwrap a potential pointer-type
