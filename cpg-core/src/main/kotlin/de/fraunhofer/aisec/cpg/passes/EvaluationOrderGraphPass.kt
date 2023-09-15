@@ -60,8 +60,8 @@ import org.slf4j.LoggerFactory
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
- * * EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate node.
- *   A CFG will rather use the first actual executable statement within the block.
+ * * EOG considers an opening blocking ("Block", indicated by a "{") as a separate node. A CFG will
+ *   rather use the first actual executable statement within the block.
  * * For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG treats
  *   this as one "if" statement.
  * * EOG considers a method header as a node. CFG will consider the first executable statement of
@@ -108,12 +108,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
         map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
-        map[ArraySubscriptionExpression::class.java] = {
-            handleArraySubscriptionExpression(it as ArraySubscriptionExpression)
+        map[SubscriptExpression::class.java] = {
+            handleSubscriptExpression(it as SubscriptExpression)
         }
-        map[ArrayCreationExpression::class.java] = {
-            handleArrayCreationExpression(it as ArrayCreationExpression)
-        }
+        map[NewArrayExpression::class.java] = { handleNewArrayExpression(it as NewArrayExpression) }
         map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
         map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
@@ -122,10 +120,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
         map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
         map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[CompoundStatement::class.java] = { handleCompoundStatement(it as CompoundStatement) }
-        map[CompoundStatementExpression::class.java] = {
-            handleCompoundStatementExpression(it as CompoundStatementExpression)
-        }
+        map[Block::class.java] = { handleBlock(it as Block) }
         map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
         map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
         map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
@@ -160,7 +155,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[Literal::class.java] = { handleDefault(it) }
         map[DefaultStatement::class.java] = { handleDefault(it) }
         map[TypeIdExpression::class.java] = { handleDefault(it) }
-        map[DeclaredReferenceExpression::class.java] = { handleDefault(it) }
+        map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
     }
 
@@ -270,7 +265,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? CompoundStatement)?.isStaticBlock == false }
+        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
         val staticCode = code.filter { it !in nonStaticCode }
 
         pushToEOG(statementHolder as Node)
@@ -421,7 +416,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArraySubscriptionExpression(node: ArraySubscriptionExpression) {
+    protected fun handleSubscriptExpression(node: SubscriptExpression) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
         createEOG(node.arrayExpression)
@@ -429,7 +424,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArrayCreationExpression(node: ArrayCreationExpression) {
+    protected fun handleNewArrayExpression(node: NewArrayExpression) {
         for (dimension in node.dimensions) {
             createEOG(dimension)
         }
@@ -526,7 +521,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatement(node: CompoundStatement) {
+    protected fun handleBlock(node: Block) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)
@@ -578,11 +573,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val input = node.input
         createEOG(input)
 
-        pushToEOG(node)
-    }
-
-    protected fun handleCompoundStatementExpression(node: CompoundStatementExpression) {
-        createEOG(node.statement)
         pushToEOG(node)
     }
 
@@ -819,7 +809,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
         createEOG(node.expression)
         pushToEOG(node)
-        createEOG(node.blockStatement)
+        createEOG(node.block)
     }
 
     protected fun handleConditionalExpression(node: ConditionalExpression) {
@@ -829,11 +819,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
         val openConditionEOGs = ArrayList(currentPredecessors)
         nextEdgeProperties[Properties.BRANCH] = true
-        createEOG(node.thenExpr)
+        createEOG(node.thenExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openConditionEOGs)
         nextEdgeProperties[Properties.BRANCH] = false
-        createEOG(node.elseExpr)
+        createEOG(node.elseExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openBranchNodes)
     }
@@ -935,9 +925,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val compound =
             if (node.statement is DoStatement) {
                 createEOG(node.statement)
-                (node.statement as DoStatement).statement as CompoundStatement
+                (node.statement as DoStatement).statement as Block
             } else {
-                node.statement as CompoundStatement
+                node.statement as Block
             }
         currentPredecessors = ArrayList()
         for (subStatement in compound.statements) {

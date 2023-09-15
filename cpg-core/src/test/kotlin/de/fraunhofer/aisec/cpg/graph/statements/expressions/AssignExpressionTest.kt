@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import kotlin.test.*
@@ -39,8 +38,8 @@ class AssignExpressionTest {
     @Test
     fun propagateSimple() {
         with(TestLanguageFrontend()) {
-            val refA = newDeclaredReferenceExpression("a")
-            val refB = newDeclaredReferenceExpression("b")
+            val refA = newReference("a")
+            val refB = newReference("b")
 
             // Simple assignment from "b" to "a". Both types are unknown at this point
             val stmt = newAssignExpression(lhs = listOf(refA), rhs = listOf(refB))
@@ -71,9 +70,9 @@ class AssignExpressionTest {
                             )
 
                         function("main") {
-                            val refA = newDeclaredReferenceExpression("a")
-                            val refErr = newDeclaredReferenceExpression("err")
-                            val refFunc = newDeclaredReferenceExpression("func")
+                            val refA = newReference("a")
+                            val refErr = newReference("err")
+                            val refFunc = newReference("func")
                             refFunc.refersTo = func
                             val call = newCallExpression(refFunc)
 
@@ -81,8 +80,8 @@ class AssignExpressionTest {
                             val stmt =
                                 newAssignExpression(lhs = listOf(refA, refErr), rhs = listOf(call))
 
-                            body = newCompoundStatement()
-                            body as CompoundStatement += stmt
+                            body = newBlock()
+                            body as Block += stmt
                         }
                     }
                 }

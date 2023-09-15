@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
 import kotlin.test.*
@@ -163,7 +163,7 @@ class DeclarationTest {
         assertNotNull(printf)
 
         printf.arguments.drop(1).forEach {
-            val ref = assertIs<DeclaredReferenceExpression>(it)
+            val ref = assertIs<Reference>(it)
             assertNotNull(ref.refersTo)
         }
 

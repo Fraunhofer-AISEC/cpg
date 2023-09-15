@@ -97,12 +97,7 @@ internal class ScopeManagerTest : BaseTest() {
 
         // resolve symbol
         val call =
-            frontend.newCallExpression(
-                frontend.newDeclaredReferenceExpression("A::func1"),
-                "A::func1",
-                null,
-                false
-            )
+            frontend.newCallExpression(frontend.newReference("A::func1"), "A::func1", null, false)
         val func = final.resolveFunction(call).firstOrNull()
 
         assertEquals(func1, func)

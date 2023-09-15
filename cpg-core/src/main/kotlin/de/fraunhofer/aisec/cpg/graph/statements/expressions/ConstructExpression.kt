@@ -39,6 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  *   as part of a [NewExpression].
  * * In Java, it is the initializer of a [NewExpression].
  */
+// TODO Merge and/or refactor
 class ConstructExpression : CallExpression() {
     /**
      * The link to the [ConstructorDeclaration]. This is populated by the

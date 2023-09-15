@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.fields
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.variables
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -74,7 +74,7 @@ internal class VariableResolverTest : BaseTest() {
 
         var local = getLocal.variables.firstOrNull { it.name.localName != "this" }
 
-        var returnValue = returnStatement.returnValue as DeclaredReferenceExpression
+        var returnValue = returnStatement.returnValue as Reference
         assertNotEquals(field, returnValue.refersTo)
         assertEquals(local, returnValue.refersTo)
 
@@ -85,7 +85,7 @@ internal class VariableResolverTest : BaseTest() {
 
         local = getShadow.variables.firstOrNull { it.name.localName != "this" }
 
-        returnValue = returnStatement.returnValue as DeclaredReferenceExpression
+        returnValue = returnStatement.returnValue as Reference
         assertNotEquals(field, returnValue.refersTo)
         assertEquals(local, returnValue.refersTo)
     }

@@ -38,10 +38,9 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 /**
- * This pass determines the data flows of DeclaredReferenceExpressions which refer to a
- * VariableDeclaration (not a field) while considering the control flow of a function. After this
- * path, only such data flows are left which can occur when following the control flow (in terms of
- * the EOG) of the program.
+ * This pass determines the data flows of References which refer to a VariableDeclaration (not a
+ * field) while considering the control flow of a function. After this path, only such data flows
+ * are left which can occur when following the control flow (in terms of the EOG) of the program.
  */
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -108,10 +107,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     }
 
     /**
-     * Computes the previous write access of [currentEdge].end if it is a
-     * [DeclaredReferenceExpression] or [ValueDeclaration] based on the given [state] (which maps
-     * all variables to its last write instruction). It also updates the [state] if
-     * [currentEdge].end performs a write-operation to a variable.
+     * Computes the previous write access of [currentEdge].end if it is a [Reference] or
+     * [ValueDeclaration] based on the given [state] (which maps all variables to its last write
+     * instruction). It also updates the [state] if [currentEdge].end performs a write-operation to
+     * a variable.
      *
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.
@@ -122,7 +121,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        var writtenDecl: Declaration?
+        var writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState
@@ -153,8 +152,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
                 // This was the last write to the respective declaration.
-                (assignment.target as? Declaration
-                        ?: (assignment.target as? DeclaredReferenceExpression)?.refersTo)
+                (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
                     ?.let {
                         doubleState.declarationsState[it] =
                             PowersetLattice(setOf(assignment.target as Node))
@@ -163,13 +161,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         } else if (isIncOrDec(currentNode)) {
             // Increment or decrement => Add the prevWrite of the input to the input. After the
             // operation, the prevWrite of the input's variable is this node.
-            val input = (currentNode as UnaryOperator).input as DeclaredReferenceExpression
+            val input = (currentNode as UnaryOperator).input as Reference
             // We write to the variable in the input
-            writtenDecl = input.refersTo
+            writtenDeclaration = input.refersTo
 
-            if (writtenDecl != null) {
-                state.push(input, doubleState.declarationsState[writtenDecl])
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(input))
+            if (writtenDeclaration != null) {
+                state.push(input, doubleState.declarationsState[writtenDeclaration])
+                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(input))
             }
         } else if (isCompoundAssignment(currentNode)) {
             // We write to the lhs, but it also serves as an input => We first get all previous
@@ -177,17 +175,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             // The write operation goes to the variable in the lhs
             val lhs = currentNode.lhs.singleOrNull()
-            writtenDecl = (lhs as? DeclaredReferenceExpression)?.refersTo
+            writtenDeclaration = (lhs as? Reference)?.refersTo
 
-            if (writtenDecl != null && lhs != null) {
+            if (writtenDeclaration != null && lhs != null) {
                 // Data flows from the last writes to the lhs variable to this node
-                state.push(lhs, doubleState.declarationsState[writtenDecl])
+                state.push(lhs, doubleState.declarationsState[writtenDeclaration])
 
                 // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDecl] = PowersetLattice(setOf(lhs))
+                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(lhs))
             }
         } else if (
-            (currentNode as? DeclaredReferenceExpression)?.access == AccessValues.READ &&
+            (currentNode as? Reference)?.access == AccessValues.READ &&
                 currentNode.refersTo is VariableDeclaration &&
                 currentNode.refersTo !is FieldDeclaration
         ) {
@@ -211,10 +209,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 }
 
             // We wrote something to this variable declaration
-            writtenDecl =
+            writtenDeclaration =
                 when (writtenTo) {
                     is Declaration -> writtenTo
-                    is DeclaredReferenceExpression -> writtenTo.refersTo
+                    is Reference -> writtenTo.refersTo
                     else -> {
                         log.error(
                             "The variable of type ${writtenTo?.javaClass} is not yet supported in the foreach loop"
@@ -223,7 +221,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                     }
                 }
 
-            if (writtenTo is DeclaredReferenceExpression) {
+            if (writtenTo is Reference) {
                 // This is a special case: We add the nextEOGEdge which goes out of the loop but
                 // with the old previousWrites map.
                 val nodesOutsideTheLoop =
@@ -240,7 +238,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                     state.push(writtenTo, PowersetLattice(setOf(iterable)))
                     // Add the variable declaration (or the reference) to the list of previous
                     // write nodes in this path
-                    state.declarationsState[writtenDecl] = PowersetLattice(setOf(writtenTo))
+                    state.declarationsState[writtenDeclaration] = PowersetLattice(setOf(writtenTo))
                 }
             }
         } else if (currentNode is FunctionDeclaration) {
@@ -268,7 +266,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         return currentNode is AssignExpression &&
             currentNode.operatorCode in
                 (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
-            (currentNode.lhs.singleOrNull() as? DeclaredReferenceExpression)?.refersTo != null
+            (currentNode.lhs.singleOrNull() as? Reference)?.refersTo != null
     }
 
     protected fun isSimpleAssignment(currentNode: Node): Boolean {
@@ -280,7 +278,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     protected fun isIncOrDec(currentNode: Node) =
         currentNode is UnaryOperator &&
             (currentNode.operatorCode == "++" || currentNode.operatorCode == "--") &&
-            (currentNode.input as? DeclaredReferenceExpression)?.refersTo != null
+            (currentNode.input as? Reference)?.refersTo != null
 
     /**
      * Removes the DFG edges for a potential implicit return statement if it is not in
@@ -291,7 +289,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         reachableReturnStatements: Collection<ReturnStatement>
     ) {
         val lastStatement =
-            ((node as? FunctionDeclaration)?.body as? CompoundStatement)?.statements?.lastOrNull()
+            ((node as? FunctionDeclaration)?.body as? Block)?.statements?.lastOrNull()
         if (
             lastStatement is ReturnStatement &&
                 lastStatement.isImplicit &&

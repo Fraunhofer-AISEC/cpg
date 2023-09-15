@@ -169,7 +169,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleIdentifier(node: TypeScriptNode): Expression {
         val name = this.frontend.codeOf(node)?.trim() ?: ""
 
-        return newDeclaredReferenceExpression(name, unknownType(), this.frontend.codeOf(node))
+        return newReference(name, unknownType(), this.frontend.codeOf(node))
     }
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
@@ -190,17 +190,20 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         call =
             if (propertyAccess != null) {
-                val memberExpression =
+                val memberExpressionExpression =
                     this.handle(propertyAccess) as? MemberExpression
                         ?: return ProblemExpression("node is not a member expression")
 
-                newMemberCallExpression(memberExpression, code = this.frontend.codeOf(node))
+                newMemberCallExpression(
+                    memberExpressionExpression,
+                    code = this.frontend.codeOf(node)
+                )
             } else {
                 // TODO: fqn - how?
                 val fqn = this.frontend.getIdentifierName(node)
                 // regular function call
 
-                val ref = newDeclaredReferenceExpression(fqn)
+                val ref = newReference(fqn)
 
                 newCallExpression(ref, fqn, this.frontend.codeOf(node), false)
             }

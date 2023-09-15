@@ -42,6 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
  * accurate as possible when propagating types, the [InitializerListExpression.type] property MUST
  * be set before adding any values to [InitializerListExpression.initializers].
  */
+// TODO Merge and/or refactor
 class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)

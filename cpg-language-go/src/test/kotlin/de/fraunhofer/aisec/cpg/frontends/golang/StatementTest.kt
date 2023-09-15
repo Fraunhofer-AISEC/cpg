@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import java.nio.file.Path
 import kotlin.test.Test
@@ -102,7 +102,7 @@ class StatementTest {
 
         // The EOG for the defer statement itself should be in the regular EOG path
         op.prevEOG.any { it is CallExpression && it.name.localName == "do" }
-        op.nextEOG.any { it is DeclaredReferenceExpression && it.name.localName == "that" }
+        op.nextEOG.any { it is Reference && it.name.localName == "that" }
 
         // It should NOT connect to the call expression
         op.nextEOG.none { it is CallExpression }

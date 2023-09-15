@@ -29,7 +29,7 @@ import java.util.*
 
 /**
  * Represents the specification of a range (e.g., of an array). Usually used in combination with an
- * [ArraySubscriptionExpression] as the [ArraySubscriptionExpression.subscriptExpression].
+ * [SubscriptExpression] as the [SubscriptExpression.subscriptExpression].
  *
  * Examples can be found in Go:
  * ```go

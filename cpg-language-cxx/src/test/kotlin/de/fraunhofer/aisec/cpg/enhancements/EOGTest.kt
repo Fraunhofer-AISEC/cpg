@@ -936,15 +936,12 @@ internal class EOGTest : BaseTest() {
         assertTrue(printFunctionCall in lambda.prevEOG)
 
         // The "inner" EOG is assembled correctly.
-        val body = (lambda.function?.body as? CompoundStatement)
+        val body = (lambda.function?.body as? Block)
         assertNotNull(body)
         assertEquals(1, lambda.function?.nextEOG?.size)
-        assertEquals(
-            "std::cout",
-            (lambda.function?.nextEOG?.get(0) as? DeclaredReferenceExpression)?.name.toString()
-        )
+        assertEquals("std::cout", (lambda.function?.nextEOG?.get(0) as? Reference)?.name.toString())
 
-        val cout = lambda.function?.nextEOG?.get(0) as? DeclaredReferenceExpression
+        val cout = lambda.function?.nextEOG?.get(0) as? Reference
         assertNotNull(cout)
         assertEquals(1, cout.nextEOG.size)
         assertEquals("Hello ", (cout.nextEOG[0] as? Literal<*>)?.value.toString())
@@ -957,12 +954,9 @@ internal class EOGTest : BaseTest() {
         val binOpLeft = hello.nextEOG[0] as? BinaryOperator
         assertNotNull(binOpLeft)
         assertEquals(1, binOpLeft.nextEOG.size)
-        assertEquals(
-            "number",
-            (binOpLeft.nextEOG[0] as? DeclaredReferenceExpression)?.name.toString()
-        )
+        assertEquals("number", (binOpLeft.nextEOG[0] as? Reference)?.name.toString())
 
-        val number = binOpLeft.nextEOG[0] as? DeclaredReferenceExpression
+        val number = binOpLeft.nextEOG[0] as? Reference
         assertNotNull(number)
         assertEquals(1, number.nextEOG.size)
         assertEquals("<<", (number.nextEOG[0] as? BinaryOperator)?.operatorCode)
@@ -970,12 +964,9 @@ internal class EOGTest : BaseTest() {
         val binOpCenter = (number.nextEOG[0] as? BinaryOperator)
         assertNotNull(binOpCenter)
         assertEquals(1, binOpCenter.nextEOG.size)
-        assertEquals(
-            "std::endl",
-            (binOpCenter.nextEOG[0] as? DeclaredReferenceExpression)?.name.toString()
-        )
+        assertEquals("std::endl", (binOpCenter.nextEOG[0] as? Reference)?.name.toString())
 
-        val endl = (binOpCenter.nextEOG[0] as? DeclaredReferenceExpression)
+        val endl = (binOpCenter.nextEOG[0] as? Reference)
         assertNotNull(endl)
         assertEquals(1, endl.nextEOG.size)
         assertEquals("<<", (endl.nextEOG[0] as? BinaryOperator)?.operatorCode)
@@ -983,9 +974,9 @@ internal class EOGTest : BaseTest() {
         val binOpRight = (endl.nextEOG[0] as? BinaryOperator)
         assertNotNull(binOpRight)
         assertEquals(1, binOpRight.nextEOG.size)
-        assertTrue(binOpRight.nextEOG.firstOrNull() is CompoundStatement)
+        assertTrue(binOpRight.nextEOG.firstOrNull() is Block)
 
-        assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? CompoundStatement)?.nextEOG?.size)
+        assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? Block)?.nextEOG?.size)
     }
 
     @Test

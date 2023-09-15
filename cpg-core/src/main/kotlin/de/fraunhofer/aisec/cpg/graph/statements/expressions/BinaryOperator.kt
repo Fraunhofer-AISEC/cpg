@@ -78,12 +78,11 @@ open class BinaryOperator :
 
     private fun connectNewLhs(lhs: Expression) {
         lhs.registerTypeObserver(this)
-        if (lhs is DeclaredReferenceExpression && "=" == operatorCode) {
+        if (lhs is Reference && "=" == operatorCode) {
             // declared reference expr is the left-hand side of an assignment -> writing to the var
             lhs.access = AccessValues.WRITE
         } else if (
-            lhs is DeclaredReferenceExpression &&
-                operatorCode in (language?.compoundAssignmentOperators ?: setOf())
+            lhs is Reference && operatorCode in (language?.compoundAssignmentOperators ?: setOf())
         ) {
             // declared reference expr is the left-hand side of an assignment -> writing to the var
             lhs.access = AccessValues.READWRITE

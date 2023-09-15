@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -82,7 +82,7 @@ class FrontendHelperTest {
 
         // 2 line comment in the constructor
         val constructor = classDeclaration.constructors.first()
-        val constructorAssignment = (constructor.body as CompoundStatement).statements[0]
+        val constructorAssignment = (constructor.body as Block).statements[0]
         assertNull(constructor.comment)
         constructorAssignment.comment = ""
 
@@ -96,7 +96,7 @@ class FrontendHelperTest {
 
         val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
         assertNull(mainMethod.comment)
-        val forLoop = (mainMethod.body as CompoundStatement).statements[0] as ForStatement
+        val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
         forLoop.comment = null
 
         val comment6 = "for loop"
@@ -112,7 +112,7 @@ class FrontendHelperTest {
         FrontendUtils.matchCommentToNode(comment7, Region(16, 26, 16, 32), tu)
         // assertEquals(comment7, forLoop.initializerStatement.comment)
 
-        val printStatement = (forLoop.statement as CompoundStatement).statements.first()
+        val printStatement = (forLoop.statement as Block).statements.first()
         printStatement.comment = null
         val comment8 = "Crazy print"
         val comment9 = "Comment which belongs to nothing"
@@ -120,7 +120,7 @@ class FrontendHelperTest {
         FrontendUtils.matchCommentToNode(comment9, Region(18, 16, 18, 48), tu)
         assertTrue(printStatement.comment?.contains(comment8) == true)
         // TODO The second comment doesn't belong to the print but to the loop body
-        assertTrue((forLoop.statement as? CompoundStatement)?.comment?.contains(comment9) == true)
+        assertTrue((forLoop.statement as? Block)?.comment?.contains(comment9) == true)
 
         assertNull(mainMethod.comment)
     }
@@ -148,8 +148,8 @@ class FrontendHelperTest {
         val tu = result.translationUnits.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
         val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
-        val forLoop = (mainMethod.body as CompoundStatement).statements[0] as ForStatement
-        val printStatement = (forLoop.statement as CompoundStatement).statements.first()
+        val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
+        val printStatement = (forLoop.statement as Block).statements.first()
 
         val regionSysout = FrontendUtils.parseColumnPositionsFromFile(tu.code!!, 20, 13, 17, 17)
 

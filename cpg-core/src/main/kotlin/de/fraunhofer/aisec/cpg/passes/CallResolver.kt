@@ -140,8 +140,8 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
             is TranslationUnitDeclaration -> {
                 currentTU = node
             }
-            is ExplicitConstructorInvocation -> {
-                handleExplicitConstructorInvocation(node)
+            is ConstructorCallExpression -> {
+                handleConstructorCallExpression(node)
             }
             is ConstructExpression -> {
                 // We might have call expressions inside our arguments, so in order to correctly
@@ -223,7 +223,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         // Additionally, also set the REFERS_TO of the callee. In the future, we might make more
         // resolution decisions based on the callee itself. Unfortunately we can only set one here,
         // so we will take the first one
-        if (callee is DeclaredReferenceExpression) {
+        if (callee is Reference) {
             callee.refersTo = candidates.firstOrNull()
         }
     }
@@ -241,7 +241,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     ): List<FunctionDeclaration>? {
         return when (callee) {
             is MemberExpression -> resolveMemberCallee(callee, curClass, call)
-            is DeclaredReferenceExpression -> resolveReferenceCallee(callee, curClass, call)
+            is Reference -> resolveReferenceCallee(callee, curClass, call)
             null -> {
                 Util.warnWithFileLocation(
                     call,
@@ -281,11 +281,11 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
     }
 
     /**
-     * Resolves a [CallExpression.callee] of type [DeclaredReferenceExpression] to a possible list
-     * of [FunctionDeclaration] nodes.
+     * Resolves a [CallExpression.callee] of type [Reference] to a possible list of
+     * [FunctionDeclaration] nodes.
      */
     protected fun resolveReferenceCallee(
-        callee: DeclaredReferenceExpression,
+        callee: Reference,
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
@@ -317,7 +317,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
      *   delegates resolving of regular function calls within classes to this function (meh!)
      */
     fun resolveMemberCallee(
-        callee: DeclaredReferenceExpression,
+        callee: Reference,
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
@@ -326,8 +326,8 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         if (
             curClass != null &&
                 callee is MemberExpression &&
-                callee.base is DeclaredReferenceExpression &&
-                isSuperclassReference(callee.base as DeclaredReferenceExpression)
+                callee.base is Reference &&
+                isSuperclassReference(callee.base as Reference)
         ) {
             (callee.language as? HasSuperClasses)?.handleSuperCall(
                 callee,
@@ -429,7 +429,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         constructExpression.instantiates = recordDeclaration
         for (template in templateList) {
             if (
-                template is ClassTemplateDeclaration &&
+                template is RecordTemplateDeclaration &&
                     recordDeclaration != null &&
                     recordDeclaration in template.realizations &&
                     (constructExpression.templateParameters.size <= template.parameters.size)
@@ -465,16 +465,18 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         }
     }
 
-    protected fun handleExplicitConstructorInvocation(eci: ExplicitConstructorInvocation) {
-        eci.containingClass?.let { containingClass ->
-            val recordDeclaration = recordMap[eci.parseName(containingClass)]
-            val signature = eci.arguments.map { it.type }
+    protected fun handleConstructorCallExpression(
+        constructorCallExpression: ConstructorCallExpression
+    ) {
+        constructorCallExpression.containingClass?.let { containingClass ->
+            val recordDeclaration = recordMap[constructorCallExpression.parseName(containingClass)]
+            val signature = constructorCallExpression.arguments.map { it.type }
             if (recordDeclaration != null) {
                 val constructor =
                     getConstructorDeclarationForExplicitInvocation(signature, recordDeclaration)
                 val invokes = mutableListOf<FunctionDeclaration>()
                 invokes.add(constructor)
-                eci.invokes = invokes
+                constructorCallExpression.invokes = invokes
             }
         }
     }
@@ -631,7 +633,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
          *
-         * @param templateParams of the VariableDeclaration/NewExpression
+         * @param templateParams of the VariableDeclaration/NewExpressionp
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
          *   ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
          */

@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -99,7 +99,7 @@ abstract class SymbolResolverPass(ctx: TranslationContext) : ComponentPass(ctx) 
     /**
      * Determines if the [reference] refers to the super class and we have to start searching there.
      */
-    protected fun isSuperclassReference(reference: DeclaredReferenceExpression): Boolean {
+    protected fun isSuperclassReference(reference: Reference): Boolean {
         val language = reference.language
         return language is HasSuperClasses && reference.name.endsWith(language.superClassKeyword)
     }

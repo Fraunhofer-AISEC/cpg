@@ -39,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * use-case is access of a member function (method) as part of the [MemberCallExpression.callee]
  * property of a [MemberCallExpression].
  */
-class MemberExpression : DeclaredReferenceExpression(), HasBase {
+class MemberExpression : Reference(), HasBase {
     @AST
     override var base: Expression = ProblemExpression("could not parse base expression")
         set(value) {

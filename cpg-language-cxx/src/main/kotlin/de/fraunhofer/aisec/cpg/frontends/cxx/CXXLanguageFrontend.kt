@@ -386,7 +386,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newDeclaredReferenceExpression(code, unknownType(), code)
+                newReference(code, unknownType(), code)
                 2 -> // an integer
                 newLiteral(code.toInt(), primitiveType("int"), code)
                 130 -> // a string

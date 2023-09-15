@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.astParent
 
@@ -168,8 +168,8 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    return if (this.body is CompoundStatement) {
-        return (body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+    return if (this.body is Block) {
+        return (body as? Block)?.statements?.filterIsInstance<T>()?.getOrNull(n)
     } else {
         if (n == 0 && this.body is T) {
             this.body as T
@@ -515,8 +515,8 @@ val Node?.methods: List<MethodDeclaration>
 val Node?.fields: List<FieldDeclaration>
     get() = this.allChildren()
 
-/** Returns all [ParamVariableDeclaration] children in this graph, starting with this [Node]. */
-val Node?.parameters: List<ParamVariableDeclaration>
+/** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
+val Node?.parameters: List<ParameterDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
@@ -539,8 +539,8 @@ val Node?.variables: List<VariableDeclaration>
 val Node?.literals: List<Literal<*>>
     get() = this.allChildren()
 
-/** Returns all [DeclaredReferenceExpression] children in this graph, starting with this [Node]. */
-val Node?.refs: List<DeclaredReferenceExpression>
+/** Returns all [Reference] children in this graph, starting with this [Node]. */
+val Node?.refs: List<Reference>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
@@ -559,10 +559,7 @@ val Node?.assignments: List<Assignment>
 val VariableDeclaration.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
-        val assignments =
-            start.assignments.filter {
-                (it.target as? DeclaredReferenceExpression)?.refersTo == this
-            }
+        val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
 
         // We need to measure the distance between the start and each assignment value
         return assignments
@@ -604,7 +601,7 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
 operator fun FunctionDeclaration.get(n: Int): Statement? {
     val body = this.body
 
-    if (body is CompoundStatement) {
+    if (body is Block) {
         return body[n]
     } else if (n == 0) {
         return body
@@ -646,10 +643,10 @@ fun Node.controlledBy(): List<Node> {
  * Returns the expression specifying the dimension (i.e., size) of the array during its
  * initialization.
  */
-val ArraySubscriptionExpression.arraySize: Expression
+val SubscriptExpression.arraySize: Expression
     get() =
-        (((this.arrayExpression as DeclaredReferenceExpression).refersTo as VariableDeclaration)
-                .initializer as ArrayCreationExpression)
+        (((this.arrayExpression as Reference).refersTo as VariableDeclaration).initializer
+                as NewArrayExpression)
             .dimensions[0]
 
 /**
