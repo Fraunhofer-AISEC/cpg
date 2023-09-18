@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -43,7 +44,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSingle() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
 
         // normal type
@@ -82,7 +83,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testWithModifier() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
 
         // pointer
@@ -98,7 +99,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testChained() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
         val l1 = findByUniqueName(variables, "l1")
         val l3 = findByUniqueName(variables, "l3")
@@ -110,7 +111,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testMultiple() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
 
         // simple type
@@ -144,7 +145,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testStructs() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
         val ps1 = findByUniqueName(variables, "ps1")
         val ps2 = findByUniqueName(variables, "ps2")
@@ -154,7 +155,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testArbitraryTypedefLocation() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
         val ullong1 = findByUniqueName(variables, "someUllong1")
         val ullong2 = findByUniqueName(variables, "someUllong2")
@@ -164,7 +165,7 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testMemberTypeDef() {
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variables = result.variables
         val records = result.records
         val addConst = findByUniqueName(records, "add_const")

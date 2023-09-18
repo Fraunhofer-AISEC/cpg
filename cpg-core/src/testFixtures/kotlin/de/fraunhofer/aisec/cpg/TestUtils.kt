@@ -132,7 +132,6 @@ object TestUtils {
                 .debugParser(true)
                 .failOnError(true)
                 .useParallelFrontends(true)
-                .defaultLanguages()
         if (usePasses) {
             builder.defaultPasses()
         }

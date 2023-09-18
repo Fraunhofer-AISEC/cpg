@@ -47,6 +47,7 @@ class CXXResolveTest {
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(true).build()
                 )
+                it.registerLanguage<CPPLanguage>()
             }
         assertNotNull(tu)
 
@@ -102,6 +103,7 @@ class CXXResolveTest {
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(true).build()
                 )
+                it.registerLanguage<CPPLanguage>()
             }
         assertNotNull(tu)
 

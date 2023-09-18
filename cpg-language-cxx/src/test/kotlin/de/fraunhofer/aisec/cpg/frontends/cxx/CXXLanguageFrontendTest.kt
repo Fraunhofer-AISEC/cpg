@@ -55,7 +55,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testForEach() {
         val file = File("src/test/resources/cxx/foreachstmt.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
         assertFalse(main.isEmpty())
 
@@ -87,7 +90,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testTryCatch() {
         val file = File("src/test/resources/components/trystmt.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
         assertFalse(main.isEmpty())
 
@@ -120,7 +126,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testTypeId() {
         val file = File("src/test/resources/typeidexpr.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
         with(tu) {
             assertNotNull(main)
@@ -158,7 +167,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testCast() {
         val file = File("src/test/resources/cxx/castexpr.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         with(tu) {
             val main = tu.functions["main"]
             assertNotNull(main)
@@ -201,7 +213,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testArrays() {
         val file = File("src/test/resources/cxx/arrays.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         with(tu) {
             assertNotNull(main)
@@ -250,7 +265,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testFunctionDeclaration() {
         val file = File("src/test/resources/cxx/functiondecl.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // should be seven function nodes
         assertEquals(8, declaration.declarations.size)
@@ -318,7 +336,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testBlock() {
         val file = File("src/test/resources/compoundstmt.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val function = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         assertNotNull(function)
 
@@ -340,7 +361,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testPostfixExpression() {
         val file = File("src/test/resources/postfixexpression.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val statements =
             declaration.getDeclarationAs(0, FunctionDeclaration::class.java)?.statements
         assertNotNull(statements)
@@ -371,7 +395,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testIf() {
         val file = File("src/test/resources/if.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val statements =
             declaration.getDeclarationAs(0, FunctionDeclaration::class.java)?.statements
         assertNotNull(statements)
@@ -389,7 +416,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testSwitch() {
         val file = File("src/test/resources/cfg/switch.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         assertTrue(tu.allChildren<Node>().isNotEmpty())
 
@@ -410,7 +440,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testDeclarationStatement() {
         val file = File("src/test/resources/cxx/declstmt.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         with(tu) {
             val function = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
             val statements = function?.statements
@@ -499,7 +532,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testAssignmentExpression() {
         val file = File("src/test/resources/cxx/assignmentexpression.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // just take a look at the second function
         val main = tu.functions["main"]
@@ -545,7 +581,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testShiftExpression() {
         val file = File("src/test/resources/shiftexpression.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val functionDecl = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         val statements = functionDecl?.statements
         assertNotNull(statements)
@@ -556,7 +595,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testUnaryOperator() {
         val file = File("src/test/resources/unaryoperator.cpp")
-        val unit = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val unit =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val statements = unit.getDeclarationAs(0, FunctionDeclaration::class.java)?.statements
         assertNotNull(statements)
 
@@ -622,7 +664,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testBinaryOperator() {
         val file = File("src/test/resources/cxx/binaryoperator.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         val main = tu.functions["main"]
         assertNotNull(main)
@@ -684,7 +729,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testRecordDeclaration() {
         val file = File("src/test/resources/cxx/recordstmt.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         val recordDeclaration = tu.records.firstOrNull()
         assertNotNull(recordDeclaration)
@@ -798,7 +846,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testLiterals() {
         val file = File("src/test/resources/cxx/literals.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         val s = tu.variables["s"]
         assertNotNull(s)
@@ -872,7 +923,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testInitListExpression() {
         val file = File("src/test/resources/initlistexpression.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // x y = { 1, 2 };
         val y = tu.getDeclarationAs(1, VariableDeclaration::class.java)
@@ -908,7 +962,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testObjectCreation() {
         val file = File("src/test/resources/cxx/objcreation.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(tu)
         with(tu) {
             // get the main method
@@ -969,7 +1026,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testRegionsCfg() {
         val file = File("src/test/resources/cfg.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val fdecl = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         val body = fdecl!!.body as Block
         val expected: MutableMap<String?, Region> = HashMap()
@@ -990,7 +1050,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testDesignatedInitializer() {
         val file = File("src/test/resources/components/designatedInitializer.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // should be four method nodes
         assertEquals(2, declaration.declarations.size)
@@ -1071,7 +1134,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testLocalVariables() {
         val file = File("src/test/resources/variables/local_variables.cpp")
-        val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         val function =
             declaration.byNameOrNull<FunctionDeclaration>("testExpressionInExpressionList")
@@ -1093,7 +1159,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testLocation() {
         val file = File("src/test/resources/cxx/foreachstmt.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.functions["main"]
         assertNotNull(main)
 
@@ -1109,7 +1178,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testNamespaces() {
         val file = File("src/test/resources/namespaces.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(tu)
 
         val firstNamespace =
@@ -1210,7 +1282,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testEOGCompleteness() {
         val file = File("src/test/resources/fix-455/main.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main =
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
@@ -1242,8 +1317,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cxx/parenthesis.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                config: TranslationConfiguration.Builder ->
-                config.inferenceConfiguration(builder().guessCastExpressions(true).build())
+                it.inferenceConfiguration(builder().guessCastExpressions(true).build())
+                it.registerLanguage<CPPLanguage>()
             }
         val main =
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
@@ -1266,7 +1341,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testCppThis() {
         val file = File("src/test/resources/cpp-this-field.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -1307,7 +1385,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testEnum() {
         val file = File("src/test/resources/c/enum.c")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
         // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
         // but NOT any EnumConstantDeclarations
         assertEquals(2, tu.declarations.size)
@@ -1325,7 +1406,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testStruct() {
         val file = File("src/test/resources/c/struct.c")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
 
         val main = tu.functions["main"]
         assertNotNull(main)
@@ -1346,7 +1430,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testTypedef() {
         val file = File("src/test/resources/c/typedef_in_header/main.c")
-        val result = analyze(listOf(file), file.parentFile.toPath(), true)
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
 
         val typedefs = result.finalCtx.scopeManager.currentTypedefs
         assertNotNull(typedefs)
@@ -1371,7 +1458,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testFunctionPointerToClassMethodSimple() {
         val file = File("src/test/resources/cxx/funcptr_class_simple.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         val myClass = tu.records["MyClass"]
         assertNotNull(myClass)
@@ -1438,6 +1528,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/func_ptr_call.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage<CLanguage>()
                 it.registerPass<TypeHierarchyResolver>()
                 it.registerPass<ImportResolver>()
                 it.registerPass<VariableUsageResolver>()
@@ -1483,6 +1574,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/c/func_ptr_call.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage<CLanguage>()
                 it.registerPass<TypeHierarchyResolver>()
                 it.registerPass<ImportResolver>()
                 it.registerPass<VariableUsageResolver>()
@@ -1526,7 +1618,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testNamespacedFunction() {
         val file = File("src/test/resources/cxx/namespaced_function.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(tu)
 
         // everything in the TU should be a function (within a namespace), not a method (except the
@@ -1557,7 +1652,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testLambdas() {
         val file = File("src/test/resources/cxx/lambdas.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(tu)
     }
 
@@ -1565,7 +1663,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testCFunctionReturnType() {
         val file = File("src/test/resources/c/types.c")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
         assertNotNull(tu)
 
         assertLocalName("int", tu.functions["main"]?.returnTypes?.firstOrNull())
@@ -1575,7 +1676,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testFancyTypes() {
         val file = File("src/test/resources/cxx/fancy_types.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(tu)
 
         val ptr = tu.variables["ptr"]
@@ -1591,7 +1695,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 listOf(file.resolve("main1.cpp"), file.resolve("main2.cpp")),
                 file.toPath(),
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(result)
 
         // For now, we have duplicate functions because we include the header twice. This might

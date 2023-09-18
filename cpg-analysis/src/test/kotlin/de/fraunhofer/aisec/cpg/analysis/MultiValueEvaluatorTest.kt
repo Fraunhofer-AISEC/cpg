@@ -131,16 +131,6 @@ class MultiValueEvaluatorTest {
     fun testMultipleValues() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
-        /*val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("cfexample.cpp").toFile()),
-                topLevel,
-                true
-            )
-
-        assertNotNull(tu)*/
-
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
@@ -185,17 +175,6 @@ class MultiValueEvaluatorTest {
     @Test
     fun testLoop() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
-        /*val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("cfexample.cpp").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerPass<EdgeCachePass>()
-            }
-
-        assertNotNull(tu)*/
 
         val main = tu.byNameOrNull<FunctionDeclaration>("loop")
         assertNotNull(main)

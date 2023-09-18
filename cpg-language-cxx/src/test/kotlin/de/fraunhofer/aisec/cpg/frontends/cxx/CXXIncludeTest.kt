@@ -45,7 +45,10 @@ internal class CXXIncludeTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefinitionsAndDeclaration() {
         val file = File("src/test/resources/include.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         for (d in tu.declarations) {
             println(d.name.localName + " " + d.location)
         }
@@ -88,7 +91,10 @@ internal class CXXIncludeTest : BaseTest() {
     fun testCodeAndRegionInInclude() {
         // checks, whether code and region for nodes in includes are properly set
         val file = File("src/test/resources/include.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val someClass = tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java)
         assertFalse(someClass.isEmpty())
 
