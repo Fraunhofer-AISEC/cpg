@@ -56,8 +56,11 @@ class DoStatement : Statement(), ArgumentHolder {
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        this.condition = new
-        return true
+        if (condition == old) {
+            this.condition = new
+            return true
+        }
+        return false
     }
 
     override fun equals(other: Any?): Boolean {
