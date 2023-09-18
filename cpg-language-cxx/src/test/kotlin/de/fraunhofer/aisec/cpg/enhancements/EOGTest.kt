@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -915,7 +915,7 @@ internal class EOGTest : BaseTest() {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -979,15 +979,6 @@ internal class EOGTest : BaseTest() {
         assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? Block)?.nextEOG?.size)
     }
 
-    @Test
-    @Throws(Exception::class)
-    @Ignore
-    fun testEOGInvariant() {
-        val file = File("src/main/java/de/fraunhofer/aisec/cpg/passes/CallResolver.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu))
-    }
-
     /**
      * Translates the given file into CPG and returns the graph. Extracted to reduce code duplicates
      *
@@ -998,7 +989,10 @@ internal class EOGTest : BaseTest() {
     private fun translateToNodes(path: String): List<Node> {
         val toTranslate = File(path)
         val topLevel = toTranslate.parentFile.toPath()
-        val tu = analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         var nodes = SubgraphWalker.flattenAST(tu)
         // TODO: until explicitly added Return Statements are either removed again or code and
         // region set properly

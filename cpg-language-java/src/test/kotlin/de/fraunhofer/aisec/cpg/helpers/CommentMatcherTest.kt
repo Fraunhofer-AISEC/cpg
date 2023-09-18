@@ -47,8 +47,7 @@ class CommentMatcherTest {
                 .sourceLocations(listOf(file))
                 .defaultPasses()
                 .debugParser(true)
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .failOnError(true)
                 .build()
 

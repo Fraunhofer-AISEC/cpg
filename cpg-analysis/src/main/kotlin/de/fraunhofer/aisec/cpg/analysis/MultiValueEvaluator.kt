@@ -281,8 +281,11 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { e -> e.astParent is ForStatement }?.astParent
-                as? ForStatement
+            expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
+                ?: expr.prevDFG
+                    .firstOrNull { it.astParent?.astParent is ForStatement }
+                    ?.astParent
+                    ?.astParent as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =

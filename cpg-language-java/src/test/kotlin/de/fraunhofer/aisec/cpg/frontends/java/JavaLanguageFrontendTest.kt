@@ -530,8 +530,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                     .sourceLocations(listOf(file))
                     .topLevel(file.parentFile)
                     .defaultPasses()
-                    .defaultLanguages()
-                    .registerLanguage(JavaLanguage())
+                    .registerLanguage<JavaLanguage>()
                     .processAnnotations(true)
             )
         assertFalse(declarations.isEmpty())
@@ -674,7 +673,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.unregisterLanguage(JavaLanguage::class.java)
                 it.registerLanguage(MyJavaLanguage())
             }
 
@@ -702,8 +700,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .sourceLocations(*files.toTypedArray())
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -727,8 +724,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .sourceLocations(*files.toTypedArray())
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .debugParser(true)
                 .failOnError(true)
                 .build()

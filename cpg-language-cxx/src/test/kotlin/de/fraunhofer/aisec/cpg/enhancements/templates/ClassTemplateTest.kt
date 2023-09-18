@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -143,7 +144,9 @@ internal class ClassTemplateTest : BaseTest() {
     @Throws(Exception::class)
     fun testClassTemplateStructure() {
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "pair.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "pair.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val recordTemplateDeclarations = result.allChildren<RecordTemplateDeclaration>()
         val template =
             findByUniqueName(
@@ -197,7 +200,9 @@ internal class ClassTemplateTest : BaseTest() {
     fun testClassTemplateWithValueParameter() {
         // Test pair2.cpp: Add Value Parameter to Template Instantiation
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "pair2.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "pair2.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val recordTemplateDeclarations = result.allChildren<RecordTemplateDeclaration>()
         val template =
             findByUniqueName(
@@ -293,7 +298,9 @@ internal class ClassTemplateTest : BaseTest() {
     fun testStructTemplateWithSameDefaultType() {
         // Test pair3.cpp: Template a struct instead of a class and use a Type1 as default of Type2
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "pair3.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "pair3.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val template =
             findByUniqueName(
                 result.allChildren<RecordTemplateDeclaration>(),
@@ -350,7 +357,9 @@ internal class ClassTemplateTest : BaseTest() {
     fun testTemplateOverrindingDefaults() {
         // Test pair3-1.cpp: Override defaults of template
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val template =
             findByUniqueName(
                 result.allChildren<RecordTemplateDeclaration>(),
@@ -399,7 +408,9 @@ internal class ClassTemplateTest : BaseTest() {
     fun testTemplateRecursiveDefaults() {
         // Test pair3-2.cpp: Use recursive template parameters using defaults
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "pair3-2.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "pair3-2.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val template =
             findByUniqueName(
                 result.allChildren<RecordTemplateDeclaration>(),
@@ -478,7 +489,9 @@ internal class ClassTemplateTest : BaseTest() {
     fun testReferenceInTemplates() {
         // Test array.cpp: checks usage of referencetype of parameterized type (T[])
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "array.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "array.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val template =
             findByUniqueName(
                 result.allChildren<RecordTemplateDeclaration>(),
@@ -531,7 +544,9 @@ internal class ClassTemplateTest : BaseTest() {
     fun testTemplateInstantiationWithNew() {
         // Test array2.cpp: Test template usage with new keyword
         val result =
-            analyze(listOf(Path.of(topLevel.toString(), "array2.cpp").toFile()), topLevel, true)
+            analyze(listOf(Path.of(topLevel.toString(), "array2.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val template =
             findByUniqueName(
                 result.allChildren<RecordTemplateDeclaration>(),

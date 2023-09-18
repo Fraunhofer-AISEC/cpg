@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.literals
@@ -44,7 +45,7 @@ internal class ConstructorsTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testCPP() {
-        val result = TestUtils.analyze("cpp", topLevel, true)
+        val result = TestUtils.analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) {
@@ -144,7 +145,9 @@ internal class ConstructorsTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val twoDefaultArg =
@@ -199,7 +202,9 @@ internal class ConstructorsTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val singleDefaultArg =
@@ -244,7 +249,9 @@ internal class ConstructorsTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val variables = result.variables
         val implicitConstructor =

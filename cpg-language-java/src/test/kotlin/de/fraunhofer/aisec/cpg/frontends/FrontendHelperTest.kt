@@ -50,9 +50,8 @@ class FrontendHelperTest {
                 .sourceLocations(listOf(file))
                 .defaultPasses()
                 .debugParser(true)
-                .defaultLanguages()
+                .registerLanguage<JavaLanguage>()
                 .failOnError(true)
-                .registerLanguage(JavaLanguage())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -135,8 +134,7 @@ class FrontendHelperTest {
                 .sourceLocations(listOf(file))
                 .defaultPasses()
                 .debugParser(true)
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .failOnError(true)
                 .build()
 
