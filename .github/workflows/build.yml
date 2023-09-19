@@ -126,7 +126,6 @@ jobs:
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |
-          ls -l **/build/reports/**/**
           zip -r reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}

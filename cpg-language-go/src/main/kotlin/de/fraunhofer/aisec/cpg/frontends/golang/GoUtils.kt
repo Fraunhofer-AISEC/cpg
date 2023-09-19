@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import java.io.File
 import java.util.concurrent.TimeUnit
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * This functions checks whether the file specified in [file] should be processed in the
@@ -154,58 +156,74 @@ internal class Project {
     var components: MutableMap<String, List<File>> = mutableMapOf()
 
     var includePaths: List<File> = mutableListOf()
-}
 
-/**
- * This function emulates building a Go project. It requires an installed Go environment and uses
- * the Go binary to compile a list of package dependencies, which are then included into the
- * [Project] as includes.
- *
- * Note: This currently is limited to packages of the standard library
- */
-internal fun buildProject(
-    modulePath: String,
-    goos: String? = null,
-    goarch: String? = null,
-    tags: List<String> = listOf()
-): Project {
-    val project = Project()
-    val symbols = mutableMapOf<String, String>()
-    var files = mutableListOf<File>()
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(Project::class.java)
 
-    val topLevel = File(modulePath)
+        /**
+         * This function emulates building a Go project. It requires an installed Go environment and
+         * uses the Go binary to compile a list of package dependencies, which are then included
+         * into the [Project] as includes.
+         *
+         * Note: This currently is limited to packages of the standard library
+         */
+        internal fun buildProject(
+            modulePath: String,
+            goos: String? = null,
+            goarch: String? = null,
+            tags: List<String> = listOf()
+        ): Project {
+            val project = Project()
+            val symbols = mutableMapOf<String, String>()
+            var files = mutableListOf<File>()
 
-    var proc =
-        ProcessBuilder("go", "list", "all")
-            .directory(topLevel)
-            .redirectOutput(ProcessBuilder.Redirect.PIPE)
-            .start()
-    proc.waitFor(5, TimeUnit.MINUTES)
+            val topLevel = File(modulePath)
 
-    // For now, we only support deps in the standard library
-    val deps = proc.inputStream.bufferedReader().readLines().filter { !it.contains(".") }
+            var proc =
+                ProcessBuilder("go", "list", "all")
+                    .directory(topLevel)
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .start()
+            proc.waitFor(5, TimeUnit.MINUTES)
+            if (proc.exitValue() != 0) {
+                log.debug(proc.errorStream.bufferedReader().readLine())
+            }
 
-    proc =
-        ProcessBuilder("go", "env", "GOROOT").redirectOutput(ProcessBuilder.Redirect.PIPE).start()
-    proc.waitFor(5, TimeUnit.MINUTES)
+            // For now, we only support deps in the standard library
+            val deps = proc.inputStream.bufferedReader().readLines().filter { !it.contains(".") }
 
-    val stdLib = File(proc.inputStream.bufferedReader().readLine()).resolve("src")
+            log.debug("Identified {} package dependencies of the stdlib", deps.size)
 
-    files += deps.flatMap { gatherGoFiles(stdLib.resolve(it), false) }
-    files += gatherGoFiles(topLevel)
+            proc =
+                ProcessBuilder("go", "env", "GOROOT")
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .start()
+            proc.waitFor(5, TimeUnit.MINUTES)
+            if (proc.exitValue() != 0) {
+                log.debug(proc.errorStream.bufferedReader().readLine())
+            }
 
-    goos?.let { symbols["GOOS"] = it }
-    goarch?.let { symbols["GOARCH"] = it }
-    tags.let { symbols["-tags"] = tags.joinToString { " " } }
+            val stdLib = File(proc.inputStream.bufferedReader().readLine()).resolve("src")
 
-    // Pre-filter any files we are not building anyway based on our symbols
-    files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
+            log.debug("GOROOT/src is located @ {}", stdLib)
 
-    // TODO(oxisto): look for binaries in cmd folder
-    project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
-    project.symbols = symbols
-    // TODO(oxisto): support vendor includes
-    project.includePaths = listOf(stdLib)
+            files += deps.flatMap { gatherGoFiles(stdLib.resolve(it), false) }
+            files += gatherGoFiles(topLevel)
 
-    return project
+            goos?.let { symbols["GOOS"] = it }
+            goarch?.let { symbols["GOARCH"] = it }
+            tags.let { symbols["-tags"] = tags.joinToString { " " } }
+
+            // Pre-filter any files we are not building anyway based on our symbols
+            files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
+
+            // TODO(oxisto): look for binaries in cmd folder
+            project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
+            project.symbols = symbols
+            // TODO(oxisto): support vendor includes
+            project.includePaths = listOf(stdLib)
+
+            return project
+        }
+    }
 }
