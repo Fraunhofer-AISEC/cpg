@@ -192,7 +192,7 @@ internal class Project {
             // For now, we only support deps in the standard library
             val deps = proc.inputStream.bufferedReader().readLines().filter { !it.contains(".") }
 
-            log.debug("Identified {} package dependencies of the stdlib", deps.size)
+            log.debug("Identified {} package dependencies (stdlib only)", deps.size)
 
             proc =
                 ProcessBuilder("go", "env", "GOROOT")
