@@ -245,7 +245,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleRecordDeclaration(node: RecordDeclaration) {
+    protected open fun handleRecordDeclaration(node: RecordDeclaration) {
         scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()

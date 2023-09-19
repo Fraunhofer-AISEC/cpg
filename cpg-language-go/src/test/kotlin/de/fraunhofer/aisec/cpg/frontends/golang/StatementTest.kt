@@ -92,10 +92,10 @@ class StatementTest {
         val p = tu.namespaces["p"]
         assertNotNull(p)
 
-        val main = p.functions["main"]
-        assertNotNull(main)
+        val `do` = p.methods["Do"]
+        assertNotNull(`do`)
 
-        val op = main.allChildren<UnaryOperator> { it.name.localName == "defer" }.firstOrNull()
+        val op = `do`.allChildren<UnaryOperator> { it.name.localName == "defer" }.firstOrNull()
         assertNotNull(op)
 
         // The EOG for the defer statement itself should be in the regular EOG path

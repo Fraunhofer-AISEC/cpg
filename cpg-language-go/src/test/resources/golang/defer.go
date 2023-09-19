@@ -5,7 +5,9 @@ import (
 	"os"
 )
 
-func main() {
+type MyStruct struct{}
+
+func (s MyStruct) Do() {
 	i := 1
 	do()
 	defer that(i)

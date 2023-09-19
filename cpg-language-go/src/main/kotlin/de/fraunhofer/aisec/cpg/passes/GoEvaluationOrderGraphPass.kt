@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
@@ -78,6 +82,23 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         }
     }
 
+    /**
+     * We need to intentionally override [handleRecordDeclaration] to NOT create the EOG for its
+     * children, e.g., [RecordDeclaration.methods]. The reason for this is that Go only has external
+     * methods declarations, and we do a little cheat by adding the methods both to the namespace of
+     * the current file and to the [RecordDeclaration.methods].
+     *
+     * But, due to this, the original [EvaluationOrderGraphPass] would create the EOG for methods
+     * twice, once for the object in the [RecordDeclaration] and once for the declaration inside the
+     * [NamespaceDeclaration] of the current file.
+     */
+    override fun handleRecordDeclaration(node: RecordDeclaration) {
+        scopeManager.enterScope(node)
+        handleStatementHolder(node)
+        currentPredecessors.clear()
+        scopeManager.leaveScope(node)
+    }
+
     override fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // First, call the regular EOG handler
         super.handleFunctionDeclaration(node)
@@ -88,14 +109,13 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         // We need to follow the path from the defer statement to all return statements that are
         // reachable from this point.
         for (defer in defers ?: listOf()) {
-            // TODO(oxisto): This is broken! this returns 8192 paths instead of 4
-            /*val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
+            val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
             for (path in paths.fulfilled) {
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
                 addEOGEdge(path.last(), defer.input)
-            }*/
+            }
         }
     }
 }
