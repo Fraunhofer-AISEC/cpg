@@ -25,10 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-fun shouldBuild(file: File, symbols: Map<String, String>): Boolean {
+/**
+ * This functions checks whether the file specified in [file] should be processed in the
+ * [GoLanguageFrontend]. It mainly checks for build constraints, which can either be part of the
+ * filename or specified in the file (see [BuildConstraintExpression]).
+ *
+ * Note: This is currently specific to Go, but could be integrated into the [TranslationManager] for
+ * other languages using an appropriate interface.
+ */
+internal fun shouldBeBuild(file: File, symbols: Map<String, String>): Boolean {
     // First, we need to check, whether the filename ends with a possible _$GOOS.go, $_GOARCH.go
     // or $_GOOS_$GOARCH.go
     val parts = file.nameWithoutExtension.split("_")
@@ -67,7 +78,7 @@ fun shouldBuild(file: File, symbols: Map<String, String>): Boolean {
         file
             .bufferedReader()
             .useLines { lines -> lines.take(50).toList() }
-            .firstOrNull() { it.startsWith("//go:build") }
+            .firstOrNull { it.startsWith("//go:build") }
             ?: return true
 
     val constraint = BuildConstraintExpression.fromString(goBuildLine.substringAfter("//go:build "))
@@ -121,7 +132,7 @@ private val Map<String, String>.buildTags: Set<String>
         return tags
     }
 
-fun gatherGoFiles(root: File, includeSubDir: Boolean = true): List<File> {
+internal fun gatherGoFiles(root: File, includeSubDir: Boolean = true): List<File> {
     return root
         .walkTopDown()
         .onEnter { (it == root || includeSubDir) && !it.name.contains(".go") }
@@ -132,7 +143,12 @@ fun gatherGoFiles(root: File, includeSubDir: Boolean = true): List<File> {
         .toList()
 }
 
-class Project {
+/**
+ * Represents a Go project. This could potentially be extended and moved to cpg-core to be available
+ * for other languages. It shares some fields with a [CompilationDatabase] and both could
+ * potentially be merged.
+ */
+internal class Project {
     var symbols: Map<String, String> = mutableMapOf()
 
     var components: MutableMap<String, List<File>> = mutableMapOf()
@@ -140,7 +156,14 @@ class Project {
     var includePaths: List<File> = mutableListOf()
 }
 
-fun buildProject(
+/**
+ * This function emulates building a Go project. It requires an installed Go environment and uses
+ * the Go binary to compile a list of package dependencies, which are then included into the
+ * [Project] as includes.
+ *
+ * Note: This currently is limited to packages of the standard library
+ */
+internal fun buildProject(
     modulePath: String,
     goos: String? = null,
     goarch: String? = null,
@@ -176,10 +199,10 @@ fun buildProject(
     tags.let { symbols["-tags"] = tags.joinToString { " " } }
 
     // Pre-filter any files we are not building anyway based on our symbols
-    files = files.filter { shouldBuild(it, symbols) }.toMutableList()
+    files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
 
-    // TODO(oxisto): look for binaries
-    project.components["app"] = files
+    // TODO(oxisto): look for binaries in cmd folder
+    project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
     project.symbols = symbols
     // TODO(oxisto): support vendor includes
     project.includePaths = listOf(stdLib)

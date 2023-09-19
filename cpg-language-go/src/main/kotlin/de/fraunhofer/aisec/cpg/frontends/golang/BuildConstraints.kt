@@ -27,10 +27,36 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import java.util.StringTokenizer
 
+/**
+ * Go allows to specify so-called
+ * [build constraints](https://pkg.go.dev/cmd/go#hdr-Build_constraints) on files, to specify
+ * conditions on which they should be built (or not).
+ *
+ * For example, the following build constraint specifies that the file is either built on linux and
+ * darwin arm-based machines:
+ * ```
+ * //go:build (linux && arm64) || (darwin && arm64)
+ * ```
+ *
+ * These build constraints consist of several expressions (tags) that can be combined with `||` and
+ * `&&` as well as negated with `!`.
+ *
+ * This interface serves as the bases for all these expressions and contains a companion object to
+ * parse such an expression (without the `//go:build` prefix) using [fromString].
+ */
 fun interface BuildConstraintExpression {
+    /**
+     * Evaluates whether the current expression satisfies the set of [tags]. Tags can be for example
+     * the target operating system (e.g., `linux`), the target architecture (e.g. `arm64`), the Go
+     * version (e.g. `go1.20`) or other custom tags supplied to the build process.
+     */
     fun evaluate(tags: Set<String>): Boolean
 
     companion object {
+        /**
+         * This function can be used to translate a string-based build constraint (without the
+         * `//go:build` prefix) into a [BuildConstraintExpression].
+         */
         fun fromString(str: String): BuildConstraintExpression? {
             val tokenizer = StringTokenizer(str.replace(" ", ""), "!&|()", true)
 
@@ -99,6 +125,10 @@ fun interface BuildConstraintExpression {
     }
 }
 
+/**
+ * A unary build constraint expression. Currently, only `!` as [operatorCode] for a negation is
+ * supported.
+ */
 class BuildConstraintUnaryExpression(
     val operatorCode: String,
     val expr: BuildConstraintExpression
@@ -112,6 +142,10 @@ class BuildConstraintUnaryExpression(
     }
 }
 
+/**
+ * A binary build constraint expression. Currently, only `&&` and `||` as [operatorCode] are
+ * supported.
+ */
 class BuildConstraintBinaryExpression(
     val operatorCode: String,
     val lhs: BuildConstraintExpression,
@@ -126,9 +160,16 @@ class BuildConstraintBinaryExpression(
     }
 }
 
+/**
+ * A simple parenthesis around a build constraint, which can be used to logically group expressions.
+ */
 class BuildConstraintParenthesis(val expr: BuildConstraintExpression) :
     BuildConstraintExpression by expr
 
+/**
+ * The usage of a tag as a build constraint expression. This is the simplest form of expression and
+ * will return true if the [tag] is contained in the list of available tags.
+ */
 class BuildConstraintTag(val tag: String) : BuildConstraintExpression {
     override fun evaluate(tags: Set<String>): Boolean {
         return tag in tags

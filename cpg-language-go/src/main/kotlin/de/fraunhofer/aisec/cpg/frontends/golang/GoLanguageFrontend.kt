@@ -125,7 +125,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        if (!shouldBuild(file, ctx.config.symbols)) {
+        if (!shouldBeBuild(file, ctx.config.symbols)) {
             log.debug(
                 "Ignoring the contents of {} because of missing build tags or different GOOS/GOARCH.",
                 file

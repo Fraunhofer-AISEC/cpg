@@ -71,11 +71,18 @@ class ScopeManager : ScopeProvider {
     var currentScope: Scope? = null
         private set
 
+    /** Represents an alias with the name [to] for the particular name [from]. */
     data class Alias(var from: Name, var to: Name)
 
     /**
-     * In some languages, we can define aliases. They can probably be defined at different scopes,
-     * but for now we only allow it for the current file.
+     * In some languages, we can define aliases for names. An example is renaming package imports in
+     * Go, e.g., to avoid name conflicts.
+     *
+     * In reality, they can probably be defined at different scopes for other languages, but for now
+     * we only allow it for the current file.
+     *
+     * This can potentially be used to replace [addTypedef] at some point, which still relies on the
+     * existence of a [LanguageFrontend].
      */
     private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
 
@@ -607,24 +614,24 @@ class ScopeManager : ScopeProvider {
      * TODO: We should merge this function with [.resolveFunction]
      */
     @JvmOverloads
-    fun resolveReference(ref: Reference, scope: Scope? = currentScope): ValueDeclaration? {
+    fun resolveReference(ref: Reference, startScope: Scope? = currentScope): ValueDeclaration? {
         // Unfortunately, we still have an issue about duplicate declarations because header files
         // are included multiple times, so we need to exclude the C++ frontend (for now).
         val language = ref.language
-        val (s, name) =
+        val (scope, name) =
             if (
                 language?.name?.localName != "CLanguage" &&
                     (language?.name?.localName != "CPPLanguage")
             ) {
                 // For all other languages, we can extract the scope information out of the name and
                 // start our search at the dedicated scope.
-                extractScope(ref, scope)
+                extractScope(ref, startScope)
             } else {
                 Pair(scope, ref.name)
             }
 
         // Try to resolve value declarations according to our criteria
-        return resolve<ValueDeclaration>(s) {
+        return resolve<ValueDeclaration>(scope) {
                 if (it.name.lastPartsMatch(name)) {
                     val helper = ref.resolutionHelper
                     return@resolve when {
@@ -663,12 +670,12 @@ class ScopeManager : ScopeProvider {
     @JvmOverloads
     fun resolveFunction(
         call: CallExpression,
-        scope: Scope? = currentScope
+        startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
-        val (s, name) = extractScope(call, scope)
+        val (scope, name) = extractScope(call, startScope)
 
         val func =
-            resolve<FunctionDeclaration>(s) {
+            resolve<FunctionDeclaration>(scope) {
                 it.name.lastPartsMatch(name) && it.hasSignature(call.signature)
             }
 
@@ -690,13 +697,13 @@ class ScopeManager : ScopeProvider {
             // else as well in other languages
             var scopeName = node.name.parent
 
-            // We need to check, if have an alias for this file
+            // We need to check, whether we have an alias for the scope name in this file
             val list = aliases[node.location?.artifactLocation]
             val alias = list?.firstOrNull { it.to == scopeName }?.from
             if (alias != null) {
                 scopeName = alias
                 // Reconstruct the original name with the alias, so we can resolve declarations with
-                // the namescape
+                // the namespace
                 name = Name(name.localName, alias)
             }
 
