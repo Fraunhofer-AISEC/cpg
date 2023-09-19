@@ -179,11 +179,16 @@ internal class Project {
 
             val topLevel = File(modulePath)
 
-            var proc =
-                ProcessBuilder("go", "list", "all")
+            val pb =
+                ProcessBuilder("go", "list", tags.joinToString(",", "-tags="), "all")
                     .directory(topLevel)
                     .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                    .start()
+
+            val env = pb.environment()
+            env["GOOS"] = goos
+            env["GOARCH"] = goarch
+
+            var proc = pb.start()
             proc.waitFor(5, TimeUnit.MINUTES)
             if (proc.exitValue() != 0) {
                 log.debug(proc.errorStream.bufferedReader().readLine())
