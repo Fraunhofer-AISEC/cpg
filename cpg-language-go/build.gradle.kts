@@ -41,6 +41,7 @@ publishing {
 
 dependencies {
     implementation("net.java.dev.jna:jna:5.13.0")
+    testImplementation(project(":cpg-analysis"))
 }
 
 if (!project.hasProperty("skipGoBuild")) {

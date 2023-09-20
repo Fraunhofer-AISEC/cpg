@@ -28,21 +28,26 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 
-abstract class GoHandler<ResultNode : Node, HandlerNode : GoStandardLibrary.Ast.Node>(
-    configConstructor: Supplier<ResultNode>,
+abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast.Node>(
+    configConstructor: Supplier<ResultNode?>,
     lang: GoLanguageFrontend
-) : Handler<ResultNode, HandlerNode, GoLanguageFrontend>(configConstructor, lang) {
+) : Handler<ResultNode?, HandlerNode, GoLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
      *
-     * We also want non-nullable result handlers
+     * We also want to support nullable results for some handlers, e.g., when ignoring private
+     * declarations in dependencies.
      */
     override fun handle(ctx: HandlerNode): ResultNode {
         val node = handleNode(ctx)
+        if (node == null) {
+            return node
+        }
 
         // The language frontend might set a location, which we should respect. Otherwise, we will
         // set the location here.
@@ -77,6 +82,28 @@ abstract class GoHandler<ResultNode : Node, HandlerNode : GoStandardLibrary.Ast.
             cpgNode.problem = "Parsing of type $name is not supported (yet)"
         }
 
-        return cpgNode
+        return cpgNode!!
     }
+
+    /**
+     * This virtual property returns the name of the import package when imported without any
+     * aliases.
+     */
+    val GoStandardLibrary.Ast.ImportSpec.importName: String
+        get() {
+            val path = frontend.expressionHandler.handle(this.path) as? Literal<*>
+            val paths = (path?.value as? String)?.split("/") ?: listOf()
+
+            // Return the last name in the path as the import name. However, if the last name is a
+            // module version (e.g., v5), then we need to return the second-to-last
+            var last = paths.lastOrNull()
+            last =
+                if (last?.startsWith("v") == true) {
+                    paths.getOrNull(paths.size - 2)
+                } else {
+                    last
+                }
+
+            return last ?: ""
+        }
 }

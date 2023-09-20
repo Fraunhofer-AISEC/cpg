@@ -36,10 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
@@ -71,19 +72,82 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     private var commentMap: GoStandardLibrary.Ast.CommentMap? = null
     var currentFile: GoStandardLibrary.Ast.File? = null
 
+    var isDependency: Boolean = false
+
     val declarationHandler = DeclarationHandler(this)
     val specificationHandler = SpecificationHandler(this)
     var statementHandler = StatementHandler(this)
     var expressionHandler = ExpressionHandler(this)
 
+    /**
+     * This helper class contains values needed to properly decide in which state const declaration
+     * / specifications are in.
+     */
+    class DeclarationContext {
+        /**
+         * The current value of `iota`. This needs to be reset for each
+         * [GoStandardLibrary.Ast.GenDecl] and incremented for each observed
+         * [GoStandardLibrary.Ast.ValueSpec].
+         */
+        var iotaValue = -1
+
+        /**
+         * The current initializers in a list representing the different "columns". For example in
+         * the following code:
+         * ```go
+         * const (
+         *   a, b = 1, 2
+         *   c, d
+         *   e, f = 4, 5
+         * )
+         * ```
+         *
+         * The current list of initializers would first be (`1`,`2`) until a new set of initializers
+         * is declared in the last spec. The key corresponds to the "column" of the variable
+         * (a=0,b=1).
+         */
+        var constInitializers = mutableMapOf<Int, GoStandardLibrary.Ast.Expr>()
+
+        /** The current const type, which is valid until a new initializer is present */
+        var constType: Type? = null
+
+        /** The current [GoStandardLibrary.Ast.GenDecl] that is being processed. */
+        var currentDecl: GoStandardLibrary.Ast.GenDecl? = null
+    }
+
+    /**
+     * The current [DeclarationContext]. This is somewhat of a workaround since we cannot properly
+     * communicate state between different handlers. However, because *within* a [LanguageFrontend],
+     * everything is parsed sequentially according to AST order, we can safely use this context
+     * here.
+     */
+    var declCtx = DeclarationContext()
+
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
+        if (!shouldBeBuild(file, ctx.config.symbols)) {
+            log.debug(
+                "Ignoring the contents of {} because of missing build tags or different GOOS/GOARCH.",
+                file
+            )
+            return newTranslationUnitDeclaration(file.name)
+        }
+
+        val dependency =
+            ctx.config.includePaths.firstOrNull {
+                file.absolutePath.contains(it.toAbsolutePath().toString())
+            }
+
         // Make sure, that our top level is set either way
         val topLevel =
-            if (config.topLevel != null) {
-                config.topLevel
-            } else {
-                file.parentFile
+            // If this file is part of an include, we set the top level to the root of the include
+            when {
+                dependency != null -> {
+                    isDependency = true
+                    dependency.toFile()
+                }
+                config.topLevel != null -> config.topLevel
+                else -> file.parentFile
             }!!
 
         val std = GoStandardLibrary.INSTANCE
@@ -95,7 +159,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         }
 
         val fset = std.NewFileSet()
-        val f = Parser.parseFile(fset, file.absolutePath, file.readText())
+        val f = Parser.parseFile(fset, file.absolutePath)
 
         this.commentMap = std.NewCommentMap(fset, f, f.comments)
 
@@ -119,8 +183,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             // module path as well as the current directory in relation to the topLevel
             var packagePath = file.parentFile.relativeTo(topLevel)
 
-            // If we are in a module, we need to prepend the module path to it
-            currentModule?.let { packagePath = File(it.module.mod.path).resolve(packagePath) }
+            // If we are in a module, we need to prepend the module path to it. There is an
+            // exception if we are in the "std" module, which represents the standard library
+            val modulePath = currentModule?.module?.mod?.path
+            if (modulePath != null && modulePath != "std") {
+                packagePath = File(modulePath).resolve(packagePath)
+            }
 
             p.path = packagePath.path
         } catch (ex: IllegalArgumentException) {
@@ -149,72 +217,161 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {
-        return when (type) {
-            is GoStandardLibrary.Ast.Ident -> {
-                val name: String =
-                    if (isBuiltinType(type.name)) {
-                        // Definitely not an FQN type
-                        type.name
-                    } else {
-                        // FQN'ize this name (with the current file)
-                        "${currentFile?.name?.name}.${type.name}" // this.File.Name.Name
+        val type =
+            when (type) {
+                is GoStandardLibrary.Ast.Ident -> {
+                    val name: String =
+                        if (isBuiltinType(type.name)) {
+                            // Definitely not an FQN type
+                            type.name
+                        } else {
+                            // FQN'ize this name (with the current file)
+                            "${currentFile?.name?.name}.${type.name}" // this.File.Name.Name
+                        }
+
+                    objectType(name)
+                }
+                is GoStandardLibrary.Ast.SelectorExpr -> {
+                    // This is a FQN type
+                    val baseName = (type.x as? GoStandardLibrary.Ast.Ident)?.name?.let { Name(it) }
+
+                    return objectType(Name(type.sel.name, baseName))
+                }
+                is GoStandardLibrary.Ast.ArrayType -> {
+                    return typeOf(type.elt).array()
+                }
+                is GoStandardLibrary.Ast.ChanType -> {
+                    // Handle them similar to a map type (see below)
+                    return objectType("chan", listOf(typeOf(type.value)))
+                }
+                is GoStandardLibrary.Ast.FuncType -> {
+                    val paramTypes =
+                        type.params.list
+                            .flatMap { field ->
+                                // Because we can have unnamed parameters or multiple parameters
+                                // declared at once, we need to expand the list of types according
+                                // to the list of names
+                                if (field.names.isEmpty()) {
+                                    listOf(field.type)
+                                } else {
+                                    field.names.map { field.type }
+                                }
+                            }
+                            .map { fieldTypeOf(it).first }
+                    val returnTypes = type.results?.list?.map { typeOf(it.type) } ?: listOf()
+                    val name = funcTypeName(paramTypes, returnTypes)
+
+                    FunctionType(name, paramTypes, returnTypes, this.language)
+                }
+                is GoStandardLibrary.Ast.IndexExpr -> {
+                    // A go type constraint, aka generic
+                    val baseType = typeOf(type.x)
+                    val generics = listOf(typeOf(type.index))
+                    objectType(baseType.name, generics)
+                }
+                is GoStandardLibrary.Ast.IndexListExpr -> {
+                    // A go type constraint, aka generic with multiple types
+                    val baseType = typeOf(type.x)
+                    val generics = type.indices.map { typeOf(it) }
+                    objectType(baseType.name, generics)
+                }
+                is GoStandardLibrary.Ast.StructType -> {
+                    // Go allows to use anonymous structs as type. This is something we cannot model
+                    // properly in the CPG yet. In order to at least deal with this partially, we
+                    // construct a ObjectType and put the fields and their types into the type.
+                    // This will result in something like `struct{name string; args util.args; want
+                    // string}`
+                    val parts =
+                        type.fields.list.map { field ->
+                            var desc = ""
+                            // Name can be optional, if its embedded
+                            field.names.getOrNull(0)?.let { desc += it }
+                            desc += " "
+                            desc += fieldTypeOf(field.type).first.name
+                            desc
+                        }
+
+                    val name = parts.joinToString("; ", "struct{", "}")
+
+                    // Create an anonymous struct, this will add it to the scope manager. This is
+                    // somewhat duplicate, but the easiest for now. We need to create it in the
+                    // global
+                    // scope to avoid namespace issues
+                    var record =
+                        scopeManager.withScope(scopeManager.globalScope) {
+                            specificationHandler.buildRecordDeclaration(type, name)
+                        }
+
+                    record.toType()
+                }
+                is GoStandardLibrary.Ast.InterfaceType -> {
+                    // Go allows to use anonymous interface as type. This is something we cannot
+                    // model
+                    // properly in the CPG yet. In order to at least deal with this partially, we
+                    // construct a ObjectType and put the methods and their types into the type.
+
+                    // In the easiest case this is the empty interface `interface{}`, which we then
+                    // consider to be the "any" type. `any` is actually a type alias for
+                    // `interface{}`,
+                    // but in modern Go `any` is preferred.
+                    if (type.methods.list.isEmpty()) {
+                        return primitiveType("any")
                     }
 
-                objectType(name)
-            }
-            is GoStandardLibrary.Ast.ArrayType -> {
-                return typeOf(type.elt).array()
-            }
-            is GoStandardLibrary.Ast.ChanType -> {
-                // Handle them similar to a map type (see below)
-                return objectType("chan", listOf(typeOf(type.value)))
-            }
-            is GoStandardLibrary.Ast.FuncType -> {
-                val paramTypes = type.params.list.map { typeOf(it.type) }
-                val returnTypes = type.results?.list?.map { typeOf(it.type) } ?: listOf()
-                val name = funcTypeName(paramTypes, returnTypes)
+                    val parts =
+                        type.methods.list.map { method ->
+                            var desc = ""
+                            // Name can be optional, if its embedded
+                            method.names.getOrNull(0)?.let { desc += it }
+                            // the function type has a weird "func" prefix, which we do not want
+                            desc += typeOf(method.type).name.toString().removePrefix("func")
+                            desc
+                        }
 
-                return FunctionType(name, paramTypes, returnTypes, this.language)
+                    objectType(parts.joinToString("; ", "interface{", "}"))
+                }
+                is GoStandardLibrary.Ast.MapType -> {
+                    // We cannot properly represent Go's built-in map types, yet so we have
+                    // to make a shortcut here and represent it as a Java-like map<K, V> type.
+                    return objectType("map", listOf(typeOf(type.key), typeOf(type.value)))
+                }
+                is GoStandardLibrary.Ast.StarExpr -> {
+                    typeOf(type.x).pointer()
+                }
+                else -> {
+                    Util.warnWithFileLocation(
+                        this,
+                        type,
+                        log,
+                        "Not parsing type of type ${type.goType} yet"
+                    )
+                    unknownType()
+                }
             }
-            is GoStandardLibrary.Ast.MapType -> {
-                // We cannot properly represent Go's built-in map types, yet so we have
-                // to make a shortcut here and represent it as a Java-like map<K, V> type.
-                return objectType("map", listOf(typeOf(type.key), typeOf(type.value)))
+
+        return typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+    }
+
+    /**
+     * A quick helper function to retrieve the type of a field, to check for possible variadic
+     * arguments.
+     */
+    internal fun fieldTypeOf(
+        paramType: GoStandardLibrary.Ast.Expr,
+    ): Pair<Type, Boolean> {
+        var variadic = false
+        val type =
+            if (paramType is GoStandardLibrary.Ast.Ellipsis) {
+                variadic = true
+                typeOf(paramType.elt).array()
+            } else {
+                typeOf(paramType)
             }
-            is GoStandardLibrary.Ast.StarExpr -> {
-                typeOf(type.x).pointer()
-            }
-            else -> {
-                log.warn("Not parsing type of type ${type.goType} yet")
-                unknownType()
-            }
-        }
+        return Pair(type, variadic)
     }
 
     private fun isBuiltinType(name: String): Boolean {
-        return when (name) {
-            "bool",
-            "byte",
-            "complex128",
-            "complex64",
-            "error",
-            "float32",
-            "float64",
-            "int",
-            "int8",
-            "int16",
-            "int32",
-            "int64",
-            "rune",
-            "string",
-            "uint",
-            "uint8",
-            "uint16",
-            "uint32",
-            "uint64",
-            "uintptr" -> true
-            else -> false
-        }
+        return language.primitiveTypeNames.contains(name)
     }
 
     override fun codeOf(astNode: GoStandardLibrary.Ast.Node): String? {
@@ -239,43 +396,90 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         }
     }
 
-    /**
-     * This function produces a Go-style function type name such as `func(int, string) string` or
-     * `func(int) (error, string)`
-     */
-    private fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
-        val rn = mutableListOf<String>()
-        val pn = mutableListOf<String>()
+    companion object {
+        /**
+         * All possible goos values. See
+         * https://github.com/golang/go/blob/release-branch.go1.21/src/go/build/syslist.go#L11
+         */
+        val goosValues =
+            listOf(
+                "aix",
+                "android",
+                "darwin",
+                "dragonfly",
+                "freebsd",
+                "hurd",
+                "illumos",
+                "ios",
+                "js",
+                "linux",
+                "nacl",
+                "netbsd",
+                "openbsd",
+                "plan9",
+                "solaris",
+                "wasip1",
+                "windows",
+                "zos"
+            )
 
-        for (t in paramTypes) {
-            pn += t.name.toString()
-        }
+        /**
+         * All possible architecture values. See
+         * https://github.com/golang/go/blob/release-branch.go1.21/src/go/build/syslist.go#L54
+         */
+        val goarchValues =
+            listOf(
+                "386",
+                "amd64",
+                "arm",
+                "arm64",
+                "loong64",
+                "mips",
+                "mips64",
+                "mips64le",
+                "mipsle",
+                "ppc64",
+                "ppc64le",
+                "riscv64",
+                "s390x"
+            )
+    }
+}
 
-        for (t in returnTypes) {
-            rn += t.name.toString()
-        }
-
-        val rs =
-            if (returnTypes.size > 1) {
-                rn.joinToString(", ", prefix = " (", postfix = ")")
-            } else if (returnTypes.isNotEmpty()) {
-                rn.joinToString(", ", prefix = " ")
-            } else {
-                ""
-            }
-
-        return pn.joinToString(", ", prefix = "func(", postfix = ")$rs")
+val Type?.underlyingType: Type?
+    get() {
+        return (this as? ObjectType)?.recordDeclaration?.superClasses?.singleOrNull()
     }
 
-    fun getImportName(spec: GoStandardLibrary.Ast.ImportSpec): String {
-        val name = spec.name
-        if (name != null) {
-            return name.name
+val Type?.isOverlay: Boolean
+    get() {
+        return this is ObjectType && this.recordDeclaration?.kind == "overlay"
+    }
+
+/**
+ * This function produces a Go-style function type name such as `func(int, string) string` or
+ * `func(int) (error, string)`
+ */
+fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
+    val rn = mutableListOf<String>()
+    val pn = mutableListOf<String>()
+
+    for (t in paramTypes) {
+        pn += t.name.toString()
+    }
+
+    for (t in returnTypes) {
+        rn += t.name.toString()
+    }
+
+    val rs =
+        if (returnTypes.size > 1) {
+            rn.joinToString(", ", prefix = " (", postfix = ")")
+        } else if (returnTypes.isNotEmpty()) {
+            rn.joinToString(", ", prefix = " ")
+        } else {
+            ""
         }
 
-        val path = expressionHandler.handle(spec.path) as? Literal<*>
-        val paths = (path?.value as? String)?.split("/") ?: listOf()
-
-        return paths.lastOrNull() ?: ""
-    }
+    return pn.joinToString(", ", prefix = "func(", postfix = ")$rs")
 }

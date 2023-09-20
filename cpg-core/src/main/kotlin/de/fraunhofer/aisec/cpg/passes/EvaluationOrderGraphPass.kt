@@ -127,6 +127,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
         map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
         map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
+        map[TypeExpression::class.java] = { handleTypeExpression(it as TypeExpression) }
         map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
         map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
         map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
@@ -244,7 +245,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleRecordDeclaration(node: RecordDeclaration) {
+    protected open fun handleRecordDeclaration(node: RecordDeclaration) {
         scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
@@ -581,6 +582,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val openConditionEOGs = ArrayList(currentPredecessors)
         createEOG(node.message)
         setCurrentEOGs(openConditionEOGs)
+        pushToEOG(node)
+    }
+
+    protected fun handleTypeExpression(node: TypeExpression) {
         pushToEOG(node)
     }
 

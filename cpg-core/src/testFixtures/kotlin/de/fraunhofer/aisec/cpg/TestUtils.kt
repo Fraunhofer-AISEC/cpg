@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -154,7 +154,9 @@ object TestUtils {
     ): List<TranslationUnitDeclaration> {
         val config = builder.build()
         val analyzer = TranslationManager.builder().config(config).build()
-        return analyzer.analyze().get().translationUnits
+        val result = analyzer.analyze().get()
+
+        return result.components["application"]?.translationUnits ?: listOf()
     }
 
     @JvmOverloads

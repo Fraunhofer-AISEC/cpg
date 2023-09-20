@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -39,7 +40,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * use-case is access of a member function (method) as part of the [MemberCallExpression.callee]
  * property of a [MemberCallExpression].
  */
-class MemberExpression : Reference(), HasBase {
+class MemberExpression : Reference(), ArgumentHolder, HasBase {
     @AST
     override var base: Expression = ProblemExpression("could not parse base expression")
         set(value) {
@@ -56,6 +57,19 @@ class MemberExpression : Reference(), HasBase {
             .appendSuper(super.toString())
             .append("base", base)
             .toString()
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.base = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (old == base) {
+            base = new
+            return true
+        }
+
+        return false
     }
 
     override fun equals(other: Any?): Boolean {

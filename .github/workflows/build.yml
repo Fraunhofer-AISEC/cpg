@@ -22,7 +22,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20"
+          go-version: "1.21"
       - name: Build
         run: |
           cd cpg-language-go/src/main/golang
@@ -65,7 +65,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.18
+          go-version: 1.21
       - name: Cache SonarCloud packages
         uses: actions/cache@v3
         with:
@@ -126,7 +126,7 @@ jobs:
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |
-          zip reports.zip **/build/reports/**/** || true
+          zip -r reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v3

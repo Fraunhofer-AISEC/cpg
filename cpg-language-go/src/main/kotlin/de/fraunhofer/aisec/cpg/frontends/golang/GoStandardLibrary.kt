@@ -52,8 +52,8 @@ interface GoStandardLibrary : Library {
      * this package.
      */
     object Parser {
-        fun parseFile(fileSet: Ast.FileSet, path: String, contents: String): Ast.File {
-            return INSTANCE.goParserParseFile(fileSet, path, contents)
+        fun parseFile(fileSet: Ast.FileSet, path: String): Ast.File {
+            return INSTANCE.goParserParseFile(fileSet, path)
         }
     }
 
@@ -153,6 +153,11 @@ interface GoStandardLibrary : Library {
                 get() {
                     return list(INSTANCE::GetNumGenDeclSpecs, INSTANCE::GetGenDeclSpec)
                 }
+
+            val tok: Int
+                get() {
+                    return INSTANCE.GetGenDeclTok(this)
+                }
         }
 
         class FuncDecl(p: Pointer? = Pointer.NULL) : Decl(p) {
@@ -168,7 +173,7 @@ interface GoStandardLibrary : Library {
                     return INSTANCE.GetFuncDeclName(this)
                 }
 
-            val body: BlockStmt
+            val body: BlockStmt?
                 get() {
                     return INSTANCE.GetFuncDeclBody(this)
                 }
@@ -193,6 +198,11 @@ interface GoStandardLibrary : Library {
             val name: Ident
                 get() {
                     return INSTANCE.GetTypeSpecName(this)
+                }
+
+            val assign: Int
+                get() {
+                    return INSTANCE.GetTypeSpecAssign(this)
                 }
 
             val type: Expr
@@ -243,7 +253,9 @@ interface GoStandardLibrary : Library {
                     "*ast.FuncLit" -> FuncLit(nativeValue)
                     "*ast.Ident" -> Ident(nativeValue)
                     "*ast.IndexExpr" -> IndexExpr(nativeValue)
+                    "*ast.IndexListExpr" -> IndexListExpr(nativeValue)
                     "*ast.KeyValueExpr" -> KeyValueExpr(nativeValue)
+                    "*ast.ParenExpr" -> ParenExpr(nativeValue)
                     "*ast.SelectorExpr" -> SelectorExpr(nativeValue)
                     "*ast.StarExpr" -> StarExpr(nativeValue)
                     "*ast.SliceExpr" -> SliceExpr(nativeValue)
@@ -311,7 +323,7 @@ interface GoStandardLibrary : Library {
         }
 
         class CompositeLit(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val type: Expr
+            val type: Expr?
                 get() {
                     return INSTANCE.GetCompositeLitType(this)
                 }
@@ -334,6 +346,13 @@ interface GoStandardLibrary : Library {
                 }
         }
 
+        class ParenExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
+            val x: Expr
+                get() {
+                    return INSTANCE.GetParenExprX(this)
+                }
+        }
+
         class FuncLit(p: Pointer? = Pointer.NULL) : Expr(p) {
             fun toDecl(): FuncDecl {
                 return INSTANCE.MakeFuncDeclFromFuncLit(this)
@@ -345,6 +364,11 @@ interface GoStandardLibrary : Library {
         }
 
         class Ident(p: Pointer? = Pointer.NULL) : Expr(p) {
+            val isUnexported: Boolean
+                get() {
+                    return name.isNotEmpty() && name[0].isLowerCase()
+                }
+
             val name: String
                 get() {
                     return INSTANCE.GetIdentName(this)
@@ -364,6 +388,21 @@ interface GoStandardLibrary : Library {
             val index: Expr
                 get() {
                     return INSTANCE.GetIndexExprIndex(this)
+                }
+        }
+
+        class IndexListExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
+            val x: Expr
+                get() {
+                    return INSTANCE.GetIndexListExprX(this)
+                }
+
+            val indices: List<Expr>
+                get() {
+                    return list(
+                        INSTANCE::GetNumIndexListExprIndices,
+                        INSTANCE::GetIndexListExprIndex
+                    )
                 }
         }
 
@@ -517,7 +556,9 @@ interface GoStandardLibrary : Library {
                     "*ast.LabeledStmt" -> LabeledStmt(nativeValue)
                     "*ast.RangeStmt" -> RangeStmt(nativeValue)
                     "*ast.ReturnStmt" -> ReturnStmt(nativeValue)
+                    "*ast.SendStmt" -> SendStmt(nativeValue)
                     "*ast.SwitchStmt" -> SwitchStmt(nativeValue)
+                    "*ast.TypeSwitchStmt" -> TypeSwitchStmt(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -700,6 +741,18 @@ interface GoStandardLibrary : Library {
                 }
         }
 
+        class SendStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
+            val chan: Expr
+                get() {
+                    return INSTANCE.GetSendStmtChan(this)
+                }
+
+            val value: Expr
+                get() {
+                    return INSTANCE.GetSendStmtValue(this)
+                }
+        }
+
         class SwitchStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
             val init: Stmt?
                 get() {
@@ -714,6 +767,23 @@ interface GoStandardLibrary : Library {
             val body: BlockStmt
                 get() {
                     return INSTANCE.GetSwitchStmtBody(this)
+                }
+        }
+
+        class TypeSwitchStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
+            val init: Stmt?
+                get() {
+                    return INSTANCE.GetTypeSwitchStmtInit(this)
+                }
+
+            val assign: Stmt
+                get() {
+                    return INSTANCE.GetTypeSwitchStmtAssign(this)
+                }
+
+            val body: BlockStmt
+                get() {
+                    return INSTANCE.GetTypeSwitchStmtBody(this)
                 }
         }
 
@@ -774,7 +844,7 @@ interface GoStandardLibrary : Library {
 
     // go/parser package
 
-    fun goParserParseFile(fileSet: Ast.FileSet, path: String, src: String): Ast.File
+    fun goParserParseFile(fileSet: Ast.FileSet, path: String): Ast.File
 
     fun GetType(obj: Pointer): String
 
@@ -826,9 +896,9 @@ interface GoStandardLibrary : Library {
 
     fun GetFuncDeclName(funcDecl: Ast.FuncDecl): Ast.Ident
 
-    fun GetFuncDeclBody(funcDecl: Ast.FuncDecl): Ast.BlockStmt
+    fun GetFuncDeclBody(funcDecl: Ast.FuncDecl): Ast.BlockStmt?
 
-    fun GetCompositeLitType(compositeLit: Ast.CompositeLit): Ast.Expr
+    fun GetCompositeLitType(compositeLit: Ast.CompositeLit): Ast.Expr?
 
     fun GetNumCompositeLitElts(compositeLit: Ast.CompositeLit): Int
 
@@ -843,6 +913,8 @@ interface GoStandardLibrary : Library {
     fun GetKeyValueExprKey(keyValueExpr: Ast.KeyValueExpr): Ast.Expr
 
     fun GetKeyValueExprValue(keyValueExpr: Ast.KeyValueExpr): Ast.Expr
+
+    fun GetParenExprX(parenExpr: Ast.ParenExpr): Ast.Expr
 
     fun GetBasicLitValue(basicLit: Ast.BasicLit): String
 
@@ -958,6 +1030,12 @@ interface GoStandardLibrary : Library {
 
     fun GetIndexExprIndex(IndexExpr: Ast.IndexExpr): Ast.Expr
 
+    fun GetIndexListExprX(indexListExpr: Ast.IndexListExpr): Ast.Expr
+
+    fun GetNumIndexListExprIndices(indexListExpr: Ast.IndexListExpr): Int
+
+    fun GetIndexListExprIndex(indexListExpr: Ast.IndexListExpr, i: Int): Ast.Expr
+
     fun GetIfStmtInit(ifStmt: Ast.IfStmt): Ast.Stmt?
 
     fun GetIfStmtCond(ifStmt: Ast.IfStmt): Ast.Expr
@@ -980,15 +1058,27 @@ interface GoStandardLibrary : Library {
 
     fun GetReturnStmtResult(returnStmt: Ast.ReturnStmt, i: Int): Ast.Expr
 
+    fun GetSendStmtChan(sendStmt: Ast.SendStmt): Ast.Expr
+
+    fun GetSendStmtValue(sendStmt: Ast.SendStmt): Ast.Expr
+
     fun GetSwitchStmtInit(switchStmt: Ast.SwitchStmt): Ast.Stmt?
 
     fun GetSwitchStmtTag(switchStmt: Ast.SwitchStmt): Ast.Expr?
 
     fun GetSwitchStmtBody(stmt: Ast.SwitchStmt): Ast.BlockStmt
 
+    fun GetTypeSwitchStmtInit(typeSwitchStmt: Ast.TypeSwitchStmt): Ast.Stmt?
+
+    fun GetTypeSwitchStmtAssign(typeSwitchStmt: Ast.TypeSwitchStmt): Ast.Stmt
+
+    fun GetTypeSwitchStmtBody(typeSwitchStmt: Ast.TypeSwitchStmt): Ast.BlockStmt
+
     fun GetNumGenDeclSpecs(genDecl: Ast.GenDecl): Int
 
     fun GetGenDeclSpec(genDecl: Ast.GenDecl, i: Int): Ast.Spec
+
+    fun GetGenDeclTok(genDecl: Ast.GenDecl): Int
 
     fun GetImportSpecName(importSpec: Ast.ImportSpec): Ast.Ident?
 
@@ -998,13 +1088,15 @@ interface GoStandardLibrary : Library {
 
     fun GetValueSpecName(valueSpec: Ast.ValueSpec, i: Int): Ast.Ident
 
-    fun GetValueSpecType(valueSpec: Ast.ValueSpec): Ast.Expr
+    fun GetValueSpecType(valueSpec: Ast.ValueSpec): Ast.Expr?
 
     fun GetNumValueSpecValues(valueSpec: Ast.ValueSpec): Int
 
     fun GetValueSpecValue(valueSpec: Ast.ValueSpec, i: Int): Ast.Expr
 
     fun GetTypeSpecName(typeSpec: Ast.TypeSpec): Ast.Ident
+
+    fun GetTypeSpecAssign(typeSpec: Ast.TypeSpec): Int
 
     fun GetTypeSpecType(typeSpec: Ast.TypeSpec): Ast.Expr
 

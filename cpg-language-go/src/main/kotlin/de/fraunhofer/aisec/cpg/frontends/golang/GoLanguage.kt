@@ -25,16 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.frontends.HasGenerics
-import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
-import de.fraunhofer.aisec.cpg.frontends.HasStructs
-import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.types.*
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
 class GoLanguage :
-    Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics, HasStructs {
+    Language<GoLanguageFrontend>(),
+    HasShortCircuitOperators,
+    HasGenerics,
+    HasStructs,
+    HasFirstClassFunctions,
+    HasAnonymousIdentifier {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class
@@ -108,4 +111,37 @@ class GoLanguage :
             // https://pkg.go.dev/builtin#string
             "string" to StringType("string", this)
         )
+
+    override fun isDerivedFrom(type: Type, superType: Type): Boolean {
+        if (type == superType || superType == primitiveType("any")) {
+            return true
+        }
+
+        // If we encounter an auto type as part of the function declaration, we accept this as any
+        // type
+        if (
+            (type is ObjectType && superType is AutoType) ||
+                (type is PointerType && type.isArray && superType.root is AutoType)
+        ) {
+            return true
+        }
+
+        // We additionally want to emulate the behaviour of Go's interface system here
+        if (superType is ObjectType && superType.recordDeclaration?.kind == "interface") {
+            var b = true
+            val target = (type.root as? ObjectType)?.recordDeclaration
+
+            // Our target struct type needs to implement all the functions of the interface
+            // TODO(oxisto): Differentiate on the receiver (pointer vs non-pointer)
+            for (method in superType.recordDeclaration?.methods ?: listOf()) {
+                if (target?.methods?.firstOrNull { it.signature == method.signature } != null) {
+                    b = false
+                }
+            }
+
+            return b
+        }
+
+        return false
+    }
 }

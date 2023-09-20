@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -35,35 +33,30 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class DeclarationHandler(frontend: GoLanguageFrontend) :
-    Handler<Declaration, GoStandardLibrary.Ast.Decl, GoLanguageFrontend>(
-        ::ProblemDeclaration,
-        frontend
-    ) {
+    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(::ProblemDeclaration, frontend) {
 
-    init {
-        map[GoStandardLibrary.Ast.FuncDecl::class.java] = HandlerInterface {
-            handleFuncDecl(it as GoStandardLibrary.Ast.FuncDecl)
+    override fun handleNode(node: GoStandardLibrary.Ast.Decl): Declaration? {
+        return when (node) {
+            is GoStandardLibrary.Ast.FuncDecl -> handleFuncDecl(node)
+            is GoStandardLibrary.Ast.GenDecl -> handleGenDecl(node)
+            else -> {
+                return handleNotSupported(node, node.goType)
+            }
         }
-        map[GoStandardLibrary.Ast.GenDecl::class.java] = HandlerInterface {
-            handleGenDecl(it as GoStandardLibrary.Ast.GenDecl)
-        }
-        map.put(GoStandardLibrary.Ast.Decl::class.java, ::handleNode)
-    }
-
-    private fun handleNode(decl: GoStandardLibrary.Ast.Decl): Declaration {
-        val message = "Not parsing declaration of type ${decl.goType} yet"
-        log.error(message)
-
-        return newProblemDeclaration(message)
     }
 
     private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): FunctionDeclaration {
         val recv = funcDecl.recv
         val func =
             if (recv != null) {
-                val method = newMethodDeclaration(funcDecl.name.name, rawNode = funcDecl)
                 val recvField = recv.list.firstOrNull()
                 val recordType = recvField?.type?.let { frontend.typeOf(it) } ?: unknownType()
+
+                val method =
+                    newMethodDeclaration(
+                        Name(funcDecl.name.name, recordType.root.name),
+                        rawNode = funcDecl
+                    )
 
                 // The name of the Go receiver is optional. In fact, if the name is not
                 // specified we probably do not need any receiver variable at all,
@@ -79,7 +72,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 }
 
                 if (recordType !is UnknownType) {
-                    val recordName = recordType.name
+                    val recordName = recordType.root.name
 
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
@@ -93,9 +86,14 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     // marked as AST and in Go a method is not part of the struct's AST but is
                     // declared outside. In the future, we need to differentiate between just the
                     // associated members  of the class and the pure AST nodes declared in the
-                    // struct
-                    // itself
-                    record?.addMethod(method)
+                    // struct itself
+                    if (record != null) {
+                        method.recordDeclaration = record
+                        record.addMethod(method)
+
+                        // Enter scope of record
+                        frontend.scopeManager.enterScope(record)
+                    }
                 }
                 method
             } else {
@@ -143,69 +141,93 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         // Parse parameters
         for (param in funcDecl.type.params.list) {
-            var name = ""
-
-            // Somehow parameters end up having no name sometimes, have not fully understood why.
-            if (param.names.isNotEmpty()) {
-                name = param.names[0].name
-
-                // If the name is an underscore, it means that the parameter is
-                // unnamed. In order to avoid confusing and some compatibility with
-                // other languages, we are just setting the name to an empty string
-                // in this case.
-                if (name == "_") {
-                    name = ""
-                }
+            // We need to differentiate between three cases:
+            // - an empty list of names, which means that the parameter is unnamed; and we also give
+            //   it an empty name
+            // - a single entry in the list of names, which is one regular parameter
+            // - multiple entries in the list of names, which specifies multiple parameters with the
+            //   same type
+            //
+            // We can treat the last two cases together, by just gathering all the names and
+            // creating one param per name with the same type
+            val names = mutableListOf<String>()
+            if (param.names.isEmpty()) {
+                names += ""
             } else {
-                log.warn("Some param has no name, which is a bit weird: $param")
+                names +=
+                    param.names.map {
+                        // If the name is an underscore, it means that the parameter is
+                        // unused (but not unnamed).
+                        //
+                        // But, but order to avoid confusion in resolving and to add
+                        // some compatibility with other languages, we are just setting
+                        // the name to an empty string in this case as well.
+                        val name = it.name
+                        if (name == "_") {
+                            return@map ""
+                        }
+                        name
+                    }
             }
 
-            // Check for varargs. In this case we want to parse the element type
-            // (and make it an array afterwards)
-            var variadic = false
-            val type =
-                if (param.type is GoStandardLibrary.Ast.Ellipsis) {
-                    variadic = true
-                    frontend.typeOf((param.type as GoStandardLibrary.Ast.Ellipsis).elt).array()
-                } else {
-                    frontend.typeOf(param.type)
+            // Create one param variable per name
+            for (name in names) {
+                // Check for varargs. In this case we want to parse the element type
+                // (and make it an array afterwards)
+                val (type, variadic) = frontend.fieldTypeOf(param.type)
+
+                val p = newParameterDeclaration(name, type, variadic, rawNode = param)
+
+                frontend.scopeManager.addDeclaration(p)
+                frontend.setComment(p, param)
+            }
+        }
+
+        // Only parse function body in non-dependencies
+        if (!frontend.isDependency) {
+            // Check, if the last statement is a return statement, otherwise we insert an implicit
+            // one
+            val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
+            if (body is Block) {
+                val last = body.statements.lastOrNull()
+                if (last !is ReturnStatement) {
+                    val ret = newReturnStatement()
+                    ret.isImplicit = true
+                    body += ret
                 }
-
-            val p = newParameterDeclaration(name, type, variadic, rawNode = param)
-
-            frontend.scopeManager.addDeclaration(p)
-
-            frontend.setComment(p, param)
-        }
-
-        // Check, if the last statement is a return statement, otherwise we insert an implicit one
-        val body = frontend.statementHandler.handle(funcDecl.body)
-        if (body is Block) {
-            val last = body.statements.lastOrNull()
-            if (last !is ReturnStatement) {
-                val ret = newReturnStatement()
-                ret.isImplicit = true
-                body += ret
             }
+            func.body = body
         }
-
-        func.body = body
 
         frontend.scopeManager.leaveScope(func)
+
+        // Leave scope of record, if applicable
+        (func as? MethodDeclaration)?.recordDeclaration?.let {
+            frontend.scopeManager.leaveScope(it)
+        }
 
         return func
     }
 
     private fun handleGenDecl(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {
+        // Reset the iota value. We need to start with -1 because we immediately increment in
+        // handleValueSpec
+        frontend.declCtx.iotaValue = -1
+        // Set ourselves as the current gendecl
+        frontend.declCtx.currentDecl = genDecl
+        // Reset the initializers
+        frontend.declCtx.constInitializers.clear()
+
         val sequence = DeclarationSequence()
 
         for (spec in genDecl.specs) {
-            frontend.specificationHandler.handle(spec)?.let {
-                sequence += it
+            val declaration = frontend.specificationHandler.handle(spec)
+            if (declaration != null) {
+                sequence += declaration
 
                 // Go associates the comment to the genDecl, so we need to explicitly launch
                 // setComment here.
-                frontend.setComment(it, genDecl)
+                frontend.setComment(declaration, genDecl)
             }
         }
 

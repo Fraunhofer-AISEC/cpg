@@ -50,12 +50,11 @@ class TypeManager {
      * Generics) to the ParameterizedType to be able to resolve the Type of the fields, since
      * ParameterizedTypes are unique to the RecordDeclaration and are not merged.
      */
-    private val recordToTypeParameters =
-        Collections.synchronizedMap(mutableMapOf<RecordDeclaration, List<ParameterizedType>>())
-    private val templateToTypeParameters =
-        Collections.synchronizedMap(
-            mutableMapOf<TemplateDeclaration, MutableList<ParameterizedType>>()
-        )
+    private val recordToTypeParameters: MutableMap<RecordDeclaration, List<ParameterizedType>> =
+        ConcurrentHashMap()
+    private val templateToTypeParameters:
+        MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
+        ConcurrentHashMap()
 
     val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
     val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
@@ -288,14 +287,12 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     return types
 }
 
-/** Checks, if this [Type] is either derived from or equals to [superType]. */
+/**
+ * Checks, if this [Type] is either derived from or equals to [superType]. This is forwarded to the
+ * [Language] of the [Type] and can be overridden by the individual languages.
+ */
 fun Type.isDerivedFrom(superType: Type): Boolean {
-    // Retrieve all ancestor types of our type (more concretely of the root type)
-    val root = this.root
-    val superTypes = root.ancestors.map { it.type }
-
-    // Check, if super type (or its root) is in the list
-    return superType.root in superTypes
+    return this.language?.isDerivedFrom(this, superType) ?: false
 }
 
 /**

@@ -200,7 +200,7 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
                     // the TU. It is also a little bit redundant, since ScopeManager.resolveFunction
                     // (which gets called before) already extracts the scope, but this information
                     // gets lost.
-                    val scope = scopeManager.extractScope(call, scopeManager.globalScope)
+                    val (scope, _) = scopeManager.extractScope(call, scopeManager.globalScope)
 
                     // We have two possible start points, a namespace declaration or a translation
                     // unit. Nothing else is allowed (fow now)
@@ -321,6 +321,11 @@ open class CallResolver(ctx: TranslationContext) : SymbolResolverPass(ctx) {
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
+        // We need to resolve the base calls first. This might be done duplicate now
+        if (callee is MemberExpression && callee.base is CallExpression) {
+            handleCallExpression(curClass, callee.base as CallExpression)
+        }
+
         // We need to adjust certain types of the base in case of a super call and we delegate this.
         // If that is successful, we can continue with regular resolving
         if (

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.HasFirstClassFunctions
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -37,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
@@ -68,6 +70,21 @@ class ScopeManager : ScopeProvider {
     /** The currently active scope. */
     var currentScope: Scope? = null
         private set
+
+    /** Represents an alias with the name [to] for the particular name [from]. */
+    data class Alias(var from: Name, var to: Name)
+
+    /**
+     * In some languages, we can define aliases for names. An example is renaming package imports in
+     * Go, e.g., to avoid name conflicts.
+     *
+     * In reality, they can probably be defined at different scopes for other languages, but for now
+     * we only allow it for the current file.
+     *
+     * This can potentially be used to replace [addTypedef] at some point, which still relies on the
+     * existence of a [LanguageFrontend].
+     */
+    private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
 
     /**
      * The language frontend tied to the scope manager. Can be used to implement language specific
@@ -597,28 +614,45 @@ class ScopeManager : ScopeProvider {
      * TODO: We should merge this function with [.resolveFunction]
      */
     @JvmOverloads
-    fun resolveReference(ref: Reference, scope: Scope? = currentScope): ValueDeclaration? {
+    fun resolveReference(ref: Reference, startScope: Scope? = currentScope): ValueDeclaration? {
+        // Unfortunately, we still have an issue about duplicate declarations because header files
+        // are included multiple times, so we need to exclude the C++ frontend (for now).
+        val language = ref.language
+        val (scope, name) =
+            if (
+                language?.name?.localName != "CLanguage" &&
+                    (language?.name?.localName != "CPPLanguage")
+            ) {
+                // For all other languages, we can extract the scope information out of the name and
+                // start our search at the dedicated scope.
+                extractScope(ref, startScope)
+            } else {
+                Pair(scope, ref.name)
+            }
+
+        // Try to resolve value declarations according to our criteria
         return resolve<ValueDeclaration>(scope) {
-                if (
-                    it.name.lastPartsMatch(ref.name)
-                ) { // TODO: This place is likely to make things fail
-                    var helper = ref.resolutionHelper
-                    // If the reference seems to point to a function the entire signature is checked
-                    // for equality
-                    if (helper?.type is FunctionPointerType && it is FunctionDeclaration) {
-                        val fptrType = helper.type as FunctionPointerType
-                        // TODO(oxisto): This is the third place where function pointers are
-                        //   resolved. WHY?
-                        // TODO(oxisto): Support multiple return values
-                        val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
-                        if (
+                if (it.name.lastPartsMatch(name)) {
+                    val helper = ref.resolutionHelper
+                    return@resolve when {
+                        // If the reference seems to point to a function (using a function pointer)
+                        // the entire signature is checked for equality
+                        helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
+                            val fptrType = helper.type as FunctionPointerType
+                            // TODO(oxisto): Support multiple return values
+                            val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
                             returnType == fptrType.returnType &&
                                 it.hasSignature(fptrType.parameters)
-                        ) {
-                            return@resolve true
                         }
-                    } else {
-                        return@resolve it !is FunctionDeclaration
+                        // If our language has first-class functions, we can safely return them as a
+                        // reference
+                        ref.language is HasFirstClassFunctions -> {
+                            true
+                        }
+                        // Otherwise, we are not looking for functions here
+                        else -> {
+                            it !is FunctionDeclaration
+                        }
                     }
                 }
 
@@ -636,23 +670,42 @@ class ScopeManager : ScopeProvider {
     @JvmOverloads
     fun resolveFunction(
         call: CallExpression,
-        scope: Scope? = currentScope
+        startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
-        val s = extractScope(call, scope)
+        val (scope, name) = extractScope(call, startScope)
 
-        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
+        val func =
+            resolve<FunctionDeclaration>(scope) {
+                it.name.lastPartsMatch(name) && it.hasSignature(call.signature)
+            }
+
+        return func
     }
 
-    fun extractScope(node: Node, scope: Scope? = currentScope): Scope? {
+    /**
+     * This function extracts a possible scope out of a [Name], e.g. if the name is fully qualified.
+     * This also resolves possible name aliases (e.g. because of imports). It returns a pair of a
+     * scope (if found) as well as the name, which is possibly adjusted for the aliases.
+     */
+    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+        var name: Name = node.name
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
         if (node.name.parent != null) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = node.name.parent
+            var scopeName = node.name.parent
 
-            // TODO: proper scope selection
+            // We need to check, whether we have an alias for the scope name in this file
+            val list = aliases[node.location?.artifactLocation]
+            val alias = list?.firstOrNull { it.to == scopeName }?.from
+            if (alias != null) {
+                scopeName = alias
+                // Reconstruct the original name with the alias, so we can resolve declarations with
+                // the namespace
+                name = Name(name.localName, alias)
+            }
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
@@ -669,7 +722,7 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
-        return s
+        return Pair(s, name)
     }
 
     /**
@@ -786,6 +839,12 @@ class ScopeManager : ScopeProvider {
     fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
         return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
             .firstOrNull()
+    }
+
+    fun addAlias(file: PhysicalLocation.ArtifactLocation, from: Name, to: Name) {
+        val list = aliases.computeIfAbsent(file) { mutableSetOf() }
+
+        list += Alias(from, to)
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */

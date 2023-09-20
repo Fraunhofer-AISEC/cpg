@@ -200,11 +200,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             // the "normal" case won't work. We handle this case separately here...
             // This is what we write to the declaration
             val iterable = currentNode.iterable as? Expression
-
             val writtenTo =
-                when (currentNode.variable) {
-                    is DeclarationStatement ->
-                        (currentNode.variable as DeclarationStatement).singleDeclaration
+                when (val variable = currentNode.variable) {
+                    is DeclarationStatement -> {
+                        if (variable.isSingleDeclaration()) {
+                            variable.singleDeclaration
+                        } else if (variable.variables.size == 2) {
+                            // If there are two variables, we just blindly assume that the order is
+                            // (key, value), so we return the second one
+                            variable.declarations[1]
+                        } else {
+                            null
+                        }
+                    }
                     else -> currentNode.variable
                 }
 

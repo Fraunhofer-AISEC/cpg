@@ -29,7 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
