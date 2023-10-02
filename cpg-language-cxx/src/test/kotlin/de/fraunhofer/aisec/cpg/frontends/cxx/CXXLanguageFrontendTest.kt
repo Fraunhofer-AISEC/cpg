@@ -658,6 +658,29 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertLocalName("ptr", input)
         assertEquals("*", dereference.operatorCode)
         assertTrue(dereference.isPrefix)
+
+        // int* c;
+        val cDecl = statements[++line] as DeclarationStatement
+        // *c = 7;
+        val cAssignment = statements[++line] as AssignExpression
+
+        val cDeref = cAssignment.lhs<UnaryOperator>()
+        assertNotNull(cDeref)
+        input = cDeref.input
+        assertLocalName("c", input)
+        assertEquals("*", dereference.operatorCode)
+        assertTrue(dereference.isPrefix)
+
+        val literal7 = cAssignment.rhs<Literal<Int>>()
+        assertNotNull(literal7)
+        assertEquals(setOf<Node>(cDeref), literal7.nextDFG)
+        assertEquals(setOf<Node>(cDeref.input), cDeref.nextDFG)
+
+        val cNextUsageStmt = statements[++line] as AssignExpression
+        val cNextUsage = cNextUsageStmt.rhs<UnaryOperator>()
+        assertNotNull(cNextUsage)
+        assertEquals(setOf<Node>(cNextUsage.input), cDeref.input.nextDFG)
+        assertEquals(setOf<Node>(cNextUsage), cNextUsage.input.nextDFG)
     }
 
     @Test
