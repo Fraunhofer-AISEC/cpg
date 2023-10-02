@@ -234,6 +234,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // there was probably some other kind of DFG edge into the reference
             doubleState.declarationsState[currentNode.refersTo] =
                 PowersetLattice(setOf(currentNode))
+        } else if ((currentNode as? Reference)?.access == AccessValues.WRITE) {
+            // We write to the variable => Update the declarationState accordingly because
+            // there was probably some other kind of DFG edge into the reference
+            doubleState.declarationsState[currentNode.refersTo] =
+                PowersetLattice(setOf(currentNode))
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
             // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
