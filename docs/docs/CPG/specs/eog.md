@@ -3,7 +3,7 @@
 The Evaluation Order Graph (EOG) is built as edges between AST nodes after the initial translation of the code to the CPG.
 Its purpose is to follow the order in which code is executed, similar to a CFG, and additionally differentiate on a finer level of granularity in which order expressions and subexpressions are evaluated.
 Every node points to a set of previously evaluated nodes (`prevEOG`) and nodes that are evaluated after (`nextEOG`).
-The EOG edges are intraprocedural and thus differentiate from INVOKES edges.
+The EOG edges are intra-procedural and thus differentiate from INVOKES edges.
 In the following, we summarize in which order the root node representing a language construct and its descendants in the AST tree are connected.
 
 An EOG always starts at root node representing a method/function or record that holds executable code and ends in the node representing the corresponding code or multiple return statements.
@@ -48,7 +48,7 @@ Note that, in the following graphics we will often draw an EOG edge to an abstra
 The EOG path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST leaf nodes.
 
 ## FunctionDeclaration
-A function declaration is the start of an intraprocedural EOG and contains its end. Therefore there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
+A function declaration is the start of an intra-procedural EOG and contains its end. Therefore there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
 
 Interesting fields:
 
@@ -112,7 +112,7 @@ flowchart LR
 ```
 
 ## VariableDeclaration
-Represents the declaration of a local variable.
+Represents the declaration of a local or global variable.
 
 Interesting fields:
 
@@ -122,12 +122,13 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child
-  parent(["VariableDeclaration"]) --EOG--> next:::outer
+  prev:::outer --EOG--> parent(["VariableDeclaration"])
+  child --EOG--> next:::outer
   parent -.-> child["initializer"]
-  child --EOG--> parent
-
+  parent --EOG--> child
 ```
+
+In case the variable is a global variable (e.g., a top-level variable in a `RecordDeclaration`), it does not have a `prevEOG` and the initializer does not have a `nextEOG`.
 
 ## CallExpression
 Represents any type of call in a program.
