@@ -511,10 +511,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             createEOG(declaration)
         }
 
-        // Handle left hand side(s) first
+        // First the left hand side(s)
         node.lhs.forEach { createEOG(it) }
 
-        // Then the right side(s). Avoid creating the EOG twice if it's already part of the
+        // Then, handle the right side(s). Avoid creating the EOG twice if it's already part of the
         // initializer of a declaration
         node.rhs.forEach {
             if (it !in node.declarations.map { decl -> decl.initializer }) {

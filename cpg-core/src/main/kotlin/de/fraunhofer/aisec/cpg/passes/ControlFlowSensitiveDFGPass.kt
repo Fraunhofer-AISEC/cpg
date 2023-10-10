@@ -223,6 +223,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 state.push(currentNode, it)
             }
         } else if ((currentNode as? Reference)?.access == AccessValues.READWRITE) {
+            // We can only find a change if there's a state for the variable
+            doubleState.declarationsState[currentNode.refersTo]?.let {
+                // We only read the variable => Get previous write which have been collected in
+                // the other steps
+                state.push(currentNode, it)
+            }
             // We read and write to the variable => Update the declarationState accordingly because
             // there was probably some other kind of DFG edge into the reference
             doubleState.declarationsState[currentNode.refersTo] =
