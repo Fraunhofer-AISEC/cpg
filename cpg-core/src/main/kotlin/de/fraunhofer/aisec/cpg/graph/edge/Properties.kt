@@ -49,7 +49,8 @@ enum class Properties {
     INSTANTIATION,
     UNREACHABLE,
     ACCESS,
-    DEPENDENCE
+    DEPENDENCE,
+    DYNAMIC_INVOKE
 }
 
 /** The types of dependencies that might be represented in the CPG */

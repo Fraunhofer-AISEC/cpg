@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -138,8 +138,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * can either be a reference to a global or local one, depending on the prefix.
      *
      * This function will also take care of actually resolving the reference. This is a) faster and
-     * b) needed because the [VariableUsageResolver] is not familiar with the prefix system,
-     * determining the scope of the variable.
+     * b) needed because the [SymbolResolver] is not familiar with the prefix system, determining
+     * the scope of the variable.
      */
     private fun handleReference(valueRef: LLVMValueRef): Expression {
         val namePair = frontend.getNameOf(valueRef)

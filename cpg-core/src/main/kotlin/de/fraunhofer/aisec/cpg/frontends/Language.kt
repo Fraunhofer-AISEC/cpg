@@ -201,7 +201,16 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         return true
     }
 
-    open fun isDerivedFrom(type: Type, superType: Type): Boolean {
+    /**
+     * This function checks, if [type] is derived from [superType]. Optionally, the nodes that hold
+     * the respective type can be supplied as [hint] and [superHint].
+     */
+    open fun isDerivedFrom(
+        type: Type,
+        superType: Type,
+        hint: HasType?,
+        superHint: HasType?
+    ): Boolean {
         // Retrieve all ancestor types of our type (more concretely of the root type)
         val root = type.root
         val superTypes = root.ancestors.map { it.type }

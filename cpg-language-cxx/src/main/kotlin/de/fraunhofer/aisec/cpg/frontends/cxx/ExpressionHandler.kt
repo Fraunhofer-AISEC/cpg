@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
 import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
@@ -217,10 +217,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // expression since the construct expression will do the actual template instantiation
             if (newExpression.templateParameters?.isNotEmpty() == true) {
                 newExpression.templateParameters?.let {
-                    CallResolver.addImplicitTemplateParametersToCall(
-                        it,
-                        initializer as ConstructExpression
-                    )
+                    addImplicitTemplateParametersToCall(it, initializer as ConstructExpression)
                 }
             }
 

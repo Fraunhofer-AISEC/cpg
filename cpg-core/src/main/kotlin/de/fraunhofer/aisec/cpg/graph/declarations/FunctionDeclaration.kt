@@ -32,16 +32,16 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.*
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
+open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, ResolutionStartHolder {
     /** The function body. Usually a [Block]. */
     @AST var body: Statement? = null
 
@@ -111,13 +111,20 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             targetFunctionDeclaration.signatureTypes == signatureTypes
     }
 
-    fun hasSignature(targetSignature: List<Type>): Boolean {
-        val signature =
-            parameters
-                .stream()
-                .sorted(Comparator.comparingInt(ParameterDeclaration::argumentIndex))
-                .collect(Collectors.toList())
+    fun hasSignature(call: CallExpression): Boolean {
+        return hasSignature(call.signature, call.arguments)
+    }
+
+    // TODO: Documentation required. It's not completely clear what this method is supposed to do.
+    fun hasSignature(
+        targetSignature: List<Type>,
+        targetExpressions: List<Expression>? = null
+    ): Boolean {
+        val signature = parameters.sortedBy { it.argumentIndex }
+        // TODO: Why do we have to sort it here while we don't sort the list in signatureTypes?
         return if (signature.all { !it.isVariadic } && targetSignature.size < signature.size) {
+            // TODO: So we don't consider arguments with default values (among others) but then, the
+            // SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
             false
         } else {
             // signature is a collection of positional arguments, so the order must be preserved
@@ -125,13 +132,14 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
                 val declared = signature[i]
                 if (declared.isVariadic) {
                     // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no matter what comes now (potential FIXME: in Java, we could have
-                    // overloading with different vararg types, in C++ we can't, as vararg types are
-                    // not defined here anyways)
+                    // fulfilled no matter what comes now
+                    // FIXME: in Java, we could have overloading with different vararg types, in
+                    //  C++ we can't, as vararg types are not defined here anyways)
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!provided.isDerivedFrom(declared.type)) {
+                val expression = targetExpressions?.get(i)
+                if (!provided.isDerivedFrom(declared.type, expression, this)) {
                     return false
                 }
             }
@@ -189,18 +197,15 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             return parameters.map { it.default }
         }
 
-    val defaultParameterSignature: List<Type>
-        get() {
-            val signature: MutableList<Type> = ArrayList()
-            for (paramVariableDeclaration in parameters) {
-                if (paramVariableDeclaration.default != null) {
-                    signature.add(paramVariableDeclaration.type)
+    val defaultParameterSignature: List<Type> // TODO: What's this property?
+        get() =
+            parameters.map {
+                if (it.default != null) {
+                    it.type
                 } else {
-                    signature.add(unknownType())
+                    unknownType()
                 }
             }
-            return signature
-        }
 
     val signatureTypes: List<Type>
         get() = parameters.map { it.type }
@@ -221,6 +226,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             .append("parameters", parameters)
             .toString()
     }
+
+    override val resolutionStartNodes: List<Node>
+        get() = listOfNotNull(this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

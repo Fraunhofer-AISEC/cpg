@@ -171,7 +171,8 @@ internal class Project {
             modulePath: String,
             goos: String? = null,
             goarch: String? = null,
-            tags: List<String> = listOf()
+            goVersion: Int? = null,
+            tags: MutableList<String> = mutableListOf()
         ): Project {
             val project = Project()
             val symbols = mutableMapOf<String, String>()
@@ -217,7 +218,15 @@ internal class Project {
 
             goos?.let { symbols["GOOS"] = it }
             goarch?.let { symbols["GOARCH"] = it }
-            tags.let { symbols["-tags"] = tags.joinToString { " " } }
+
+            if (goVersion != null) {
+                // Populate tags with go-version
+                for (i in 1..goVersion) {
+                    tags += "go1.$i"
+                }
+            }
+
+            tags.let { symbols["-tags"] = tags.joinToString(" ") }
 
             // Pre-filter any files we are not building anyway based on our symbols
             files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
@@ -226,7 +235,7 @@ internal class Project {
             project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
             project.symbols = symbols
             // TODO(oxisto): support vendor includes
-            project.includePaths = listOf(stdLib)
+            project.includePaths = listOf(stdLib, topLevel.resolve("vendor"))
 
             return project
         }

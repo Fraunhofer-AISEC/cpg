@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -64,6 +63,8 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
 
         // We should only propagate a function type, coming from our declared function
         if (newType is FunctionType) {
+            // TODO(oxisto): We should discuss at some point, whether we should actually return
+            //  a FunctionType instead of a FunctionPointerType
             // Propagate a pointer reference to the function
             this.type = newType.pointer()
         }

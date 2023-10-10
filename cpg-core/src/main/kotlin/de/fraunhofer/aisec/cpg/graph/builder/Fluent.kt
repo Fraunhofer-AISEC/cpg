@@ -438,12 +438,12 @@ context(Holder<out Statement>)
 
 fun LanguageFrontend<*, *>.memberCall(
     localName: CharSequence,
-    member: Expression,
+    base: Expression,
     isStatic: Boolean = false,
     init: (MemberCallExpression.() -> Unit)? = null
 ): MemberCallExpression {
     // Try to parse the name
-    val node = newMemberCallExpression(newMemberExpression(localName, member), isStatic)
+    val node = newMemberCallExpression(newMemberExpression(localName, base), isStatic)
     if (init != null) {
         init(node)
     }
@@ -684,9 +684,9 @@ fun LanguageFrontend<*, *>.whileCondition(init: WhileStatement.() -> Expression)
 }
 
 /**
- * <<<<<<< HEAD Configures the [DoStatement.condition] in the Fluent Node DSL of the nearest
- * enclosing [DoStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [DoStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [DoStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
  */
 context(DoStatement)
 
@@ -695,13 +695,9 @@ fun LanguageFrontend<*, *>.whileCondition(init: DoStatement.() -> Expression): E
 }
 
 /**
- * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
- * [IfStatement.thenStatement] of the nearest enclosing [IfStatement]. The [init] block can be used
- * to create further sub-nodes as well as configuring the created node itself.
- * =======
  * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfStatement.thenStatement] of
  * the nearest enclosing [IfStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself. >>>>>>> main
+ * well as configuring the created node itself.
  */
 context(IfStatement)
 
@@ -748,9 +744,9 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Creates a new [CompoundStatement] in the Fluent Node DSL and sets it to the
- * [DoStatement.statement] of the nearest enclosing [DoStatement]. The [init] block can be used to
- * create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [DoStatement.statement] of the
+ * nearest enclosing [WhileStatement]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(DoStatement)
 
@@ -1438,4 +1434,15 @@ private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
     if (needsScope) {
         scopeManager.leaveScope(node)
     }
+}
+
+context(MethodDeclaration)
+
+fun LanguageFrontend<*, *>.receiver(name: String, type: Type): VariableDeclaration {
+    val node = newVariableDeclaration(name, type)
+
+    this@MethodDeclaration.receiver = node
+    scopeManager.addDeclaration(node)
+
+    return node
 }

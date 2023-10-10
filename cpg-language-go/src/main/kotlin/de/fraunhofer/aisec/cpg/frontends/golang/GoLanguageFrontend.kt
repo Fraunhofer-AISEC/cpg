@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -456,6 +456,26 @@ val Type?.isOverlay: Boolean
         return this is ObjectType && this.recordDeclaration?.kind == "overlay"
     }
 
+val Type.isInterface: Boolean
+    get() {
+        return this is ObjectType && this.recordDeclaration?.kind == "interface"
+    }
+
+val Type.isMap: Boolean
+    get() {
+        return this is ObjectType && this.name.localName == "map"
+    }
+
+val Type.isChannel: Boolean
+    get() {
+        return this is ObjectType && this.name.localName == "chan"
+    }
+
+val HasType?.isNil: Boolean
+    get() {
+        return this is Literal<*> && this.name.localName == "nil"
+    }
+
 /**
  * This function produces a Go-style function type name such as `func(int, string) string` or
  * `func(int) (error, string)`
@@ -483,3 +503,10 @@ fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
 
     return pn.joinToString(", ", prefix = "func(", postfix = ")$rs")
 }
+
+val RecordDeclaration.embeddedStructs: List<RecordDeclaration>
+    get() {
+        return this.fields
+            .filter { "embedded" in it.modifiers }
+            .mapNotNull { it.type.root.recordDeclaration }
+    }

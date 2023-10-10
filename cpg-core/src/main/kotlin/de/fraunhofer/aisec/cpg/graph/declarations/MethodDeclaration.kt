@@ -27,8 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.passes.CallResolver
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 
 /**
  * A method declaration is a [FunctionDeclaration] that is part of to a specific [RecordDeclaration]
@@ -53,8 +52,8 @@ open class MethodDeclaration : FunctionDeclaration() {
      * [receiver] property of the method, since the scope manager cannot do this. If the name of the
      * receiver, e.g., `this`, is used anywhere in the method body, a [Reference] must be created by
      * the language frontend, and its [Reference.refersTo] property must point to this [receiver].
-     * The latter is done automatically by the [VariableUsageResolver], which treats it like any
-     * other regular variable.
+     * The latter is done automatically by the [SymbolResolver], which treats it like any other
+     * regular variable.
      *
      * Some languages (for example Python) denote the first argument in a method declaration as the
      * receiver (e.g., in `def foo(self, arg1)`, `self` is the receiver). In this case, extra care
@@ -68,7 +67,7 @@ open class MethodDeclaration : FunctionDeclaration() {
      * superclass of the current class. In this case, a [Reference] will also be created (with the
      * name `super`) and it will also refer to this receiver, even though the receiver's name is
      * `this`. This is one of the very few exceptions where the reference and its declaration do not
-     * share the same name. The [CallResolver] will recognize this and treat the scoping aspect of
+     * share the same name. The [SymbolResolver] will recognize this and treat the scoping aspect of
      * the super-call accordingly.
      */
     @AST var receiver: VariableDeclaration? = null

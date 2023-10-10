@@ -233,7 +233,7 @@ def handle_expression_impl(self, expr):
             # try to see, whether this refers to a known class and thus is a
             # constructor.
             record = self.scopemanager.getRecordForName(
-                self.scopemanager.getCurrentScope(), refname)
+                refname, self.scopemanager.getCurrentScope())
             if record is not None:
                 self.log_with_loc("Received a record: %s" % record)
                 call = ExpressionBuilderKt.newConstructExpression(

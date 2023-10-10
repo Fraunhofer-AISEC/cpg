@@ -444,8 +444,7 @@ private constructor(
          * This will register
          * - [TypeHierarchyResolver]
          * - [ImportResolver]
-         * - [VariableUsageResolver]
-         * - [CallResolver]
+         * - [SymbolResolver]
          * - [DFGPass]
          * - [EvaluationOrderGraphPass]
          * - [TypeResolver]
@@ -457,9 +456,9 @@ private constructor(
         fun defaultPasses(): Builder {
             registerPass<TypeHierarchyResolver>()
             registerPass<ImportResolver>()
-            registerPass<VariableUsageResolver>()
-            registerPass<CallResolver>() // creates CG
+            registerPass<SymbolResolver>()
             registerPass<DFGPass>()
+            registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()

@@ -341,7 +341,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         // delegate further operations to the scope manager. We also save the old scope so we can
         // restore it.
         return inferInScopeOf(start) {
-            Companion.log.debug(
+            log.debug(
                 "Inferring a new namespace declaration {} {}",
                 name,
                 if (path != null) {

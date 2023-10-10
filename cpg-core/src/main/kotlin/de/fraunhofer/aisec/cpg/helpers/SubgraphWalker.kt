@@ -39,8 +39,6 @@ import java.lang.reflect.Field
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Consumer
-import java.util.function.Predicate
-import java.util.stream.Collectors
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
@@ -258,6 +256,8 @@ object SubgraphWalker {
         var backlog: Deque<Node>? = null
             private set
 
+        var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
          * place where usual graph manipulation will happen. The current node is the single argument
@@ -316,10 +316,8 @@ object SubgraphWalker {
                         Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
                     )
                     val unseenChildren =
-                        getAstChildren(current)
-                            .stream()
-                            .filter(Predicate.not { o: Node -> seen.contains(o) })
-                            .collect(Collectors.toList())
+                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+
                     seen.addAll(unseenChildren)
                     unseenChildren.asReversed().forEach { child: Node ->
                         (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
@@ -359,6 +357,7 @@ object SubgraphWalker {
      * resolving declarations or other scope-related tasks.
      */
     class ScopedWalker {
+        lateinit var strategy: (Node) -> Iterator<Node>
         private var walker: IterativeGraphWalker? = null
         private val scopeManager: ScopeManager
 
@@ -366,8 +365,12 @@ object SubgraphWalker {
             scopeManager = lang.scopeManager
         }
 
-        constructor(scopeManager: ScopeManager) {
+        constructor(
+            scopeManager: ScopeManager,
+            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+        ) {
             this.scopeManager = scopeManager
+            this.strategy = strategy
         }
 
         /**
@@ -392,15 +395,27 @@ object SubgraphWalker {
             )
         }
 
+        fun registerHandler(handler: Consumer<Node?>) {
+            handlers.add(
+                TriConsumer { _: RecordDeclaration?, _: Node?, currNode: Node? ->
+                    handler.accept(currNode)
+                }
+            )
+        }
+
         /**
          * Wraps [IterativeGraphWalker] to handle declaration scopes.
          *
          * @param root The node where AST descent is started
          */
         fun iterate(root: Node) {
-            walker = IterativeGraphWalker()
-            handlers.forEach { h -> walker?.registerOnNodeVisit { n -> handleNode(n, h) } }
-            walker?.iterate(root)
+            val walker = IterativeGraphWalker()
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n -> handleNode(n, h) } }
+
+            this.walker = walker
+
+            walker.iterate(root)
         }
 
         private fun handleNode(

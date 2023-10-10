@@ -12,6 +12,8 @@ void printLog(string logId, string message){
     cout << logId << ": " << message << endl;
 }
 
+class error;
+
 class ScopeVariables{
     public:
         string varName = "instance_field";
@@ -44,8 +46,8 @@ class ScopeVariables{
             }
 
             try {
-                throw string("exception_string");
-            } catch (const string& varName) {
+                throw new error();
+            } catch (const error& varName) {
                 printLog("func2_catch_varName", varName);
             };
             ScopeVariables scopeVariables;

@@ -43,3 +43,7 @@ var rr = []int{
 var mapr = map[int][]byte{
 	submodule.Zero: {1, 2, 3},
 }
+
+var structr = []MyStruct{
+	0: {Field: 10},
+}

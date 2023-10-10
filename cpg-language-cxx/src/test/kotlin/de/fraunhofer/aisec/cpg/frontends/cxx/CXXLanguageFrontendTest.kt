@@ -1531,13 +1531,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
                 it.registerPass<TypeHierarchyResolver>()
                 it.registerPass<ImportResolver>()
-                it.registerPass<VariableUsageResolver>()
-                it.registerPass<CallResolver>() // creates CG
+                it.registerPass<CXXExtraPass>()
+                it.registerPass<SymbolResolver>()
                 it.registerPass<DFGPass>()
                 it.registerPass<EvaluationOrderGraphPass>() // creates EOG
                 it.registerPass<TypeResolver>()
                 it.registerPass<ControlFlowSensitiveDFGPass>()
-                it.registerPass<FunctionPointerCallResolver>()
+                it.registerPass<DynamicInvokeResolver>()
                 it.registerPass<FilenameMapper>()
             }
 
@@ -1577,12 +1577,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
                 it.registerPass<TypeHierarchyResolver>()
                 it.registerPass<ImportResolver>()
-                it.registerPass<VariableUsageResolver>()
-                it.registerPass<CallResolver>() // creates CG
+                it.registerPass<CXXExtraPass>()
+                it.registerPass<SymbolResolver>()
                 it.registerPass<DFGPass>()
                 it.registerPass<EvaluationOrderGraphPass>() // creates EOG
                 it.registerPass<TypeResolver>()
-                it.registerPass<FunctionPointerCallResolver>()
+                it.registerPass<DynamicInvokeResolver>()
                 it.registerPass<ControlFlowSensitiveDFGPass>()
                 it.registerPass<FilenameMapper>()
             }
