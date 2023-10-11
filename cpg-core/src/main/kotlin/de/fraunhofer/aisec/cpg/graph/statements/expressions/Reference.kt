@@ -84,6 +84,13 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     var isStaticAccess = false
 
     /**
+     * Is this reference used in the [AssignExpression.lhs] or [UnaryOperator.input] or
+     * [ForEachStatement.variable] which has a dedicated handling in the
+     * [ControlFlowSensitiveDFGPass]?
+     */
+    var dfgHandlerHint = false
+
+    /**
      * This is a MAJOR workaround needed to resolve function pointers, until we properly re-design
      * the call resolver. When this [Reference] contains a function pointer reference that is
      * assigned to a variable (or to another reference), we need to set
