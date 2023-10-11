@@ -229,7 +229,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // the other steps
                 state.push(currentNode, it)
             }
-        } else if ((currentNode as? Reference)?.access == AccessValues.READWRITE) {
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.READWRITE &&
+                currentNode.nextEOG.none { isCompoundAssignment(it) || isIncOrDec(it) }
+        ) {
+            /* This branch collects all READWRITE accesses which are not handled separately as compoundAssignment or inc/dec unary operation. This could for example be a pointer passed to an unknown function which is modified in this function but other things are also possible. */
             // We can only find a change if there's a state for the variable
             doubleState.declarationsState[currentNode.refersTo]?.let {
                 // We only read the variable => Get previous write which have been collected in
@@ -240,7 +244,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // there was probably some other kind of DFG edge into the reference
             doubleState.declarationsState[currentNode.refersTo] =
                 PowersetLattice(setOf(currentNode))
-        } else if ((currentNode as? Reference)?.access == AccessValues.WRITE) {
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.WRITE &&
+                currentNode.nextEOG.none { it is ForEachStatement }
+        ) {
+            /* Also here, we want/have to filter out variables in ForEachStatements because this must be handled separately.  */
             // We write to the variable => Update the declarationState accordingly because
             // there was probably some other kind of DFG edge into the reference
             doubleState.declarationsState[currentNode.refersTo] =
@@ -263,7 +271,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             null
                         }
                     }
-                    else -> currentNode.variable
+                    else -> variable
                 }
 
             // We wrote something to this variable declaration
