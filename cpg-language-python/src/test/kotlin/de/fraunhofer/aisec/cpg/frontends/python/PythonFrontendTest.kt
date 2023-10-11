@@ -1047,35 +1047,35 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(barCall)
 
         // no dataflow from var declaration to loop variable because it's a write access
-        assert((firstLoop.variable?.prevDFG?.contains(varDefinedBeforeLoop) == false))
+        assertFalse(
+            varDefinedBeforeLoop in (firstLoop.variable?.prevDFG ?: setOf(varDefinedBeforeLoop))
+        )
 
         // dataflow from range call to loop variable
         val firstLoopIterable = firstLoop.iterable as? CallExpression
         assertNotNull(firstLoopIterable)
-        assert((firstLoop.variable?.prevDFG?.contains((firstLoopIterable)) == true))
+        assertContains((firstLoop.variable?.prevDFG ?: setOf()), firstLoopIterable)
 
         // dataflow from var declaration to loop iterable call
-        assert(
-            firstLoopIterable.arguments.firstOrNull()?.prevDFG?.contains(varDefinedBeforeLoop) ==
-                true
+        assertContains(
+            firstLoopIterable.arguments.firstOrNull()?.prevDFG ?: setOf(),
+            varDefinedBeforeLoop
         )
 
         // dataflow from first loop to foo call
         val loopVar = firstLoop.variable as? Reference
         assertNotNull(loopVar)
-        assert(fooCall.arguments.first().prevDFG.contains(loopVar))
+        assertContains(fooCall.arguments.first().prevDFG, loopVar)
 
         // dataflow from var declaration to foo call (in case for loop is not executed)
-        assert(fooCall.arguments.first().prevDFG.contains(varDefinedBeforeLoop))
+        assertContains(fooCall.arguments.first().prevDFG, varDefinedBeforeLoop)
 
         // dataflow from range call to loop variable
         val secondLoopIterable = secondLoop.iterable as? CallExpression
         assertNotNull(secondLoopIterable)
-        assert(
-            ((secondLoop.variable as DeclarationStatement)
-                .singleDeclaration
-                ?.prevDFG
-                ?.contains((secondLoopIterable)) == true)
+        assertContains(
+            (secondLoop.variable as DeclarationStatement).singleDeclaration?.prevDFG ?: setOf(),
+            secondLoopIterable
         )
 
         // dataflow from second loop var to bar call
