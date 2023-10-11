@@ -179,11 +179,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
                 // This was the last write to the respective declaration.
-                (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
-                    ?.let {
-                        doubleState.declarationsState[it] =
-                            PowersetLattice(setOf(assignment.target as Node))
+                val declPair: Pair<Declaration, Node>? =
+                    if (assignment.target is Declaration)
+                        Pair(assignment.target as Declaration, assignment.target)
+                    else {
+                        val unwrappedTarget = unwrapReference(assignment.target as? Node)
+                        if (unwrappedTarget?.refersTo == null) {
+                            null
+                        } else {
+                            Pair(unwrappedTarget.refersTo!!, unwrappedTarget)
+                        }
                     }
+                declPair?.let { (decl, target) ->
+                    doubleState.declarationsState[decl] = PowersetLattice(setOf(target))
+                }
             }
         } else if (isIncOrDec(currentNode)) {
             // Increment or decrement => Add the prevWrite of the input to the input. After the
@@ -202,7 +211,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             // The write operation goes to the variable in the lhs
             val lhs = currentNode.lhs.singleOrNull()
-            writtenDeclaration = (lhs as? Reference)?.refersTo
+            writtenDeclaration = unwrapReference(lhs)?.refersTo
 
             if (writtenDeclaration != null && lhs != null) {
                 // Data flows from the last writes to the lhs variable to this node
@@ -224,7 +233,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READWRITE &&
-                currentNode.nextEOG.none { isCompoundAssignment(it) || isIncOrDec(it) }
+                !currentNode.dfgHandlerHint
         ) {
             /* This branch collects all READWRITE accesses which are not handled separately as compoundAssignment or inc/dec unary operation. This could for example be a pointer passed to an unknown function which is modified in this function but other things are also possible. */
             // We can only find a change if there's a state for the variable
@@ -238,8 +247,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             doubleState.declarationsState[currentNode.refersTo] =
                 PowersetLattice(setOf(currentNode))
         } else if (
-            (currentNode as? Reference)?.access == AccessValues.WRITE &&
-                currentNode.nextEOG.none { it is ForEachStatement }
+            (currentNode as? Reference)?.access == AccessValues.WRITE && !currentNode.dfgHandlerHint
         ) {
             /* Also here, we want/have to filter out variables in ForEachStatements because this must be handled separately.  */
             // We write to the variable => Update the declarationState accordingly because
@@ -355,6 +363,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 lastStatement !in reachableReturnStatements
         )
             lastStatement.removeNextDFG(node)
+    }
+
+    private fun unwrapReference(node: Node?): Reference? {
+        return if (node is Reference) node
+        else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
+            unwrapReference(node.input)
+        else null
     }
 
     /**

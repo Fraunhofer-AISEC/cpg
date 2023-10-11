@@ -60,8 +60,10 @@ class AssignExpression :
         set(value) {
             field = value
             fun unwrapReference(node: Node): Reference? {
-                return if (node is Reference) node
-                else if (
+                return if (node is Reference) {
+                    node.dfgHandlerHint = true
+                    node
+                } else if (
                     node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&")
                 )
                     unwrapReference(node.input)
