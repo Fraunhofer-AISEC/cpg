@@ -52,7 +52,8 @@ enum class Properties {
     DEPENDENCE,
     DYNAMIC_INVOKE,
     SENSITIVITY,
-    CALLING_CONTEXT
+    CALLING_CONTEXT_IN,
+    CALLING_CONTEXT_OUT
 }
 
 /** The types of dependencies that might be represented in the CPG */
