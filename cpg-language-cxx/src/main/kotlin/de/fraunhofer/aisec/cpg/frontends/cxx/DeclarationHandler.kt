@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
@@ -77,11 +77,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++ (using
      * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
-     * [UsingDirective]. However, currently, no actual adjustment of available names / scopes is
+     * [UsingDeclaration]. However, currently, no actual adjustment of available names / scopes is
      * done yet.
      */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return newUsingDirective(using.rawSignature, using.qualifiedName.toString())
+        return newUsingDeclaration(using.rawSignature, using.qualifiedName.toString())
     }
 
     /**
@@ -195,7 +195,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // Let the statement handler take care of the function body. The outcome should (always)
             // be a compound statement, holding all other statements.
             val bodyStatement = frontend.statementHandler.handle(ctx.body)
-            if (bodyStatement is CompoundStatement) {
+            if (bodyStatement is Block) {
                 val statements = bodyStatement.statementEdges
 
                 // get the last statement
@@ -273,7 +273,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (ctx.declaration is CPPASTFunctionDefinition) {
                 newFunctionTemplateDeclaration(name, frontend.codeOf(ctx))
             } else {
-                newClassTemplateDeclaration(name, frontend.codeOf(ctx))
+                newRecordTemplateDeclaration(name, frontend.codeOf(ctx))
             }
 
         templateDeclaration.location = frontend.locationOf(ctx)
@@ -310,27 +310,27 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         for (templateParameter in ctx.templateParameters) {
             if (templateParameter is CPPASTSimpleTypeTemplateParameter) {
                 // Handle Type Parameters
-                val typeParamDeclaration =
-                    frontend.declaratorHandler.handle(templateParameter) as TypeParamDeclaration
+                val typeParamDecl =
+                    frontend.declaratorHandler.handle(templateParameter) as TypeParameterDeclaration
                 val parameterizedType =
                     frontend.typeManager.createOrGetTypeParameter(
                         templateDeclaration,
                         templateParameter.name.toString(),
                         language
                     )
-                typeParamDeclaration.type = parameterizedType
+                typeParamDecl.type = parameterizedType
                 if (templateParameter.defaultType != null) {
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
-                    typeParamDeclaration.default = defaultType
+                    typeParamDecl.default = defaultType
                 }
-                templateDeclaration.addParameter(typeParamDeclaration)
+                templateDeclaration.addParameter(typeParamDecl)
             } else if (templateParameter is CPPASTParameterDeclaration) {
                 // Handle Value Parameters
                 val nonTypeTemplateParamDeclaration =
                     frontend.parameterDeclarationHandler.handle(
                         templateParameter as IASTParameterDeclaration
                     )
-                if (nonTypeTemplateParamDeclaration is ParamVariableDeclaration) {
+                if (nonTypeTemplateParamDeclaration is ParameterDeclaration) {
                     if (templateParameter.declarator.initializer != null) {
                         val defaultExpression =
                             frontend.initializerHandler.handle(
@@ -502,7 +502,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             // the type of this declaration). The typical (and only) scenario we
                             // support here is the assignment of a `&ref` as initializer.
                             initializer is UnaryOperator && type is FunctionPointerType -> {
-                                val ref = initializer.input as? DeclaredReferenceExpression
+                                val ref = initializer.input as? Reference
                                 ref?.resolutionHelper = declaration
                             }
                         }

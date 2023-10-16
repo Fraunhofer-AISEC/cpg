@@ -25,16 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import java.io.File
+import de.fraunhofer.aisec.cpg.testcases.Query
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -43,15 +39,7 @@ import org.junit.jupiter.api.Test
 class QueryTest {
     @Test
     fun testMemcpyTooLargeQuery2() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>(
@@ -75,15 +63,7 @@ class QueryTest {
 
     @Test
     fun testMemcpyTooLargeQuery() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -102,15 +82,7 @@ class QueryTest {
 
     @Test
     fun testMemcpyTooLargeQueryImplies() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(
@@ -125,21 +97,12 @@ class QueryTest {
 
     @Test
     fun testUseAfterFree() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
                 !executionPath(outer) {
-                        (it as? DeclaredReferenceExpression)?.refersTo ==
-                            (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                        (it as? Reference)?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
             }
@@ -152,8 +115,8 @@ class QueryTest {
                 { outer ->
                     not(
                         executionPath(outer) {
-                            (it as? DeclaredReferenceExpression)?.refersTo ==
-                                (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                            (it as? Reference)?.refersTo ==
+                                (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
                 }
@@ -164,24 +127,14 @@ class QueryTest {
 
     @Test
     fun testDoubleFree() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
                 !executionPath(outer) {
                         (it as? CallExpression)?.name?.localName == "free" &&
-                            ((it as? CallExpression)?.arguments?.getOrNull(0)
-                                    as? DeclaredReferenceExpression)
-                                ?.refersTo ==
-                                (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                            ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
+                                ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
             }
@@ -195,10 +148,8 @@ class QueryTest {
                     not(
                         executionPath(outer) {
                             (it as? CallExpression)?.name?.localName == "free" &&
-                                ((it as? CallExpression)?.arguments?.getOrNull(0)
-                                        as? DeclaredReferenceExpression)
-                                    ?.refersTo ==
-                                    (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                                ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
+                                    ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
                 }
@@ -210,15 +161,7 @@ class QueryTest {
 
     @Test
     fun testParameterGreaterThanOrEqualConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -245,15 +188,7 @@ class QueryTest {
 
     @Test
     fun testParameterGreaterThanConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -280,15 +215,7 @@ class QueryTest {
 
     @Test
     fun testParameterLessThanOrEqualConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -315,15 +242,7 @@ class QueryTest {
 
     @Test
     fun testParameterEqualsConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -350,15 +269,7 @@ class QueryTest {
 
     @Test
     fun testParameterLessThanConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -385,15 +296,7 @@ class QueryTest {
 
     @Test
     fun testParameterNotEqualsConst() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -420,15 +323,7 @@ class QueryTest {
 
     @Test
     fun testParameterIn() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
@@ -455,21 +350,11 @@ class QueryTest {
 
     @Test
     fun testAssign() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/assign.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getAssign()
 
         val queryTreeResult =
             result.all<AssignmentHolder>(
-                mustSatisfy = {
-                    it.assignments.all { (it.value.invoke() as QueryTree<Number>) < 5 }
-                }
+                mustSatisfy = { it.assignments.all { (it.value() as QueryTree<Number>) < 5 } }
             )
         assertTrue(queryTreeResult.first)
 
@@ -483,18 +368,10 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQuery() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArray()
 
         val queryTreeResult =
-            result.all<ArraySubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) < min(it.arraySize) &&
                         min(it.subscriptExpression) >= 0
@@ -503,7 +380,7 @@ class QueryTest {
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<ArraySubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt min(it.arraySize)) and
                         (min(it.subscriptExpression) ge 0)
@@ -515,18 +392,10 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQueryExists() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArray()
 
         val queryTreeResult =
-            result.exists<ArraySubscriptionExpression>(
+            result.exists<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) >= min(it.arraySize) ||
                         min(it.subscriptExpression) < 0
@@ -535,7 +404,7 @@ class QueryTest {
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.existsExtended<ArraySubscriptionExpression>(
+            result.existsExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (it.subscriptExpression.max ge it.arraySize.min) or
                         (it.subscriptExpression.min lt 0)
@@ -547,19 +416,10 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQuery2() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array2.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArray2()
 
         val queryTreeResult =
-            result.all<ArraySubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) < min(it.arraySize) &&
                         min(it.subscriptExpression) >= 0
@@ -568,7 +428,7 @@ class QueryTest {
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<ArraySubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt min(it.arraySize)) and
                         (min(it.subscriptExpression) ge 0)
@@ -580,48 +440,34 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQuery3() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array3.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArray3()
+        val subscripts =
+            MultiValueEvaluator()
+                .evaluate(result.allChildren<SubscriptExpression>().first().subscriptExpression)
 
         val queryTreeResult =
-            result.all<ArraySubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     max(it.subscriptExpression) <
                         min(
                             it.arrayExpression
-                                .followPrevDFGEdgesUntilHit { node ->
-                                    node is ArrayCreationExpression
-                                }
+                                .followPrevDFGEdgesUntilHit { node -> node is NewArrayExpression }
                                 .fulfilled
-                                .map { it2 ->
-                                    (it2.last() as ArrayCreationExpression).dimensions[0]
-                                }
+                                .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
                         ) && min(it.subscriptExpression) > 0
                 }
             )
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<ArraySubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     (max(it.subscriptExpression) lt
                         min(
                             it.arrayExpression
-                                .followPrevDFGEdgesUntilHit { node ->
-                                    node is ArrayCreationExpression
-                                }
+                                .followPrevDFGEdgesUntilHit { node -> node is NewArrayExpression }
                                 .fulfilled
-                                .map { it2 ->
-                                    (it2.last() as ArrayCreationExpression).dimensions[0]
-                                }
+                                .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
                         )) and (min(it.subscriptExpression) ge 0)
                 }
             )
@@ -631,19 +477,10 @@ class QueryTest {
 
     @Test
     fun testOutOfBoundsQueryCorrect() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/array_correct.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getArrayCorrect()
 
         val queryTreeResult =
-            result.all<ArraySubscriptionExpression>(
+            result.all<SubscriptExpression>(
                 mustSatisfy = {
                     val max_sub = max(it.subscriptExpression)
                     val min_dim = min(it.arraySize)
@@ -654,7 +491,7 @@ class QueryTest {
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
-            result.allExtended<ArraySubscriptionExpression>(
+            result.allExtended<SubscriptExpression>(
                 mustSatisfy = {
                     val max_sub = max(it.subscriptExpression)
                     val min_dim = min(it.arraySize)
@@ -668,15 +505,7 @@ class QueryTest {
 
     @Test
     fun testDivisionBy0() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<BinaryOperator>(
@@ -696,15 +525,7 @@ class QueryTest {
 
     @Test
     fun testIntOverflowAssignment() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/vulnerable.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getVulnerable()
 
         val queryTreeResult =
             result.all<AssignmentHolder>(
@@ -737,16 +558,7 @@ class QueryTest {
 
     @Test
     fun testDataFlowRequirement() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/Dataflow.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getDataflow()
 
         val queryTreeResult =
             result.all<CallExpression>(
@@ -811,17 +623,7 @@ class QueryTest {
 
     @Test
     fun testComplexDFGAndEOGRequirement() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/ComplexDataflow.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getComplexDataflow()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(
@@ -865,17 +667,7 @@ class QueryTest {
 
     @Test
     fun testComplexDFGAndEOGRequirement2() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/ComplexDataflow2.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getComplexDataflow2()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(
@@ -919,17 +711,7 @@ class QueryTest {
 
     @Test
     fun testClomplexDFGAndEOGRequirement3() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/query/ComplexDataflow3.java"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
-                .registerPass<EdgeCachePass>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = Query.getComplexDataflow3()
 
         val queryTreeResult =
             result.allExtended<CallExpression>(

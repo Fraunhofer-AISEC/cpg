@@ -57,9 +57,11 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getStaticImports(recordDecl: RecordDeclaration): MutableSet<ValueDeclaration> {
+    protected fun getStaticImports(
+        recordDeclaration: RecordDeclaration
+    ): MutableSet<ValueDeclaration> {
         val partitioned =
-            recordDecl.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
+            recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
         val staticImports = mutableSetOf<ValueDeclaration>()
         val importPattern = Pattern.compile("(?<base>.*)\\.(?<member>.*)")

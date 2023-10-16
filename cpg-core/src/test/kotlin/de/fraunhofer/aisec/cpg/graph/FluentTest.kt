@@ -33,12 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.test.*
 
 class FluentTest {
@@ -82,7 +82,7 @@ class FluentTest {
         assertLocalName("argc", argc)
         assertLocalName("int", argc.type)
 
-        val body = main.body as? CompoundStatement
+        val body = main.body as? Block
         assertNotNull(body)
         assertTrue {
             body.scope is FunctionScope
@@ -130,7 +130,7 @@ class FluentTest {
         assertNotNull(printf)
         assertEquals("else", printf.arguments[0]<Literal<*>>()?.value)
 
-        var ref = condition.lhs<DeclaredReferenceExpression>()
+        var ref = condition.lhs<Reference>()
         assertNotNull(ref)
         assertLocalName("argc", ref)
 
@@ -157,7 +157,7 @@ class FluentTest {
         assertNotNull(binOp.scope)
         assertEquals("+", binOp.operatorCode)
 
-        ref = binOp.lhs as? DeclaredReferenceExpression
+        ref = binOp.lhs as? Reference
         assertNotNull(ref)
         assertNotNull(ref.scope)
         assertNull(ref.refersTo)
@@ -168,7 +168,9 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
+        EvaluationOrderGraphPass(result.finalCtx)
+            .accept(result.components.first().translationUnits.first())
+        SymbolResolver(result.finalCtx).accept(result.components.first())
 
         // Now the reference should be resolved and the MCE name set
         assertRefersTo(ref, variable)

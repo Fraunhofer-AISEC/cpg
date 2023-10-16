@@ -89,7 +89,7 @@ On some edges, we want to store additional information (e.g., if a `EOG` node is
 /** The list of function parameters. */
 @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
 @field:SubGraph("AST")
-var parameterEdges = mutableListOf<PropertyEdge<ParamVariableDeclaration>>()
+var parameterEdges = mutableListOf<PropertyEdge<ParameterDeclaration>>()
 
 /** Virtual property for accessing [parameterEdges] without property edges. */
 var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)

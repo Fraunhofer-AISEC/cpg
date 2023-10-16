@@ -28,7 +28,10 @@ package de.fraunhofer.aisec.cpg.enhancements.calls
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -43,15 +46,18 @@ import kotlin.test.*
 
 internal class FunctionPointerTest : BaseTest() {
     @Throws(Exception::class)
-    private fun analyze(language: String): TranslationResult {
+    private fun analyze(
+        language: String,
+        configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    ): TranslationResult {
         val topLevel = Path.of("src", "test", "resources", "functionPointers")
 
-        return TestUtils.analyze(language, topLevel, true)
+        return TestUtils.analyze(language, topLevel, true, configModifier)
     }
 
     @Throws(Exception::class)
-    fun test(language: String) {
-        val result = analyze(language)
+    fun test(language: String, configModifier: Consumer<TranslationConfiguration.Builder>? = null) {
+        val result = analyze(language, configModifier)
         val functions = result.functions
         val main = functions["main", SearchModifier.UNIQUE]
         val calls = main.calls
@@ -183,12 +189,12 @@ internal class FunctionPointerTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testC() {
-        test("c")
+        test("c") { it.registerLanguage<CLanguage>() }
     }
 
     @Test
     @Throws(Exception::class)
     fun testCPP() {
-        test("cpp")
+        test("cpp") { it.registerLanguage<CPPLanguage>() }
     }
 }

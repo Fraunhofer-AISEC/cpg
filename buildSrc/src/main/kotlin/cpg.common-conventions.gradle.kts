@@ -112,7 +112,11 @@ tasks.withType<KotlinCompile> {
 // common testing configuration
 //
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        if (!project.hasProperty("integration")) {
+            excludeTags("integration")
+        }
+    }
     maxHeapSize = "4048m"
 }
 

@@ -219,8 +219,7 @@ class Application : Callable<Int> {
         listOf(
             TypeHierarchyResolver::class,
             ImportResolver::class,
-            VariableUsageResolver::class,
-            CallResolver::class,
+            SymbolResolver::class,
             DFGPass::class,
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
@@ -346,7 +345,8 @@ class Application : Callable<Int> {
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
-                .defaultLanguages()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")

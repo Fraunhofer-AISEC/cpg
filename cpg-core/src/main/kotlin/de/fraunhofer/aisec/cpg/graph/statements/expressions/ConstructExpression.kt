@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -39,12 +39,13 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  *   as part of a [NewExpression].
  * * In Java, it is the initializer of a [NewExpression].
  */
+// TODO Merge and/or refactor
 class ConstructExpression : CallExpression() {
     /**
      * The link to the [ConstructorDeclaration]. This is populated by the
-     * [de.fraunhofer.aisec.cpg.passes.CallResolver] later.
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] later.
      */
-    @PopulatedByPass(CallResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     var constructor: ConstructorDeclaration? = null
         get() =
             if (anoymousClass != null) {
@@ -64,7 +65,7 @@ class ConstructExpression : CallExpression() {
     @AST var anoymousClass: RecordDeclaration? = null
 
     /** The [Declaration] of the type this expression instantiates. */
-    @PopulatedByPass(CallResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     var instantiates: Declaration? = null
         get() =
             if (anoymousClass != null) {

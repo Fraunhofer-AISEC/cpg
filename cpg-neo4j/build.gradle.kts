@@ -44,14 +44,6 @@ publishing {
     }
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform {
-        if (!project.hasProperty("integration")) {
-            excludeTags("integration")
-        }
-    }
-}
-
 dependencies {
     // neo4j
     api(libs.bundles.neo4j)

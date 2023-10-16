@@ -33,13 +33,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -70,9 +70,8 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
      * [Declaration] in the graph. We need this, because this way we can look up and connect a
-     * [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This in
-     * turn is needed because of the local/global system we cannot rely on the
-     * [VariableUsageResolver].
+     * [Reference] to its [Declaration] already in the language frontend. This in turn is needed
+     * because of the local/global system we cannot rely on the [SymbolResolver].
      */
     var bindingsCache = mutableMapOf<String, Declaration>()
 

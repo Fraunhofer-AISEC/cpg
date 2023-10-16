@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ResolutionStartHolder
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.isDerivedFrom
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -60,8 +60,8 @@ import org.slf4j.LoggerFactory
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
- * * EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate node.
- *   A CFG will rather use the first actual executable statement within the block.
+ * * EOG considers an opening blocking ("Block", indicated by a "{") as a separate node. A CFG will
+ *   rather use the first actual executable statement within the block.
  * * For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG treats
  *   this as one "if" statement.
  * * EOG considers a method header as a node. CFG will consider the first executable statement of
@@ -71,7 +71,6 @@ import org.slf4j.LoggerFactory
  * this pass and fine-tune it.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     protected var currentPredecessors = mutableListOf<Node>()
@@ -108,12 +107,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
         map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
-        map[ArraySubscriptionExpression::class.java] = {
-            handleArraySubscriptionExpression(it as ArraySubscriptionExpression)
+        map[SubscriptExpression::class.java] = {
+            handleSubscriptExpression(it as SubscriptExpression)
         }
-        map[ArrayCreationExpression::class.java] = {
-            handleArrayCreationExpression(it as ArrayCreationExpression)
-        }
+        map[NewArrayExpression::class.java] = { handleNewArrayExpression(it as NewArrayExpression) }
         map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
         map[DeclarationStatement::class.java] = {
             handleDeclarationStatement(it as DeclarationStatement)
@@ -122,16 +119,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
         map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
         map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[CompoundStatement::class.java] = { handleCompoundStatement(it as CompoundStatement) }
-        map[CompoundStatementExpression::class.java] = {
-            handleCompoundStatementExpression(it as CompoundStatementExpression)
-        }
+        map[Block::class.java] = { handleBlock(it as Block) }
         map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
         map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
         map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
         map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
         map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
         map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
+        map[TypeExpression::class.java] = { handleTypeExpression(it as TypeExpression) }
         map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
         map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
         map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
@@ -160,7 +155,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[Literal::class.java] = { handleDefault(it) }
         map[DefaultStatement::class.java] = { handleDefault(it) }
         map[TypeIdExpression::class.java] = { handleDefault(it) }
-        map[DeclaredReferenceExpression::class.java] = { handleDefault(it) }
+        map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
     }
 
@@ -180,7 +175,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
-     * remove there outgoing edges. This also removes cycles.
+     * remove their outgoing edges. This also removes cycles.
      */
     protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
         // All nodes which have an eog edge
@@ -192,18 +187,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         )
         // only eog entry points
         var validStarts =
-            eogNodes
-                .filter { node ->
-                    node is FunctionDeclaration ||
-                        node is RecordDeclaration ||
-                        node is NamespaceDeclaration ||
-                        node is TranslationUnitDeclaration
-                }
-                .toSet()
+            eogNodes.filter { it is ResolutionStartHolder || it is VariableDeclaration }.toSet()
         // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
+        val alreadySeen = IdentitySet<Node>()
         while (validStarts.isNotEmpty()) {
             eogNodes.removeAll(validStarts)
-            validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eogNodes }.toSet()
+            validStarts = validStarts.flatMap { it.nextEOG }.filter { it !in alreadySeen }.toSet()
+            alreadySeen.addAll(validStarts)
         }
         // The remaining nodes are unreachable from the entry points. We delete their outgoing EOG
         // edges.
@@ -212,7 +202,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 next.end.removePrevEOGEntry(unvisitedNode)
             }
 
-            unvisitedNode.nextEOGEdges.clear()
+            unvisitedNode.clearNextEOG()
         }
     }
 
@@ -221,6 +211,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // loop through functions
         for (child in node.declarations) {
+            currentPredecessors.clear()
             createEOG(child)
         }
         processedListener.clearProcessed()
@@ -231,25 +222,25 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // loop through functions
         for (child in node.declarations) {
+            currentPredecessors.clear()
             createEOG(child)
         }
         processedListener.clearProcessed()
     }
 
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
+        pushToEOG(node)
         // analyze the initializer
         createEOG(node.initializer)
-        pushToEOG(node)
     }
 
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
+        pushToEOG(node)
         // analyze the initializer
         createEOG(node.initializer)
-        node.elements.forEach { createEOG(it) }
-        pushToEOG(node)
     }
 
-    protected fun handleRecordDeclaration(node: RecordDeclaration) {
+    protected open fun handleRecordDeclaration(node: RecordDeclaration) {
         scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
@@ -258,6 +249,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         for (method in node.methods) {
             createEOG(method)
+        }
+        for (fields in node.fields) {
+            createEOG(fields)
         }
         for (records in node.records) {
             createEOG(records)
@@ -270,7 +264,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? CompoundStatement)?.isStaticBlock == false }
+        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
         val staticCode = code.filter { it !in nonStaticCode }
 
         pushToEOG(statementHolder as Node)
@@ -421,7 +415,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArraySubscriptionExpression(node: ArraySubscriptionExpression) {
+    protected fun handleSubscriptExpression(node: SubscriptExpression) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
         createEOG(node.arrayExpression)
@@ -429,7 +423,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleArrayCreationExpression(node: ArrayCreationExpression) {
+    protected fun handleNewArrayExpression(node: NewArrayExpression) {
         for (dimension in node.dimensions) {
             createEOG(dimension)
         }
@@ -520,13 +514,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Handle left hand side(s) first
         node.lhs.forEach { createEOG(it) }
 
-        // Then the right side(s)
-        node.rhs.forEach { createEOG(it) }
+        // Then the right side(s). Avoid creating the EOG twice if it's already part of the
+        // initializer of a declaration
+        node.rhs.forEach {
+            if (it !in node.declarations.map { decl -> decl.initializer }) {
+                createEOG(it)
+            }
+        }
 
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatement(node: CompoundStatement) {
+    protected fun handleBlock(node: Block) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)
@@ -581,16 +580,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatementExpression(node: CompoundStatementExpression) {
-        createEOG(node.statement)
-        pushToEOG(node)
-    }
-
     protected fun handleAssertStatement(node: AssertStatement) {
         createEOG(node.condition)
         val openConditionEOGs = ArrayList(currentPredecessors)
         createEOG(node.message)
         setCurrentEOGs(openConditionEOGs)
+        pushToEOG(node)
+    }
+
+    protected fun handleTypeExpression(node: TypeExpression) {
         pushToEOG(node)
     }
 
@@ -618,9 +616,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
             }
             toRemove.forEach { catchesOrRelays?.remove(it) }
+            pushToEOG(catchClause)
             createEOG(catchClause.body)
             tmpEOGNodes.addAll(currentPredecessors)
         }
+
         val canTerminateExceptionfree = tmpEOGNodes.any { reachableFromValidEOGRoot(it) }
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
@@ -738,6 +738,28 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             createEOG(arg)
         }
         pushToEOG(node)
+
+        if (node.anoymousClass != null) {
+            // Generate the EOG inside the anonymous class. It's not linked to the EOG of the outer
+            // part.
+            val tmpCurrentEOG = currentPredecessors.toMutableList()
+            val tmpCurrentProperties = nextEdgeProperties.toMutableMap()
+            val tmpIntermediateNodes = intermediateNodes.toMutableList()
+
+            nextEdgeProperties.clear()
+            currentPredecessors.clear()
+            intermediateNodes.clear()
+
+            createEOG(node.anoymousClass)
+
+            nextEdgeProperties.clear()
+            currentPredecessors.clear()
+            intermediateNodes.clear()
+
+            nextEdgeProperties.putAll(tmpCurrentProperties)
+            currentPredecessors.addAll(tmpCurrentEOG)
+            intermediateNodes.addAll(tmpIntermediateNodes)
+        }
     }
 
     /**
@@ -819,7 +841,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
         createEOG(node.expression)
         pushToEOG(node)
-        createEOG(node.blockStatement)
+        createEOG(node.block)
     }
 
     protected fun handleConditionalExpression(node: ConditionalExpression) {
@@ -829,11 +851,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
         val openConditionEOGs = ArrayList(currentPredecessors)
         nextEdgeProperties[Properties.BRANCH] = true
-        createEOG(node.thenExpr)
+        createEOG(node.thenExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openConditionEOGs)
         nextEdgeProperties[Properties.BRANCH] = false
-        createEOG(node.elseExpr)
+        createEOG(node.elseExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openBranchNodes)
     }
@@ -935,9 +957,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val compound =
             if (node.statement is DoStatement) {
                 createEOG(node.statement)
-                (node.statement as DoStatement).statement as CompoundStatement
+                (node.statement as DoStatement).statement as Block
             } else {
-                node.statement as CompoundStatement
+                node.statement as Block
             }
         currentPredecessors = ArrayList()
         for (subStatement in compound.statements) {

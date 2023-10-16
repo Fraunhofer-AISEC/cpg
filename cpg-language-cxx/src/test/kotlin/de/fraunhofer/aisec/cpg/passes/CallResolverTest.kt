@@ -153,7 +153,9 @@ class CallResolverTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "calls.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
 
@@ -184,7 +186,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val functionDeclarations = result.functions
         val callExpressions = result.calls
 
@@ -224,7 +228,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val callExpressions = result.calls
 
         // Check resolution of implicit cast
@@ -272,7 +278,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         val functionDeclarations = result.functions
         val displayDeclaration =
@@ -287,7 +295,7 @@ class CallResolverTest : BaseTest() {
         // Check defines edge
         assertEquals(displayDefinition, displayDeclaration.definition)
 
-        // Check defaults edge of ParamVariableDeclaration
+        // Check defaults edge of ParameterDeclaration
         assertEquals(displayDeclaration.defaultParameters, displayDefinition.defaultParameters)
 
         // Check call display(1);
@@ -359,7 +367,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         val functionDeclarations = result.functions
         val displayFunction =
@@ -368,7 +378,7 @@ class CallResolverTest : BaseTest() {
             }
         val literalStar = findByUniquePredicate(result.literals) { it.value == '*' }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 }
-        // Check defaults edge of ParamVariableDeclaration
+        // Check defaults edge of ParameterDeclaration
         assertTrue(displayFunction.defaultParameters[0] is Literal<*>)
         assertTrue(displayFunction.defaultParameters[1] is Literal<*>)
         assertEquals('*', (displayFunction.defaultParameters[0] as Literal<*>).value)
@@ -423,7 +433,9 @@ class CallResolverTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "defaultargs", "partialDefaults.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         val functionDeclarations = result.functions
         val addFunction =
@@ -493,7 +505,9 @@ class CallResolverTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "defaultargs", "defaultInMethod.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         val functionDeclarations = result.functions
         val declaredReferenceExpressions = result.refs
@@ -535,7 +549,9 @@ class CallResolverTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "undefined.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         assertEquals(1, calls.size)
 
@@ -553,7 +569,9 @@ class CallResolverTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "defined.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         assertEquals(1, calls.size)
 
@@ -646,7 +664,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         testScopedFunctionResolutionFunctionGlobal(result, calls)
         testScopedFunctionResolutionRedeclaration(result, calls)
@@ -669,7 +689,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
         val methodDeclarations = result.methods
         val calcOverload: FunctionDeclaration =
@@ -717,7 +739,9 @@ class CallResolverTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val calls = result.calls
 
         val calcCall =
@@ -735,7 +759,10 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCallWithIgnoredResult() {
         val file = File("src/test/resources/calls/ignore-return.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // check for function declarations, we only want two: main and someFunction
         // we do NOT want any inferred/implicit function declarations that could exist, if

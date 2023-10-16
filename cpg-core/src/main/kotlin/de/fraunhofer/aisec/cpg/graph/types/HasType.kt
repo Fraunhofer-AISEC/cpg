@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /**
@@ -47,8 +47,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * following:
      * - the type declared by the [Node], e.g., by a [ValueDeclaration]
      * - intrinsically tied to the node, e.g. an [IntegerType] in an integer [Literal]
-     * - the [Type] of a declaration a node is referring to, e.g., in a
-     *   [DeclaredReferenceExpression]
+     * - the [Type] of a declaration a node is referring to, e.g., in a [Reference]
      *
      * An implementation of this must be sure to invoke [informObservers].
      */

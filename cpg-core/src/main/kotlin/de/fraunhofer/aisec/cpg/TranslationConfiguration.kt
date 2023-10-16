@@ -444,8 +444,7 @@ private constructor(
          * This will register
          * - [TypeHierarchyResolver]
          * - [ImportResolver]
-         * - [VariableUsageResolver]
-         * - [CallResolver]
+         * - [SymbolResolver]
          * - [DFGPass]
          * - [EvaluationOrderGraphPass]
          * - [TypeResolver]
@@ -457,9 +456,9 @@ private constructor(
         fun defaultPasses(): Builder {
             registerPass<TypeHierarchyResolver>()
             registerPass<ImportResolver>()
-            registerPass<VariableUsageResolver>()
-            registerPass<CallResolver>() // creates CG
+            registerPass<SymbolResolver>()
             registerPass<DFGPass>()
+            registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
@@ -507,19 +506,6 @@ private constructor(
                     }
                 }
             }
-        }
-
-        /** Register all default languages. */
-        @Deprecated(
-            message =
-                "We moved all languages out of the core package and therefore you should register individual languages instead. For compatibility reasons we do a dynamic lookup to Java and C/C++ languages here but this function will be removed in the future."
-        )
-        fun defaultLanguages(): Builder {
-            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-            optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-
-            return this
         }
 
         /**

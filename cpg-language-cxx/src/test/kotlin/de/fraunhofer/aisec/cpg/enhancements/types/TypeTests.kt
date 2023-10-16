@@ -116,7 +116,13 @@ internal class TypeTests : BaseTest() {
     fun testFunctionPointerTypes() {
         val topLevel = Path.of("src", "test", "resources", "types")
         val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true)
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("fptr_type.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val noParamType = FunctionPointerType(emptyList(), CPPLanguage(), IncompleteType())
         val oneParamType =
             FunctionPointerType(
@@ -171,7 +177,10 @@ internal class TypeTests : BaseTest() {
         ) {
             val topLevel =
                 Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
-            val result = analyze("simple_inheritance.cpp", topLevel, true)
+            val result =
+                analyze("simple_inheritance.cpp", topLevel, true) {
+                    it.registerLanguage<CPPLanguage>()
+                }
             val root = assertNotNull(result.records["Root"]).toType()
             val level0 = assertNotNull(result.records["Level0"]).toType()
             val level1 = assertNotNull(result.records["Level1"]).toType()
@@ -187,7 +196,8 @@ internal class TypeTests : BaseTest() {
     @Test
     fun testCommonTypeTestCppMultiInheritance() {
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
-        val result = analyze("multi_inheritance.cpp", topLevel, true)
+        val result =
+            analyze("multi_inheritance.cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
 
         val root = assertNotNull(result.records["Root"]).toType()
         val level0 = assertNotNull(result.records["Level0"]).toType()
@@ -228,7 +238,7 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun graphTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result = analyze("cpp", topLevel, true)
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val variableDeclarations = result.variables
 
         // Test PointerType chain with pointer

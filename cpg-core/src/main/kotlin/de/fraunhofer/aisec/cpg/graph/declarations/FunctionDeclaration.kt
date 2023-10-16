@@ -30,19 +30,19 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.*
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
-    /** The function body. Usually a [CompoundStatement]. */
+open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, ResolutionStartHolder {
+    /** The function body. Usually a [Block]. */
     @AST var body: Statement? = null
 
     /**
@@ -54,7 +54,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var parameterEdges = mutableListOf<PropertyEdge<ParamVariableDeclaration>>()
+    var parameterEdges = mutableListOf<PropertyEdge<ParameterDeclaration>>()
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
@@ -111,27 +111,35 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             targetFunctionDeclaration.signatureTypes == signatureTypes
     }
 
-    fun hasSignature(targetSignature: List<Type>): Boolean {
-        val signature =
-            parameters
-                .stream()
-                .sorted(Comparator.comparingInt(ParamVariableDeclaration::argumentIndex))
-                .collect(Collectors.toList())
-        return if (targetSignature.size < signature.size) {
+    fun hasSignature(call: CallExpression): Boolean {
+        return hasSignature(call.signature, call.arguments)
+    }
+
+    // TODO: Documentation required. It's not completely clear what this method is supposed to do.
+    fun hasSignature(
+        targetSignature: List<Type>,
+        targetExpressions: List<Expression>? = null
+    ): Boolean {
+        val signature = parameters.sortedBy { it.argumentIndex }
+        // TODO: Why do we have to sort it here while we don't sort the list in signatureTypes?
+        return if (signature.all { !it.isVariadic } && targetSignature.size < signature.size) {
+            // TODO: So we don't consider arguments with default values (among others) but then, the
+            // SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
             false
         } else {
             // signature is a collection of positional arguments, so the order must be preserved
             for (i in signature.indices) {
                 val declared = signature[i]
-                if (declared.isVariadic && targetSignature.size >= signature.size) {
+                if (declared.isVariadic) {
                     // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no matter what comes now (potential FIXME: in Java, we could have
-                    // overloading with different vararg types, in C++ we can't, as vararg types are
-                    // not defined here anyways)
+                    // fulfilled no matter what comes now
+                    // FIXME: in Java, we could have overloading with different vararg types, in
+                    //  C++ we can't, as vararg types are not defined here anyways)
                     return true
                 }
                 val provided = targetSignature[i]
-                if (!provided.isDerivedFrom(declared.type)) {
+                val expression = targetExpressions?.get(i)
+                if (!provided.isDerivedFrom(declared.type, expression, this)) {
                     return false
                 }
             }
@@ -172,16 +180,16 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     }
 
     fun <T> getBodyStatementAs(i: Int, clazz: Class<T>): T? {
-        if (body is CompoundStatement) {
-            val statement = (body as CompoundStatement).statements[i]
+        if (body is Block) {
+            val statement = (body as Block).statements[i]
             return if (clazz.isAssignableFrom(statement.javaClass)) clazz.cast(statement) else null
         }
         return null
     }
 
     /**
-     * A list of default expressions for each item in [parameters]. If a [ParamVariableDeclaration]
-     * has no default, the list will be null at this index. This list must have the same size as
+     * A list of default expressions for each item in [parameters]. If a [ParameterDeclaration] has
+     * no default, the list will be null at this index. This list must have the same size as
      * [parameters].
      */
     val defaultParameters: List<Expression?>
@@ -189,30 +197,27 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             return parameters.map { it.default }
         }
 
-    val defaultParameterSignature: List<Type>
-        get() {
-            val signature: MutableList<Type> = ArrayList()
-            for (paramVariableDeclaration in parameters) {
-                if (paramVariableDeclaration.default != null) {
-                    signature.add(paramVariableDeclaration.type)
+    val defaultParameterSignature: List<Type> // TODO: What's this property?
+        get() =
+            parameters.map {
+                if (it.default != null) {
+                    it.type
                 } else {
-                    signature.add(unknownType())
+                    unknownType()
                 }
             }
-            return signature
-        }
 
     val signatureTypes: List<Type>
         get() = parameters.map { it.type }
 
-    fun addParameter(paramVariableDeclaration: ParamVariableDeclaration) {
-        val propertyEdge = PropertyEdge(this, paramVariableDeclaration)
+    fun addParameter(parameterDeclaration: ParameterDeclaration) {
+        val propertyEdge = PropertyEdge(this, parameterDeclaration)
         propertyEdge.addProperty(Properties.INDEX, parameters.size)
         parameterEdges.add(propertyEdge)
     }
 
-    fun removeParameter(paramVariableDeclaration: ParamVariableDeclaration) {
-        parameterEdges.removeIf { it.end == paramVariableDeclaration }
+    fun removeParameter(parameterDeclaration: ParameterDeclaration) {
+        parameterEdges.removeIf { it.end == parameterDeclaration }
     }
 
     override fun toString(): String {
@@ -221,6 +226,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
             .append("parameters", parameters)
             .toString()
     }
+
+    override val resolutionStartNodes: List<Node>
+        get() = listOfNotNull(this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -239,7 +247,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), body, parameters, throwsTypes)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is ParamVariableDeclaration) {
+        if (declaration is ParameterDeclaration) {
             addIfNotContains(parameterEdges, declaration)
         }
 

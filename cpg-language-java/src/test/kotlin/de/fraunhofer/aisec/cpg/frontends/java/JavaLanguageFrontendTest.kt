@@ -131,7 +131,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(forEachStatement)
 
         // should loop over ls
-        assertEquals(ls, (forEachStatement.iterable as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(ls, (forEachStatement.iterable as? Reference)?.refersTo)
 
         // should declare String s
         val s = forEachStatement.variable
@@ -153,7 +153,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // Check the flow from the iterable to the variable s
         assertEquals(1, sDecl.prevDFG.size)
-        assertTrue(forEachStatement.iterable as DeclaredReferenceExpression in sDecl.prevDFG)
+        assertTrue(forEachStatement.iterable as Reference in sDecl.prevDFG)
         // Check the flow from the variable s to the print
         assertTrue(sDecl in sce.arguments.first().prevDFG)
     }
@@ -339,7 +339,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(3, switchStatements.size)
 
         val switchStatement = switchStatements[0]
-        assertEquals(11, (switchStatement.statement as? CompoundStatement)?.statements?.size)
+        assertEquals(11, (switchStatement.statement as? Block)?.statements?.size)
 
         val caseStatements = switchStatement.allChildren<CaseStatement>()
         assertEquals(4, caseStatements.size)
@@ -395,7 +395,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         )
 
         // expression itself should be a reference
-        val ref = cast.expression as? DeclaredReferenceExpression
+        val ref = cast.expression as? Reference
         assertNotNull(ref)
         assertEquals(e, ref.refersTo)
     }
@@ -418,7 +418,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = record.methods[0]
         assertNotNull(main)
 
-        val statements = (main.body as? CompoundStatement)?.statements
+        val statements = (main.body as? Block)?.statements
         assertNotNull(statements)
 
         val a = (statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
@@ -430,7 +430,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         // it has an array creation initializer
-        val ace = a.initializer as? ArrayCreationExpression
+        val ace = a.initializer as? NewArrayExpression
         assertNotNull(ace)
 
         // which has a initializer list (1 entry)
@@ -446,9 +446,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val b = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
 
         // initializer is array subscription
-        val ase = b?.initializer as? ArraySubscriptionExpression
+        val ase = b?.initializer as? SubscriptExpression
         assertNotNull(ase)
-        assertEquals(a, (ase.arrayExpression as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(a, (ase.arrayExpression as? Reference)?.refersTo)
         assertEquals(0, (ase.subscriptExpression as? Literal<*>)?.value)
     }
 
@@ -470,7 +470,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = record.methods[0]
         assertNotNull(main)
 
-        val statements = (main.body as? CompoundStatement)?.statements
+        val statements = (main.body as? Block)?.statements
         assertNotNull(statements)
 
         val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
@@ -530,8 +530,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                     .sourceLocations(listOf(file))
                     .topLevel(file.parentFile)
                     .defaultPasses()
-                    .defaultLanguages()
-                    .registerLanguage(JavaLanguage())
+                    .registerLanguage<JavaLanguage>()
                     .processAnnotations(true)
             )
         assertFalse(declarations.isEmpty())
@@ -631,8 +630,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(op)
 
         val lhs = op.lhs<MemberExpression>()
-        val receiver =
-            (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration?
+        val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
         assertLocalName("this", receiver)
         assertEquals(tu.objectType("my.Animal"), receiver.type)
@@ -675,7 +673,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.unregisterLanguage(JavaLanguage::class.java)
                 it.registerLanguage(MyJavaLanguage())
             }
 
@@ -703,8 +700,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .sourceLocations(*files.toTypedArray())
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -728,8 +724,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .sourceLocations(*files.toTypedArray())
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -771,7 +766,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val assign = doSomething.bodyOrNull<AssignExpression>()
         assertNotNull(assign)
 
-        val ref = ((assign.rhs<MemberExpression>())?.base as DeclaredReferenceExpression).refersTo
+        val ref = ((assign.rhs<MemberExpression>())?.base as Reference).refersTo
         assertNotNull(ref)
         assertSame(ref, thisOuterClass)
     }

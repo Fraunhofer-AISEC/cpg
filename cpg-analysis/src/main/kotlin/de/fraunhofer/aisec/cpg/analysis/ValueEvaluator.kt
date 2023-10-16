@@ -87,16 +87,16 @@ open class ValueEvaluator(
         node?.let { this.path += it }
 
         when (node) {
-            is ArrayCreationExpression -> return evaluateInternal(node.initializer, depth + 1)
+            is NewArrayExpression -> return evaluateInternal(node.initializer, depth + 1)
             is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is ArraySubscriptionExpression -> return handleArraySubscriptionExpression(node, depth)
+            is SubscriptExpression -> return handleSubscriptExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
@@ -277,12 +277,8 @@ open class ValueEvaluator(
      * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
      * s.
      */
-    protected fun handleArraySubscriptionExpression(
-        expr: ArraySubscriptionExpression,
-        depth: Int
-    ): Any? {
-        val array =
-            (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration
+    protected fun handleSubscriptExpression(expr: SubscriptExpression, depth: Int): Any? {
+        val array = (expr.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
         val ile = array?.initializer as? InitializerListExpression
 
         ile?.let {
@@ -301,7 +297,7 @@ open class ValueEvaluator(
             return (array.initializer as Literal<*>).value
         }
 
-        if (expr.arrayExpression is ArraySubscriptionExpression) {
+        if (expr.arrayExpression is SubscriptExpression) {
             return evaluateInternal(expr.arrayExpression, depth + 1)
         }
 
@@ -315,9 +311,9 @@ open class ValueEvaluator(
             val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
 
             return if (lhs == rhs) {
-                evaluateInternal(expr.thenExpr, depth + 1)
+                evaluateInternal(expr.thenExpression, depth + 1)
             } else {
-                evaluateInternal(expr.elseExpr, depth + 1)
+                evaluateInternal(expr.elseExpression, depth + 1)
             }
         }
 
@@ -328,10 +324,7 @@ open class ValueEvaluator(
      * Tries to compute the constant value of a reference. It therefore checks the incoming data
      * flow edges.
      */
-    protected open fun handleDeclaredReferenceExpression(
-        expr: DeclaredReferenceExpression,
-        depth: Int
-    ): Any? {
+    protected open fun handleReference(expr: Reference, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
@@ -358,10 +351,7 @@ open class ValueEvaluator(
      * If a reference has READWRITE access, ignore any "self-references", e.g. from a
      * plus/minus/div/times-assign or a plusplus/minusminus, etc.
      */
-    protected fun filterSelfReferences(
-        ref: DeclaredReferenceExpression,
-        inDFG: List<Node>
-    ): List<Node> {
+    protected fun filterSelfReferences(ref: Reference, inDFG: List<Node>): List<Node> {
         var list = inDFG
 
         // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach

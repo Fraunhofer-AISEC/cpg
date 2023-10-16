@@ -86,7 +86,7 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
          There are nodes where we do not set the declaration when storing them in the scope,
          mostly for structures that have a single value-declaration: WhileStatement, DoStatement,
          ForStatement, SwitchStatement; and others where the location of declaration is somewhere
-         deeper in the AST-subtree: CompoundStatement, AssertStatement.
+         deeper in the AST-subtree: Block, AssertStatement.
         */
     }
 

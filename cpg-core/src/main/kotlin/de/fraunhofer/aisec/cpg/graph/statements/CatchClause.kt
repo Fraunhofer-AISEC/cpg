@@ -28,16 +28,21 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ResolutionStartHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import java.util.Objects
 
-class CatchClause : Statement(), BranchingNode {
+class CatchClause : Statement(), BranchingNode, ResolutionStartHolder {
     @AST var parameter: VariableDeclaration? = null
 
-    @AST var body: CompoundStatement? = null
+    @AST var body: Block? = null
 
     override val branchedBy: Node?
         get() = parameter
+
+    override val resolutionStartNodes: List<Node>
+        get() = listOf(this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

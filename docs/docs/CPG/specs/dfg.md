@@ -65,7 +65,7 @@ Interesting fields:
 ### Case 1: Normal assignment (`operatorCode: =`)
 
 The `rhs` flows to `lhs`. In some languages, it is possible to have an assignment in a subexpression (e.g. `a + (b=1)`).
-For this reason, if the assignment's ast parent is not a `CompoundStatement` (i.e., a block of statements), we also add a DFG edge to the whole operator.
+For this reason, if the assignment's ast parent is not a `Block` (i.e., a block of statements), we also add a DFG edge to the whole operator.
 If the `lhs` consists of multiple variables (or a tuple), we try to split up the `rhs` by the index. If we can't do this, the whole `rhs` flows to all variables in `lhs`.
 
 Scheme:
@@ -87,7 +87,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   A[assignment.rhs] -- DFG --> assignment.lhs;
-  subgraph S[If the ast parent is not a CompoundStatement]
+  subgraph S[If the ast parent is not a Block
     direction LR
     assignment.rhs -- DFG --> assignment;
   end
@@ -140,7 +140,7 @@ Scheme:
     lhs -- DFG --> node;
   ```
 
-## ArrayCreationExpression
+## NewArrayExpression
 
 Interesting fields:
 
@@ -151,7 +151,7 @@ The `initializer` flows to the array creation expression.
 Scheme:
   ```mermaid
   flowchart LR
-    node([ArrayCreationExpression]) -.- initializer(initializer)
+    node([NewArrayExpression]) -.- initializer(initializer)
     initializer -- DFG --> node
   ```
 
@@ -169,7 +169,7 @@ Scheme:
     initializer -- DFG --> node
 ```
 
-## ArraySubscriptionExpression
+## SubscriptExpression
 
 Interesting fields:
 
@@ -181,7 +181,7 @@ The `arrayExpression` flows to the subscription expression. This means, we do no
 Scheme:
   ```mermaid
   flowchart LR
-    arrayExpression -- DFG --> node([ArraySubscriptionExpression]);
+    arrayExpression -- DFG --> node([SubscriptExpression]);
     arrayExpression -.- node;
   ```
 
@@ -191,21 +191,21 @@ Scheme:
 Interesting fields:
 
 * `condition: Expression`: The condition which is evaluated
-* `thenExpr: Expression`: The expression which is executed if the condition holds
-* `elseExpr: Expression`: The expression which is executed if the condition does not hold
+* `thenExpression: Expression`: The expression which is executed if the condition holds
+* `elseExpression: Expression`: The expression which is executed if the condition does not hold
 
 The `thenExpr` and the `elseExpr` flow to the `ConditionalExpression`. This means that implicit data flows are not considered.
 
 Scheme:
   ```mermaid
   flowchart LR
-    thenExpr -- DFG --> node([ConditionalExpression]);
-    thenExpr -.- node;
-    elseExpr -.- node;
-    elseExpr -- DFG --> node;
+    thenExpression -- DFG --> node([ConditionalExpression]);
+    thenExpression -.- node;
+    elseExpression -.- node;
+    elseExpression -- DFG --> node;
    ```
 
-## DeclaredReferenceExpression
+## Reference
 
 Interesting fields:
 
@@ -219,19 +219,19 @@ The `DFGPass` generates very simple edges based on the access to the variable as
 * The value flows from the declaration to the expression for read access. Scheme:
   ```mermaid
   flowchart LR
-    refersTo -- DFG --> node([DeclaredReferenceExpression]);
+    refersTo -- DFG --> node([Reference]);
     refersTo -.- node;
   ```
 * For write access, data flow from the expression to the declaration. Scheme:
   ```mermaid
   flowchart LR
-    node([DeclaredReferenceExpression]) -- DFG --> refersTo;
+    node([Reference]) -- DFG --> refersTo;
     node -.- refersTo;
   ```
 * For readwrite access, both flows are present. Scheme:
   ```mermaid
   flowchart LR
-    refersTo -- DFG 1 --> node([DeclaredReferenceExpression]);
+    refersTo -- DFG 1 --> node([Reference]);
     refersTo -.- node;
     node -- DFG 2 --> refersTo;
   ```
@@ -240,20 +240,20 @@ This mostly serves one purpose: The current function pointer resolution requires
 
 The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts for the data flows which differ depending on the program's control flow (e.g., different assignments to a variable in an if and else branch, ...). The pass performs the following actions:
 
-* First, it clears all the edges between a `VariableDeclaration` and its `DeclaredReferenceExpression`. Actually, it clears all incoming and outgoing DFG edges of all VariableDeclarations in a function. This includes the initializer but this edge is restored right away. Scheme:
+* First, it clears all the edges between a `VariableDeclaration` and its `Reference`. Actually, it clears all incoming and outgoing DFG edges of all VariableDeclarations in a function. This includes the initializer but this edge is restored right away. Scheme:
   ```mermaid
   flowchart LR
     node([VariableDeclaration]) -.- initializer;
     initializer -- DFG --> node;
   ```
-* For each read access to a DeclaredReferenceExpression, it collects all potential previous assignments to the variable and adds these to the incoming DFG edges. You can imagine that this is done by traversing the EOG backwards until finding the first assignment to the variable for each possible path. Scheme:
+* For each read access to a Reference, it collects all potential previous assignments to the variable and adds these to the incoming DFG edges. You can imagine that this is done by traversing the EOG backwards until finding the first assignment to the variable for each possible path. Scheme:
   ```mermaid
   flowchart LR
-    node([DeclaredReferenceExpression]) -.- refersTo;
+    node([Reference]) -.- refersTo;
     A == last write to ==> refersTo;
     A[/Node/] -- DFG --> node;
   ```
-* If we increment or decrement a variable with "++" or "--", the data of this statement flows from the previous writes of the variable to the input of the statement (= the DeclaredReferenceExpression). We write back to this reference and consider the lhs as a "write" to the variable! *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
+* If we increment or decrement a variable with "++" or "--", the data of this statement flows from the previous writes of the variable to the input of the statement (= the Reference). We write back to this reference and consider the lhs as a "write" to the variable! *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
   ```mermaid
   flowchart LR
     node([UnaryOperator]) -.- input;
@@ -298,9 +298,9 @@ Interesting fields:
 * `base: Expression`: The base object whose field is accessed
 * `refersTo: Declaration?`: The field it refers to. If the class is not implemented in the code under analysis, it is `null`.
 
-The MemberExpression represents an access to an object's field and extends a DeclaredReferenceExpression with a `base`.
+The MemberExpression represents an access to an object's field and extends a Reference with a `base`.
 
-If an implementation of the respective class is available, we handle it like a normal DeclaredReferenceExpression.
+If an implementation of the respective class is available, we handle it like a normal Reference.
 If the `refersTo` field is `null` (i.e., the implementation is not available), base flows to the expression.
 
 ## ExpressionList
@@ -554,7 +554,7 @@ Interesting fields:
 
 The value of the initializer flows to the whole field.
 
-In addition, all writes to a reference to the field (via a `DeclaredReferenceExpression`) flow to the field, for all reads, data flow to the reference.
+In addition, all writes to a reference to the field (via a `Reference`) flow to the field, for all reads, data flow to the reference.
 
 Scheme:
 ```mermaid
@@ -571,7 +571,7 @@ Interesting fields:
 
 * `initializer: Expression?`: The value which is used to initialize a variable (if applicable).
 
-The value of the initializer flows to the variable declaration. The value of the variable declarations flows to all `DeclaredReferenceExpressions` which read the value before the value of the variable is written to through another reference to the variable.
+The value of the initializer flows to the variable declaration. The value of the variable declarations flows to all `References` which read the value before the value of the variable is written to through another reference to the variable.
 
 Scheme:
 ```mermaid
@@ -589,7 +589,7 @@ Interesting fields:
 * `initializer: Expression?`: The value which is used to initialize a variable (if applicable).
 * `element: List<VariableDeclaration>`: The value which is used to initialize a variable (if applicable).
 
-The value of the initializer flows to the elements of the tuple declaration. The value of the variable declarations flows to all `DeclaredReferenceExpressions` which read the value before the value of the variable is written to through another reference to the variable.
+The value of the initializer flows to the elements of the tuple declaration. The value of the variable declarations flows to all `References` which read the value before the value of the variable is written to through another reference to the variable.
 
 Scheme:
 ```mermaid

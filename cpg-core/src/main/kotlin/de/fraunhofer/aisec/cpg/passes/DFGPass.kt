@@ -39,8 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** Adds the DFG edges for various types of nodes. */
-@DependsOn(VariableUsageResolver::class)
-@DependsOn(CallResolver::class)
+@DependsOn(SymbolResolver::class)
 class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
@@ -64,11 +63,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
             is AssignExpression -> handleAssignExpression(node)
-            is ArrayCreationExpression -> handleArrayCreationExpression(node)
-            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
+            is NewArrayExpression -> handleNewArrayExpression(node)
+            is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
-            is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
+            is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
             // We keep the logic for the InitializerListExpression in that class because the
@@ -118,7 +117,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * For a [MemberExpression], the base flows to the expression if the field is not implemented in
-     * the code under analysis. Otherwise, it's handled as a [DeclaredReferenceExpression].
+     * the code under analysis. Otherwise, it's handled as a [Reference].
      */
     protected fun handleMemberExpression(
         node: MemberExpression,
@@ -127,7 +126,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node.refersTo == null && inferDfgForUnresolvedCalls) {
             node.addPrevDFG(node.base)
         } else {
-            handleDeclaredReferenceExpression(node)
+            handleReference(node)
         }
     }
 
@@ -309,12 +308,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edges to a [DeclaredReferenceExpression] as follows:
+     * Adds the DFG edges to a [Reference] as follows:
      * - If the variable is written to, data flows from this node to the variable declaration.
      * - If the variable is read from, data flows from the variable declaration to this node.
      * - For a combined read and write, both edges for data flows are added.
      */
-    protected fun handleDeclaredReferenceExpression(node: DeclaredReferenceExpression) {
+    protected fun handleReference(node: Reference) {
         node.refersTo?.let {
             when (node.access) {
                 AccessValues.WRITE -> node.addNextDFG(it)
@@ -332,22 +331,20 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * expression to the whole expression.
      */
     protected fun handleConditionalExpression(node: ConditionalExpression) {
-        node.thenExpr?.let { node.addPrevDFG(it) }
-        node.elseExpr?.let { node.addPrevDFG(it) }
+        node.thenExpression?.let { node.addPrevDFG(it) }
+        node.elseExpression?.let { node.addPrevDFG(it) }
     }
 
     /**
-     * Adds the DFG edge to an [ArraySubscriptionExpression]. The whole array `x` flows to the
-     * result `x[i]`.
+     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result
+     * `x[i]`.
      */
-    protected fun handleArraySubscriptionExpression(node: ArraySubscriptionExpression) {
+    protected fun handleSubscriptExpression(node: SubscriptExpression) {
         node.addPrevDFG(node.arrayExpression)
     }
 
-    /**
-     * Adds the DFG edge to an [ArrayCreationExpression]. The initializer flows to the expression.
-     */
-    protected fun handleArrayCreationExpression(node: ArrayCreationExpression) {
+    /** Adds the DFG edge to an [NewArrayExpression]. The initializer flows to the expression. */
+    protected fun handleNewArrayExpression(node: NewArrayExpression) {
         node.initializer?.let { node.addPrevDFG(it) }
     }
 
@@ -364,7 +361,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
                 // When the parent is a compound statement (or similar block of code), we can safely
                 // assume that we're not in such a sub-expression
-                if (parent == null || parent !is CompoundStatement) {
+                if (parent == null || parent !is Block) {
                     node.rhs.addNextDFG(node)
                 }
             }

@@ -168,7 +168,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
             for (i in signature.indices) {
                 val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
                 val paramName = generateParamName(i, targetType)
-                val param = newParamVariableDeclaration(paramName, targetType, false, "")
+                val param = newParameterDeclaration(paramName, targetType, false, "")
                 param.argumentIndex = i
 
                 scopeManager.addDeclaration(param)
@@ -222,7 +222,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         return paramName.toString()
     }
 
-    private fun inferNonTypeTemplateParameter(name: String): ParamVariableDeclaration {
+    private fun inferNonTypeTemplateParameter(name: String): ParameterDeclaration {
         val expr =
             start as? Expression
                 ?: throw UnsupportedOperationException(
@@ -230,16 +230,16 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 )
 
         // Non-Type Template Parameter
-        return newParamVariableDeclaration(name, expr.type, false, name)
+        return newParameterDeclaration(name, expr.type, false, name)
     }
 
     private fun inferTemplateParameter(
         name: String,
-    ): TypeParamDeclaration {
+    ): TypeParameterDeclaration {
         val parameterizedType = ParameterizedType(name, language)
         typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
-        val decl = newTypeParamDeclaration(name, name)
+        val decl = newTypeParameterDeclaration(name, name)
         decl.type = parameterizedType
 
         return decl
@@ -341,7 +341,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         // delegate further operations to the scope manager. We also save the old scope so we can
         // restore it.
         return inferInScopeOf(start) {
-            Companion.log.debug(
+            log.debug(
                 "Inferring a new namespace declaration {} {}",
                 name,
                 if (path != null) {

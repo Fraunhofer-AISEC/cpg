@@ -406,7 +406,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                file == other.file &&
+                // We need to exclude "file" here, because in C++ the same header node can be
+                // imported in two different files and in this case, the "file" property will be
+                // different. Since want to squash those equal nodes, we will only consider all the
+                // other attributes, including "location" (which contains the *original* file
+                // location in the header file), but not "file".
+                // file == other.file &&
                 isImplicit == other.isImplicit
     }
 

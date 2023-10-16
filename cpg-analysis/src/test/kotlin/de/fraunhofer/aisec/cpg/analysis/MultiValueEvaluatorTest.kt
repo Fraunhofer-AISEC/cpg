@@ -25,18 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import java.nio.file.Path
+import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -46,15 +44,7 @@ import kotlin.test.assertTrue
 class MultiValueEvaluatorTest {
     @Test
     fun testSingleValue() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("example.cpp").toFile()),
-                topLevel,
-                true
-            )
-
-        assertNotNull(tu)
+        val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
@@ -139,15 +129,7 @@ class MultiValueEvaluatorTest {
 
     @Test
     fun testMultipleValues() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("cfexample.cpp").toFile()),
-                topLevel,
-                true
-            )
-
-        assertNotNull(tu)
+        val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
@@ -155,7 +137,7 @@ class MultiValueEvaluatorTest {
         val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
         assertNotNull(b)
 
-        var printB = main.bodyOrNull<CallExpression>()
+        var printB = main.calls("println")[0]
         assertNotNull(printB)
 
         val evaluator = MultiValueEvaluator()
@@ -165,25 +147,25 @@ class MultiValueEvaluatorTest {
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(1, 2), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(1)
+        printB = main.calls("println")[1]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(2)
+        printB = main.calls("println")[2]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 4), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(3)
+        printB = main.calls("println")[3]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(-4, -2, -1, 0, 1, 2, 4), value.values)
 
-        printB = main.bodyOrNull<CallExpression>(4)
+        printB = main.calls("println")[4]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
@@ -192,17 +174,7 @@ class MultiValueEvaluatorTest {
 
     @Test
     fun testLoop() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("cfexample.cpp").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerPass<EdgeCachePass>()
-            }
-
-        assertNotNull(tu)
+        val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("loop")
         assertNotNull(main)
@@ -211,8 +183,7 @@ class MultiValueEvaluatorTest {
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()
-        val iVarList =
-            ((forLoop.statement as CompoundStatement).statements[0] as AssignExpression).rhs
+        val iVarList = ((forLoop.statement as Block).statements[0] as AssignExpression).rhs
         assertEquals(1, iVarList.size)
         val iVar = iVarList.first()
         val value = evaluator.evaluate(iVar) as ConcreteNumberSet
@@ -228,7 +199,7 @@ class MultiValueEvaluatorTest {
             val three = newLiteral(3, primitiveType("int"))
             val four = newLiteral(4, primitiveType("int"))
 
-            val ref = newDeclaredReferenceExpression("a")
+            val ref = newReference("a")
             ref.prevDFG = mutableSetOf(three, four)
 
             val neg = newUnaryOperator("-", false, true)

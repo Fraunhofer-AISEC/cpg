@@ -64,7 +64,6 @@ internal class SubgraphWalkerTest : BaseTest() {
                         .debugParser(true)
                         .failOnError(true)
                         .useParallelFrontends(true)
-                        .defaultLanguages()
                         .registerLanguage(TestLanguage("."))
                         .defaultPasses()
                         .build()

@@ -37,7 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.FunctionPointerCallResolver
+import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
+import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -77,7 +78,8 @@ import org.slf4j.LoggerFactory
  * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
  * and C++ code.
  */
-@RegisterExtraPass(FunctionPointerCallResolver::class)
+@RegisterExtraPass(DynamicInvokeResolver::class)
+@RegisterExtraPass(CXXExtraPass::class)
 class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
 
@@ -386,7 +388,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newDeclaredReferenceExpression(code, unknownType(), code)
+                newReference(code, unknownType(), code)
                 2 -> // an integer
                 newLiteral(code.toInt(), primitiveType("int"), code)
                 130 -> // a string
@@ -498,10 +500,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                         // translation unit
                         resolveAlias = true
 
-                        val decl =
-                            scopeManager.currentScope?.let {
-                                scopeManager.getRecordForName(it, Name(name))
-                            }
+                        val decl = scopeManager.getRecordForName(Name(name))
 
                         // We found a symbol, so we can use its name
                         if (decl != null) {
