@@ -49,8 +49,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleIfExp(node: PythonAST.IfExp): Expression {
         return newConditionalExpression(
             condition = handle(node.test),
-            thenExpr = handle(node.body),
-            elseExpr = handle(node.orelse),
+            thenExpression = handle(node.body),
+            elseExpression = handle(node.orelse),
             rawNode = node
         )
     }
@@ -153,7 +153,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     // try to resolve -> [ConstructExpression]
                     val currentScope = frontend.scopeManager.currentScope
                     val record =
-                        currentScope?.let { frontend.scopeManager.getRecordForName(it, func.name) }
+                        currentScope?.let { frontend.scopeManager.getRecordForName(func.name) }
 
                     if (record != null) {
                         // construct expression
@@ -182,7 +182,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleName(node: PythonAST.Name): Expression {
-        val r = newDeclaredReferenceExpression(name = node.id, rawNode = node)
+        val r = newReference(name = node.id, rawNode = node)
 
         /*
          * TODO: this is not nice... :(

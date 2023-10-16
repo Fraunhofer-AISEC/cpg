@@ -492,7 +492,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("bar", bar)
 
         assertEquals(2, (bar.body as? Block)?.statements?.size)
-        val line1 = (bar.body as? CompoundStatement)?.statements?.get(0) as? AssignExpression
+        val line1 = (bar.body as? Block)?.statements?.get(0) as? AssignExpression
         assertNotNull(line1)
         val line2 = (bar.body as? Block)?.statements?.get(1) as? MemberCallExpression
         assertNotNull(line2)
@@ -1032,7 +1032,7 @@ class PythonFrontendTest : BaseTest() {
         val varDefinedInLoop = forloopFunc.variables["varDefinedInLoop"]
         assertNotNull(varDefinedInLoop)
 
-        val functionBody = forloopFunc.body as? CompoundStatement
+        val functionBody = forloopFunc.body as? Block
         assertNotNull(functionBody)
 
         val firstLoop = functionBody.statements[1] as? ForEachStatement

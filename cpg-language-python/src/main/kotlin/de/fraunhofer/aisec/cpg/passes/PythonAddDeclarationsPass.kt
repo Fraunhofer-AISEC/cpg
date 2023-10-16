@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
@@ -65,7 +65,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
     private fun handle(node: Node?) {
         when (node) {
             is AssignExpression -> handleAssignExpression(node)
-            is DeclaredReferenceExpression -> handleDeclaredReferenceExpression(node)
+            is Reference -> handleReference(node)
             else -> {}
         }
     }
@@ -73,9 +73,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
     /*
      * Return null when not creating a new decl
      */
-    private fun handleDeclaredReferenceExpression(
-        node: DeclaredReferenceExpression
-    ): VariableDeclaration? {
+    private fun handleReference(node: Reference): VariableDeclaration? {
         val resolved = scopeManager.resolveReference(node)
         if (resolved == null) {
             val decl =
@@ -131,10 +129,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
 
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
-            (target as? DeclaredReferenceExpression)?.let {
+            (target as? Reference)?.let {
                 val resolved = scopeManager.resolveReference(it)
                 if (resolved == null) {
-                    val decl = handleDeclaredReferenceExpression(it)
+                    val decl = handleReference(it)
                     assignExpression.findValue(it)?.let { value ->
                         decl?.type = value.type
                     } // TODO why do we need this (testCtor test case for example)?

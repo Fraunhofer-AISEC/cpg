@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
@@ -76,7 +76,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleWhile(node: PythonAST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeCompoundStmt(node.body)
+        ret.statement = makeBlock(node.body)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -85,7 +85,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val ret = newForEachStatement(rawNode = node)
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeCompoundStmt(node.body)
+        ret.statement = makeBlock(node.body)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -101,8 +101,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleIf(node: PythonAST.If): Statement {
         val ret = newIfStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.thenStatement = makeCompoundStmt(node.body)
-        ret.elseStatement = makeCompoundStmt(node.orelse)
+        ret.thenStatement = makeBlock(node.body)
+        ret.elseStatement = makeBlock(node.orelse)
         return ret
     }
 
@@ -286,7 +286,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // END HANDLE ARGUMENTS
 
         if (s.body.isNotEmpty()) {
-            result.body = makeCompoundStmt(s.body)
+            result.body = makeBlock(s.body)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -295,12 +295,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return wrapDeclarationToStatement(result)
     }
 
-    private fun makeCompoundStmt(
+    private fun makeBlock(
         stmts: List<PythonAST.StmtBase>,
         code: String? = null,
         rawNode: PythonAST.AST? = null
-    ): CompoundStatement {
-        val result = newCompoundStatement(code, rawNode)
+    ): Block {
+        val result = newBlock(code, rawNode)
         for (stmt in stmts) {
             result.addStatement(handle(stmt))
         }
