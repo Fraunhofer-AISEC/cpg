@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -73,6 +74,12 @@ class ScopeManager : ScopeProvider {
 
     /** Represents an alias with the name [to] for the particular name [from]. */
     data class Alias(var from: Name, var to: Name)
+
+    /**
+     * A cache map of unique tags (computed with [Reference.buildUniqueTag]) and their respective
+     * [ValueDeclaration]. This is used by [resolveReference] as a caching mechanism.
+     */
+    private val symbolTable = mutableMapOf<ReferenceTag, ValueDeclaration>()
 
     /**
      * In some languages, we can define aliases for names. An example is renaming package imports in
@@ -615,37 +622,54 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun resolveReference(ref: Reference, startScope: Scope? = currentScope): ValueDeclaration? {
+        // Retrieve a unique tag for the particular reference based on the current scope
+        val tag = ref.buildUniqueTag(startScope)
+
+        // If we find a match in our symbol table, we can immediately return the declaration
+        var decl = symbolTable[tag]
+        if (decl != null) {
+            return decl
+        }
+
         val (scope, name) = extractScope(ref, startScope)
 
         // Try to resolve value declarations according to our criteria
-        return resolve<ValueDeclaration>(scope) {
-                if (it.name.lastPartsMatch(name)) {
-                    val helper = ref.resolutionHelper
-                    return@resolve when {
-                        // If the reference seems to point to a function (using a function pointer)
-                        // the entire signature is checked for equality
-                        helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
-                            val fptrType = helper.type as FunctionPointerType
-                            // TODO(oxisto): Support multiple return values
-                            val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
-                            returnType == fptrType.returnType &&
-                                it.hasSignature(fptrType.parameters)
-                        }
-                        // If our language has first-class functions, we can safely return them as a
-                        // reference
-                        ref.language is HasFirstClassFunctions -> {
-                            true
-                        }
-                        // Otherwise, we are not looking for functions here
-                        else -> {
-                            it !is FunctionDeclaration
+        decl =
+            resolve<ValueDeclaration>(scope) {
+                    if (it.name.lastPartsMatch(name)) {
+                        val helper = ref.resolutionHelper
+                        return@resolve when {
+                            // If the reference seems to point to a function (using a function
+                            // pointer) the entire signature is checked for equality
+                            helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
+                                val fptrType = helper.type as FunctionPointerType
+                                // TODO(oxisto): Support multiple return values
+                                val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                                returnType == fptrType.returnType &&
+                                    it.hasSignature(fptrType.parameters)
+                            }
+                            // If our language has first-class functions, we can safely return them
+                            // as a reference
+                            ref.language is HasFirstClassFunctions -> {
+                                true
+                            }
+                            // Otherwise, we are not looking for functions here
+                            else -> {
+                                it !is FunctionDeclaration
+                            }
                         }
                     }
-                }
 
-                return@resolve false
-            }
-            .firstOrNull()
+                    return@resolve false
+                }
+                .firstOrNull()
+
+        // Update the symbol cache, if we found a declaration for the tag
+        if (decl != null) {
+            symbolTable[tag] = decl
+        }
+
+        return decl
     }
 
     /**

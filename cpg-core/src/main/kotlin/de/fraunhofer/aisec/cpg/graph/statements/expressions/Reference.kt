@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -153,4 +154,15 @@ open class Reference : Expression(), HasType.TypeObserver {
             prev.registerTypeObserver(this)
         }
     }
+
+    /**
+     * This function builds a unique tag for the particular reference, based on the [startScope].
+     * Its purpose is to cache symbol resolutions, similar to LLVMs system of Unified Symbol
+     * Resolution (USR).
+     */
+    fun buildUniqueTag(startScope: Scope?): ReferenceTag {
+        return Objects.hash(this.name, this.resolutionHelper, startScope)
+    }
 }
+
+typealias ReferenceTag = Int
