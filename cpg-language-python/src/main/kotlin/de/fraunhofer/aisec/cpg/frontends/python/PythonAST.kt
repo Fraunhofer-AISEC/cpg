@@ -698,7 +698,7 @@ interface PythonAST {
      * ```
      */
     class Constant(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: Any? by lazy { "value" of pyObject }
+        val value: Any by lazy { "value" of pyObject }
         val kind: String? by lazy { "kind" of pyObject }
     }
 
