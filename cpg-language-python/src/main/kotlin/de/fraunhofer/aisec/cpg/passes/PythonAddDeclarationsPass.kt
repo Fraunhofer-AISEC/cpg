@@ -86,8 +86,13 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                         ?.receiver
                                         ?.name
                         ) {
-                            val field = newFieldDeclaration(node.name, code = node.code)
-                            field.location = node.location
+                            val field =
+                                newFieldDeclaration(
+                                    node.name,
+                                    code = node.code,
+                                    rawNode = node,
+                                    location = node.location
+                                )
                             scopeManager.currentRecord?.addField(field) // TODO why do we need this?
                             field
                         } else {
