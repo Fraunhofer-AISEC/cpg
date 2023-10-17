@@ -124,8 +124,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
 
             decl.isImplicit = true
 
-            decl.scope = scopeManager.currentScope // TODO why do we need this?
-            scopeManager.addDeclaration(decl)
+            if (decl is FieldDeclaration) {
+                decl.scope = scopeManager.currentRecord?.scope
+                scopeManager.currentRecord?.addField(decl)
+                scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                    scopeManager.addDeclaration(decl)
+                }
+            } else {
+                decl.scope = scopeManager.currentScope // TODO why do we need this?
+                scopeManager.addDeclaration(decl)
+            }
             return decl
         } else {
             return null

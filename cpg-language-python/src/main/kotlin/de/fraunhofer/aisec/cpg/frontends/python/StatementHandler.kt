@@ -310,8 +310,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleArgument(node: PythonAST.arg) {
         val currentFunction = frontend.scopeManager.currentFunction
         val arg = newParameterDeclaration(name = node.arg, rawNode = node)
-        // frontend.scopeManager.addDeclaration(arg) // TODO why not?
-        currentFunction?.addParameter(arg)
+        frontend.scopeManager.addDeclaration(arg)
         // TODO type hints?
     }
 
