@@ -216,7 +216,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         val superTypes = root.ancestors.map { it.type }
 
         // Check, if super type (or its root) is in the list
-        return superType.root in superTypes
+        return superType.root in superTypes ||
+            superType is UnknownType // TODO remove / move to python
     }
 }
 
