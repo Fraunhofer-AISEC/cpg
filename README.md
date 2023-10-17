@@ -183,8 +183,7 @@ The following authors have contributed to this project (in alphabetical order):
 
 ## Contributing
 
-We are currently discussing the implementation of a Contributor License Agreement (CLA). Unfortunately,
-we cannot merge external pull requests until this issue is resolved.
+Before accepting external contributions, you need to sign our [CLA](https://cla-assistant.io/Fraunhofer-AISEC/cpg). Our CLA assistent will check, whether you already signed the CLA when you open your first pull request.
 
 ## Further reading
 
