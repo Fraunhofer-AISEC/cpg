@@ -79,8 +79,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     }
 
     override fun typeOf(type: Any): Type {
-        // TODO
-        return unknownType()
+        return autoType() // TODO
     }
 
     override fun codeOf(astNode: PythonAST.AST): String? {

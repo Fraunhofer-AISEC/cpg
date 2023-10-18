@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, PythonAST.ExprBase>(::ProblemExpression, frontend) {
@@ -42,8 +43,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is PythonAST.Compare -> handleCompare(node)
             is PythonAST.Dict -> handleDict(node)
             is PythonAST.IfExp -> handleIfExp(node)
+            is PythonAST.Tuple -> handleTuple(node)
             else -> TODO()
         }
+    }
+
+    private fun handleTuple(node: PythonAST.Tuple): Expression {
+        TODO()
     }
 
     private fun handleIfExp(node: PythonAST.IfExp): Expression {
@@ -112,6 +118,24 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleConstant(node: PythonAST.Constant): Expression {
+        // TODO: this is ugly
+
+        return if (
+            (node.pyObject.getAttr("value") as? PyObject)?.getAttr("__class__").toString() ==
+                "<class 'complex'>"
+        ) {
+            val tpe = primitiveType("complex")
+            return newLiteral(node.pyObject.getAttr("value").toString(), type = tpe, rawNode = node)
+        } else if (node.pyObject.getAttr("value") == null) {
+            val tpe = objectType("None")
+
+            return newLiteral(null, type = tpe, rawNode = node)
+        } else {
+            easyConstant(node)
+        }
+    }
+
+    private fun easyConstant(node: PythonAST.Constant): Expression {
         // TODO check and add missing types
         val tpe =
             when (node.value) {
@@ -121,9 +145,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Long -> primitiveType("int")
                 is Float,
                 is Double -> primitiveType("float")
-                null -> objectType("None")
                 else -> {
-                    unknownType()
+                    autoType()
                 }
             }
         return newLiteral(node.value, type = tpe, rawNode = node)

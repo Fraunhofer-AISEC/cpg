@@ -43,25 +43,25 @@ interface PythonAST {
     interface WithPythonLocation { // TODO make the fields accessible `by lazy`
         val pyObject: PyObject
 
-        /** Maps to the `lineno` filed from Pyhon's ast. */
+        /** Maps to the `lineno` filed from Python's ast. */
         val lineno: Int
             get() {
                 return (pyObject.getAttr("lineno") as? Long)?.toInt() ?: TODO()
             }
 
-        /** Maps to the `col_offset` filed from Pyhon's ast. */
+        /** Maps to the `col_offset` filed from Python's ast. */
         val col_offset: Int
             get() {
                 return (pyObject.getAttr("col_offset") as? Long)?.toInt() ?: TODO()
             }
 
-        /** Maps to the `end_lineno` filed from Pyhon's ast. */
+        /** Maps to the `end_lineno` filed from Python's ast. */
         val end_lineno: Int
             get() {
                 return (pyObject.getAttr("end_lineno") as? Long)?.toInt() ?: TODO()
             }
 
-        /** Maps to the `end_col_offset` filed from Pyhon's ast. */
+        /** Maps to the `end_col_offset` filed from Python's ast. */
         val end_col_offset: Int
             get() {
                 return (pyObject.getAttr("end_col_offset") as? Long)?.toInt() ?: TODO()

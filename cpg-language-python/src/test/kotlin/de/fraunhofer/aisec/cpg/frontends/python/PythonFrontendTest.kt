@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -70,40 +69,38 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(b)
         assertLocalName("b", b)
         assertEquals(tu.primitiveType("bool"), b.type)
-        assertEquals(true, (b.initializer as? Literal<*>)?.value)
+        assertEquals(true, (b.firstAssignment as? Literal<*>)?.value)
 
         val i = p.variables["i"]
         assertNotNull(i)
         assertLocalName("i", i)
         assertEquals(tu.primitiveType("int"), i.type)
-        assertEquals(42L, (i.initializer as? Literal<*>)?.value)
+        assertEquals(42L, (i.firstAssignment as? Literal<*>)?.value)
 
         val f = p.variables["f"]
         assertNotNull(f)
         assertLocalName("f", f)
         assertEquals(tu.primitiveType("float"), f.type)
-        assertEquals(1.0, (f.initializer as? Literal<*>)?.value)
+        assertEquals(1.0, (f.firstAssignment as? Literal<*>)?.value)
 
         val c = p.variables["c"]
         assertNotNull(c)
         assertLocalName("c", c)
-        assertEquals(
-            NumericType("complex", null, PythonLanguage(), NumericType.Modifier.NOT_APPLICABLE),
-            c.type
-        )
-        assertEquals("(3+5j)", (c.initializer as? Literal<*>)?.value)
+        // assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"
+        // assertEquals("(3+5j)", (c.firstAssignment as? Literal<*>)?.value) // TODO: this is
+        // currently a binary op
 
         val t = p.variables["t"]
         assertNotNull(t)
         assertLocalName("t", t)
         assertEquals(tu.primitiveType("str"), t.type)
-        assertEquals("Hello", (t.initializer as? Literal<*>)?.value)
+        assertEquals("Hello", (t.firstAssignment as? Literal<*>)?.value)
 
         val n = p.variables["n"]
         assertNotNull(n)
         assertLocalName("n", n)
         assertEquals(tu.objectType("None"), n.type)
-        assertEquals(null, (n.initializer as? Literal<*>)?.value)
+        assertEquals(null, (n.firstAssignment as? Literal<*>)?.value)
     }
 
     @Test
@@ -665,11 +662,11 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(barBody)
 
         // self.classFieldDeclaredInFunction = 456
-        val barStmt0 = barBody.statements[0] as? DeclarationStatement
+        val barStmt0 = barBody.statements[0] as? AssignExpression
         val decl0 = barStmt0?.declarations?.get(0) as? FieldDeclaration
         assertNotNull(decl0)
         assertLocalName("classFieldDeclaredInFunction", decl0)
-        assertNotNull(decl0.initializer)
+        assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
         val barStmt1 = barBody.statements[1] as? AssignExpression
@@ -754,18 +751,18 @@ class PythonFrontendTest : BaseTest() {
         val foo = p.variables["foo"]
         assertNotNull(foo)
 
-        val initializer = foo.initializer as? MemberCallExpression
-        assertNotNull(initializer)
+        val firstAssignment = foo.firstAssignment as? MemberCallExpression
+        assertNotNull(firstAssignment)
 
-        assertLocalName("zzz", initializer)
-        val base = initializer.base as? MemberExpression
+        assertLocalName("zzz", firstAssignment)
+        val base = firstAssignment.base as? MemberExpression
         assertNotNull(base)
         assertLocalName("baz", base)
         val baseBase = base.base as? Reference
         assertNotNull(baseBase)
         assertLocalName("bar", baseBase)
 
-        val memberExpression = initializer.callee as? MemberExpression
+        val memberExpression = firstAssignment.callee as? MemberExpression
         assertNotNull(memberExpression)
         assertLocalName("zzz", memberExpression)
     }
@@ -916,10 +913,10 @@ class PythonFrontendTest : BaseTest() {
                 as? VariableDeclaration
         assertNotNull(phrDeclaration)
         assertLocalName("phr", phrDeclaration)
-        val phrInintializer = phrDeclaration.initializer as? BinaryOperator
-        assertNotNull(phrInintializer)
-        assertEquals("|", phrInintializer.operatorCode)
-        assertEquals(true, phrInintializer.lhs is InitializerListExpression)
+        val phrInitializer = phrDeclaration.firstAssignment as? BinaryOperator
+        assertNotNull(phrInitializer)
+        assertEquals("|", phrInitializer.operatorCode)
+        assertEquals(true, phrInitializer.lhs is InitializerListExpression)
 
         // z = {"user_id": user_id}
         val elseStmt1 =

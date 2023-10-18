@@ -95,7 +95,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAnnAssign(node: PythonAST.AnnAssign): Statement {
-        TODO()
+        // TODO: annotations
+        val lhs = frontend.expressionHandler.handle(node.target)
+        return if (node.value != null) {
+            newAssignExpression(
+                lhs = listOf(lhs),
+                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
+                rawNode = node
+            )
+        } else {
+            lhs
+        }
     }
 
     private fun handleIf(node: PythonAST.If): Statement {
@@ -120,7 +130,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleImportFrom(node: PythonAST.ImportFrom): Statement {
-        TODO()
+        val declStmt = newDeclarationStatement(rawNode = node)
+        for (stmt in node.names) {
+            val name =
+                if (stmt.asname != null) {
+                    stmt.asname
+                } else {
+                    stmt.name
+                }
+            val decl = newVariableDeclaration(name = name, rawNode = node)
+            frontend.scopeManager.addDeclaration(decl)
+            declStmt.addDeclaration(decl)
+        }
+        return declStmt
     }
 
     private fun handleClassDef(stmt: PythonAST.ClassDef): Statement {
