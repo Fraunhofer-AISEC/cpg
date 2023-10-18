@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -70,5 +72,24 @@ class SymbolResolverTest {
         val construct = method1.calls { it is ConstructExpression }.firstOrNull()
         assertNotNull(construct)
         assertInvokes(construct, constructor)
+    }
+
+    @Test
+    fun testUniqueTags() {
+        val result = GraphExamples.getConditionalExpression()
+
+        val map = mutableMapOf<ReferenceTag, MutableList<Reference>>()
+
+        val refs = result.refs
+        refs.forEach {
+            // Build a unique tag based on the scope of the reference is in (since this is usually
+            // the start scope)
+            val list = map.computeIfAbsent(it.uniqueTag) { mutableListOf() }
+            list += it
+
+            // All elements in the list must have the same scope and name
+            assertEquals(1, list.map { ref -> ref.scope }.toSet().size)
+            assertEquals(1, list.map { ref -> ref.name }.toSet().size)
+        }
     }
 }
