@@ -640,6 +640,106 @@ class ValueEvaluatorTest {
     }
 
     @Test
+    fun testHandleShiftLeft() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("<<")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(12, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(12L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{<<}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleShiftRight() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator(">>")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(0, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(0L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{>>}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleBitwiseAnd() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("&")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(2, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2L, primitiveType("long"))
+            assertEquals(2L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{&}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleBitwiseOr() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("|")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(3, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2L, primitiveType("long"))
+            assertEquals(3L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{|}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleBitwiseXor() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("^")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(1, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2L, primitiveType("long"))
+            assertEquals(1L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{^}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
     fun testHandleUnary() {
         with(TestHandler(TestLanguageFrontend())) {
             val neg = newUnaryOperator("-", false, true)

@@ -303,10 +303,16 @@ class DeclarationTest {
         with(tu) {
             val values =
                 mapOf(
+                    "zeroShift" to Pair(0, objectType("int")),
+                    "zeroAnd" to Pair(0, objectType("int")),
                     "one" to Pair(1, objectType("p.custom")),
                     "oneAsWell" to Pair(1, objectType("p.custom")),
+                    "oneShift" to Pair(1, primitiveType("int")),
                     "two" to Pair(2, primitiveType("int")),
+                    "twoShift" to Pair(2, primitiveType("int")),
                     "three" to Pair(3, primitiveType("int")),
+                    "threeOr" to Pair(3, primitiveType("int")),
+                    "threeXor" to Pair(3, primitiveType("int")),
                     "four" to Pair(4, primitiveType("int")),
                     "tenAsWell" to Pair(10, primitiveType("int")),
                     "five" to Pair(5, primitiveType("int")),
