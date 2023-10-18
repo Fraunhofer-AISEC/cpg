@@ -29,6 +29,10 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 // TODO Merge and/or refactor
+/**
+ * Explicit call of a constructor inside the records code that is constructed. Use it for Expressions like `this()`
+ * and `super`. As well as other similar expressions of the same type.
+ */
 class ConstructorCallExpression : CallExpression() {
     var containingClass: String? = null
 
