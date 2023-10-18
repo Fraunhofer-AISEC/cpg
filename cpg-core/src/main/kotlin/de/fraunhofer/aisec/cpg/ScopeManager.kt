@@ -614,16 +614,16 @@ class ScopeManager : ScopeProvider {
      * Resolves only references to Values in the current scope, static references to other visible
      * records are not resolved over the ScopeManager.
      *
-     * @param scope
      * @param ref
      * @return
      *
      * TODO: We should merge this function with [.resolveFunction]
      */
-    @JvmOverloads
-    fun resolveReference(ref: Reference, startScope: Scope? = currentScope): ValueDeclaration? {
+    fun resolveReference(ref: Reference): ValueDeclaration? {
+        val startScope = ref.scope
+
         // Retrieve a unique tag for the particular reference based on the current scope
-        val tag = ref.buildUniqueTag(startScope)
+        val tag = ref.uniqueTag
 
         // If we find a match in our symbol table, we can immediately return the declaration
         var decl = symbolTable[tag]
