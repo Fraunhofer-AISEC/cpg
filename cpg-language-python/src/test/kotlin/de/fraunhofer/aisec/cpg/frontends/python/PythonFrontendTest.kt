@@ -795,7 +795,7 @@ class PythonFrontendTest : BaseTest() {
         val whlBody = whlStmt.statement as? Block
         assertNotNull(whlBody)
 
-        val xDeclaration = whlBody.statements[0] as? DeclarationStatement
+        val xDeclaration = whlBody.statements[0] as? AssignExpression
         assertNotNull(xDeclaration)
 
         val ifStatement = whlBody.statements[1] as? IfStatement
