@@ -404,8 +404,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
-        assertEquals(2, recordFoo.fields.size)
-        val somevar = recordFoo.fields[0]
+        assertEquals(1, recordFoo.fields.size)
+        val somevar = recordFoo.fields["somevar"]
         assertNotNull(somevar)
         assertLocalName("somevar", somevar)
         // assertEquals(tu.parseType("int", false), somevar.type) TODO fix type deduction
