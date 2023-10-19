@@ -7,3 +7,4 @@ enableGoFrontend=true
 enablePythonFrontend=true
 enableLLVMFrontend=true
 enableTypeScriptFrontend=true
+enableRubyFrontend=true
