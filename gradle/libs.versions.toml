@@ -1,7 +1,7 @@
 [versions]
 kotlin = "1.9.0"
 neo4j = "4.0.6"
-log4j = "2.20.0"
+log4j = "2.21.0"
 sonarqube = "4.4.0.3356"
 spotless = "6.22.0"
 nexus-publish = "1.3.0"
@@ -19,8 +19,7 @@ log4j-core = { module= "org.apache.logging.log4j:log4j-core", version.ref = "log
 jline = { module = "org.jline:jline", version = "3.23.0" }
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.13.0"}
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
-neo4j-ogm = { module = "org.neo4j:neo4j-ogm", version.ref = "neo4j"}
-neo4j-ogm-bolt = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
+neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.25.4"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.15.0"}
@@ -49,7 +48,7 @@ nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", versi
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
-neo4j = ["neo4j-ogm-core", "neo4j-ogm", "neo4j-ogm-bolt"]
+neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}

@@ -153,4 +153,16 @@ open class Reference : Expression(), HasType.TypeObserver {
             prev.registerTypeObserver(this)
         }
     }
+
+    /**
+     * This function builds a unique tag for the particular reference, based on the [startScope].
+     * Its purpose is to cache symbol resolutions, similar to LLVMs system of Unified Symbol
+     * Resolution (USR).
+     */
+    val uniqueTag: ReferenceTag
+        get() {
+            return Objects.hash(this.name, this.resolutionHelper, this.scope)
+        }
 }
+
+typealias ReferenceTag = Int

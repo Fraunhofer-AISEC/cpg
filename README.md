@@ -34,7 +34,7 @@ In order to get familiar with the graph itself, you can use the subproject [cpg-
 ### As Library
 
 The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
-```
+```kotlin
 repositories {
     ivy {
         setUrl("https://download.eclipse.org/tools/cdt/releases/11.0/cdt-11.0.0/plugins")
@@ -121,7 +121,7 @@ Instead of manually editing the `gradle.properties` file, you can also use the `
 
 #### Golang
 
-In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically find JNI headers and stores the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS. In order to use it in an external project, the resulting library needs to be placed somewhere in `java.library.path`.
+In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically store the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS.
 
 #### Python
 
@@ -144,7 +144,6 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 #### TypeScript
 
 For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
-
 
 ### Code Style
 
@@ -183,8 +182,7 @@ The following authors have contributed to this project (in alphabetical order):
 
 ## Contributing
 
-We are currently discussing the implementation of a Contributor License Agreement (CLA). Unfortunately,
-we cannot merge external pull requests until this issue is resolved.
+Before accepting external contributions, you need to sign our [CLA](https://cla-assistant.io/Fraunhofer-AISEC/cpg). Our CLA assistent will check, whether you already signed the CLA when you open your first pull request.
 
 ## Further reading
 

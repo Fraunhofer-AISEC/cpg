@@ -24,3 +24,12 @@ const (
 	fiveAsWell = 5 + iota*100
 	onehundredandfive
 )
+
+const (
+	oneShift = 1 << iota
+	twoShift
+	zeroShift = 1 >> iota
+	zeroAnd   = oneShift & twoShift
+	threeOr   = oneShift | twoShift
+	threeXor  = oneShift ^ twoShift
+)

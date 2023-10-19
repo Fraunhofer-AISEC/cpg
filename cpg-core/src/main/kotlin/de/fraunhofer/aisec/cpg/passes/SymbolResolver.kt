@@ -205,7 +205,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Peek into the declaration, and if it is a variable, we can proceed normally, as we
             // are running into the special case explained above. Otherwise, we abort here (for
             // now).
-            wouldResolveTo = scopeManager.resolveReference(current, current.scope)
+            wouldResolveTo = scopeManager.resolveReference(current)
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
                 return
             }
@@ -214,9 +214,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
-        var refersTo =
-            current.refersTo
-                ?: wouldResolveTo ?: scopeManager.resolveReference(current, current.scope)
+        var refersTo = current.refersTo ?: wouldResolveTo ?: scopeManager.resolveReference(current)
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
