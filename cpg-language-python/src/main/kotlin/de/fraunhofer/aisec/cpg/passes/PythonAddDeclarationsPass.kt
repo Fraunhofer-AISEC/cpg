@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -74,6 +75,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
      * Return null when not creating a new decl
      */
     private fun handleReference(node: Reference): VariableDeclaration? {
+        if (node.resolutionHelper is CallExpression) {
+            return null
+        }
         val resolved = scopeManager.resolveReference(node)
         if (resolved == null) {
             val decl =
