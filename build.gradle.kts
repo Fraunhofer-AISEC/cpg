@@ -1,7 +1,3 @@
-import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
-import java.io.BufferedOutputStream
-import java.io.ByteArrayOutputStream
-
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -76,7 +72,7 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
     val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
     val mapOf = mapOf(id to config)
 
-    dokkaMultiModuleTask.outputDirectory.set(file(buildDir.resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
+    dokkaMultiModuleTask.outputDirectory.set(file(layout.buildDirectory.asFile.get().resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 
