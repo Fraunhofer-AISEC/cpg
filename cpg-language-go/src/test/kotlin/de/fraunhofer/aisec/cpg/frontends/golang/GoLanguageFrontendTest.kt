@@ -941,7 +941,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val f = tu.variables["f"]
         assertNotNull(f)
-        assertIs<FunctionType>(f.type)
+        assertIs<FunctionType>(f.type.underlyingType)
 
         val g = tu.variables["g"]
         assertNotNull(g)
@@ -1145,7 +1145,30 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(funcy)
         funcy.invokeEdges.all { it.getProperty(Properties.DYNAMIC_INVOKE) == true }
 
+        // We should be able to resolve the call from our stored "do" function to funcy
+        assertInvokes(funcy, result.functions["do"])
+
         val refs = result.refs.filter { it.name.localName != GoLanguage().anonymousIdentifier }
         refs.forEach { assertNotNull(it.refersTo) }
+    }
+
+    @Test
+    fun testPackages() {
+        val topLevel = Path.of("src", "test", "resources", "golang", "packages")
+        val result =
+            analyze(
+                listOf(
+                    // We need to keep them in this particular order, otherwise we will not resolve
+                    // cross-package correctly yet
+                    topLevel.resolve("api/apiv1.go").toFile(),
+                    topLevel.resolve("packages.go").toFile(),
+                    topLevel.resolve("cmd/packages/packages.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
     }
 }

@@ -111,7 +111,16 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             when (val type = expr.type) {
                 is FunctionType -> type.pointer() as FunctionPointerType
                 is FunctionPointerType -> type
-                else -> return
+                else -> {
+                    // some languages allow other types to derive from a function type, in this case
+                    // we need to look for a super type
+                    val superType = type.superTypes.singleOrNull()
+                    if (superType is FunctionType) {
+                        superType.pointer() as FunctionPointerType
+                    } else {
+                        return
+                    }
+                }
             }
 
         val invocationCandidates = mutableListOf<FunctionDeclaration>()

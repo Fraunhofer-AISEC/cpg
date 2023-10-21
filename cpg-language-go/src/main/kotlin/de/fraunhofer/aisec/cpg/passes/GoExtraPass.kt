@@ -247,7 +247,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If our type is an "overlay", we need to look for the underlying type
         type =
-            if (type.isOverlay) {
+            if (type.namedType) {
                 type.underlyingType
             } else {
                 type
@@ -272,11 +272,25 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     init.type = type.elementType
                 } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
                     init.value?.type = type.elementType
+                } else if (init is KeyValueExpression && init.key is InitializerListExpression) {
+                    init.key?.type = type.elementType
+                }
+            }
+        } else if (type?.isMap == true) {
+            for (init in node.initializers) {
+                if (init is KeyValueExpression) {
+                    if (init.key is InitializerListExpression) {
+                        init.key?.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
+                    } else if (init.value is InitializerListExpression) {
+                        init.value?.type =
+                            (type as ObjectType).generics.getOrNull(1) ?: unknownType()
+                    }
                 }
             }
         }
 
-        // We are not interested in arrays and maps, but only the "inner" single-object expressions
+        // Afterwards, we are not interested in arrays and maps, but only the "inner" single-object
+        // expressions
         if (
             type is UnknownType ||
                 (type is PointerType && type.isArray) ||
@@ -394,7 +408,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             scopeManager.globalScope
                 ?.astNode
                 ?.startInference(ctx)
-                ?.inferNamespaceDeclaration(include.name, include.filename)
+                ?.inferNamespaceDeclaration(include.name, include.filename, include)
         }
     }
 
