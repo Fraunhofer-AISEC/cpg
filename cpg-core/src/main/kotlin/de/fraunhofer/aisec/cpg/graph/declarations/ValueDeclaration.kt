@@ -61,6 +61,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
 
+    var aliases = mutableSetOf<Node>()
+
     override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
             if (field == value) {

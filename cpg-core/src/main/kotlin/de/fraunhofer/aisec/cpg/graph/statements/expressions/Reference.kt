@@ -72,7 +72,9 @@ open class Reference : Expression(), HasType.TypeObserver {
                 value.registerTypeObserver(this)
             }
         }
-    // set the access
+
+    var aliases = mutableSetOf<Node>()
+
     /**
      * Is this reference used for writing data instead of just reading it? Determines dataflow
      * direction
