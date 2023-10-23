@@ -144,3 +144,9 @@ val enableTypeScriptFrontend: Boolean by extra {
     enableTypeScriptFrontend.toBoolean()
 }
 project.logger.lifecycle("TypeScript frontend is ${if (enableTypeScriptFrontend) "enabled" else "disabled"}")
+
+val enableRubyFrontend: Boolean by extra {
+    val enableRubyFrontend: String? by project
+    enableRubyFrontend.toBoolean()
+}
+project.logger.lifecycle("Ruby frontend is ${if (enableRubyFrontend) "enabled" else "disabled"}")
