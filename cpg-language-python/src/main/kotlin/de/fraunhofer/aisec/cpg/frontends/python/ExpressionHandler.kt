@@ -49,7 +49,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleTuple(node: PythonAST.Tuple): Expression {
-        TODO()
+        val lst = mutableListOf<Expression>()
+        for (e in node.elts) {
+            lst += handle(e)
+        }
+        val ile = newInitializerListExpression(rawNode = node)
+        ile.initializers = lst.toList()
+        return ile
     }
 
     private fun handleIfExp(node: PythonAST.IfExp): Expression {
@@ -62,7 +68,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleDict(node: PythonAST.Dict): Expression {
-        TODO()
+        val lst = mutableListOf<Expression>()
+        for (i in node.values.indices) {
+            lst +=
+                newKeyValueExpression(
+                    key = node.keys[i]?.let { handle(it) },
+                    value = handle(node.values[i]),
+                    rawNode = node
+                )
+        }
+        val ile = newInitializerListExpression(rawNode = node)
+        ile.initializers = lst.toList()
+        return ile
     }
 
     private fun handleCompare(node: PythonAST.Compare): Expression {

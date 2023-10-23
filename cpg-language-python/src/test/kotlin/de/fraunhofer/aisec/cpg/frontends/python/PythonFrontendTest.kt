@@ -908,9 +908,8 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("minor", ifCond.lhs as? Reference)
 
         // phr = {"user_id": user_id} | content
-        val phrDeclaration =
-            (ifThen.statements[0] as? DeclarationStatement)?.declarations?.get(0)
-                as? VariableDeclaration
+        val phrDeclaration = (ifThen.statements[0] as? AssignExpression)?.declarations?.get(0)
+
         assertNotNull(phrDeclaration)
         assertLocalName("phr", phrDeclaration)
         val phrInitializer = phrDeclaration.firstAssignment as? BinaryOperator
@@ -919,9 +918,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(true, phrInitializer.lhs is InitializerListExpression)
 
         // z = {"user_id": user_id}
-        val elseStmt1 =
-            (ifElse.statements[0] as? DeclarationStatement)?.declarations?.get(0)
-                as? VariableDeclaration
+        val elseStmt1 = (ifElse.statements[0] as? AssignExpression)?.declarations?.get(0)
         assertNotNull(elseStmt1)
         assertLocalName("z", elseStmt1)
 

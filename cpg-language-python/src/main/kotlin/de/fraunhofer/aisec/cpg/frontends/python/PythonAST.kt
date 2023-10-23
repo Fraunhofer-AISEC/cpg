@@ -554,7 +554,7 @@ interface PythonAST {
      * ```
      */
     class Dict(pyObject: PyObject) : ExprBase(pyObject) {
-        val keys: List<ExprBase> by lazy { "keys" of pyObject }
+        val keys: List<ExprBase?> by lazy { "keys" of pyObject }
         val values: List<ExprBase> by lazy { "values" of pyObject }
     }
 
