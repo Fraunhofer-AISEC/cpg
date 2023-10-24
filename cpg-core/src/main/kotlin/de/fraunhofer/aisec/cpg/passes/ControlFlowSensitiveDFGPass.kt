@@ -376,7 +376,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             lastStatement.removeNextDFG(node)
     }
 
-    private fun unwrapReference(node: Node?): Reference? {
+    protected fun unwrapReference(node: Node?): Reference? {
         return if (node is Reference) node
         else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
             unwrapReference(node.input)
