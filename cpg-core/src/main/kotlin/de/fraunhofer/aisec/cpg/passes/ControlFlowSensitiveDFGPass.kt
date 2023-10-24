@@ -142,7 +142,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.
      */
-    protected fun transfer(
+    protected open fun transfer(
         currentEdge: PropertyEdge<Node>,
         state: State<Node, Set<Node>>,
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
@@ -365,7 +365,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             lastStatement.removeNextDFG(node)
     }
 
-    private fun unwrapReference(node: Node?): Reference? {
+    protected fun unwrapReference(node: Node?): Reference? {
         return if (node is Reference) node
         else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
             unwrapReference(node.input)

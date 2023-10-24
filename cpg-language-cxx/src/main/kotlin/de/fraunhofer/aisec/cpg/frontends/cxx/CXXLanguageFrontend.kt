@@ -80,7 +80,7 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
-class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
+open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
 
     /**
