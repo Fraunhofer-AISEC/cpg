@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import org.slf4j.Logger
@@ -404,5 +404,21 @@ object Util {
     enum class Edge {
         ENTRIES,
         EXITS
+    }
+
+    fun unwrapReference(node: Node?): Reference? {
+        return if (node is Reference) node
+        else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
+            unwrapReference(node.input)
+        else if (node is CastExpression) unwrapReference(node.expression)
+        else if (
+            node is BinaryOperator &&
+                (node.operatorCode == "&" || node.operatorCode == "*") &&
+                node.lhs is CastExpression &&
+                (node.lhs as CastExpression).expression is ProblemExpression
+        )
+        // TODO: This is only a hotfix for a bug in the language frontend.
+        unwrapReference(node.rhs)
+        else null
     }
 }

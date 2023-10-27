@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -363,13 +364,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 lastStatement !in reachableReturnStatements
         )
             lastStatement.removeNextDFG(node)
-    }
-
-    protected fun unwrapReference(node: Node?): Reference? {
-        return if (node is Reference) node
-        else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
-            unwrapReference(node.input)
-        else null
     }
 
     /**
