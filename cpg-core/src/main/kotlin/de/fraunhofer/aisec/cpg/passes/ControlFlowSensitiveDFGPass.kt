@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
