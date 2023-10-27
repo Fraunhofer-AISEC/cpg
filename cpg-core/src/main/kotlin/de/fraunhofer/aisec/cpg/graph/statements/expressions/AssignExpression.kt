@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -59,16 +60,6 @@ class AssignExpression :
     var lhs: List<Expression> = listOf()
         set(value) {
             field = value
-            fun unwrapReference(node: Node): Reference? {
-                return if (node is Reference) {
-                    node.dfgHandlerHint = true
-                    node
-                } else if (
-                    node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&")
-                )
-                    unwrapReference(node.input)
-                else null
-            }
             if (operatorCode == "=") {
                 field.forEach { unwrapReference(it)?.access = AccessValues.WRITE }
             } else {
