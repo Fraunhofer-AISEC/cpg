@@ -404,8 +404,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     handleUnresolvedCalls(call, it)
                 } else {
                     Util.attachCallParameters(it, call.arguments)
-                    call.addPrevDFG(it)
                 }
+                call.addPrevDFG(it)
             }
         }
     }
