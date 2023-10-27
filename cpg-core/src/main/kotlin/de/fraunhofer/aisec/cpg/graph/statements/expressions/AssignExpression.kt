@@ -61,9 +61,21 @@ class AssignExpression :
         set(value) {
             field = value
             if (operatorCode == "=") {
-                field.forEach { unwrapReference(it)?.access = AccessValues.WRITE }
+                field.forEach {
+                    val unwrapped = unwrapReference(it)
+                    unwrapped?.let {
+                        it.access = AccessValues.WRITE
+                        it.dfgHandlerHint = true
+                    }
+                }
             } else {
-                field.forEach { unwrapReference(it)?.access = AccessValues.READWRITE }
+                field.forEach {
+                    val unwrapped = unwrapReference(it)
+                    unwrapped?.let {
+                        it.access = AccessValues.READWRITE
+                        it.dfgHandlerHint = true
+                    }
+                }
             }
         }
 
