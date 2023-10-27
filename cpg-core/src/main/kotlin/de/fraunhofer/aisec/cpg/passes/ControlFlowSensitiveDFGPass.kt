@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -374,13 +375,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 lastStatement !in reachableReturnStatements
         )
             lastStatement.removeNextDFG(node)
-    }
-
-    protected fun unwrapReference(node: Node?): Reference? {
-        return if (node is Reference) node
-        else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
-            unwrapReference(node.input)
-        else null
     }
 
     /**
