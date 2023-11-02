@@ -135,7 +135,7 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
             // upper bound
             this[newNode] = newLatticeElement.lub(current)
         } else {
-            this[newNode] = newLatticeElement.duplicate()
+            this[newNode] = newLatticeElement
         }
         return true
     }
@@ -147,13 +147,15 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
  */
 class Worklist<K : Any, N : Any, V>() {
     /** A mapping of nodes to the state which is currently available there. */
-    var globalState: MutableMap<K, State<N, V>> = mutableMapOf()
+    var globalState = IdentityHashMap<K, State<N, V>>()
         private set
 
     /** A list of all nodes which have already been visited. */
     private val alreadySeen = IdentitySet<K>()
 
-    constructor(globalState: MutableMap<K, State<N, V>> = mutableMapOf()) : this() {
+    constructor(
+        globalState: IdentityHashMap<K, State<N, V>> = IdentityHashMap<K, State<N, V>>()
+    ) : this() {
         this.globalState = globalState
     }
 
@@ -242,7 +244,9 @@ inline fun <reified K : Node, V> iterateEOG(
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>
 ): State<K, V>? {
-    val worklist = Worklist(mutableMapOf(Pair(startNode, startState)))
+    val initialState = IdentityHashMap<K, State<K, V>>()
+    initialState[startNode] = startState
+    val worklist = Worklist(initialState)
     worklist.push(startNode, startState)
 
     while (worklist.isNotEmpty()) {
@@ -273,7 +277,7 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>
 ): State<N, V>? {
-    val globalState = mutableMapOf<K, State<N, V>>()
+    val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {
         globalState[startEdge] = startState
     }
