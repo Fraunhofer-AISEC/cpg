@@ -51,11 +51,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStatement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructorCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
@@ -517,7 +515,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpression {
+    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructExpression {
         val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
@@ -528,11 +526,26 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
+        var name = containingClass + this.language?.namespaceDelimiter + containingClass
         val node =
-            this.newConstructorCallExpression(
-                containingClass,
-                explicitConstructorInvocationStmt.toString()
+            this.newConstructExpression(
+                name,
+                explicitConstructorInvocationStmt.toString(),
+                explicitConstructorInvocationStmt
             )
+        node.type = UnknownType.getUnknownType(language)
+        if (explicitConstructorInvocationStmt.isThis) {
+            frontend.scopeManager.currentRecord?.toType()?.let { node.type = it }
+            node.callee = this.newReference(name)
+        } else {
+            frontend.scopeManager.currentRecord?.superTypes?.first()?.let {
+                node.type = it
+                node.callee =
+                    this.newReference(
+                        it.name.toString() + this.language?.namespaceDelimiter + it.name.localName
+                    )
+            }
+        }
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .stream()

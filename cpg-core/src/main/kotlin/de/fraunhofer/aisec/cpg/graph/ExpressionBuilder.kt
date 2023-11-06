@@ -301,27 +301,6 @@ fun MetadataProvider.newCallExpression(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newConstructorCallExpression(
-    containingClass: String?,
-    code: String? = null,
-    rawNode: Any? = null
-): ConstructorCallExpression {
-    val node = ConstructorCallExpression()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    node.containingClass = containingClass
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [CallExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
     callee: Expression?,
     isStatic: Boolean = false,
