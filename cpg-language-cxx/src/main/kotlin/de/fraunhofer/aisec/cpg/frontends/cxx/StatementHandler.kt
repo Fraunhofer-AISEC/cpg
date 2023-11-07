@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
@@ -290,9 +291,10 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): DeclarationStatement {
+    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): Statement {
         return if (ctx.declaration is IASTASMDeclaration) {
-            newASMDeclarationStatement(rawNode = ctx)
+            // TODO: Specify the contained language through a language node and find a way to run a frontend for sub-block if available
+            newDistinctLanguageBlock(rawNode = ctx)
         } else {
             val declarationStatement = newDeclarationStatement(rawNode = ctx)
             val declaration = frontend.declarationHandler.handle(ctx.declaration)
