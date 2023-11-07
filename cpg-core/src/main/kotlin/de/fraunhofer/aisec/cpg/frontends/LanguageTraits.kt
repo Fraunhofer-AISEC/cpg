@@ -27,15 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.CallResolver
-import java.util.regex.Pattern
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 
 /**
  * A language trait is a feature or trait that is common to a group of programming languages. Any
@@ -116,7 +114,7 @@ interface HasComplexCallResolution : LanguageTrait {
         call: CallExpression,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
-        callResolver: CallResolver
+        callResolver: SymbolResolver
     ): List<FunctionDeclaration>
 
     /**
@@ -131,7 +129,7 @@ interface HasComplexCallResolution : LanguageTrait {
     fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern,
+        name: String,
         ctx: TranslationContext
     ): List<FunctionDeclaration>
 }
@@ -170,7 +168,6 @@ interface HasSuperClasses : LanguageTrait {
         callee: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
-        recordMap: Map<Name, RecordDeclaration>
     ): Boolean
 }
 

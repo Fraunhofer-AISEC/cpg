@@ -76,10 +76,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
-                    val record =
-                        frontend.scopeManager.currentScope?.let {
-                            frontend.scopeManager.getRecordForName(it, recordName)
-                        }
+                    val record = frontend.scopeManager.getRecordForName(recordName)
 
                     // now this gets a little bit hacky, we will add it to the record declaration
                     // this is strictly speaking not 100 % true, since the method property edge is
@@ -140,7 +137,36 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         func.returnTypes = returnTypes
 
         // Parse parameters
-        for (param in funcDecl.type.params.list) {
+        handleFuncParams(funcDecl.type.params)
+
+        // Only parse function body in non-dependencies
+        if (!frontend.isDependency) {
+            // Check, if the last statement is a return statement, otherwise we insert an implicit
+            // one
+            val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
+            if (body is Block) {
+                val last = body.statements.lastOrNull()
+                if (last !is ReturnStatement) {
+                    val ret = newReturnStatement()
+                    ret.isImplicit = true
+                    body += ret
+                }
+            }
+            func.body = body
+        }
+
+        frontend.scopeManager.leaveScope(func)
+
+        // Leave scope of record, if applicable
+        (func as? MethodDeclaration)?.recordDeclaration?.let {
+            frontend.scopeManager.leaveScope(it)
+        }
+
+        return func
+    }
+
+    internal fun handleFuncParams(list: GoStandardLibrary.Ast.FieldList) {
+        for (param in list.list) {
             // We need to differentiate between three cases:
             // - an empty list of names, which means that the parameter is unnamed; and we also give
             //   it an empty name
@@ -182,31 +208,6 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 frontend.setComment(p, param)
             }
         }
-
-        // Only parse function body in non-dependencies
-        if (!frontend.isDependency) {
-            // Check, if the last statement is a return statement, otherwise we insert an implicit
-            // one
-            val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
-            if (body is Block) {
-                val last = body.statements.lastOrNull()
-                if (last !is ReturnStatement) {
-                    val ret = newReturnStatement()
-                    ret.isImplicit = true
-                    body += ret
-                }
-            }
-            func.body = body
-        }
-
-        frontend.scopeManager.leaveScope(func)
-
-        // Leave scope of record, if applicable
-        (func as? MethodDeclaration)?.recordDeclaration?.let {
-            frontend.scopeManager.leaveScope(it)
-        }
-
-        return func
     }
 
     private fun handleGenDecl(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {

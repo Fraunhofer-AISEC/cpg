@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
@@ -221,3 +222,14 @@ abstract class Type : Node {
         }
     }
 }
+
+/** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
+var Type.recordDeclaration: RecordDeclaration?
+    get() {
+        return (this as? ObjectType)?.recordDeclaration
+    }
+    set(value) {
+        if (this is ObjectType) {
+            this.recordDeclaration = value
+        }
+    }

@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -112,8 +111,7 @@ open class JavaLanguage :
         callee: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
-        recordMap: Map<Name, RecordDeclaration>
-    ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager, recordMap)
+    ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager)
 
     override val startCharacter = '<'
     override val endCharacter = '>'

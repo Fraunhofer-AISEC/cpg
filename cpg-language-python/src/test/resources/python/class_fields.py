@@ -1,5 +1,5 @@
 class Foo:
-    x
+    x: int
     y = 123
 
     def bar(self):

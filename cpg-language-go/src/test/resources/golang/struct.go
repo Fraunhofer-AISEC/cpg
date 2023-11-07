@@ -21,13 +21,13 @@ type MyInterface interface {
 }
 
 func (s MyStruct) MyFunc() string {
-	fmt.Printf(s.myOtherFunc(), s.MyField)
+	fmt.Printf(s.myOtherFunc(1), s.MyField)
 
 	return "s"
 }
 
-func (s MyStruct) myOtherFunc() string {
-	return "%d"
+func (s MyStruct) myOtherFunc(i int) string {
+	return fmt.Sprintf("%d", i)
 }
 
 func NewMyStruct() *MyStruct {

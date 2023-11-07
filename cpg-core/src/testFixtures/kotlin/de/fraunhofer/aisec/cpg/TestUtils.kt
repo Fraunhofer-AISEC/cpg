@@ -265,7 +265,7 @@ object TestUtils {
      * @param usedMember
      * - THe expected member that is used
      */
-    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Node?) {
+    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
         assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the

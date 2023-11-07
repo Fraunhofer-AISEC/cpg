@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -49,7 +49,7 @@ open class Reference : Expression(), HasType.TypeObserver {
      * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
      * this expression.
      */
-    @PopulatedByPass(VariableUsageResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null
         set(value) {
@@ -103,7 +103,7 @@ open class Reference : Expression(), HasType.TypeObserver {
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .append(super.toString())
+            .appendSuper(super.toString())
             .append("refersTo", refersTo)
             .toString()
     }
@@ -153,4 +153,16 @@ open class Reference : Expression(), HasType.TypeObserver {
             prev.registerTypeObserver(this)
         }
     }
+
+    /**
+     * This function builds a unique tag for the particular reference, based on the [startScope].
+     * Its purpose is to cache symbol resolutions, similar to LLVMs system of Unified Symbol
+     * Resolution (USR).
+     */
+    val uniqueTag: ReferenceTag
+        get() {
+            return Objects.hash(this.name, this.resolutionHelper, this.scope)
+        }
 }
+
+typealias ReferenceTag = Int

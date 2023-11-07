@@ -291,8 +291,12 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
  * Checks, if this [Type] is either derived from or equals to [superType]. This is forwarded to the
  * [Language] of the [Type] and can be overridden by the individual languages.
  */
-fun Type.isDerivedFrom(superType: Type): Boolean {
-    return this.language?.isDerivedFrom(this, superType) ?: false
+fun Type.isDerivedFrom(
+    superType: Type,
+    hint: HasType? = null,
+    superHint: HasType? = null
+): Boolean {
+    return this.language?.isDerivedFrom(this, superType, hint, superHint) ?: false
 }
 
 /**

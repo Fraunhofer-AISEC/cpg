@@ -219,8 +219,7 @@ class Application : Callable<Int> {
         listOf(
             TypeHierarchyResolver::class,
             ImportResolver::class,
-            VariableUsageResolver::class,
-            CallResolver::class,
+            SymbolResolver::class,
             DFGPass::class,
             EvaluationOrderGraphPass::class,
             TypeResolver::class,

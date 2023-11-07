@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
@@ -136,67 +137,41 @@ class GraphExamples {
         ) =
             testFrontend(config).build {
                 translationResult {
-                    translationUnit("initializerListExprDFG.cpp") {
-                        function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("i", t("int")) {
-                                        val initList = newInitializerListExpression()
-                                        initList.initializers = listOf(call("foo"))
-                                        initializer = initList
+                    translationUnit("Variables.java") {
+                        record("Variables") {
+                            field("field", t("int")) {
+                                literal(42, t("int"))
+                                modifiers = listOf("private")
+                            }
+                            method("getField", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body { returnStmt { member("field") } }
+                            }
+                            method("getLocal", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body {
+                                    declare {
+                                        variable("local", t("int")) { literal(42, t("int")) }
                                     }
+                                    returnStmt { ref("local") }
                                 }
-                                returnStmt { ref("i") }
-
-                                translationUnit("Variables.java") {
-                                    record("Variables") {
-                                        field("field", t("int")) {
-                                            literal(42, t("int"))
-                                            modifiers = listOf("private")
-                                        }
-                                        method("getField", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
-                                            body { returnStmt { member("field") } }
-                                        }
-                                        method("getLocal", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
-                                            body {
-                                                declare {
-                                                    variable("local", t("int")) {
-                                                        literal(42, t("int"))
-                                                    }
-                                                }
-                                                returnStmt { ref("local") }
-                                            }
-                                        }
-                                        method("getShadow", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
-                                            body {
-                                                declare {
-                                                    variable("field", t("int")) {
-                                                        literal(43, t("int"))
-                                                    }
-                                                }
-                                                returnStmt { ref("field") }
-                                            }
-                                        }
-                                        method("getNoShadow", t("int")) {
-                                            receiver =
-                                                newVariableDeclaration("this", t("Variables"))
-                                            body {
-                                                declare {
-                                                    variable("field", t("int")) {
-                                                        literal(43, t("int"))
-                                                    }
-                                                }
-                                                returnStmt { member("field", ref("this")) }
-                                            }
-                                        }
+                            }
+                            method("getShadow", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body {
+                                    declare {
+                                        variable("field", t("int")) { literal(43, t("int")) }
                                     }
+                                    returnStmt { ref("field") }
+                                }
+                            }
+                            method("getNoShadow", t("int")) {
+                                receiver = newVariableDeclaration("this", t("Variables"))
+                                body {
+                                    declare {
+                                        variable("field", t("int")) { literal(43, t("int")) }
+                                    }
+                                    returnStmt { member("field", ref("this")) }
                                 }
                             }
                         }
@@ -996,6 +971,61 @@ class GraphExamples {
                                     call("sc.print")
                                     call("sc.magic") { literal(3, t("int")) }
                                     call("sc.magic2") { literal(5, t("int")) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        /**
+         * This roughly represents the following Java Code:
+         * ```java
+         * public class TestClass {
+         *   public TestClass(int i) {
+         *
+         *   };
+         *
+         *   public TestClass method1() {
+         *     return new TestClass(4);
+         *   }
+         *
+         *   public void method2() {
+         *      var variable = this.method1();
+         *      variable.method2();
+         *      return;
+         *   }
+         * }
+         * ```
+         */
+        fun getCombinedVariableAndCallTest(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("CombinedVariableAndCall.java") {
+                        record("TestClass") {
+                            constructor { param("i", t("int")) }
+                            method("method1", t("TestClass")) {
+                                body {
+                                    returnStmt { construct("TestClass") { literal(4, t("int")) } }
+                                }
+                            }
+
+                            method("method2") {
+                                receiver("this", t("TestClass"))
+                                body {
+                                    declare {
+                                        variable("variable", autoType()) {
+                                            memberCall("method1", ref("this"))
+                                        }
+                                    }
+
+                                    memberCall("method2", ref("variable"))
                                 }
                             }
                         }

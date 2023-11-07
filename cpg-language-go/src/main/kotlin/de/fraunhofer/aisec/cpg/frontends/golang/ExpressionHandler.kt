@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Ast.BasicLit.Kind.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -149,16 +150,18 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             return literal
         }
 
-        val ref = newReference(ident.name, rawNode = ident)
+        // If we are directly in a name scope, make sure we FQN'ize the name, to help with
+        // resolution; unless it is already an FQN or a package name.
+        var name: CharSequence = ident.name
+        name =
+            when {
+                name in builtins -> name
+                isPackageName(name) -> name
+                language?.namespaceDelimiter.toString() in name -> name
+                else -> parseName((scope as? NameScope)?.name?.fqn(ident.name) ?: ident.name)
+            }
 
-        // Check, if this refers to a package import
-        val import = frontend.currentTU?.getIncludeByName(ident.name)
-        // Then set the refersTo, because our regular CPG passes will not resolve them
-        if (import != null) {
-            ref.refersTo = import
-        }
-
-        return ref
+        return newReference(name, rawNode = ident)
     }
 
     private fun handleIndexExpr(indexExpr: GoStandardLibrary.Ast.IndexExpr): SubscriptExpression {
@@ -329,16 +332,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         // Check, if this just a regular reference to a variable with a package scope and not a
         // member expression
-        var isMemberExpression = true
-        for (imp in frontend.currentFile?.imports ?: listOf()) {
-            // If we have an alias, we need to check it instead of the import name
-            val name = imp.name?.name ?: imp.importName
-
-            if (base.name.localName == name) {
-                // found a package name, so this is NOT a member expression
-                isMemberExpression = false
-            }
-        }
+        val isMemberExpression = !isPackageName(base.name.localName)
 
         val ref =
             if (isMemberExpression) {
@@ -352,6 +346,22 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             }
 
         return ref
+    }
+
+    private fun isPackageName(
+        name: CharSequence,
+    ): Boolean {
+        for (imp in frontend.currentFile?.imports ?: listOf()) {
+            // If we have an alias, we need to check it instead of the import name
+            val packageName = imp.name?.name ?: imp.importName
+
+            if (name == packageName) {
+                // found a package name
+                return true
+            }
+        }
+
+        return false
     }
 
     /**
@@ -458,5 +468,53 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             frontend.declarationHandler.handle(funcLit.toDecl()) as? FunctionDeclaration
 
         return lambda
+    }
+
+    companion object {
+        val builtins =
+            listOf(
+                "bool",
+                "uint8",
+                "uint16",
+                "uint32",
+                "uint64",
+                "int8",
+                "int16",
+                "int32",
+                "int64",
+                "float32",
+                "float64",
+                "complex64",
+                "complex128",
+                "string",
+                "int",
+                "uint",
+                "uintptr",
+                "byte",
+                "rune",
+                "any",
+                "comparable",
+                "iota",
+                "nil",
+                "append",
+                "copy",
+                "delete",
+                "len",
+                "cap",
+                "make",
+                "max",
+                "min",
+                "new",
+                "complex",
+                "real",
+                "imag",
+                "clear",
+                "close",
+                "panic",
+                "recover",
+                "print",
+                "println",
+                "error"
+            )
     }
 }

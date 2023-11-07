@@ -9,6 +9,7 @@ val enableGoFrontend: Boolean by rootProject.extra
 val enablePythonFrontend: Boolean by rootProject.extra
 val enableLLVMFrontend: Boolean by rootProject.extra
 val enableTypeScriptFrontend: Boolean by rootProject.extra
+val enableRubyFrontend: Boolean by rootProject.extra
 
 dependencies {
     if (enableJavaFrontend) api(project(":cpg-language-java"))
@@ -17,4 +18,5 @@ dependencies {
     if (enablePythonFrontend) api(project(":cpg-language-python"))
     if (enableLLVMFrontend) api(project(":cpg-language-llvm"))
     if (enableTypeScriptFrontend) api(project(":cpg-language-typescript"))
+    if (enableRubyFrontend) api(project(":cpg-language-ruby"))
 }

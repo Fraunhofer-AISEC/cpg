@@ -351,6 +351,10 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(4, recordFoo.fields.size)
         assertEquals(1, recordFoo.methods.size)
 
+        // TODO: When developing the new python frontend, remove the type specifier from the field
+        //   again and check if the field still occurs. It's absolutely not clear to me who would be
+        //   responsible for adding it but IMHO it should be the frontend. This, however, is
+        //   currently not the case.
         val fieldX = recordFoo.fields["x"]
         assertNotNull(fieldX)
 

@@ -26,15 +26,9 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
-import de.fraunhofer.aisec.cpg.frontends.golang.funcTypeName
-import de.fraunhofer.aisec.cpg.frontends.golang.isOverlay
-import de.fraunhofer.aisec.cpg.frontends.golang.underlyingType
+import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
@@ -98,7 +92,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * This is also possible with more complex types, such as interfaces or aliased types, as long as
  * they are compatible. Because types in the same package can be defined in multiple files, we
  * cannot decide during the frontend run. Therefore, we need to execute this pass before the
- * [CallResolver] and convert certain [CallExpression] nodes into a [CastExpression].
+ * [SymbolResolver] and convert certain [CallExpression] nodes into a [CastExpression].
  *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
@@ -106,9 +100,14 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * [InitializerListExpression] to a fully-qualified name that contains the name of the [ObjectType]
  * that the expression is creating. This way we can resolve the static references to the field to
  * the actual field.
+ *
+ * ## Add Methods of Embedded Structs to the Record's Scope
+ *
+ * This pass also adds methods of [RecordDeclaration.embeddedStructs] into the scope of the
+ * [RecordDeclaration] itself, so that it can be resolved using the regular [SymbolResolver].
  */
-@ExecuteBefore(VariableUsageResolver::class)
-@ExecuteBefore(CallResolver::class)
+@ExecuteBefore(SymbolResolver::class)
+@ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(DFGPass::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
@@ -126,6 +125,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
             when (node) {
                 is CallExpression -> handleCall(node, parent)
                 is IncludeDeclaration -> handleInclude(node)
+                is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
                 is InitializerListExpression -> handleInitializerListExpression(node)
@@ -137,50 +137,107 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         }
     }
 
+    /**
+     * This function adds methods of [RecordDeclaration.embeddedStructs] into the scope of the
+     * struct itself, so we can resolve method calls of embedded structs.
+     *
+     * For example, if a struct embeds another struct (see https://go.dev/ref/spec#Struct_types), we
+     * can call any methods of the embedded struct on the one that embeds it:
+     * ```go
+     * type MyTime struct {
+     *   time.Time
+     * }
+     *
+     * func main() {
+     *   var t = MyTime{Time: time.Now()}
+     *   t.Add(-5*time.Second)
+     * }
+     * ```
+     */
+    private fun handleRecordDeclaration(record: RecordDeclaration) {
+        // We are only interest in structs, not interfaces
+        if (record.kind != "struct") {
+            return
+        }
+
+        // Enter our record's scope
+        scopeManager.enterScope(record)
+
+        // Loop through the embedded struct and add their methods to the record's scope.
+        for (method in record.embeddedStructs.flatMap { it.methods }) {
+            // Add it to the scope, but do NOT add it to the underlying AST field (methods),
+            // otherwise we would duplicate the method in the AST
+            scopeManager.addDeclaration(method, addToAST = false)
+        }
+
+        scopeManager.leaveScope(record)
+    }
+
     private fun addBuiltIn(): TranslationUnitDeclaration {
         val builtin = newTranslationUnitDeclaration("builtin.go")
+        builtin.language = GoLanguage()
         scopeManager.resetToGlobal(builtin)
 
-        val len = newFunctionDeclaration("len", localNameOnly = true)
-        len.parameters = listOf(newParameterDeclaration("v", GoLanguage().autoType()))
-        len.type =
+        return with(builtin) {
+            val len = newFunctionDeclaration("len", localNameOnly = true)
+            len.parameters = listOf(newParameterDeclaration("v", autoType()))
+            len.returnTypes = listOf(primitiveType("int"))
+            addBuiltInFunction(len)
+
+            /**
+             * ```go
+             * func append(slice []Type, elems ...Type) []Type
+             * ```
+             */
+            val append = newFunctionDeclaration("append", localNameOnly = true)
+            append.parameters =
+                listOf(
+                    newParameterDeclaration("slice", autoType().array()),
+                    newParameterDeclaration("elems", autoType(), variadic = true),
+                )
+            append.returnTypes = listOf(autoType().array())
+            addBuiltInFunction(append)
+
+            /**
+             * ```go
+             * func panic(v any)
+             * ```
+             */
+            val panic = newFunctionDeclaration("panic", localNameOnly = true)
+            panic.parameters = listOf(newParameterDeclaration("v", primitiveType("any")))
+            addBuiltInFunction(panic)
+
+            /**
+             * ```go
+             * func recover() any
+             * ```
+             */
+            val recover = newFunctionDeclaration("panic", localNameOnly = true)
+            panic.returnTypes = listOf(primitiveType("any"))
+            addBuiltInFunction(recover)
+
+            val error = newRecordDeclaration("error", "interface")
+            scopeManager.enterScope(error)
+
+            val errorFunc = newMethodDeclaration("Error", recordDeclaration = error)
+            errorFunc.returnTypes = listOf(primitiveType("string"))
+            addBuiltInFunction(errorFunc)
+
+            scopeManager.leaveScope(error)
+            builtin
+        }
+    }
+
+    private fun addBuiltInFunction(func: FunctionDeclaration) {
+        func.type =
             typeManager.registerType(
-                FunctionType(funcTypeName(len.signatureTypes, len.returnTypes))
+                FunctionType(
+                    funcTypeName(func.signatureTypes, func.returnTypes),
+                    func.signatureTypes,
+                    func.returnTypes
+                )
             )
-        scopeManager.addDeclaration(len)
-
-        /**
-         * ```go
-         * func append(slice []Type, elems ...Type) []Type
-         * ```
-         */
-        val append = newFunctionDeclaration("append", localNameOnly = true)
-        append.parameters =
-            listOf(
-                newParameterDeclaration("slice", GoLanguage().autoType().array()),
-                newParameterDeclaration("elems", GoLanguage().autoType(), variadic = true),
-            )
-        append.returnTypes = listOf(GoLanguage().autoType().array())
-        append.type =
-            typeManager.registerType(
-                FunctionType(funcTypeName(append.signatureTypes, append.returnTypes))
-            )
-        scopeManager.addDeclaration(append)
-
-        val error = newRecordDeclaration("error", "interface")
-        scopeManager.enterScope(error)
-
-        val errorFunc = newMethodDeclaration("Error", recordDeclaration = error)
-        errorFunc.returnTypes = listOf(GoLanguage().primitiveType("string"))
-        errorFunc.type =
-            typeManager.registerType(
-                FunctionType(funcTypeName(errorFunc.signatureTypes, errorFunc.returnTypes))
-            )
-        scopeManager.addDeclaration(errorFunc)
-
-        scopeManager.leaveScope(error)
-
-        return builtin
+        scopeManager.addDeclaration(func)
     }
 
     /**
@@ -215,6 +272,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
             for (init in node.initializers) {
                 if (init is InitializerListExpression) {
                     init.type = type.elementType
+                } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
+                    init.value?.type = type.elementType
                 }
             }
         }
