@@ -63,6 +63,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
 
+    var className: String = this::class.simpleName.toString()
+
     /**
      * This property holds the full name using our new [Name] class. It is currently not persisted
      * in the graph database.
