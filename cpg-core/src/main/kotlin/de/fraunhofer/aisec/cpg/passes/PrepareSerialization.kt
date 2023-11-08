@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import kotlin.reflect.full.memberProperties
@@ -45,6 +46,13 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             .javaField
             .also { it?.isAccessible = true }
 
+    private val valueTypeField =
+        Literal::class
+            .memberProperties
+            .first() { it.name == "valueType" }
+            .javaField
+            .also { it?.isAccessible = true }
+
     override fun cleanup() {
         // nothing to do
     }
@@ -56,6 +64,7 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             // CallExpression overwrites name property and must be copied to JvmField
             // to be visible by Neo4jOGM
             if (node is CallExpression) nodeNameField?.set(node, node.name)
+            if (node is Literal<*>) valueTypeField?.set(node, node.valueType)
         }
     }
 }

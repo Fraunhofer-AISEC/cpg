@@ -39,6 +39,10 @@ import org.neo4j.ogm.typeconversion.AttributeConverter
  */
 class Literal<T> : Expression() {
     @Convert(ValueConverter::class) var value: T? = null
+    var valueType: String = ""
+        get() {
+            return if (value != null) value!!::class.simpleName.toString() else ""
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
