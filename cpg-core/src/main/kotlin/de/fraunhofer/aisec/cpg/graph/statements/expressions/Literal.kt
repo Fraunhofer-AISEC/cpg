@@ -36,6 +36,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  */
 class Literal<T> : Expression() {
     var value: T? = null
+    var valueType: String = ""
+        get() {
+            return if (value != null) value!!::class.simpleName.toString() else ""
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
