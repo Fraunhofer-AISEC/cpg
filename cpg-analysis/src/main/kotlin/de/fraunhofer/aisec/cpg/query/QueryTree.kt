@@ -63,7 +63,7 @@ open class QueryTree<T>(
     fun printNicely(depth: Int = 0): String {
         var res =
             "  ".repeat(depth) +
-                "$stringRepresentation (==> $value)\n" +
+                "$stringRepresentation (==> ${if (value is List<*>) (value as List<*>).joinToString("\n","[", "]") else value})\n" +
                 "--------".repeat(depth + 1)
         if (children.isNotEmpty()) {
             res += "\n"
