@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
@@ -262,6 +263,16 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
             val translationUnitDeclaration =
                 declarationHandler.handleTranslationUnit(translationUnit)
+
+            for (c in translationUnit.comments) {
+                if (c.rawSignature.isNotEmpty()) {
+                    regionOf(c.fileLocation)?.let {
+                        CommentMatcher()
+                            .matchCommentToNode(c.rawSignature, it, translationUnitDeclaration)
+                    }
+                }
+            }
+
             bench.stop()
             translationUnitDeclaration
         } catch (ex: CoreException) {
@@ -275,7 +286,13 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     }
 
     override fun locationOf(astNode: IASTNode): PhysicalLocation? {
-        val fLocation = astNode.fileLocation ?: return null
+        return regionOf(astNode.fileLocation)?.let {
+            PhysicalLocation(Path.of(astNode.containingFilename).toUri(), it)
+        }
+    }
+
+    private fun regionOf(fLocation: IASTFileLocation?): Region? {
+        if (fLocation == null) return null
         val lineBreaks: IntArray =
             try {
                 val fLoc = getField(fLocation.javaClass, "fLocationCtx")
@@ -308,19 +325,19 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
 
         // our start line, indexed by 0
-        val startLine = astNode.fileLocation.startingLineNumber - 1
+        val startLine = fLocation.startingLineNumber - 1
 
         // our end line, indexed by 0
-        val endLine = astNode.fileLocation.endingLineNumber - 1
+        val endLine = fLocation.endingLineNumber - 1
 
         // our start column, index by 0
         val startColumn =
             if (startLine == 0) {
                 // if we are in the first line, the start column is just the node offset
-                astNode.fileLocation.nodeOffset
+                fLocation.nodeOffset
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                astNode.fileLocation.nodeOffset -
+                fLocation.nodeOffset -
                     lineBreaks[startLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
@@ -329,18 +346,17 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         val endColumn =
             if (endLine == 0) {
                 // if we are in the first line, the end column is just the node offset
-                astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength
+                fLocation.nodeOffset + fLocation.nodeLength
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                (astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength) -
+                (fLocation.nodeOffset + fLocation.nodeLength) -
                     lineBreaks[endLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
 
         // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
         // not 0
-        val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
-        return PhysicalLocation(Path.of(astNode.containingFilename).toUri(), region)
+        return Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
     }
 
     /**
