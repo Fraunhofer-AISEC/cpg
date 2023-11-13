@@ -147,7 +147,7 @@ class AssignExpression :
             // here we allow tuple only to be at the first position of the rhs
             // if the index at the rhs is higher or there are not enough elements on the lhs to
             // match, an error will be thrown
-            if (idx != 0 || lhs.size < type.types.size + rhs.size + 1) {
+            if (idx != 0 || lhs.size < type.types.size + rhs.size - 1) {
                 log.info(
                     "Tuple type size on RHS does is to large or tuple is not in the first position of the rhs "
                 )

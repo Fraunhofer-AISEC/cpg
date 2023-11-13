@@ -530,24 +530,6 @@ fun MetadataProvider.newInitializerListExpression(
 }
 
 /**
- * Creates a new [DesignatedInitializerExpression]. The [MetadataProvider] receiver will be used to
- * fill different meta-data using [Node.applyMetadata]. Calling this extension function outside of
- * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newDesignatedInitializerExpression(
-    code: String? = null,
-    rawNode: Any? = null
-): DesignatedInitializerExpression {
-    val node = DesignatedInitializerExpression()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
-
-    log(node)
-    return node
-}
-
-/**
  * Creates a new [TypeExpression]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
