@@ -556,9 +556,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleCXXDesignatedInitializer(
-        ctx: CPPASTDesignatedInitializer
-    ): DesignatedInitializerExpression {
+    private fun handleCXXDesignatedInitializer(ctx: CPPASTDesignatedInitializer): AssignExpression {
         val rhs = handle(ctx.operand)
         val lhs = ArrayList<Expression>()
         if (ctx.designators.isEmpty()) {
@@ -598,16 +596,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        val die = newDesignatedInitializerExpression(rawNode = ctx)
-        die.lhs = lhs
-        die.rhs = rhs
-
-        return die
+        return newAssignExpression(
+            lhs = lhs,
+            rhs = listOfNotNull(rhs),
+            rawNode = ctx
+        )
     }
 
-    private fun handleCDesignatedInitializer(
-        ctx: CASTDesignatedInitializer
-    ): DesignatedInitializerExpression {
+    private fun handleCDesignatedInitializer(ctx: CASTDesignatedInitializer): AssignExpression {
         val rhs = handle(ctx.operand)
         val lhs = ArrayList<Expression>()
         if (ctx.designators.isEmpty()) {
@@ -647,11 +643,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        val die = newDesignatedInitializerExpression(rawNode = ctx)
-        die.lhs = lhs
-        die.rhs = rhs
-
-        return die
+        return newAssignExpression(
+            lhs = lhs,
+            rhs = listOfNotNull(rhs),
+            rawNode = ctx
+        )
     }
 
     private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression {

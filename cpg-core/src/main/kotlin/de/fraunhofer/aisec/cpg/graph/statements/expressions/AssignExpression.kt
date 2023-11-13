@@ -120,7 +120,7 @@ class AssignExpression :
         return if (lhs.size > 1) {
             rhs.singleOrNull()
         } else {
-            // Basically, we need to find out which index on the lhs this variable belongs to and
+            // We need to find out which index on the lhs this variable belongs to and
             // find the corresponding index on the rhs.
             val idx = lhs.indexOf(lhsExpression)
             if (idx == -1) {
@@ -135,26 +135,41 @@ class AssignExpression :
     fun findTargets(rhsExpression: HasType): List<Expression> {
         val type = rhsExpression.type
 
+        // We need to find out which index on the rhs this variable belongs to and
+        // find the corresponding index on the rhs.
+        val idx = rhs.indexOf(rhsExpression)
+
         // There are now two possibilities: Either, we have a tuple type, that we need to
         // deconstruct, or we have a singular type
         return if (type is TupleType) {
-            // We need to see if there is enough room on the left side. Currently, we only support
-            // languages that do not allow to mix tuple and non-tuple types luckily, so we can just
-            // assume that all arguments on the left side are assignment targets
-            if (lhs.size != type.types.size) {
-                log.info("Tuple type size on RHS does not match number of LHS expressions")
+            // If we know that the rhs element is a tuple we assign enough elements on the lhs that
+            // coincide with his size
+            // here we allow tuple only to be at the first position of the rhs
+            // if the index at the rhs is higher or there are not enough elements on the lhs to
+            // match, an error will be thrown
+            if (idx != 0 || lhs.size < type.types.size + rhs.size + 1) {
+                log.info(
+                    "Tuple type size on RHS does is to large or tuple is not in the first position of the rhs "
+                )
                 listOf()
             } else {
-                lhs
+                lhs.subList(0, type.types.size)
             }
         } else {
-            // Basically, we need to find out which index on the rhs this variable belongs to and
-            // find the corresponding index on the rhs.
-            val idx = rhs.indexOf(rhsExpression)
             if (idx == -1) {
                 listOf()
             } else {
-                listOfNotNull(lhs.getOrNull(idx))
+                // If lhs has more elements, the first element in rhs targets enough elements at the
+                // start of lhs to even it out
+                if (idx == 0 && lhs.size > rhs.size) {
+                    lhs.subList(0, lhs.size - rhs.size + 1)
+                } else {
+                    // we map all elements from rhs to lhs from the end of both lists, when there
+                    // are no more elements in
+                    // lhs to be mapped to the target will be the first element in lhs (assuming it
+                    // is a tuple of size rhs.size - lhs.size)
+                    listOfNotNull(lhs.getOrElse(idx + lhs.size - rhs.size) { lhs.firstOrNull() })
+                }
             }
         }
     }
