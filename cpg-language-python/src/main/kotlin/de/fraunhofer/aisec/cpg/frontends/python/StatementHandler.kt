@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
@@ -111,8 +112,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleIf(node: PythonAST.If): Statement {
         val ret = newIfStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.thenStatement = makeBlock(node.body)
-        ret.elseStatement = makeBlock(node.orelse)
+        ret.thenStatement =
+            if (node.body.isNotEmpty()) {
+                makeBlock(node.body)
+            } else {
+                null
+            }
+        ret.elseStatement =
+            if (node.orelse.isNotEmpty()) {
+                makeBlock(node.orelse)
+            } else {
+                null
+            }
         return ret
     }
 
@@ -204,8 +215,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        // HANDLE ARGUMENTS
+        // HANDLE ANNOTATIONS
+        result.addAnnotations(handleAnnotations(s))
 
+        // HANDLE ARGUMENTS
         if (s.args.posonlyargs.isNotEmpty()) {
             val problem =
                 newProblemDeclaration(
@@ -317,6 +330,70 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return wrapDeclarationToStatement(result)
     }
 
+    private fun handleAnnotations(
+        node: PythonAST.FunctionDef
+    ): Collection<de.fraunhofer.aisec.cpg.graph.Annotation> {
+        val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
+        for (decorator in node.decorator_list) {
+            /*
+            # cannot do this because kw arguments are not properly handled yet in
+            # functions
+            # expr = self.visit(decorator)
+             */
+            val members = mutableListOf<Node>()
+            if (decorator is PythonAST.Call) {
+                if (decorator.func is PythonAST.Attribute) {
+                    /*
+                    # unfortunately, FQN'ing does not work here correctly because at
+                    # this point the base of the MemberExpression is not yet resolved.
+                    # So instead we use the ref's "code" property to have the correct
+                    # name like @app.route. In the future it might make sense to have
+                    # a type listener in the Annotation to correctly resolve the base
+                    */
+                    val ref = frontend.expressionHandler.handle(decorator.func)
+
+                    val member =
+                        newAnnotationMember(
+                            name = "receiver",
+                            value = (ref as? MemberExpression)?.base,
+                            rawNode = node
+                        )
+                    members += member
+                    annotations += newAnnotation(name = ref.name, rawNode = decorator.func)
+                } else if (decorator.func is PythonAST.Name) {
+                    val ref = frontend.expressionHandler.handle(decorator.func)
+                    annotations += newAnnotation(name = ref.name, rawNode = node)
+                }
+            } else {
+                TODO()
+            }
+
+            /*
+            # add first arg as value
+            */
+            if (decorator.args.isNotEmpty()) {
+                val arg0 = decorator.args[0]
+                val value = frontend.expressionHandler.handle(arg0)
+                val member = newAnnotationMember(name = "value", value = value, rawNode = node)
+                members += member
+                // TODO: more than 1 args ???
+            }
+            /*
+            # loop through keywords args
+            */
+            for (kw in decorator.keywords) {
+                val member =
+                    newAnnotationMember(
+                        name = kw.arg,
+                        value = frontend.expressionHandler.handle(kw.value),
+                        rawNode = node
+                    )
+                members += member
+            }
+        }
+        return annotations
+    }
+
     private fun makeBlock(
         stmts: List<PythonAST.StmtBase>,
         code: String? = null,
@@ -349,6 +426,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun getTypeInCurrentNamespace(it: PythonAST.AST): Type {
-        TODO()
+        return if (it is PythonAST.Name) {
+            val namespace = frontend.scopeManager.currentNamespace?.localName
+            objectType(namespace + "." + it.id)
+        } else {
+            TODO()
+        }
     }
 }
