@@ -94,7 +94,6 @@ abstract class Scope(
 
     override fun hashCode(): Int {
         var result = astNode?.hashCode() ?: 0
-        result = 31 * result + (parent?.hashCode() ?: 0)
         result = 31 * result + (name?.hashCode() ?: 0)
         return result
     }
