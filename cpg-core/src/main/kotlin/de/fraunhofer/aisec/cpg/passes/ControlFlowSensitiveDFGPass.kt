@@ -128,7 +128,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        for (varDecl in node.variables.filter { it !is FieldDeclaration }) {
+        for (varDecl in node.variables.filter { it !is FieldDeclaration && !it.isGlobal }) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
         }
@@ -224,7 +224,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
                 currentNode.refersTo is VariableDeclaration &&
-                currentNode.refersTo !is FieldDeclaration
+                currentNode.refersTo !is FieldDeclaration &&
+                (currentNode.refersTo as? VariableDeclaration)?.isGlobal != true
         ) {
             // We can only find a change if there's a state for the variable
             doubleState.declarationsState[currentNode.refersTo]?.let {

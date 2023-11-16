@@ -419,6 +419,6 @@ object Util {
         )
         // TODO: This is only a hotfix for a bug in the language frontend.
         unwrapReference(node.rhs)
-        else null
+        else if (node is SubscriptExpression) unwrapReference(node.arrayExpression) else null
     }
 }

@@ -269,7 +269,7 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         // follow them
         if (currentPath.last().nextDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
+            // failedPaths.add(currentPath)
             continue
         }
 
