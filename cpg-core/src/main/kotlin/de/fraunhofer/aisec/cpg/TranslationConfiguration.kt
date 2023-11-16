@@ -108,7 +108,8 @@ private constructor(
     inferenceConfiguration: InferenceConfiguration,
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
-    addIncludesToGraph: Boolean
+    addIncludesToGraph: Boolean,
+    maxComplexityForDFG: Int?,
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -165,6 +166,8 @@ private constructor(
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
 
+    val maxComplexityForDFG: Int?
+
     init {
         registeredPasses = passes
         this.languages = languages
@@ -178,6 +181,7 @@ private constructor(
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
         this.addIncludesToGraph = addIncludesToGraph
+        this.maxComplexityForDFG = maxComplexityForDFG
     }
 
     /** Returns a list of all analyzed files. */
@@ -228,6 +232,7 @@ private constructor(
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
+        private var maxComplexityForDFG: Int? = null
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -406,6 +411,11 @@ private constructor(
         /** Registers an additional [Language]. */
         inline fun <reified T : Language<*>> registerLanguage(): Builder {
             T::class.primaryConstructor?.call()?.let { registerLanguage(it) }
+            return this
+        }
+
+        fun maxComplexityForDFG(max: Int): Builder {
+            this.maxComplexityForDFG = max
             return this
         }
 
@@ -594,7 +604,8 @@ private constructor(
                 inferenceConfiguration,
                 compilationDatabase,
                 matchCommentsToNodes,
-                addIncludesToGraph
+                addIncludesToGraph,
+                maxComplexityForDFG
             )
         }
 

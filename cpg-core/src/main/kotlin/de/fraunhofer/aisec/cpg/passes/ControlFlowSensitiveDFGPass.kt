@@ -61,9 +61,28 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * @param node every node in the TranslationResult
      */
     protected fun handle(node: Node) {
+        val max = config.maxComplexityForDFG
+
         if (node is FunctionDeclaration) {
+            // Skip empty functions
+            if (node.body == null) {
+                return
+            }
+
+            // Calculate the complexity of the function and see, if it exceeds our threshold
+            if (max != null) {
+                val c = node.body?.cyclicComplexity ?: 0
+                if (c > max) {
+                    log.info(
+                        "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                    )
+                    return
+                }
+            }
+
             clearFlowsOfVariableDeclarations(node)
             val startState = DFGPassState<Set<Node>>()
+
             startState.declarationsState.push(node, PowersetLattice(setOf()))
             val finalState =
                 iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return

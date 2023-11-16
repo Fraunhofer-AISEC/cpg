@@ -30,7 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -264,6 +267,15 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
             return list
         }
 
+    /**
+     * This returns a simple heuristic for the complexity of a function declaration, based on the
+     * level of nesting
+     */
+    val complexity: Int
+        get() {
+            return this.body?.cyclicComplexity ?: 0
+        }
+
     companion object {
         const val WHITESPACE = " "
         const val BRACKET_LEFT = "("
@@ -271,3 +283,27 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
         const val BRACKET_RIGHT = ")"
     }
 }
+
+val Statement.cyclicComplexity: Int
+    get() {
+        var i = 0
+        for (stmt in (this as? Block)?.statements ?: listOf()) {
+            when (stmt) {
+                is IfStatement -> {
+                    // add one for each branch (and include the children)
+                    stmt.thenStatement?.let { i += it.cyclicComplexity + 1 }
+                    stmt.elseStatement?.let { i += it.cyclicComplexity + 1 }
+                }
+                is SwitchStatement -> {
+                    // forward it to the block containing the case statements
+                    stmt.statement?.let { i += it.cyclicComplexity }
+                }
+                is CaseStatement -> {
+                    // add one for each branch (and include the children)
+                    stmt.caseExpression?.let { i += it.cyclicComplexity }
+                }
+            }
+        }
+
+        return i
+    }
