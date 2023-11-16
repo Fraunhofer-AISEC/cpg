@@ -49,8 +49,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity] a
-         * [FunctionDeclaration] must have in order to be considered.
+         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
+         * a [FunctionDeclaration] must have in order to be considered.
          */
         var maxComplexity: Int? = null
     ) : PassConfiguration()
@@ -105,7 +105,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             for ((key, value) in finalState.generalState) {
                 if (key is TupleDeclaration) {
                     // We need a little hack for tuple statements to set the index. We have the
-                    // outer part (i.e., the tuple) here but we generate the DFG edges to the
+                    // outer part (i.e., the tuple) here, but we generate the DFG edges to the
                     // elements. We have the indices here, so it's amazing.
                     key.elements.forEachIndexed { i, element ->
                         element.addAllPrevDFG(
