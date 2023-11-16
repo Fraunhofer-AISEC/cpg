@@ -109,7 +109,7 @@ private constructor(
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
-    maxComplexityForDFG: Int?,
+    passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -166,7 +166,7 @@ private constructor(
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
 
-    val maxComplexityForDFG: Int?
+    val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
 
     init {
         registeredPasses = passes
@@ -181,7 +181,7 @@ private constructor(
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
         this.addIncludesToGraph = addIncludesToGraph
-        this.maxComplexityForDFG = maxComplexityForDFG
+        this.passConfigurations = passConfigurations
     }
 
     /** Returns a list of all analyzed files. */
@@ -232,7 +232,8 @@ private constructor(
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
-        private var maxComplexityForDFG: Int? = null
+        private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
+            mutableMapOf()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -414,9 +415,13 @@ private constructor(
             return this
         }
 
-        fun maxComplexityForDFG(max: Int): Builder {
-            this.maxComplexityForDFG = max
+        fun <T : Pass<*>> configurePass(clazz: KClass<T>, config: PassConfiguration): Builder {
+            this.passConfigurations[clazz] = config
             return this
+        }
+
+        inline fun <reified T : Pass<*>> configurePass(config: PassConfiguration): Builder {
+            return this.configurePass(T::class, config)
         }
 
         /**
@@ -605,7 +610,7 @@ private constructor(
                 compilationDatabase,
                 matchCommentsToNodes,
                 addIncludesToGraph,
-                maxComplexityForDFG
+                passConfigurations
             )
         }
 

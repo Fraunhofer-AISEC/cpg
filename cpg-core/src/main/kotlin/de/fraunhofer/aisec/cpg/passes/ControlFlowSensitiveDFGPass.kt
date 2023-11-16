@@ -47,6 +47,14 @@ import kotlin.contracts.contract
 @DependsOn(DFGPass::class)
 open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
+    class Configuration(
+        /**
+         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity] a
+         * [FunctionDeclaration] must have in order to be considered.
+         */
+        var maxComplexity: Int? = null
+    ) : PassConfiguration()
+
     override fun cleanup() {
         // Nothing to do
     }
@@ -61,7 +69,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * @param node every node in the TranslationResult
      */
     protected fun handle(node: Node) {
-        val max = config.maxComplexityForDFG
+        val max = passConfig<Configuration>()?.maxComplexity
 
         if (node is FunctionDeclaration) {
             // Skip empty functions
@@ -71,7 +79,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             // Calculate the complexity of the function and see, if it exceeds our threshold
             if (max != null) {
-                val c = node.body?.cyclicComplexity ?: 0
+                val c = node.body?.cyclomaticComplexity ?: 0
                 if (c > max) {
                     log.info(
                         "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"

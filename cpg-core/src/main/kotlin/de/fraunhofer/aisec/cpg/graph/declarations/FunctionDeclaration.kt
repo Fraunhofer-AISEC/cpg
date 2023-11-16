@@ -268,12 +268,11 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
         }
 
     /**
-     * This returns a simple heuristic for the complexity of a function declaration, based on the
-     * level of nesting
+     * This returns a simple heuristic for the complexity of a function declaration.
      */
     val complexity: Int
         get() {
-            return this.body?.cyclicComplexity ?: 0
+            return this.body?.cyclomaticComplexity ?: 0
         }
 
     companion object {
@@ -284,23 +283,26 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
     }
 }
 
-val Statement.cyclicComplexity: Int
+/**
+ * This is a very basic implementation of Cyclomatic Complexity.
+ */
+val Statement.cyclomaticComplexity: Int
     get() {
         var i = 0
-        for (stmt in (this as? Block)?.statements ?: listOf()) {
+        for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
             when (stmt) {
                 is IfStatement -> {
                     // add one for each branch (and include the children)
-                    stmt.thenStatement?.let { i += it.cyclicComplexity + 1 }
-                    stmt.elseStatement?.let { i += it.cyclicComplexity + 1 }
+                    stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
+                    stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
                 }
                 is SwitchStatement -> {
                     // forward it to the block containing the case statements
-                    stmt.statement?.let { i += it.cyclicComplexity }
+                    stmt.statement?.let { i += it.cyclomaticComplexity }
                 }
                 is CaseStatement -> {
                     // add one for each branch (and include the children)
-                    stmt.caseExpression?.let { i += it.cyclicComplexity }
+                    stmt.caseExpression?.let { i += it.cyclomaticComplexity }
                 }
             }
         }
