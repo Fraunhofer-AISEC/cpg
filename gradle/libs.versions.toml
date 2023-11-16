@@ -22,7 +22,7 @@ neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.25.4"}
-jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.15.0"}
+jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.16.0"}
 eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.29.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "74.1"}
