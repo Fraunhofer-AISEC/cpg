@@ -110,13 +110,18 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                     // elements. We have the indices here, so it's amazing.
                     key.elements.forEachIndexed { i, element ->
                         element.addAllPrevDFG(
-                            value.elements.filterNot { it is VariableDeclaration && key == it },
+                            value.elements.filterNot {
+                                (it is VariableDeclaration || it is ParameterDeclaration) &&
+                                    key == it
+                            },
                             mutableMapOf(Properties.INDEX to i)
                         )
                     }
                 } else {
                     key.addAllPrevDFG(
-                        value.elements.filterNot { it is VariableDeclaration && key == it }
+                        value.elements.filterNot {
+                            (it is VariableDeclaration || it is ParameterDeclaration) && key == it
+                        }
                     )
                 }
             }

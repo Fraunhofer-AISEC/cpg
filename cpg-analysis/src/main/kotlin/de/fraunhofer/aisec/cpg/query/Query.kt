@@ -197,7 +197,7 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
     val evalRes = from.followNextDFGEdgesUntilHit { it == to }
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    // allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
