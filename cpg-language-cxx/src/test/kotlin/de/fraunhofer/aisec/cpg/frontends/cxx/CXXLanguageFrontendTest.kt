@@ -1320,21 +1320,43 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.inferenceConfiguration(builder().guessCastExpressions(true).build())
                 it.registerLanguage<CPPLanguage>()
             }
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.functions["main"]
         assertNotNull(main)
 
-        val declStatement = main.getBodyStatementAs(0, DeclarationStatement::class.java)
-        assertNotNull(declStatement)
+        val count = tu.variables["count"]
+        assertNotNull(count)
 
-        val decl = declStatement.singleDeclaration as VariableDeclaration
-        assertNotNull(decl)
+        var cast = count.initializer
+        assertIs<CastExpression>(cast)
+        assertLocalName("size_t", cast.castType)
+        assertLiteralValue(42, cast.expression)
 
-        val initializer = decl.initializer
-        assertNotNull(initializer)
-        assertTrue(initializer is CastExpression)
-        assertLocalName("size_t", initializer.castType)
-        assertLiteralValue(42, initializer.expression)
+        val addr = tu.variables["addr"]
+        assertNotNull(addr)
+
+        cast = addr.initializer
+        assertIs<CastExpression>(cast)
+        assertLocalName("int64_t", cast.castType)
+
+        val unary = cast.expression
+        assertIs<UnaryOperator>(unary)
+
+        val refCount = unary.input
+        assertIs<Reference>(refCount)
+        assertRefersTo(refCount, count)
+
+        var paths = addr.followPrevDFGEdgesUntilHit { it == refCount }
+        assertTrue(paths.fulfilled.isNotEmpty())
+        assertTrue(paths.failed.isEmpty())
+
+        val refKey = tu.refs["key"]
+        assertNotNull(refKey)
+
+        val assign = tu.assignments.firstOrNull { it.value is UnaryOperator }
+        assertNotNull(assign)
+        paths = assign.value.followPrevDFGEdgesUntilHit { it == refKey }
+        assertTrue(paths.fulfilled.isNotEmpty())
+        assertTrue(paths.failed.isEmpty())
     }
 
     @Test
