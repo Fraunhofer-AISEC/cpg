@@ -9,6 +9,7 @@ on:
       - v*.**
     paths-ignore:
       - "docs/**"
+  merge_group:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
