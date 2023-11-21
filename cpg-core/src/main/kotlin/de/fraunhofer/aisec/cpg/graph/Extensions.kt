@@ -253,30 +253,38 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+fun Node.followNextDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
     val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableListOf<List<Node>>()
+    val worklist = mutableSetOf<List<Node>>()
     worklist.add(listOf(this)) // We start only with the "from" node (=this)
 
+    val alreadySeenNodes = mutableSetOf<Node>()
+
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.removeFirst()
+        val currentPath = worklist.maxBy { it.size }
+        worklist.remove(currentPath)
+        val currentNode = currentPath.last()
+        alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (currentPath.last().nextDFG.isEmpty()) {
+        if (currentNode.nextDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
+            if (collectFailedPaths) failedPaths.add(currentPath)
             continue
         }
 
-        for (next in currentPath.last().nextDFG) {
+        for (next in currentNode.nextDFG) {
             // Copy the path for each outgoing DFG edge and add the next node
-            val nextPath = mutableListOf<Node>()
-            nextPath.addAll(currentPath)
+            val nextPath = currentPath.toMutableList()
             nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -286,7 +294,11 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
+            if (
+                next !in currentPath &&
+                    (findAllPossiblePaths ||
+                        (next !in alreadySeenNodes && worklist.none { next in it }))
+            ) {
                 worklist.add(nextPath)
             }
         }
