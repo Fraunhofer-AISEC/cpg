@@ -47,6 +47,14 @@ import kotlin.contracts.contract
 @DependsOn(DFGPass::class)
 open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
+    class Configuration(
+        /**
+         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
+         * a [FunctionDeclaration] must have in order to be considered.
+         */
+        var maxComplexity: Int? = null
+    ) : PassConfiguration()
+
     override fun cleanup() {
         // Nothing to do
     }
@@ -61,9 +69,28 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * @param node every node in the TranslationResult
      */
     protected fun handle(node: Node) {
+        val max = passConfig<Configuration>()?.maxComplexity
+
         if (node is FunctionDeclaration) {
+            // Skip empty functions
+            if (node.body == null) {
+                return
+            }
+
+            // Calculate the complexity of the function and see, if it exceeds our threshold
+            if (max != null) {
+                val c = node.body?.cyclomaticComplexity ?: 0
+                if (c > max) {
+                    log.info(
+                        "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                    )
+                    return
+                }
+            }
+
             clearFlowsOfVariableDeclarations(node)
             val startState = DFGPassState<Set<Node>>()
+
             startState.declarationsState.push(node, PowersetLattice(setOf()))
             val finalState =
                 iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
@@ -78,7 +105,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             for ((key, value) in finalState.generalState) {
                 if (key is TupleDeclaration) {
                     // We need a little hack for tuple statements to set the index. We have the
-                    // outer part (i.e., the tuple) here but we generate the DFG edges to the
+                    // outer part (i.e., the tuple) here, but we generate the DFG edges to the
                     // elements. We have the indices here, so it's amazing.
                     key.elements.forEachIndexed { i, element ->
                         element.addAllPrevDFG(

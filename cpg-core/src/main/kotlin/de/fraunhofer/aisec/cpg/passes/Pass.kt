@@ -63,6 +63,8 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  */
 interface PassTarget
 
+open class PassConfiguration {}
+
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
  * three different levels:
@@ -108,6 +110,10 @@ sealed class Pass<T : PassTarget>(final override val ctx: TranslationContext) :
     companion object {
 
         val log: Logger = LoggerFactory.getLogger(Pass::class.java)
+    }
+
+    fun <T : PassConfiguration> passConfig(): T? {
+        return this.config.passConfigurations[this::class] as? T
     }
 }
 
