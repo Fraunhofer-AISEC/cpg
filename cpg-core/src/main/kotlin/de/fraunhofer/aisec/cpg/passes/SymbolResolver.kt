@@ -846,14 +846,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 .createInferredConstructor(constructExpression.signature)
     }
 
-    protected fun getConstructorDeclarationForExplicitInvocation(
-        signature: List<Type>,
-        recordDeclaration: RecordDeclaration
-    ): ConstructorDeclaration {
-        return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDeclaration.startInference(ctx).createInferredConstructor(signature)
-    }
-
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
