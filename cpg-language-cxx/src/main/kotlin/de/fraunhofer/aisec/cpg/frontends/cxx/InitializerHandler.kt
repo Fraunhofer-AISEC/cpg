@@ -57,7 +57,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = newConstructExpression(ctx.rawSignature)
+        val constructExpression = newConstructExpression(rawNode = ctx)
         constructExpression.type =
             (frontend.declaratorHandler.lastNode as? VariableDeclaration)?.type ?: unknownType()
 
@@ -79,7 +79,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         val targetType =
             (frontend.declaratorHandler.lastNode as? ValueDeclaration)?.type ?: unknownType()
 
-        val expression = newInitializerListExpression(targetType, ctx.rawSignature)
+        val expression = newInitializerListExpression(targetType, rawNode = ctx)
 
         for (clause in ctx.clauses) {
             frontend.expressionHandler.handle(clause)?.let {

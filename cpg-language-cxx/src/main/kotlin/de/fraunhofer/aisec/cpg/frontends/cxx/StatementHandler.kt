@@ -88,7 +88,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
-        return newEmptyStatement(nullStatement.rawSignature)
+        return newEmptyStatement(rawNode = nullStatement)
     }
 
     private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): TryStatement {
@@ -106,7 +106,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCatchHandler(catchHandler: ICPPASTCatchHandler): CatchClause {
-        val catchClause = newCatchClause(catchHandler.rawSignature)
+        val catchClause = newCatchClause(rawNode = catchHandler)
         frontend.scopeManager.enterScope(catchClause)
 
         val body = frontend.statementHandler.handle(catchHandler.catchBody)
@@ -127,7 +127,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleIfStatement(ctx: IASTIfStatement): IfStatement {
-        val statement = newIfStatement(ctx.rawSignature)
+        val statement = newIfStatement(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -157,14 +157,14 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleLabelStatement(ctx: IASTLabelStatement): LabelStatement {
-        val statement = newLabelStatement(ctx.rawSignature)
+        val statement = newLabelStatement(rawNode = ctx)
         statement.subStatement = handle(ctx.nestedStatement)
         statement.label = ctx.name.toString()
         return statement
     }
 
     private fun handleGotoStatement(ctx: IASTGotoStatement): GotoStatement {
-        val statement = newGotoStatement(ctx.rawSignature)
+        val statement = newGotoStatement(rawNode = ctx)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             statement.targetLabel = to as LabelStatement
         }
@@ -189,7 +189,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleWhileStatement(ctx: IASTWhileStatement): WhileStatement {
-        val statement = newWhileStatement(ctx.rawSignature)
+        val statement = newWhileStatement(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -211,7 +211,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleDoStatement(ctx: IASTDoStatement): DoStatement {
-        val statement = newDoStatement(ctx.rawSignature)
+        val statement = newDoStatement(rawNode = ctx)
         frontend.scopeManager.enterScope(statement)
         statement.condition = frontend.expressionHandler.handle(ctx.condition)
         statement.statement = handle(ctx.body)
@@ -220,7 +220,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleForStatement(ctx: IASTForStatement): ForStatement {
-        val statement = newForStatement(ctx.rawSignature)
+        val statement = newForStatement(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -256,7 +256,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleForEachStatement(ctx: CPPASTRangeBasedForStatement): ForEachStatement {
-        val statement = newForEachStatement(ctx.rawSignature)
+        val statement = newForEachStatement(rawNode = ctx)
         frontend.scopeManager.enterScope(statement)
         val decl = frontend.declarationHandler.handle(ctx.declaration)
         val `var` = newDeclarationStatement(decl?.code)
@@ -270,12 +270,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleBreakStatement(ctx: IASTBreakStatement): BreakStatement {
-        return newBreakStatement(ctx.rawSignature)
+        return newBreakStatement(rawNode = ctx)
         // C++ has no labeled break
     }
 
     private fun handleContinueStatement(ctx: IASTContinueStatement): ContinueStatement {
-        return newContinueStatement(ctx.rawSignature)
+        return newContinueStatement(rawNode = ctx)
         // C++ has no labeled continue
     }
 
@@ -292,9 +292,9 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): DeclarationStatement {
         return if (ctx.declaration is IASTASMDeclaration) {
-            newASMDeclarationStatement(ctx.rawSignature)
+            newASMDeclarationStatement(rawNode = ctx)
         } else {
-            val declarationStatement = newDeclarationStatement(ctx.rawSignature)
+            val declarationStatement = newDeclarationStatement(rawNode = ctx)
             val declaration = frontend.declarationHandler.handle(ctx.declaration)
             if (declaration is DeclarationSequence) {
                 declarationStatement.declarations = declaration.asList()
@@ -306,7 +306,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleReturnStatement(ctx: IASTReturnStatement): ReturnStatement {
-        val returnStatement = newReturnStatement(ctx.rawSignature)
+        val returnStatement = newReturnStatement(rawNode = ctx)
 
         // Parse the return value
         if (ctx.returnValue != null) {
@@ -317,7 +317,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
-        val block = newBlock(ctx.rawSignature)
+        val block = newBlock(rawNode = ctx)
 
         frontend.scopeManager.enterScope(block)
 
@@ -334,7 +334,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleSwitchStatement(ctx: IASTSwitchStatement): SwitchStatement {
-        val switchStatement = newSwitchStatement(ctx.rawSignature)
+        val switchStatement = newSwitchStatement(rawNode = ctx)
 
         frontend.scopeManager.enterScope(switchStatement)
 
@@ -361,12 +361,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCaseStatement(ctx: IASTCaseStatement): CaseStatement {
-        val caseStatement = newCaseStatement(ctx.rawSignature)
+        val caseStatement = newCaseStatement(rawNode = ctx)
         caseStatement.caseExpression = frontend.expressionHandler.handle(ctx.expression)
         return caseStatement
     }
 
     private fun handleDefaultStatement(ctx: IASTDefaultStatement): DefaultStatement {
-        return newDefaultStatement(ctx.rawSignature)
+        return newDefaultStatement(rawNode = ctx)
     }
 }
