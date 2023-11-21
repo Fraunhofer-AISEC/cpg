@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
-import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 
 abstract class PythonHandler<ResultNode : Node, HandlerNode : PythonAST.AST>(
@@ -57,24 +55,4 @@ abstract class PythonHandler<ResultNode : Node, HandlerNode : PythonAST.AST>(
     }
 
     abstract fun handleNode(node: HandlerNode): ResultNode
-
-    /**
-     * This function should be called by classes that derive from [GoHandler] to denote, that the
-     * supplied node (type) is not supported.
-     */
-    protected fun handleNotSupported(node: HandlerNode, name: String): ResultNode {
-        Util.errorWithFileLocation(
-            frontend,
-            node,
-            log,
-            "Parsing of type $name is not supported (yet)"
-        )
-
-        val cpgNode = this.configConstructor.get()
-        if (cpgNode is ProblemNode) {
-            cpgNode.problem = "Parsing of type $name is not supported (yet)"
-        }
-
-        return cpgNode
-    }
 }

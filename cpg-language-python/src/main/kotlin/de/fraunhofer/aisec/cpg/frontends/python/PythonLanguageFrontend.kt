@@ -84,7 +84,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     override fun codeOf(astNode: PythonAST.AST): String? {
         val physicalLocation = locationOf(astNode)
-        if (physicalLocation != null && fileContent != null) {
+        if (physicalLocation != null) {
             val lines =
                 fileContent
                     .split('\n') // TODO

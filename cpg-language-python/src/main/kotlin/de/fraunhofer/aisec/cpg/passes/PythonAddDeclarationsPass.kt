@@ -65,6 +65,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
      */
     private fun handle(node: Node?) {
         when (node) {
+            // TODO ist doppelt
             is AssignExpression -> handleAssignExpression(node)
             is Reference -> handleReference(node)
             else -> {}
@@ -78,6 +79,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
         if (node.resolutionHelper is CallExpression) {
             return null
         }
+        // TODO withscope of record bei newXYZ
         val resolved = scopeManager.resolveReference(node)
         if (resolved == null) {
             val decl =
