@@ -238,9 +238,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
             // Do some additional magic with default parameters, which I do not really understand
-            for (i in declaration.parameters.indices) {
-                if (candidate.parameters[i].default != null) {
-                    declaration.parameters[i].default = candidate.parameters[i].default
+            for ((i, param) in candidate.parameters.withIndex()) {
+                if (param.default != null) {
+                    declaration.parameters.getOrNull(i)?.default = candidate.parameters[i].default
                 }
             }
         }
