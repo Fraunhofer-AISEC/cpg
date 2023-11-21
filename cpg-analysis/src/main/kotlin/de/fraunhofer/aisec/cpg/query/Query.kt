@@ -194,14 +194,41 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
-fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
-    val evalRes = from.followNextDFGEdgesUntilHit { it == to }
+fun dataFlow(
+    from: Node,
+    to: Node,
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true
+): QueryTree<Boolean> {
+    val evalRes =
+        from.followNextDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths) { it == to }
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    // allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "data flow from $from to $to"
+    )
+}
+
+/**
+ * Checks if a data flow is possible between the nodes [from] as a source and a node fulfilling
+ * [predicate].
+ */
+fun dataFlow(
+    from: Node,
+    predicate: (Node) -> Boolean,
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true
+): QueryTree<Boolean> {
+    val evalRes =
+        from.followNextDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths, predicate)
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
+    if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    return QueryTree(
+        evalRes.fulfilled.isNotEmpty(),
+        allPaths.toMutableList(),
+        "data flow from $from to ${evalRes.fulfilled.map { it.last() }}"
     )
 }
 
