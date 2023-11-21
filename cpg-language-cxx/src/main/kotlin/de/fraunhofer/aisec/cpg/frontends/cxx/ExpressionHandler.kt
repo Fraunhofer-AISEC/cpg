@@ -345,9 +345,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
                     if (frontend.typeManager.typeExists(typeName)) {
                         val cast = newCastExpression(frontend.codeOf(ctx))
+                        cast.setCastOperator(0)
                         cast.castType = frontend.typeOf((ctx.operand as IASTIdExpression).name)
                         // The expression member can only be filled by the parent call
-                        // (handleFunctionCallExpression)
+                        // (handleFunctionCallExpression and handleBinaryExpression)
                         cast.location = frontend.locationOf(ctx)
                         return cast
                     }
@@ -429,7 +430,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     )
                     .forEach { callExpression.addTemplateParameter(it) }
             }
-            reference is CastExpression -> {
+            reference is CastExpression &&
+                frontend.config.inferenceConfiguration.guessCastExpressions -> {
                 // this really is a cast expression in disguise
                 reference.expression =
                     ctx.arguments.firstOrNull()?.let { handle(it) }
@@ -501,6 +503,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 handle(ctx.initOperand2)
             }
                 ?: newProblemExpression("could not parse rhs")
+
+        if (lhs is CastExpression && frontend.config.inferenceConfiguration.guessCastExpressions) {
+            // this really is a combination of a cast and a unary operator
+            val op =
+                newUnaryOperator(
+                    operatorCode,
+                    postfix = true,
+                    prefix = false,
+                    code = ctx.rawSignature
+                )
+            op.input = rhs
+            op.location = frontend.locationOf(ctx.operand2)
+            lhs.expression = op
+            return lhs
+        }
+
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
 
