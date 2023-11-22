@@ -716,6 +716,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.resetToGlobal(node)
         frontend.currentTU = node
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
+
         for (declaration in translationUnit.declarations) {
             if (declaration is CPPASTLinkageSpecification) {
                 continue // do not care about these for now
