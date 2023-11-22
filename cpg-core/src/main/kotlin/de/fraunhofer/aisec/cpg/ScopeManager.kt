@@ -878,6 +878,25 @@ class ScopeManager : ScopeProvider {
         list += Alias(from, to)
     }
 
+    fun typeDefFor(finalToCheck: Type): Type? {
+        var current = currentScope
+
+        // We need to build a path from the current scope to the top most one. This ensures us that
+        // a local definition overwrites / shadows one that was there on a higher scope.
+        while (current != null) {
+            if (current is ValueDeclarationScope) {
+                val decl = current.typedefs[finalToCheck]
+                if (decl != null) {
+                    return decl.type
+                }
+            }
+
+            current = current.parent
+        }
+
+        return null
+    }
+
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
