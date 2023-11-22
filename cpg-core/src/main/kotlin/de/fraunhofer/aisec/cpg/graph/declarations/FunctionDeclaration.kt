@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -35,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -106,47 +106,26 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
                     }
                 })
 
-    fun hasSameSignature(targetFunctionDeclaration: FunctionDeclaration): Boolean {
-        return targetFunctionDeclaration.name.localName == name.localName &&
-            targetFunctionDeclaration.signatureTypes == signatureTypes
-    }
-
+    /**
+     * This function checks, if the supplied [CallExpression] has the same signature as the current
+     * [FunctionDeclaration].
+     */
     fun hasSignature(call: CallExpression): Boolean {
         return hasSignature(call.signature, call.arguments)
     }
 
-    // TODO: Documentation required. It's not completely clear what this method is supposed to do.
+    /**
+     * This function checks, if the two supplied signatures are equal. The usual use-case is
+     * comparing the signature arguments of a [CallExpression] (in [targetSignature]) against the
+     * current [FunctionDeclaration]. Optionally, a list of [targetExpressions] (e.g., the actual
+     * call arguments) can be supplied as a hint, these will be forwarded to other comparing
+     * functions, such as [Language.isDerivedFrom].
+     */
     fun hasSignature(
         targetSignature: List<Type>,
         targetExpressions: List<Expression>? = null
     ): Boolean {
-        val signature = parameters.sortedBy { it.argumentIndex }
-        // TODO: Why do we have to sort it here while we don't sort the list in signatureTypes?
-        return if (signature.all { !it.isVariadic } && targetSignature.size < signature.size) {
-            // TODO: So we don't consider arguments with default values (among others) but then, the
-            // SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
-            false
-        } else {
-            // signature is a collection of positional arguments, so the order must be preserved
-            for (i in signature.indices) {
-                val declared = signature[i]
-                if (declared.isVariadic) {
-                    // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no matter what comes now
-                    // FIXME: in Java, we could have overloading with different vararg types, in
-                    //  C++ we can't, as vararg types are not defined here anyways)
-                    return true
-                }
-                val provided = targetSignature[i]
-                val expression = targetExpressions?.get(i)
-                if (!provided.isDerivedFrom(declared.type, expression, this)) {
-                    return false
-                }
-            }
-            // Longer target signatures are only allowed with varargs. If we reach this point, no
-            // vararg has been encountered
-            targetSignature.size == signature.size
-        }
+        return this.language?.hasSignature(this, targetSignature, targetExpressions) ?: false
     }
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
