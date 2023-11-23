@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 
 /**
@@ -41,8 +42,18 @@ class CommentMatcher {
      * Searches amongst the children of the node to find the child that contains the provided
      * region.
      */
-    fun getEnclosingChild(node: Node, location: Region): Node {
-        var children = SubgraphWalker.getAstChildren(node).toMutableList()
+    fun getEnclosingChild(
+        node: Node,
+        location: Region,
+        artifactLocation: PhysicalLocation.ArtifactLocation?
+    ): Node {
+        // If there's an ArtifactLocation specified, it should at least be in the same file.
+        var children =
+            SubgraphWalker.getAstChildren(node)
+                .filter {
+                    artifactLocation == null || artifactLocation == it.location?.artifactLocation
+                }
+                .toMutableList()
         // As some frontends add regional implicit namespaces we have to search amongst its children
         // instead.
         children.addAll(
@@ -69,15 +80,26 @@ class CommentMatcher {
      * don't have a successor starting in the same line but they have a predecessor in the same
      * line, the comment is matched to that closest predecessor.
      */
-    fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDeclaration) {
+    fun matchCommentToNode(
+        comment: String,
+        location: Region,
+        tu: TranslationUnitDeclaration,
+        artifactLocation: PhysicalLocation.ArtifactLocation? = null
+    ) {
         var enclosingNode: Node = tu
-        var smallestEnclosingNode: Node = getEnclosingChild(tu, location)
+        var smallestEnclosingNode: Node = getEnclosingChild(tu, location, artifactLocation)
         while (enclosingNode != smallestEnclosingNode) {
             enclosingNode = smallestEnclosingNode
-            smallestEnclosingNode = getEnclosingChild(smallestEnclosingNode, location)
+            smallestEnclosingNode =
+                getEnclosingChild(smallestEnclosingNode, location, artifactLocation)
         }
 
-        var children = SubgraphWalker.getAstChildren(smallestEnclosingNode).toMutableList()
+        var children =
+            SubgraphWalker.getAstChildren(smallestEnclosingNode)
+                .filter {
+                    artifactLocation == null || artifactLocation == it.location?.artifactLocation
+                }
+                .toMutableList()
 
         // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
         // children with a location
