@@ -229,7 +229,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             frontend.currentTU
                 ?.declarations
                 ?.filterIsInstance(FunctionDeclaration::class.java)
-                ?.filter { !it.isDefinition && it.hasSameSignature(declaration) }
+                ?.filter {
+                    !it.isDefinition &&
+                        it.name.lastPartsMatch(declaration.name) &&
+                        it.hasSignature(declaration.signatureTypes)
+                }
                 ?: listOf()
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
