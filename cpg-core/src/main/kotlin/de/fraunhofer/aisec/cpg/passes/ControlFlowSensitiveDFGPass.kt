@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import java.util.concurrent.CompletableFuture
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -53,7 +54,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
          * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
          * a [FunctionDeclaration] must have in order to be considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        val parallel: Boolean = true
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -61,7 +63,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
     }
 
     override fun accept(tu: TranslationUnitDeclaration) {
-        tu.functions.forEach(::handle)
+        if (passConfig<Configuration>()?.parallel == true) {
+            val futures = mutableListOf<CompletableFuture<*>>()
+            tu.functions.forEach { futures += CompletableFuture.supplyAsync { handle(it) } }
+            CompletableFuture.allOf(*futures.toTypedArray()).join()
+        } else {
+            tu.functions.forEach(::handle)
+        }
     }
 
     /**
