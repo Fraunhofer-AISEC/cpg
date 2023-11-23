@@ -40,7 +40,10 @@ import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayDesignator
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayRangeDesignator
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTFieldDesignator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
@@ -612,13 +615,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             for (des in ctx.designators) {
                 var oneLhs: Expression? = null
                 when (des) {
-                    is CPPASTArrayDesignator -> {
+                    is CASTArrayDesignator -> {
                         oneLhs = handle(des.subscriptExpression)
                     }
-                    is CPPASTFieldDesignator -> {
-                        oneLhs = newReference(des.name.toString(), unknownType(), rawNode = des)
+                    is CASTFieldDesignator -> {
+                        oneLhs =
+                            newReference(des.name.toString(), unknownType(), rawNode = des)
                     }
-                    is CPPASTArrayRangeDesignator -> {
+                    is CASTArrayRangeDesignator -> {
                         oneLhs =
                             newRangeExpression(
                                 handle(des.rangeFloor),
