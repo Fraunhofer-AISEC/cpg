@@ -91,7 +91,7 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<KClass<out Pass<*>>>,
+    passes: List<List<KClass<out Pass<*>>>>,
     /**
      * This map offers the possibility to replace certain passes for specific languages with other
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
@@ -105,6 +105,7 @@ private constructor(
     disableCleanup: Boolean,
     useUnityBuild: Boolean,
     useParallelFrontends: Boolean,
+    useParallelPasses: Boolean,
     inferenceConfiguration: InferenceConfiguration,
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
@@ -141,6 +142,8 @@ private constructor(
      */
     val useParallelFrontends: Boolean
 
+    val useParallelPasses: Boolean
+
     /**
      * This is the data structure for storing the compilation database. It stores a mapping from the
      * File to the list of files that have to be included to their path, specified by the parameter
@@ -161,7 +164,7 @@ private constructor(
     val addIncludesToGraph: Boolean
 
     @get:JsonSerialize(contentUsing = KClassSerializer::class)
-    val registeredPasses: List<KClass<out Pass<*>>>
+    val registeredPasses: List<List<KClass<out Pass<*>>>>
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
@@ -177,6 +180,7 @@ private constructor(
         this.disableCleanup = disableCleanup
         this.useUnityBuild = useUnityBuild
         this.useParallelFrontends = useParallelFrontends
+        this.useParallelPasses = useParallelPasses
         this.inferenceConfiguration = inferenceConfiguration
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
@@ -227,6 +231,7 @@ private constructor(
         private var disableCleanup = false
         private var useUnityBuild = false
         private var useParallelFrontends = false
+        private var useParallelPasses = false
         private var inferenceConfiguration = InferenceConfiguration.Builder().build()
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
@@ -579,6 +584,11 @@ private constructor(
             return this
         }
 
+        fun useParallelPasses(b: Boolean): Builder {
+            useParallelPasses = b
+            return this
+        }
+
         fun inferenceConfiguration(configuration: InferenceConfiguration): Builder {
             inferenceConfiguration = configuration
             return this
@@ -606,6 +616,7 @@ private constructor(
                 disableCleanup,
                 useUnityBuild,
                 useParallelFrontends,
+                useParallelPasses,
                 inferenceConfiguration,
                 compilationDatabase,
                 matchCommentsToNodes,
@@ -659,6 +670,10 @@ private constructor(
                 }
             }
 
+            log.info(
+                "The following mermaid graph represents the pass dependencies: \n ${buildMermaid(softDependencies, hardDependencies)}"
+            )
+
             for (p in passes) {
                 var passFound = false
                 for ((pass) in workingList.getWorkingList()) {
@@ -678,6 +693,26 @@ private constructor(
                 }
             }
             return workingList
+        }
+
+        private fun buildMermaid(
+            softDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>,
+            hardDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>
+        ): String {
+            var s = "```mermaid\n"
+            s += "flowchart TD;\n"
+            for (pass in softDependencies.keys) {
+                for (dep in softDependencies[pass]!!) {
+                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
+                }
+            }
+            for (pass in hardDependencies.keys) {
+                for (dep in hardDependencies[pass]!!) {
+                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
+                }
+            }
+            s += "```"
+            return s
         }
 
         /**
@@ -702,12 +737,13 @@ private constructor(
          *    is removed from the other passes dependencies
          * 1. The above step is repeated until all passes are added to the result
          *
-         * @return a sorted list of passes
+         * @return a sorted list of passes, with passes that can be run in parallel together in a
+         *   nested list.
          */
         @Throws(ConfigurationException::class)
-        private fun orderPasses(): List<KClass<out Pass<*>>> {
+        private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
-            val result = mutableListOf<KClass<out Pass<*>>>()
+            val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
             // duplicates
@@ -733,18 +769,22 @@ private constructor(
             }
             val firstPass = workingList.getAndRemoveFirstPass()
             if (firstPass != null) {
-                result.add(firstPass)
+                result.add(listOf(firstPass))
             }
             while (!workingList.isEmpty) {
                 val p = workingList.getAndRemoveFirstPassWithoutDependencies()
-                if (p != null) {
+                if (p.isNotEmpty()) {
                     result.add(p)
                 } else {
                     // failed to find a pass that can be added to the result -> deadlock :(
                     throw ConfigurationException("Failed to satisfy ordering requirements.")
                 }
             }
-            log.info("Passes after enforcing order: {}", result.map { it.simpleName })
+            log.info(
+                "Passes after enforcing order: {}",
+                result.map { list -> list.map { it.simpleName } }
+            )
+
             return result
         }
     }

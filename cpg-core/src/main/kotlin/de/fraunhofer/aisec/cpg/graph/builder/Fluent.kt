@@ -49,7 +49,7 @@ fun LanguageFrontend<*, *>.translationResult(
     node.addComponent(component)
     init(node)
 
-    ctx.config.registeredPasses.forEach { executePassSequential(it, ctx, node, listOf()) }
+    ctx.config.registeredPasses.flatten().forEach { executePassSequential(it, ctx, node, listOf()) }
 
     return node
 }
