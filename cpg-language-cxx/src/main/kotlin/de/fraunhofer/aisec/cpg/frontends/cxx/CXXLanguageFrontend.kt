@@ -266,9 +266,14 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
             for (c in translationUnit.comments) {
                 if (c.rawSignature.isNotEmpty()) {
-                    regionOf(c.fileLocation)?.let {
+                    locationOf(c)?.let {
                         CommentMatcher()
-                            .matchCommentToNode(c.rawSignature, it, translationUnitDeclaration)
+                            .matchCommentToNode(
+                                c.rawSignature,
+                                it.region,
+                                translationUnitDeclaration,
+                                it.artifactLocation
+                            )
                     }
                 }
             }
