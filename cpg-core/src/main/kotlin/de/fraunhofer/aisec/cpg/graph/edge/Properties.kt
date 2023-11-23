@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edge
 
+import java.util.*
+
 /**
  * INDEX: (int) Indicates the position in a list of edges
  *
@@ -61,3 +63,18 @@ enum class DependenceType {
     CONTROL,
     DATA
 }
+
+/** Sensitivity options (of DFG edges). */
+enum class SensitivitySpecifier {
+    FIELD,
+    CONTEXT;
+
+    infix fun and(other: SensitivitySpecifier) = Sensitivities.of(this, other)
+}
+
+typealias Sensitivities = EnumSet<SensitivitySpecifier>
+
+infix fun Sensitivities.allOf(other: Sensitivities) = this.containsAll(other)
+
+infix fun Sensitivities.and(other: SensitivitySpecifier) =
+    Sensitivities.of(other, *this.toTypedArray())
