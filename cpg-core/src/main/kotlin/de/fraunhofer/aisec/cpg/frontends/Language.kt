@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -273,9 +273,9 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
  * We need to bring our own serializer for [KClass] until
  * https://github.com/FasterXML/jackson-module-kotlin/issues/361 is resolved.
  */
-internal class KClassSerializer : StdSerializer<KClass<*>>(KClass::class.java) {
+internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
-        gen.writeString(value.qualifiedName)
+        gen.writeString(value.simpleName)
     }
 }

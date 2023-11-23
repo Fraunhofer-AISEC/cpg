@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -117,6 +119,39 @@ sealed class Pass<T : PassTarget>(final override val ctx: TranslationContext) :
     }
 }
 
+fun executePassesInParallel(
+    classes: List<KClass<out Pass<*>>>,
+    ctx: TranslationContext,
+    result: TranslationResult,
+    executedFrontends: Collection<LanguageFrontend<*, *>>
+) {
+    // Execute a single pass directly sequentially and return
+    var pass = classes.singleOrNull()
+    if (pass != null) {
+        executePassSequential(pass, ctx, result, executedFrontends)
+        return
+    }
+
+    // Otherwise, we build futures out of the list
+    val bench =
+        Benchmark(
+            TranslationManager::class.java,
+            "Executing Passes [${classes.map { it.simpleName }}] in parallel",
+            false,
+            result
+        )
+
+    val futures =
+        classes.map {
+            CompletableFuture.supplyAsync {
+                executePassSequential(it, ctx, result, executedFrontends)
+            }
+        }
+
+    futures.map(CompletableFuture<Unit>::join)
+    bench.stop()
+}
+
 /**
  * Creates a new [Pass] (based on [cls]) and executes it sequentially on the nodes of [result].
  * Depending on the type of pass, this will either execute the pass directly on the overall result,
@@ -128,6 +163,8 @@ fun executePassSequential(
     result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend<*, *>>
 ) {
+    val bench = Benchmark(cls.java, "Executing Pass", false, result)
+
     // This is a bit tricky but actually better than other reflection magic. We are creating a
     // "prototype" instance of our pass class, so we can deduce certain type information more
     // easily.
@@ -157,6 +194,8 @@ fun executePassSequential(
             }
         }
     }
+
+    bench.stop()
 }
 
 inline fun <reified T : PassTarget> executePass(
