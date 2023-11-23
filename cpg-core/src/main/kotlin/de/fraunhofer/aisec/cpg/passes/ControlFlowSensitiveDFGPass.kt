@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -37,12 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.*
-import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.collections.set
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -63,7 +57,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
          * considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        val parallel: Boolean = true
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -189,7 +184,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     if (assignment.target is Declaration)
                         Pair(assignment.target as Declaration, assignment.target)
                     else {
-                        val unwrappedTarget = unwrapReference(assignment.target as? Node)
+                        val unwrappedTarget = (assignment.target as? Expression).unwrapReference()
                         if (unwrappedTarget?.refersTo == null) {
                             null
                         } else {
@@ -218,7 +213,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
             // The write operation goes to the variable in the lhs
             val lhs = currentNode.lhs.singleOrNull()
-            writtenDeclaration = unwrapReference(lhs)?.refersTo
+            writtenDeclaration = lhs.unwrapReference()?.refersTo
 
             if (writtenDeclaration != null && lhs != null) {
                 // Data flows from the last writes to the lhs variable to this node
