@@ -79,7 +79,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
         if (node.resolutionHelper is CallExpression) {
             return null
         }
-        // TODO withscope of record bei newXYZ
         val resolved = scopeManager.resolveReference(node)
         if (resolved == null) {
             val decl =
@@ -93,37 +92,54 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                         ?.name
                         ) {
                             val field =
-                                newFieldDeclaration(
-                                    node.name,
-                                    code = node.code,
-                                    rawNode = node,
-                                    location = node.location
-                                )
-                            scopeManager.currentRecord?.addField(field) // TODO why do we need this?
+                                scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                                    newFieldDeclaration(
+                                        node.name,
+                                        code = node.code,
+                                        location = node.location
+                                    )
+                                }
                             field
                         } else {
-                            val v = newVariableDeclaration(node.name, code = node.code)
-                            v.location = node.location
-                            scopeManager.currentFunction?.addDeclaration(v)
+                            val v =
+                                scopeManager.withScope(scopeManager.currentFunction?.scope) {
+                                    newVariableDeclaration(
+                                        node.name,
+                                        code = node.code,
+                                        location = node.location
+                                    )
+                                }
                             v
                         }
                     } else {
-                        val field = newFieldDeclaration(node.name, code = node.code)
-                        field.location = node.location
-                        scopeManager.currentRecord?.addField(field) // TODO why do we need this?
+                        val field =
+                            scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                                newFieldDeclaration(
+                                    node.name,
+                                    code = node.code,
+                                    location = node.location
+                                )
+                            }
                         field
                     }
                 } else {
                     if (scopeManager.isInFunction) {
-                        val v = newVariableDeclaration(node.name, code = node.code)
-                        v.location = node.location
-                        scopeManager.currentFunction
-                            ?.body
-                            ?.addDeclaration(v) // TODO why do we need this?
+                        val v =
+                            scopeManager.withScope(scopeManager.currentFunction?.scope) {
+                                newVariableDeclaration(
+                                    node.name,
+                                    code = node.code,
+                                    location = node.location
+                                )
+                            }
                         v
                     } else {
-                        val v = newVariableDeclaration(node.name, code = node.code)
-                        v.location = node.location
+                        val v =
+                            newVariableDeclaration(
+                                node.name,
+                                code = node.code,
+                                location = node.location
+                            )
                         v
                     }
                 }

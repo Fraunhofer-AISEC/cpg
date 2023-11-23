@@ -157,12 +157,14 @@ fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     code: String? = null,
+    location: PhysicalLocation? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
 ): VariableDeclaration {
     val node = VariableDeclaration()
     node.applyMetadata(this, name, rawNode, code, true)
 
+    node.location = location
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
 

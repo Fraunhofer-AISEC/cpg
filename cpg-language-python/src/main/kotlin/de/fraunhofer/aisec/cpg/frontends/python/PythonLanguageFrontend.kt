@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -43,7 +42,6 @@ import jep.python.PyObject
 import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
-@SupportsParallelParsing(false) // TODO?
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<PythonAST.AST, Any>(language, ctx) {
