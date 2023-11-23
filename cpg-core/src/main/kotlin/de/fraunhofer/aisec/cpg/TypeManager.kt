@@ -252,7 +252,7 @@ class TypeManager {
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable = scopeManager.typeDefFor(finalToCheck)
+        val applicable = scopeManager.typedefFor(finalToCheck)
         return applicable ?: alias
     }
 }

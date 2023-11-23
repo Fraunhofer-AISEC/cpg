@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -203,8 +202,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
     var prevPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevPDGEdges, false)
 
-    var typedefs: MutableSet<TypedefDeclaration> = HashSet()
-
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
      * necessarily have a real counterpart in the scanned source code. However, the nodes
@@ -331,10 +328,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         for (prev in ArrayList(nextDFG)) {
             removeNextDFG(prev)
         }
-    }
-
-    fun addTypedef(typedef: TypedefDeclaration) {
-        typedefs.add(typedef)
     }
 
     fun addAnnotations(annotations: Collection<Annotation>) {

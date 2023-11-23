@@ -284,6 +284,10 @@ val Statement.cyclomaticComplexity: Int
                     // add one for the do statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
+                is WhileStatement -> {
+                    // add one for the while statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
                 is GotoStatement -> {
                     // add one
                     i++

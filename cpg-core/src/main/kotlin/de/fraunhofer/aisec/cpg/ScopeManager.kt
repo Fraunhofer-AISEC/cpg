@@ -94,12 +94,6 @@ class ScopeManager : ScopeProvider {
      */
     private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
 
-    /**
-     * The language frontend tied to the scope manager. Can be used to implement language specific
-     * scope resolution or lookup.
-     */
-    var lang: LanguageFrontend<*, *>? = null
-
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
         get() = this.firstScopeOrNull { it is BlockScope } != null
@@ -568,10 +562,7 @@ class ScopeManager : ScopeProvider {
         }
     }
 
-    /**
-     * Only used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
-     * [ValueDeclarationScope].
-     */
+    /** Only used by the [TypeManager], adds typedefs to the current [ValueDeclarationScope]. */
     fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
@@ -580,12 +571,6 @@ class ScopeManager : ScopeProvider {
         }
 
         scope.addTypedef(typedef)
-
-        if (scope.astNode == null) {
-            lang?.currentTU?.addTypedef(typedef)
-        } else {
-            scope.astNode?.addTypedef(typedef)
-        }
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
@@ -878,14 +863,14 @@ class ScopeManager : ScopeProvider {
         list += Alias(from, to)
     }
 
-    fun typeDefFor(finalToCheck: Type): Type? {
+    fun typedefFor(alias: Type): Type? {
         var current = currentScope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
         // a local definition overwrites / shadows one that was there on a higher scope.
         while (current != null) {
             if (current is ValueDeclarationScope) {
-                val decl = current.typedefs[finalToCheck]
+                val decl = current.typedefs[alias]
                 if (decl != null) {
                     return decl.type
                 }
