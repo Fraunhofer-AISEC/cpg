@@ -55,11 +55,13 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
  * constructed by the powerset.
  */
-class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Node>>(elements) {
+class PowersetLattice(override val elements: IdentitySet<Node>) :
+    LatticeElement<Set<Node>>(elements) {
     override fun lub(other: LatticeElement<Set<Node>>) =
-        PowersetLattice(other.elements.union(this.elements))
+        PowersetLattice(this.elements.union(other.elements))
 
-    override fun duplicate() = PowersetLattice(this.elements.toSet())
+    override fun duplicate(): LatticeElement<Set<Node>> =
+        PowersetLattice(this.elements.toIdentitySet())
 
     override fun compareTo(other: LatticeElement<Set<Node>>): Int {
         return if (this.elements.containsAll(other.elements)) {
