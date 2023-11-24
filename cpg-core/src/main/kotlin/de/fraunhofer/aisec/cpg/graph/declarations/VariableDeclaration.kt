@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -49,6 +50,10 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
     var templateParameters: List<Node>? = null
+
+    /** Determines if this is a global variable. */
+    val isGlobal: Boolean
+        get() = this.scope is GlobalScope
 
     /**
      * C++ uses implicit constructor calls for statements like `A a;` but this only applies to types
