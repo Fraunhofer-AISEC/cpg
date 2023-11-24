@@ -286,7 +286,7 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
+            if (next !in currentPath) {
                 worklist.add(nextPath)
             }
         }
