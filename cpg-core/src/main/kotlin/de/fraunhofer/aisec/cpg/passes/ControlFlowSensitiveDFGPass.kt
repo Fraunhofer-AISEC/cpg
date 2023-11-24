@@ -70,8 +70,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(c
         }
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
+        val c = node.body?.cyclomaticComplexity ?: 0
         if (max != null) {
-            val c = node.body?.cyclomaticComplexity ?: 0
             if (c > max) {
                 log.info(
                     "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
@@ -79,6 +79,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(c
                 return
             }
         }
+
+        log.debug("Handling {} (complexity: {})", node.name, c)
 
         clearFlowsOfVariableDeclarations(node)
         val startState = DFGPassState<Set<Node>>()
