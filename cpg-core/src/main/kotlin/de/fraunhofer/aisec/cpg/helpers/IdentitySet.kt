@@ -146,3 +146,16 @@ fun <T> identitySetOf(vararg elements: T): IdentitySet<T> {
 
     return set
 }
+
+infix fun <T> IdentitySet<T>.union(other: Iterable<T>): IdentitySet<T> {
+    val set = identitySetOf<T>()
+    set += this
+    set += other
+    return set
+}
+
+fun <T> Collection<T>.toIdentitySet(): IdentitySet<T> {
+    val set = identitySetOf<T>()
+    set += this
+    return set
+}
