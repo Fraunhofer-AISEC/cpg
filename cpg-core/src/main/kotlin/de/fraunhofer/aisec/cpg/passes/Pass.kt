@@ -42,20 +42,20 @@ import org.slf4j.LoggerFactory
 
 /**
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
- * [executePassSequential], one [Pass] object is instantiated for the whole [TranslationResult].
+ * [executePass], one [Pass] object is instantiated for the whole [TranslationResult].
  */
 abstract class TranslationResultPass(ctx: TranslationContext) : Pass<TranslationResult>(ctx)
 
 /**
- * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePassSequential],
- * one [Pass] object is instantiated for each [Component] in a [TranslationResult].
+ * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePass], one
+ * [Pass] object is instantiated for each [Component] in a [TranslationResult].
  */
 abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
 
 /**
  * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
- * [executePassSequential], one [Pass] object is instantiated for each [TranslationUnitDeclaration]
- * in a [Component].
+ * [executePass], one [Pass] object is instantiated for each [TranslationUnitDeclaration] in a
+ * [Component].
  */
 abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
 
@@ -126,9 +126,9 @@ fun executePassesInParallel(
     executedFrontends: Collection<LanguageFrontend<*, *>>
 ) {
     // Execute a single pass directly sequentially and return
-    var pass = classes.singleOrNull()
+    val pass = classes.singleOrNull()
     if (pass != null) {
-        executePassSequential(pass, ctx, result, executedFrontends)
+        executePass(pass, ctx, result, executedFrontends)
         return
     }
 
@@ -143,9 +143,7 @@ fun executePassesInParallel(
 
     val futures =
         classes.map {
-            CompletableFuture.supplyAsync {
-                executePassSequential(it, ctx, result, executedFrontends)
-            }
+            CompletableFuture.supplyAsync { executePass(it, ctx, result, executedFrontends) }
         }
 
     futures.map(CompletableFuture<Unit>::join)
@@ -153,11 +151,14 @@ fun executePassesInParallel(
 }
 
 /**
- * Creates a new [Pass] (based on [cls]) and executes it sequentially on the nodes of [result].
- * Depending on the type of pass, this will either execute the pass directly on the overall result,
- * loop through each component or through each translation unit.
+ * Creates a new [Pass] (based on [cls]) and executes it sequentially on all target nodes of
+ * [result].
+ *
+ * Depending on the type of pass, this will either execute the pass directly on the overall result
+ * (in case of a [TranslationUnitPass]) or loop through each component or through each translation
+ * unit. The individual loop elements become the "target" of the execution of [consumeTarget].
  */
-fun executePassSequential(
+fun executePass(
     cls: KClass<out Pass<*>>,
     ctx: TranslationContext,
     result: TranslationResult,
@@ -172,33 +173,67 @@ fun executePassSequential(
         cls.primaryConstructor?.call(ctx)
             ?: throw TranslationException("Could not create prototype pass")
 
+    // Collect our "targets" based on the type and granularity of the pass and consume them by the
+    // pass.
     when (prototype) {
-        is TranslationResultPass -> {
-            executePass((prototype as TranslationResultPass)::class, ctx, result, executedFrontends)
-        }
-        is ComponentPass -> {
-            for (component in result.components) {
-                executePass((prototype as ComponentPass)::class, ctx, component, executedFrontends)
-            }
-        }
-        is TranslationUnitPass -> {
-            for (component in result.components) {
-                for (tu in component.translationUnits) {
-                    executePass(
-                        (prototype as TranslationUnitPass)::class,
-                        ctx,
-                        tu,
-                        executedFrontends
-                    )
-                }
-            }
-        }
+        is TranslationResultPass ->
+            consumeTargets(
+                (prototype as TranslationResultPass)::class,
+                ctx,
+                listOf(result),
+                executedFrontends
+            )
+        is ComponentPass ->
+            consumeTargets(
+                (prototype as ComponentPass)::class,
+                ctx,
+                result.components,
+                executedFrontends
+            )
+        is TranslationUnitPass ->
+            consumeTargets(
+                (prototype as TranslationUnitPass)::class,
+                ctx,
+                result.components.flatMap { it.translationUnits },
+                executedFrontends
+            )
     }
 
     bench.stop()
 }
 
-inline fun <reified T : PassTarget> executePass(
+/**
+ * This function is a wrapper around [consumeTarget] to apply it to all [targets]. This is primarily
+ * needed because of very delicate type inference work of the Kotlin compiler.
+ *
+ * Depending on the configuration of [TranslationConfiguration.useParallelPasses], the individual
+ * targets will either be consumed sequentially or in parallel.
+ */
+private inline fun <reified T : PassTarget> consumeTargets(
+    cls: KClass<out Pass<T>>,
+    ctx: TranslationContext,
+    targets: List<T>,
+    executedFrontends: Collection<LanguageFrontend<*, *>>
+) {
+    if (ctx.config.useParallelPasses) {
+        val futures =
+            targets.map {
+                CompletableFuture.supplyAsync { consumeTarget(cls, ctx, it, executedFrontends) }
+            }
+        futures.forEach(CompletableFuture<Pass<T>?>::join)
+    } else {
+        targets.forEach { consumeTarget(cls, ctx, it, executedFrontends) }
+    }
+}
+
+/**
+ * This function creates a new [Pass] object, based on the class specified in [cls] and consumes the
+ * [target] with the pass. The target type depends on the type of pass, e.g., a
+ * [TranslationUnitDeclaration] or a whole [Component]. When passes are executed in parallel,
+ * different instances of the same [Pass] class are executed at the same time (on different [target]
+ * nodes) using this function.
+ */
+private inline fun <reified T : PassTarget> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,

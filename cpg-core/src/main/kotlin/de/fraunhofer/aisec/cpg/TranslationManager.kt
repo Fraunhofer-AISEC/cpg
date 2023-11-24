@@ -98,7 +98,7 @@ private constructor(
             } else {
                 // Execute all passes in sequence
                 for (pass in config.registeredPasses.flatten()) {
-                    executePassSequential(pass, ctx, result, executedFrontends)
+                    executePass(pass, ctx, result, executedFrontends)
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")
                     }
