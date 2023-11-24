@@ -61,7 +61,7 @@ abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
             }
         }
 
-    override var aliases = mutableSetOf<Declaration>()
+    override var aliases = mutableSetOf<HasAliases>()
 
     override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
