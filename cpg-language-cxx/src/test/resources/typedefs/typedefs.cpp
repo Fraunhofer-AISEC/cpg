@@ -75,7 +75,7 @@ typedef long type;
 type typeMemberOutside;
 
 // sample typedef with tabs
-typedef uint8		test;
+typedef uint8_t		test;
 
 struct add_const {
     typedef const int type;
