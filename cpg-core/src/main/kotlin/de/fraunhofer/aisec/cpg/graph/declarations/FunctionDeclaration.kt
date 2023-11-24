@@ -280,6 +280,21 @@ val Statement.cyclomaticComplexity: Int
                     // add one for each branch (and include the children)
                     stmt.caseExpression?.let { i += it.cyclomaticComplexity }
                 }
+                is DoStatement -> {
+                    // add one for the do statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is WhileStatement -> {
+                    // add one for the while statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is GotoStatement -> {
+                    // add one
+                    i++
+                }
+                is StatementHolder -> {
+                    i += stmt.cyclomaticComplexity
+                }
             }
         }
 
