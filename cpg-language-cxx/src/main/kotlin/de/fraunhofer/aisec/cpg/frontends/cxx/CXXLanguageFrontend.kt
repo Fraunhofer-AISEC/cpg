@@ -194,8 +194,6 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     val parameterDeclarationHandler = ParameterDeclarationHandler(this)
     val statementHandler = StatementHandler(this)
 
-    private val comments = HashMap<Pair<String, Int>, String>()
-
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
@@ -245,20 +243,6 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             bench = Benchmark(this.javaClass, "Transforming ${file.name} to CPG")
             if (config.debugParser) {
                 explore(translationUnit, 0)
-            }
-
-            for (c in translationUnit.comments) {
-                if (c.rawSignature.isEmpty()) {
-                    continue
-                }
-
-                if (c.fileLocation == null) {
-                    LOGGER.warn("Found comment with null location in {}", translationUnit.filePath)
-                    continue
-                }
-
-                comments[Pair(c.fileLocation.fileName, c.fileLocation.startingLineNumber)] =
-                    c.rawSignature
             }
 
             val translationUnitDeclaration =
@@ -452,19 +436,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     }
 
     override fun setComment(node: Node, astNode: IASTNode) {
-        val location = node.location ?: return
-
-        // No location, no comment
-
-        val loc: Pair<String, Int> =
-            Pair(location.artifactLocation.uri.path, location.region.endLine)
-        comments[loc]?.let {
-            // only exact match for now
-            node.comment = it
-        }
-        // TODO: handle orphanComments? i.e. comments which do not correspond to one line
-        // TODO: what to do with comments which are in a line which contains multiple
-        //  statements?
+        // Nothing to do. We use the CommentMatcher instead.
     }
 
     /** Returns the [Type] that is represented by an [IASTTypeId]. */
