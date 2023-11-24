@@ -823,6 +823,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
+                    .useParallelPasses(true)
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =

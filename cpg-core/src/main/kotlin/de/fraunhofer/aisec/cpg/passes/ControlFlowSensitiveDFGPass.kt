@@ -45,12 +45,13 @@ import kotlin.contracts.contract
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(ctx) {
 
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
-         * a [FunctionDeclaration] must have in order to be considered.
+         * This specifies the maximum complexity (as calculated per
+         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
+         * considered.
          */
         var maxComplexity: Int? = null
     ) : PassConfiguration()
@@ -59,65 +60,55 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         // Nothing to do
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
-        tu.functions.forEach(::handle)
-    }
-
-    /**
-     * We perform the actions for each [FunctionDeclaration].
-     *
-     * @param node every node in the TranslationResult
-     */
-    protected fun handle(node: Node) {
+    /** We perform the actions for each [FunctionDeclaration]. */
+    override fun accept(node: FunctionDeclaration) {
         val max = passConfig<Configuration>()?.maxComplexity
 
-        if (node is FunctionDeclaration) {
-            // Skip empty functions
-            if (node.body == null) {
+        // Skip empty functions
+        if (node.body == null) {
+            return
+        }
+
+        // Calculate the complexity of the function and see, if it exceeds our threshold
+        if (max != null) {
+            val c = node.body?.cyclomaticComplexity ?: 0
+            if (c > max) {
+                log.info(
+                    "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                )
                 return
             }
+        }
 
-            // Calculate the complexity of the function and see, if it exceeds our threshold
-            if (max != null) {
-                val c = node.body?.cyclomaticComplexity ?: 0
-                if (c > max) {
-                    log.info(
-                        "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
-                    )
-                    return
-                }
+        clearFlowsOfVariableDeclarations(node)
+        val startState = DFGPassState<Set<Node>>()
+
+        startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
+        val finalState =
+            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+
+        removeUnreachableImplicitReturnStatement(
+            node,
+            finalState.returnStatements.values.flatMap {
+                it.elements.filterIsInstance<ReturnStatement>()
             }
+        )
 
-            clearFlowsOfVariableDeclarations(node)
-            val startState = DFGPassState<Set<Node>>()
-
-            startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
-            val finalState =
-                iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
-
-            removeUnreachableImplicitReturnStatement(
-                node,
-                finalState.returnStatements.values.flatMap {
-                    it.elements.filterIsInstance<ReturnStatement>()
-                }
-            )
-
-            for ((key, value) in finalState.generalState) {
-                if (key is TupleDeclaration) {
-                    // We need a little hack for tuple statements to set the index. We have the
-                    // outer part (i.e., the tuple) here, but we generate the DFG edges to the
-                    // elements. We have the indices here, so it's amazing.
-                    key.elements.forEachIndexed { i, element ->
-                        element.addAllPrevDFG(
-                            value.elements.filterNot { it is VariableDeclaration && key == it },
-                            mutableMapOf(Properties.INDEX to i)
-                        )
-                    }
-                } else {
-                    key.addAllPrevDFG(
-                        value.elements.filterNot { it is VariableDeclaration && key == it }
+        for ((key, value) in finalState.generalState) {
+            if (key is TupleDeclaration) {
+                // We need a little hack for tuple statements to set the index. We have the
+                // outer part (i.e., the tuple) here, but we generate the DFG edges to the
+                // elements. We have the indices here, so it's amazing.
+                key.elements.forEachIndexed { i, element ->
+                    element.addAllPrevDFG(
+                        value.elements.filterNot { it is VariableDeclaration && key == it },
+                        mutableMapOf(Properties.INDEX to i)
                     )
                 }
+            } else {
+                key.addAllPrevDFG(
+                    value.elements.filterNot { it is VariableDeclaration && key == it }
+                )
             }
         }
     }

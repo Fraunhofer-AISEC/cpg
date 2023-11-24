@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
@@ -60,8 +61,16 @@ abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
 abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
 
 /**
+ * A [FunctionPass] is a pass that operates on a [FunctionDeclaration]. If used with [executePass],
+ * one [Pass] object is instantiated for each [FunctionDeclaration] in each
+ * [TranslationUnitDeclaration] in each [Component].
+ */
+abstract class FunctionPass(ctx: TranslationContext) : Pass<FunctionDeclaration>(ctx)
+
+/**
  * A pass target is an interface for a [Node] on which a [Pass] can operate, it should only be
- * implemented by [TranslationResult], [Component] and [TranslationUnitDeclaration].
+ * implemented by [TranslationResult], [Component], [TranslationUnitDeclaration] and
+ * [FunctionDeclaration].
  */
 interface PassTarget
 
@@ -197,6 +206,14 @@ fun executePass(
                 result.components.flatMap { it.translationUnits },
                 executedFrontends
             )
+        is FunctionPass -> {
+            consumeTargets(
+                (prototype as FunctionPass)::class,
+                ctx,
+                result.components.flatMap { it.translationUnits.flatMap { it.functions } },
+                executedFrontends
+            )
+        }
     }
 
     bench.stop()

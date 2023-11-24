@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePass
+import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 
 fun LanguageFrontend<*, *>.translationResult(
     init: TranslationResult.() -> Unit
@@ -49,7 +50,13 @@ fun LanguageFrontend<*, *>.translationResult(
     node.addComponent(component)
     init(node)
 
-    ctx.config.registeredPasses.flatten().forEach { executePass(it, ctx, node, listOf()) }
+    if (ctx.config.useParallelPasses) {
+        for (list in ctx.config.registeredPasses) {
+            executePassesInParallel(list, ctx, node, listOf())
+        }
+    } else {
+        ctx.config.registeredPasses.flatten().forEach { executePass(it, ctx, node, listOf()) }
+    }
 
     return node
 }
