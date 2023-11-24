@@ -50,7 +50,6 @@ fun LanguageFrontend<*, *>.translationResult(
     node.addComponent(component)
     init(node)
 
-<<<<<<< HEAD
     if (ctx.config.useParallelPasses) {
         for (list in ctx.config.registeredPasses) {
             executePassesInParallel(list, ctx, node, listOf())
@@ -58,9 +57,6 @@ fun LanguageFrontend<*, *>.translationResult(
     } else {
         ctx.config.registeredPasses.flatten().forEach { executePass(it, ctx, node, listOf()) }
     }
-=======
-    ctx.config.registeredPasses.flatten().forEach { executePassSequential(it, ctx, node, listOf()) }
->>>>>>> 0dc5b459c (Experimental support to run passes in parallel)
 
     return node
 }
