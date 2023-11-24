@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.HasAliases
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -45,7 +46,7 @@ import org.neo4j.ogm.annotation.Relationship
  * expression `a = b`, which itself is an [AssignExpression], contains two [Reference]s, one for the
  * variable `a` and one for variable `b`, which have been previously been declared.
  */
-open class Reference : Expression(), HasType.TypeObserver {
+open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     /**
      * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
      * this expression.
@@ -72,7 +73,9 @@ open class Reference : Expression(), HasType.TypeObserver {
                 value.registerTypeObserver(this)
             }
         }
-    // set the access
+
+    override var aliases = mutableSetOf<HasAliases>()
+
     /**
      * Is this reference used for writing data instead of just reading it? Determines dataflow
      * direction

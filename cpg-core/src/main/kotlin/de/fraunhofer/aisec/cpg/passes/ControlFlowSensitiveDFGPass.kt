@@ -91,7 +91,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             clearFlowsOfVariableDeclarations(node)
             val startState = DFGPassState<Set<Node>>()
 
-            startState.declarationsState.push(node, PowersetLattice(setOf()))
+            startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
             val finalState =
                 iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
 
@@ -142,7 +142,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.
      */
-    protected fun transfer(
+    protected open fun transfer(
         currentEdge: PropertyEdge<Node>,
         state: State<Node, Set<Node>>,
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
@@ -157,19 +157,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         if (initializer != null) {
             // A variable declaration with an initializer => The initializer flows to the
             // declaration. This also affects tuples. We split it up later.
-            state.push(currentNode, PowersetLattice(setOf(initializer)))
+            state.push(currentNode, PowersetLattice(identitySetOf(initializer)))
 
             if (currentNode is TupleDeclaration) {
                 // For a tuple declaration, we write the elements in this statement. We do not
                 // really care about the tuple when using the elements subsequently.
                 currentNode.elements.forEach {
-                    doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
+                    doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
                 }
             } else {
                 // We also wrote something to this variable declaration here.
                 doubleState.pushToDeclarationsState(
                     currentNode,
-                    PowersetLattice(setOf(currentNode))
+                    PowersetLattice(identitySetOf(currentNode))
                 )
             }
         } else if (isSimpleAssignment(currentNode)) {
@@ -182,7 +182,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
                     ?.let {
                         doubleState.declarationsState[it] =
-                            PowersetLattice(setOf(assignment.target as Node))
+                            PowersetLattice(identitySetOf(assignment.target as Node))
                     }
             }
         } else if (isIncOrDec(currentNode)) {
@@ -194,7 +194,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             if (writtenDeclaration != null) {
                 state.push(input, doubleState.declarationsState[writtenDeclaration])
-                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(input))
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(input))
             }
         } else if (isCompoundAssignment(currentNode)) {
             // We write to the lhs, but it also serves as an input => We first get all previous
@@ -209,7 +210,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 state.push(lhs, doubleState.declarationsState[writtenDeclaration])
 
                 // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(lhs))
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(lhs))
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
@@ -270,19 +272,23 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             iterable?.let {
                 writtenTo?.let {
-                    state.push(writtenTo, PowersetLattice(setOf(iterable)))
+                    state.push(writtenTo, PowersetLattice(identitySetOf(iterable)))
                     // Add the variable declaration (or the reference) to the list of previous
                     // write nodes in this path
-                    state.declarationsState[writtenDeclaration] = PowersetLattice(setOf(writtenTo))
+                    state.declarationsState[writtenDeclaration] =
+                        PowersetLattice(identitySetOf(writtenTo))
                 }
             }
         } else if (currentNode is FunctionDeclaration) {
             // We have to add the parameters
             currentNode.parameters.forEach {
-                doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
+                doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
             }
         } else if (currentNode is ReturnStatement) {
-            doubleState.returnStatements.push(currentNode, PowersetLattice(setOf(currentNode)))
+            doubleState.returnStatements.push(
+                currentNode,
+                PowersetLattice(identitySetOf(currentNode))
+            )
         } else {
             doubleState.declarationsState.push(
                 currentNode,

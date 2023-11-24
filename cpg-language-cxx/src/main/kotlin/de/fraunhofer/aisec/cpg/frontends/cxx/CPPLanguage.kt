@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
-class CPPLanguage :
+open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,

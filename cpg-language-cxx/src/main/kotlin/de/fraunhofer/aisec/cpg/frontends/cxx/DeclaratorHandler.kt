@@ -117,8 +117,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     ctx.name.toString(),
                     unknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
-                    ctx.rawSignature,
-                    implicitInitializerAllowed,
+                    implicitInitializerAllowed = implicitInitializerAllowed,
+                    rawNode = ctx
                 )
 
             // Add this declaration to the current scope
@@ -142,10 +142,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 name.localName,
                 unknownType(),
                 emptyList(),
-                ctx.rawSignature,
-                frontend.locationOf(ctx),
-                initializer,
-                true
+                location = frontend.locationOf(ctx),
+                initializer = initializer,
+                implicitInitializerAllowed = true,
+                rawNode = ctx
             )
 
         frontend.scopeManager.addDeclaration(declaration)
@@ -401,19 +401,24 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val recordDeclaration = frontend.scopeManager.currentRecord
         if (recordDeclaration == null) {
             // variable
-            result = newVariableDeclaration(name, unknownType(), ctx.rawSignature, true)
+            result =
+                newVariableDeclaration(
+                    name,
+                    unknownType(),
+                    implicitInitializerAllowed = true,
+                    rawNode = ctx
+                )
         } else {
             // field
-            val code = ctx.rawSignature
             result =
                 newFieldDeclaration(
                     name,
                     unknownType(),
                     emptyList(),
-                    code,
-                    frontend.locationOf(ctx),
-                    null,
-                    false,
+                    location = frontend.locationOf(ctx),
+                    initializer = null,
+                    implicitInitializerAllowed = false,
+                    rawNode = ctx
                 )
         }
 
@@ -435,7 +440,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             newRecordDeclaration(
                 ctx.name.toString(),
                 kind,
-                ctx.rawSignature,
+                rawNode = ctx,
             )
 
         // Handle C++ classes
@@ -483,7 +488,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
     ): TypeParameterDeclaration {
-        return newTypeParameterDeclaration(ctx.rawSignature, ctx.rawSignature, ctx)
+        return newTypeParameterDeclaration(ctx.rawSignature, rawNode = ctx)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {
