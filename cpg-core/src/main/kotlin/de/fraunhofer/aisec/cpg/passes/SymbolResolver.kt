@@ -425,7 +425,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     listOf(),
                     "",
                     null,
-                    null,
                     false,
                 )
             record.addField(declaration)

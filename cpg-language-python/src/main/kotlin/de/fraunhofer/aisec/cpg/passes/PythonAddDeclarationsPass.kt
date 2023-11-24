@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
+// TODO depend on type resolver?
 @ExecuteFirst
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), NamespaceProvider {
@@ -96,7 +97,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                     newFieldDeclaration(
                                         node.name,
                                         code = node.code,
-                                        location = node.location
                                     )
                                 }
                             field
@@ -106,7 +106,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                     newVariableDeclaration(
                                         node.name,
                                         code = node.code,
-                                        location = node.location
                                     )
                                 }
                             v
@@ -117,7 +116,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                 newFieldDeclaration(
                                     node.name,
                                     code = node.code,
-                                    location = node.location
                                 )
                             }
                         field
@@ -129,7 +127,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                 newVariableDeclaration(
                                     node.name,
                                     code = node.code,
-                                    location = node.location
                                 )
                             }
                         v
@@ -138,7 +135,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                             newVariableDeclaration(
                                 node.name,
                                 code = node.code,
-                                location = node.location
                             )
                         v
                     }
