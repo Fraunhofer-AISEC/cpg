@@ -37,19 +37,22 @@ import kotlin.test.assertNotNull
 class CommentsTest {
     @Test
     fun testCommentMatcher() {
-        val file = File("src/test/resources/comments.c")
+        val file = File("src/test/resources/c/comments.c")
         val tu =
             TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
         assertNotNull(tu)
+
         val functionDoc = tu.functions["functionDoc"]
         assertNotNull(functionDoc)
         assertEquals("/**\n * Documentation comment\n */", functionDoc.comment)
+
         val functionMultiline = tu.functions["functionMultiline"]
         assertNotNull(functionMultiline)
         assertEquals("/*\n * Multi-line\n * comment\n */", functionMultiline.comment)
+
         val functionSimple = tu.functions["functionSimple"]
         assertNotNull(functionSimple)
         assertEquals("// Simple comment", functionSimple.comment)
