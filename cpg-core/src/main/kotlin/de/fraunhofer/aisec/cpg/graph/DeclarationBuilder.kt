@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
@@ -272,13 +271,10 @@ fun MetadataProvider.newRecordDeclaration(
 fun MetadataProvider.newEnumDeclaration(
     name: CharSequence?,
     code: String? = null,
-    location: PhysicalLocation?,
     rawNode: Any? = null
 ): EnumDeclaration {
     val node = EnumDeclaration()
     node.applyMetadata(this, name, rawNode, code)
-
-    node.location = location
 
     log(node)
     return node
@@ -332,13 +328,10 @@ fun MetadataProvider.newRecordTemplateDeclaration(
 fun MetadataProvider.newEnumConstantDeclaration(
     name: CharSequence?,
     code: String? = null,
-    location: PhysicalLocation?,
     rawNode: Any? = null
 ): EnumConstantDeclaration {
     val node = EnumConstantDeclaration()
     node.applyMetadata(this, name, rawNode, code)
-
-    node.location = location
 
     log(node)
     return node
@@ -356,7 +349,6 @@ fun MetadataProvider.newFieldDeclaration(
     type: Type = unknownType(),
     modifiers: List<String>? = listOf(),
     code: String? = null,
-    location: PhysicalLocation? = null,
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
@@ -366,7 +358,6 @@ fun MetadataProvider.newFieldDeclaration(
 
     node.type = type
     node.modifiers = modifiers ?: listOf()
-    node.location = location
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
         if (initializer is NewArrayExpression) {
