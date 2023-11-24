@@ -39,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
-abstract class ValueDeclaration : Declaration(), HasType {
+abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     /** The type of this declaration. */
@@ -61,7 +61,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
 
-    var aliases = mutableSetOf<Node>()
+    override var aliases = mutableSetOf<Declaration>()
 
     override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
