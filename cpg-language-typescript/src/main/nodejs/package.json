@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "5.2.2"
+    "typescript": "5.3.2"
   },
   "license": "Apache-2.0",
   "devDependencies": {

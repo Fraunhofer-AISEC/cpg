@@ -84,7 +84,7 @@ class SymbolResolverTest {
         refs.forEach {
             // Build a unique tag based on the scope of the reference is in (since this is usually
             // the start scope)
-            val list = map.computeIfAbsent(it.uniqueTag) { mutableListOf() }
+            val list = map.computeIfAbsent(it.referenceTag) { mutableListOf() }
             list += it
 
             // All elements in the list must have the same scope and name

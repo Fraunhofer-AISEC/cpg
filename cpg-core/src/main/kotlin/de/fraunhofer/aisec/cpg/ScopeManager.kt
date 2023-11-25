@@ -76,10 +76,11 @@ class ScopeManager : ScopeProvider {
     data class Alias(var from: Name, var to: Name)
 
     /**
-     * A cache map of unique tags (computed with [Reference.buildUniqueTag]) and their respective
-     * [ValueDeclaration]. This is used by [resolveReference] as a caching mechanism.
+     * A cache map of reference tags (computed with [Reference.referenceTag]) and their respective
+     * pair of original [Reference] and resolved [ValueDeclaration]. This is used by
+     * [resolveReference] as a caching mechanism.
      */
-    private val symbolTable = mutableMapOf<ReferenceTag, ValueDeclaration>()
+    private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
     /**
      * In some languages, we can define aliases for names. An example is renaming package imports in
@@ -92,12 +93,6 @@ class ScopeManager : ScopeProvider {
      * existence of a [LanguageFrontend].
      */
     private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
-
-    /**
-     * The language frontend tied to the scope manager. Can be used to implement language specific
-     * scope resolution or lookup.
-     */
-    var lang: LanguageFrontend<*, *>? = null
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
@@ -567,10 +562,7 @@ class ScopeManager : ScopeProvider {
         }
     }
 
-    /**
-     * Only used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
-     * [ValueDeclarationScope].
-     */
+    /** Only used by the [TypeManager], adds typedefs to the current [ValueDeclarationScope]. */
     fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
@@ -579,12 +571,6 @@ class ScopeManager : ScopeProvider {
         }
 
         scope.addTypedef(typedef)
-
-        if (scope.astNode == null) {
-            lang?.currentTU?.addTypedef(typedef)
-        } else {
-            scope.astNode?.addTypedef(typedef)
-        }
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
@@ -623,18 +609,21 @@ class ScopeManager : ScopeProvider {
         val startScope = ref.scope
 
         // Retrieve a unique tag for the particular reference based on the current scope
-        val tag = ref.uniqueTag
+        val tag = ref.referenceTag
 
-        // If we find a match in our symbol table, we can immediately return the declaration
-        var decl = symbolTable[tag]
-        if (decl != null) {
-            return decl
+        // If we find a match in our symbol table, we can immediately return the declaration. We
+        // need to be careful about potential collisions in our tags, since they are based on the
+        // hash-code of the scope. We therefore take the extra precaution to compare the scope in
+        // case we get a hit. This should not take too much performance overhead.
+        val pair = symbolTable[tag]
+        if (pair != null && ref.scope == pair.first.scope) {
+            return pair.second
         }
 
         val (scope, name) = extractScope(ref, startScope)
 
         // Try to resolve value declarations according to our criteria
-        decl =
+        val decl =
             resolve<ValueDeclaration>(scope) {
                     if (it.name.lastPartsMatch(name)) {
                         val helper = ref.resolutionHelper
@@ -666,7 +655,7 @@ class ScopeManager : ScopeProvider {
 
         // Update the symbol cache, if we found a declaration for the tag
         if (decl != null) {
-            symbolTable[tag] = decl
+            symbolTable[tag] = Pair(ref, decl)
         }
 
         return decl
@@ -872,6 +861,25 @@ class ScopeManager : ScopeProvider {
         val list = aliases.computeIfAbsent(file) { mutableSetOf() }
 
         list += Alias(from, to)
+    }
+
+    fun typedefFor(alias: Type): Type? {
+        var current = currentScope
+
+        // We need to build a path from the current scope to the top most one. This ensures us that
+        // a local definition overwrites / shadows one that was there on a higher scope.
+        while (current != null) {
+            if (current is ValueDeclarationScope) {
+                val decl = current.typedefs[alias]
+                if (decl != null) {
+                    return decl.type
+                }
+            }
+
+            current = current.parent
+        }
+
+        return null
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */

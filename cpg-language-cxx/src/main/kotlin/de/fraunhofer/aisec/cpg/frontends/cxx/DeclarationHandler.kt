@@ -81,7 +81,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * done yet.
      */
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return newUsingDeclaration(using.rawSignature, using.qualifiedName.toString())
+        return newUsingDeclaration(qualifiedName = using.qualifiedName.toString(), rawNode = using)
     }
 
     /**
@@ -229,7 +229,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             frontend.currentTU
                 ?.declarations
                 ?.filterIsInstance(FunctionDeclaration::class.java)
-                ?.filter { !it.isDefinition && it.hasSameSignature(declaration) }
+                ?.filter {
+                    !it.isDefinition &&
+                        it.name.lastPartsMatch(declaration.name) &&
+                        it.hasSignature(declaration.signatureTypes)
+                }
                 ?: listOf()
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
@@ -700,11 +704,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnitDeclaration {
         val node =
-            newTranslationUnitDeclaration(
-                translationUnit.filePath,
-                translationUnit.rawSignature,
-                translationUnit
-            )
+            newTranslationUnitDeclaration(translationUnit.filePath, rawNode = translationUnit)
 
         // There might have been errors in the previous translation unit and in any case
         // we need to reset the scope manager scope to global, to avoid spilling scope errors into
@@ -712,6 +712,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.resetToGlobal(node)
         frontend.currentTU = node
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
+
         for (declaration in translationUnit.declarations) {
             if (declaration is CPPASTLinkageSpecification) {
                 continue // do not care about these for now
