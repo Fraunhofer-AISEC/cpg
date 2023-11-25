@@ -37,5 +37,4 @@ import org.neo4j.ogm.annotation.NodeEntity
  * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
  * however clang does establish a connection between those nodes, we currently do not.
  */
-@NodeEntity
-abstract class Declaration : Node()
+@NodeEntity abstract class Declaration : Node()
