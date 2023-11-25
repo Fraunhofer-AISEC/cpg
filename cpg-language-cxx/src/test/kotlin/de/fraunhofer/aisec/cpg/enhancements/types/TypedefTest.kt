@@ -26,14 +26,17 @@
 package de.fraunhofer.aisec.cpg.enhancements.types
 
 import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.records
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.nio.file.Path
 import kotlin.test.*
@@ -44,141 +47,185 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSingle() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        with(tu) {
+            // normal type
+            val l1 = tu.variables["l1"]
+            val l2 = tu.variables["l2"]
+            assertEquals(l1?.type, l2?.type)
 
-        // normal type
-        val l1 = findByUniqueName(variables, "l1")
-        val l2 = findByUniqueName(variables, "l2")
-        assertEquals(l1.type, l2.type)
+            // pointer
+            val longptr1 = tu.variables["longptr1"]
+            val longptr2 = tu.variables["longptr2"]
+            assertEquals(longptr1?.type, longptr2?.type)
 
-        // pointer
-        val longptr1 = findByUniqueName(variables, "longptr1")
-        val longptr2 = findByUniqueName(variables, "longptr2")
-        assertEquals(longptr1.type, longptr2.type)
+            // array
+            val arr1 = tu.variables["arr1"]
+            val arr2 = tu.variables["arr2"]
+            assertEquals(arr1?.type, arr2?.type)
 
-        // array
-        val arr1 = findByUniqueName(variables, "arr1")
-        val arr2 = findByUniqueName(variables, "arr2")
-        assertEquals(arr1.type, arr2.type)
+            // function pointer
+            val uintfp1 = tu.variables["uintfp1"]
+            val uintfp2 = tu.variables["uintfp2"]
 
-        // function pointer
-        val uintfp1 = findByUniqueName(variables, "uintfp1")
-        val uintfp2 = findByUniqueName(variables, "uintfp2")
+            val fpType = uintfp1?.type as? FunctionPointerType
+            assertNotNull(fpType)
 
-        val fpType = uintfp1.type as? FunctionPointerType
-        assertNotNull(fpType)
+            val returnType = fpType.returnType as? NumericType
+            assertNotNull(returnType)
+            assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
+            assertEquals(uintfp1.type, uintfp2?.type)
 
-        val returnType = fpType.returnType as? NumericType
-        assertNotNull(returnType)
-        assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
-        assertEquals(uintfp1.type, uintfp2.type)
-
-        val typedefs = result.finalCtx.scopeManager.currentTypedefs
-        val def =
-            typedefs.stream().filter { it.alias.name.localName == "test" }.findAny().orElse(null)
-        assertNotNull(def)
+            val type = tu.ctx?.scopeManager?.typedefFor(objectType("test"))
+            assertIs<IntegerType>(type)
+            assertLocalName("uint8_t", type)
+        }
     }
 
     @Test
     @Throws(Exception::class)
     fun testWithModifier() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // pointer
-        val l1ptr = findByUniqueName(variables, "l1ptr")
-        val l2ptr = findByUniqueName(variables, "l2ptr")
-        val l3ptr = findByUniqueName(variables, "l3ptr")
-        val l4ptr = findByUniqueName(variables, "l4ptr")
-        assertEquals(l1ptr.type, l2ptr.type)
-        assertEquals(l1ptr.type, l3ptr.type)
-        assertEquals(l1ptr.type, l4ptr.type)
+        val l1ptr = tu.variables["l1ptr"]
+        val l2ptr = tu.variables["l2ptr"]
+        val l3ptr = tu.variables["l3ptr"]
+        val l4ptr = tu.variables["l4ptr"]
+        assertEquals(l1ptr?.type, l2ptr?.type)
+        assertEquals(l1ptr?.type, l3ptr?.type)
+        assertEquals(l1ptr?.type, l4ptr?.type)
     }
 
     @Test
     @Throws(Exception::class)
     fun testChained() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
-        val l1 = findByUniqueName(variables, "l1")
-        val l3 = findByUniqueName(variables, "l3")
-        val l4 = findByUniqueName(variables, "l4")
-        assertEquals(l1.type, l3.type)
-        assertEquals(l1.type, l4.type)
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        val l1 = tu.variables["l1"]
+        val l3 = tu.variables["l3"]
+        val l4 = tu.variables["l4"]
+        assertEquals(l1?.type, l3?.type)
+        assertEquals(l1?.type, l4?.type)
     }
 
     @Test
     @Throws(Exception::class)
     fun testMultiple() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
-
-        // simple type
-        val i1 = findByUniqueName(variables, "i1")
-        val i2 = findByUniqueName(variables, "i2")
-        assertEquals(i1.type, i2.type)
-
-        // array
-        val a1 = findByUniqueName(variables, "a1")
-        val a2 = findByUniqueName(variables, "a2")
-        assertEquals(a1.type, a2.type)
-
-        // pointer
-        val intPtr1 = findByUniqueName(variables, "intPtr1")
-        val intPtr2 = findByUniqueName(variables, "intPtr2")
-        assertEquals(intPtr1.type, intPtr2.type)
-
-        // function pointer
-        val fPtr1 = findByUniqueName(variables, "intFptr1")
-        val fPtr2 = findByUniqueName(variables, "intFptr2")
-        assertEquals(fPtr1.type, fPtr2.type)
-
-        // template, not to be confused with multiple typedef
-        val template =
-            findByUniquePredicate(result.translationUnits.firstOrNull()?.typedefs ?: listOf()) {
-                it.type.typeName == "template_class_A"
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
             }
-        assertEquals(template.alias.typeName, "type_B")
+        with(tu) {
+            // simple type
+            val i1 = tu.variables["i1"]
+            val i2 = tu.variables["i2"]
+            assertEquals(i1?.type, i2?.type)
+
+            // array
+            val a1 = tu.variables["a1"]
+            val a2 = tu.variables["a2"]
+            assertEquals(a1?.type, a2?.type)
+
+            // pointer
+            val intPtr1 = tu.variables["intPtr1"]
+            val intPtr2 = tu.variables["intPtr2"]
+            assertEquals(intPtr1?.type, intPtr2?.type)
+
+            // function pointer
+            val fPtr1 = tu.variables["intFptr1"]
+            val fPtr2 = tu.variables["intFptr2"]
+            assertEquals(fPtr1?.type, fPtr2?.type)
+
+            val type = tu.ctx?.scopeManager?.typedefFor(objectType("type_B"))
+            assertLocalName("template_class_A", type)
+            assertIs<ObjectType>(type)
+            assertEquals(listOf(primitiveType("int"), primitiveType("int")), type.generics)
+        }
     }
 
     @Test
     @Throws(Exception::class)
     fun testStructs() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
-        val ps1 = findByUniqueName(variables, "ps1")
-        val ps2 = findByUniqueName(variables, "ps2")
-        assertEquals(ps1.type, ps2.type)
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        val ps1 = tu.variables["ps1"]
+        val ps2 = tu.variables["ps2"]
+        assertEquals(ps1?.type, ps2?.type)
     }
 
     @Test
     @Throws(Exception::class)
     fun testArbitraryTypedefLocation() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
-        val ullong1 = findByUniqueName(variables, "someUllong1")
-        val ullong2 = findByUniqueName(variables, "someUllong2")
-        assertEquals(ullong1.type, ullong2.type)
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        val ullong1 = tu.variables["someUllong1"]
+        val ullong2 = tu.variables["someUllong2"]
+        assertEquals(ullong1?.type, ullong2?.type)
     }
 
     @Test
     @Throws(Exception::class)
     fun testMemberTypeDef() {
-        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variables = result.variables
-        val records = result.records
-        val addConst = findByUniqueName(records, "add_const")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        val addConst = tu.records["add_const"]
         val typeMember1: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember1")
         val typeMember2: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember2")
         assertEquals(typeMember1.type, typeMember2.type)
 
-        val typeMemberOutside = findByUniqueName(variables, "typeMemberOutside")
-        assertNotEquals(typeMemberOutside.type, typeMember2.type)
+        val typeMemberOutside = tu.variables["typeMemberOutside"]
+        assertNotEquals(typeMemberOutside?.type, typeMember2.type)
 
-        val cptr1 = findByUniqueName(variables, "cptr1")
-        val cptr2 = findByUniqueName(variables, "cptr2")
-        assertEquals(cptr1.type, cptr2.type)
-        assertNotEquals(typeMemberOutside.type, cptr2.type)
+        val cptr1 = tu.variables["cptr1"]
+        val cptr2 = tu.variables["cptr2"]
+        assertEquals(cptr1?.type, cptr2?.type)
+        assertNotEquals(typeMemberOutside?.type, cptr2?.type)
     }
 }

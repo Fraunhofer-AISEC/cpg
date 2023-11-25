@@ -81,7 +81,6 @@ dependencies {
     api(libs.commons.io)
 
     implementation(libs.kotlin.reflect)
-    implementation(libs.jetbrains.annotations)
 
     testImplementation(libs.junit.params)
 

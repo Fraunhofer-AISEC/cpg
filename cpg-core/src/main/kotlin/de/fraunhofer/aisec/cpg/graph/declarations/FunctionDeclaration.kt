@@ -25,17 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -106,47 +106,26 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
                     }
                 })
 
-    fun hasSameSignature(targetFunctionDeclaration: FunctionDeclaration): Boolean {
-        return targetFunctionDeclaration.name.localName == name.localName &&
-            targetFunctionDeclaration.signatureTypes == signatureTypes
-    }
-
+    /**
+     * This function checks, if the supplied [CallExpression] has the same signature as the current
+     * [FunctionDeclaration].
+     */
     fun hasSignature(call: CallExpression): Boolean {
         return hasSignature(call.signature, call.arguments)
     }
 
-    // TODO: Documentation required. It's not completely clear what this method is supposed to do.
+    /**
+     * This function checks, if the two supplied signatures are equal. The usual use-case is
+     * comparing the signature arguments of a [CallExpression] (in [targetSignature]) against the
+     * current [FunctionDeclaration]. Optionally, a list of [targetExpressions] (e.g., the actual
+     * call arguments) can be supplied as a hint, these will be forwarded to other comparing
+     * functions, such as [Language.isDerivedFrom].
+     */
     fun hasSignature(
         targetSignature: List<Type>,
         targetExpressions: List<Expression>? = null
     ): Boolean {
-        val signature = parameters.sortedBy { it.argumentIndex }
-        // TODO: Why do we have to sort it here while we don't sort the list in signatureTypes?
-        return if (signature.all { !it.isVariadic } && targetSignature.size < signature.size) {
-            // TODO: So we don't consider arguments with default values (among others) but then, the
-            // SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
-            false
-        } else {
-            // signature is a collection of positional arguments, so the order must be preserved
-            for (i in signature.indices) {
-                val declared = signature[i]
-                if (declared.isVariadic) {
-                    // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no matter what comes now
-                    // FIXME: in Java, we could have overloading with different vararg types, in
-                    //  C++ we can't, as vararg types are not defined here anyways)
-                    return true
-                }
-                val provided = targetSignature[i]
-                val expression = targetExpressions?.get(i)
-                if (!provided.isDerivedFrom(declared.type, expression, this)) {
-                    return false
-                }
-            }
-            // Longer target signatures are only allowed with varargs. If we reach this point, no
-            // vararg has been encountered
-            targetSignature.size == signature.size
-        }
+        return this.language?.hasSignature(this, targetSignature, targetExpressions) ?: false
     }
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
@@ -264,6 +243,12 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
             return list
         }
 
+    /** This returns a simple heuristic for the complexity of a function declaration. */
+    val complexity: Int
+        get() {
+            return this.body?.cyclomaticComplexity ?: 0
+        }
+
     companion object {
         const val WHITESPACE = " "
         const val BRACKET_LEFT = "("
@@ -271,3 +256,47 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
         const val BRACKET_RIGHT = ")"
     }
 }
+
+/** This is a very basic implementation of Cyclomatic Complexity. */
+val Statement.cyclomaticComplexity: Int
+    get() {
+        var i = 0
+        for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
+            when (stmt) {
+                is ForEachStatement -> {
+                    // add one and include the children
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is IfStatement -> {
+                    // add one for each branch (and include the children)
+                    stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
+                    stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
+                }
+                is SwitchStatement -> {
+                    // forward it to the block containing the case statements
+                    stmt.statement?.let { i += it.cyclomaticComplexity }
+                }
+                is CaseStatement -> {
+                    // add one for each branch (and include the children)
+                    stmt.caseExpression?.let { i += it.cyclomaticComplexity }
+                }
+                is DoStatement -> {
+                    // add one for the do statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is WhileStatement -> {
+                    // add one for the while statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is GotoStatement -> {
+                    // add one
+                    i++
+                }
+                is StatementHolder -> {
+                    i += stmt.cyclomaticComplexity
+                }
+            }
+        }
+
+        return i
+    }

@@ -759,9 +759,9 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [WhileStatement.statement] of the
- * nearest enclosing [WhileStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [ForEachStatement.statement] of
+ * the nearest enclosing [ForEachStatement]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(ForEachStatement)
 

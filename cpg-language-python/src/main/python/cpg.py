@@ -70,4 +70,4 @@ def parse_comments(frontend, code, filename, tud):
                 token.start[1] + 1,
                 token.end[0],
                 token.end[1] + 1),
-            tud)
+            tud, None)
