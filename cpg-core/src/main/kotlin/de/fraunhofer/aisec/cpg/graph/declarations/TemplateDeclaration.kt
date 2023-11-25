@@ -32,9 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /** Abstract class representing the template concept */
+@NodeEntity
 abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
     enum class TemplateInitialization {
         /**
