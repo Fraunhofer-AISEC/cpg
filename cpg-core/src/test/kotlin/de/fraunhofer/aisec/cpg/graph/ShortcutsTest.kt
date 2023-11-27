@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -346,6 +347,20 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
+    }
+
+    @Test
+    fun testUnwrapReference() {
+        with(TestLanguageFrontend()) {
+            val a = newReference("a")
+            val op = newUnaryOperator("&", prefix = true, postfix = false)
+            op.input = a
+            val cast = newCastExpression()
+            cast.castType = objectType("int64")
+            cast.expression = op
+
+            assertEquals(a, cast.unwrapReference())
+        }
     }
 
     private lateinit var shortcutClassResult: TranslationResult

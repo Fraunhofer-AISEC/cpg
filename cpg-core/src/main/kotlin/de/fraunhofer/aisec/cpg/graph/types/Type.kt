@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -43,6 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * this class. Contains information which is included in any Type such as name, storage, qualifier
  * and origin
  */
+@NodeEntity
 abstract class Type : Node {
     /** All direct supertypes of this type. */
     @PopulatedByPass(TypeHierarchyResolver::class)

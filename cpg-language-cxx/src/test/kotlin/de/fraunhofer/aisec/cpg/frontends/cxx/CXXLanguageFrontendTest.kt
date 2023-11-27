@@ -1452,28 +1452,25 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testTypedef() {
         val file = File("src/test/resources/c/typedef_in_header/main.c")
-        val result =
-            analyze(listOf(file), file.parentFile.toPath(), true) {
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
             }
+        with(tu) {
+            val typedefs = tu.ctx?.scopeManager?.typedefFor(objectType("MyStruct"))
+            assertLocalName("__myStruct", typedefs)
 
-        val typedefs = result.finalCtx.scopeManager.currentTypedefs
-        assertNotNull(typedefs)
-        assertTrue(typedefs.isNotEmpty())
+            val main = tu.byNameOrNull<FunctionDeclaration>("main")
+            assertNotNull(main)
 
-        val tu = result.translationUnits.firstOrNull()
-        assertNotNull(tu)
+            val call = main.bodyOrNull<CallExpression>()
+            assertNotNull(call)
+            assertTrue(call.invokes.isNotEmpty())
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
-        assertNotNull(main)
-
-        val call = main.bodyOrNull<CallExpression>()
-        assertNotNull(call)
-        assertTrue(call.invokes.isNotEmpty())
-
-        val func = call.invokes.firstOrNull()
-        assertNotNull(func)
-        assertFalse(func.isInferred)
+            val func = call.invokes.firstOrNull()
+            assertNotNull(func)
+            assertFalse(func.isInferred)
+        }
     }
 
     @Test

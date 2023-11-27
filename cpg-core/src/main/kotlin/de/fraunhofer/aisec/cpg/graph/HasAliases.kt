@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
-
-import de.fraunhofer.aisec.cpg.graph.Node
-import org.neo4j.ogm.annotation.NodeEntity
+package de.fraunhofer.aisec.cpg.graph
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
- * function ([FunctionDeclaration]).
- *
- * Note: We do NOT (currently) distinguish between the definition and the declaration of a function.
- * This means, that if a function is first declared and later defined with a function body, we will
- * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
- * however clang does establish a connection between those nodes, we currently do not.
+ * Some nodes have aliases, i.e., it potentially references another variable. This means that
+ * writing to this node, also writes to its [aliases] and vice-versa.
  */
-@NodeEntity abstract class Declaration : Node()
+interface HasAliases {
+    /** The aliases which this node has. */
+    var aliases: MutableSet<HasAliases>
+}

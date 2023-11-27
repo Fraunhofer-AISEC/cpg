@@ -63,7 +63,6 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
             frontend.setCodeAndLocation(node, ctx)
         }
 
-        frontend.setComment(node, ctx)
         frontend.process(ctx, node)
 
         this.lastNode = node

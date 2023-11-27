@@ -252,10 +252,7 @@ class TypeManager {
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable =
-            scopeManager.currentTypedefs
-                .firstOrNull { t: TypedefDeclaration -> t.alias.root == finalToCheck }
-                ?.type
+        val applicable = scopeManager.typedefFor(finalToCheck)
         return applicable ?: alias
     }
 }

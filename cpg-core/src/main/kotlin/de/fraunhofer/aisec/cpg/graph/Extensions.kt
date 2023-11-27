@@ -286,7 +286,7 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
+            if (next !in currentPath) {
                 worklist.add(nextPath)
             }
         }
@@ -661,4 +661,26 @@ private fun Node.eogDistanceTo(to: Node): Int {
     }
 
     return i
+}
+
+/**
+ * This is a small utility function to "unwrap" a [Reference] that it is wrapped in (multiple)
+ * [Expression] nodes. This will only work on expression that only have one "argument" (such as a
+ * unary operator), in order to avoid ambiguous results. This can be useful for data-flow analysis,
+ * if you want to quickly retrieve the reference that is affected by an operation. For example in
+ * C++ it is common to take an address of a variable and cast it into an appropriate type:
+ * ```cpp
+ * int64_t addr = (int64_t) &a;
+ * ```
+ *
+ * When called on the right-hand side of this assignment, this function will return `a`.
+ */
+fun Expression?.unwrapReference(): Reference? {
+    return when {
+        this is Reference -> this
+        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
+            this.input.unwrapReference()
+        this is CastExpression -> this.expression.unwrapReference()
+        else -> null
+    }
 }

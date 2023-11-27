@@ -66,10 +66,6 @@ abstract class LanguageFrontend<in AstNode, TypeNode>(
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
 
-    init {
-        this.scopeManager.lang = this
-    }
-
     var currentTU: TranslationUnitDeclaration? = null
 
     @Throws(TranslationException::class)

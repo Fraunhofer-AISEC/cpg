@@ -52,7 +52,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
-            newParameterDeclaration(ctx.declarator.name.toString(), type, false, ctx.rawSignature)
+            newParameterDeclaration(ctx.declarator.name.toString(), type, false, rawNode = ctx)
 
         // Add default values
         if (ctx.declarator.initializer != null) {
