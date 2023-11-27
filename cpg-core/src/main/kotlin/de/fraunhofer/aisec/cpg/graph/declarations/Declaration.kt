@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import org.neo4j.ogm.annotation.NodeEntity
 
 /**
  * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
@@ -36,4 +37,4 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
  * however clang does establish a connection between those nodes, we currently do not.
  */
-abstract class Declaration : Node()
+@NodeEntity abstract class Declaration : Node()
