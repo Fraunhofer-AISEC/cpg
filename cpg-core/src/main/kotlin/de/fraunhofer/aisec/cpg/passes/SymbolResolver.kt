@@ -852,23 +852,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * @param signature of the ConstructExpression
-     * @param recordDeclaration matching the class the ConstructExpression wants to construct
-     * @return ConstructorDeclaration that matches the provided signature
-     */
-    protected fun getConstructorDeclarationDirectMatch(
-        signature: List<Type>,
-        recordDeclaration: RecordDeclaration
-    ): ConstructorDeclaration? {
-        for (constructor in recordDeclaration.constructors) {
-            if (constructor.hasSignature(signature)) {
-                return constructor
-            }
-        }
-        return null
-    }
-
-    /**
      * @param constructExpression we want to find an invocation target for
      * @param recordDeclaration associated with the Object the ConstructExpression constructs
      * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If
@@ -881,7 +864,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     ): ConstructorDeclaration {
         val signature = constructExpression.signature
         var constructorCandidate =
-            getConstructorDeclarationDirectMatch(signature, recordDeclaration)
+            recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
+
         if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
             // Check for usage of default args
             constructorCandidate =
