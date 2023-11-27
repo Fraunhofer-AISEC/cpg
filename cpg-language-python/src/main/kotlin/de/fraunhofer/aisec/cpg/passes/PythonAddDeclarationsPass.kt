@@ -28,9 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -69,6 +71,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
             // TODO ist doppelt
             is AssignExpression -> handleAssignExpression(node)
             is Reference -> handleReference(node)
+            is ForEachStatement -> handleForEach(node)
             else -> {}
         }
     }
@@ -146,6 +149,19 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                     decl?.let { d -> assignExpression.declarations += d }
                 }
             }
+        }
+    }
+
+    // TODO document why this is necessary and implement for other possible places
+    private fun handleForEach(node: ForEachStatement) {
+        when (node.variable) {
+            is Reference -> {
+                val handled = handleReference(node.variable as Reference)
+                if (handled is Declaration) {
+                    handled.let { node.addDeclaration(it) }
+                }
+            }
+            else -> TODO()
         }
     }
 
