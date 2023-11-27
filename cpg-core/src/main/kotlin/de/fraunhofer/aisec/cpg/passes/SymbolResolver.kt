@@ -860,7 +860,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         signature: List<Type>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration? {
-        return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
+        for (constructor in recordDeclaration.constructors) {
+            if (constructor.hasSignature(signature)) {
+                return constructor
+            }
+        }
+        return null
     }
 
     /**
@@ -900,7 +905,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         signature: List<Type>,
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration {
-        return getConstructorDeclarationDirectMatch(signature, recordDeclaration)
+        return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
             ?: recordDeclaration.startInference(ctx).createInferredConstructor(signature)
     }
 
