@@ -92,25 +92,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             walker.iterate(tu)
         }
 
-        /*walker.registerHandler(::resolveFieldUsages)
-        for (tu in component.translationUnits) {
-            currentTU = tu
-            walker.iterate(tu)
-        }
-
-        walker.clearCallbacks()
-        walker.registerHandler(::resolveReference)
-        for (tu in component.translationUnits) {
-            currentTU = tu
-            walker.iterate(tu)
-        }
-
-        walker.clearCallbacks()
-        walker.registerHandler(::resolveCalls)
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
-        }*/
-
         walker.strategy = Strategy::EOG_FORWARD
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
