@@ -364,7 +364,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation = newAnnotation(String(attribute.name), attribute.rawSignature)
+            val annotation = newAnnotation(String(attribute.name))
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -404,7 +404,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     )
                 else -> newLiteral(code, primitiveType("char").pointer(), code)
             }
-        return newAnnotationMember("", expression, code)
+        return newAnnotationMember("", expression)
     }
 
     @Throws(NoSuchFieldException::class)

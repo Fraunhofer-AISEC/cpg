@@ -218,10 +218,9 @@ class TypeScriptLanguageFrontend(
         return if (callExpr != null) {
             val call = this.expressionHandler.handle(callExpr) as CallExpression
 
-            val annotation = newAnnotation(call.name.localName, this.codeOf(node) ?: "")
+            val annotation = newAnnotation(call.name.localName)
 
-            annotation.members =
-                call.arguments.map { newAnnotationMember("", it, it.code ?: "") }.toMutableList()
+            annotation.members = call.arguments.map { newAnnotationMember("", it) }.toMutableList()
 
             call.disconnectFromGraph()
 
@@ -230,7 +229,7 @@ class TypeScriptLanguageFrontend(
             // or a decorator just has a simple identifier
             val name = this.getIdentifierName(node)
 
-            newAnnotation(name, this.codeOf(node) ?: "")
+            newAnnotation(name)
         }
     }
 }

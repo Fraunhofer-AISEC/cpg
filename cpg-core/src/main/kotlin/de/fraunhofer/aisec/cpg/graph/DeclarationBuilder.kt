@@ -47,7 +47,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, name, rawNode, null, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -66,7 +66,7 @@ fun MetadataProvider.newFunctionDeclaration(
     localNameOnly: Boolean = false
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this, name, rawNode, null, localNameOnly)
+    node.applyMetadata(this, name, rawNode, localNameOnly)
 
     log(node)
     return node
@@ -86,7 +86,7 @@ fun MetadataProvider.newMethodDeclaration(
     rawNode: Any? = null
 ): MethodDeclaration {
     val node = MethodDeclaration()
-    node.applyMetadata(this, name, rawNode, null, defaultNamespace = recordDeclaration?.name)
+    node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
@@ -109,7 +109,7 @@ fun MetadataProvider.newConstructorDeclaration(
 ): ConstructorDeclaration {
     val node = ConstructorDeclaration()
 
-    node.applyMetadata(this, name, rawNode, null, defaultNamespace = recordDeclaration?.name)
+    node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
 
@@ -131,7 +131,7 @@ fun MetadataProvider.newParameterDeclaration(
     rawNode: Any? = null
 ): ParameterDeclaration {
     val node = ParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, null, localNameOnly = true)
+    node.applyMetadata(this, name, rawNode, localNameOnly = true)
 
     node.type = type
     node.isVariadic = variadic
@@ -154,7 +154,7 @@ fun MetadataProvider.newVariableDeclaration(
     rawNode: Any? = null
 ): VariableDeclaration {
     val node = VariableDeclaration()
-    node.applyMetadata(this, name, rawNode, null, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
@@ -176,7 +176,7 @@ fun LanguageProvider.newTupleDeclaration(
     rawNode: Any? = null
 ): TupleDeclaration {
     val node = TupleDeclaration()
-    node.applyMetadata(this, null, rawNode, null, true)
+    node.applyMetadata(this, null, rawNode, true)
 
     // Tuples always have an auto-type
     node.type = autoType()
@@ -204,7 +204,7 @@ fun MetadataProvider.newTypedefDeclaration(
     rawNode: Any? = null
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
-    node.applyMetadata(this, alias.typeName, rawNode, null, true)
+    node.applyMetadata(this, alias.typeName, rawNode, true)
 
     node.type = targetType
     node.alias = alias
@@ -225,7 +225,7 @@ fun MetadataProvider.newTypeParameterDeclaration(
     rawNode: Any? = null
 ): TypeParameterDeclaration {
     val node = TypeParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, null, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -244,7 +244,7 @@ fun MetadataProvider.newRecordDeclaration(
     rawNode: Any? = null
 ): RecordDeclaration {
     val node = RecordDeclaration()
-    node.applyMetadata(this, name, rawNode, null, false)
+    node.applyMetadata(this, name, rawNode, false)
 
     node.kind = kind
 
@@ -264,7 +264,7 @@ fun MetadataProvider.newEnumDeclaration(
     rawNode: Any? = null
 ): EnumDeclaration {
     val node = EnumDeclaration()
-    node.applyMetadata(this, name, rawNode, null)
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -282,7 +282,7 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
     rawNode: Any? = null
 ): FunctionTemplateDeclaration {
     val node = FunctionTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, null, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -300,7 +300,7 @@ fun MetadataProvider.newRecordTemplateDeclaration(
     rawNode: Any? = null
 ): RecordTemplateDeclaration {
     val node = RecordTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, null, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -318,7 +318,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
     rawNode: Any? = null
 ): EnumConstantDeclaration {
     val node = EnumConstantDeclaration()
-    node.applyMetadata(this, name, rawNode, null)
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -340,7 +340,7 @@ fun MetadataProvider.newFieldDeclaration(
     rawNode: Any? = null
 ): FieldDeclaration {
     val node = FieldDeclaration()
-    node.applyMetadata(this, name, rawNode, null)
+    node.applyMetadata(this, name, rawNode)
 
     node.type = type
     node.modifiers = modifiers ?: listOf()
@@ -369,7 +369,7 @@ fun MetadataProvider.newProblemDeclaration(
     rawNode: Any? = null
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, null, true)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.problem = problem
     node.problemType = problemType
@@ -390,7 +390,7 @@ fun MetadataProvider.newIncludeDeclaration(
     rawNode: Any? = null
 ): IncludeDeclaration {
     val node = IncludeDeclaration()
-    node.applyMetadata(this, includeFilename, rawNode, null, true)
+    node.applyMetadata(this, includeFilename, rawNode, true)
     node.filename = includeFilename.toString()
 
     log(node)
@@ -409,7 +409,7 @@ fun MetadataProvider.newNamespaceDeclaration(
     rawNode: Any? = null
 ): NamespaceDeclaration {
     val node = NamespaceDeclaration()
-    node.applyMetadata(this, name, rawNode, null)
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -427,7 +427,7 @@ fun MetadataProvider.newUsingDeclaration(
     rawNode: Any? = null
 ): UsingDeclaration {
     val node = UsingDeclaration()
-    node.applyMetadata(this, qualifiedName, rawNode, null)
+    node.applyMetadata(this, qualifiedName, rawNode)
 
     node.qualifiedName = qualifiedName.toString()
 

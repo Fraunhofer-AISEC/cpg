@@ -98,7 +98,6 @@ fun Node.applyMetadata(
     provider: MetadataProvider?,
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
-    codeOverride: String? = null,
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
@@ -141,10 +140,6 @@ fun Node.applyMetadata(
                 defaultNamespace
             }
         this.name = this.newName(name, localNameOnly, namespace)
-    }
-
-    if (codeOverride != null) {
-        this.code = codeOverride
     }
 }
 
@@ -189,13 +184,9 @@ fun LanguageProvider.newName(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAnnotation(
-    name: CharSequence?,
-    code: String? = null,
-    rawNode: Any? = null
-): Annotation {
+fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
     val node = Annotation()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -211,11 +202,10 @@ fun MetadataProvider.newAnnotation(
 fun MetadataProvider.newAnnotationMember(
     name: CharSequence?,
     value: Expression?,
-    code: String? = null,
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     node.value = value
 
