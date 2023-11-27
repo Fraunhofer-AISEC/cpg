@@ -88,9 +88,9 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         return inferInScopeOf(start) {
             val inferred: FunctionDeclaration =
                 if (record != null) {
-                    newMethodDeclaration(name ?: "", code, isStatic, record)
+                    newMethodDeclaration(name ?: "", isStatic, record)
                 } else {
-                    newFunctionDeclaration(name ?: "", code)
+                    newFunctionDeclaration(name ?: "")
                 }
 
             debugWithFileLocation(
@@ -136,11 +136,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
         return inferInScopeOf(start) {
             val inferred =
-                newConstructorDeclaration(
-                    start.name.localName,
-                    "",
-                    start as? RecordDeclaration,
-                )
+                newConstructorDeclaration(start.name.localName, start as? RecordDeclaration)
             createInferredParameters(inferred, signature)
 
             scopeManager.addDeclaration(inferred)

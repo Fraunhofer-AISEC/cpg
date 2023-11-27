@@ -96,8 +96,7 @@ internal class ScopeManagerTest : BaseTest() {
         assertFalse(listOf(s1, s2).map { it.globalScope }.contains(final.globalScope))
 
         // resolve symbol
-        val call =
-            frontend.newCallExpression(frontend.newReference("A::func1"), "A::func1", null, false)
+        val call = frontend.newCallExpression(frontend.newReference("A::func1"), "A::func1", false)
         val func = final.resolveFunction(call).firstOrNull()
 
         assertEquals(func1, func)

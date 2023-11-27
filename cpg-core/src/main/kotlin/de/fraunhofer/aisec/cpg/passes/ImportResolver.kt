@@ -135,13 +135,12 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     name,
                     UnknownType.getUnknownType(base.language),
                     ArrayList(),
-                    "",
                     null,
                     false,
                     base.language
                 )
             targetField.isInferred = true
-            val targetMethod = base.newMethodDeclaration(name, "", true, base)
+            val targetMethod = base.newMethodDeclaration(name, true, base)
             targetMethod.isInferred = true
             base.addField(targetField)
             base.addMethod(targetMethod)

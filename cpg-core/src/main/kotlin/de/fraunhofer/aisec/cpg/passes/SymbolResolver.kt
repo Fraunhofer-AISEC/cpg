@@ -422,7 +422,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     // we will set the type later through the type inference observer
                     unknownType(),
                     listOf(),
-                    "",
                     null,
                     false,
                 )
