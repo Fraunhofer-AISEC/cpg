@@ -1020,7 +1020,7 @@ class PythonFrontendTest : BaseTest() {
         val forloopFunc = tu.functions["forloop"] as? FunctionDeclaration
         assertNotNull(forloopFunc)
 
-        val varDefinedBeforeLoop = (forloopFunc.body)?.declarations["varDefinedBeforeLoop"]
+        val varDefinedBeforeLoop = forloopFunc.variables["varDefinedBeforeLoop"]
         assertNotNull(varDefinedBeforeLoop)
 
         val varDefinedInLoop = forloopFunc.variables["varDefinedInLoop"]

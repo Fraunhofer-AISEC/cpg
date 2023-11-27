@@ -94,52 +94,27 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                         ) {
                             val field =
                                 scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                                    newFieldDeclaration(
-                                        node.name,
-                                        code = node.code,
-                                    )
+                                    newFieldDeclaration(node.name)
                                 }
                             field
                         } else {
-                            val v =
-                                scopeManager.withScope(scopeManager.currentFunction?.scope) {
-                                    newVariableDeclaration(
-                                        node.name,
-                                        code = node.code,
-                                    )
-                                }
+                            val v = newVariableDeclaration(node.name)
+
                             v
                         }
                     } else {
                         val field =
                             scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                                newFieldDeclaration(
-                                    node.name,
-                                    code = node.code,
-                                )
+                                newFieldDeclaration(node.name)
                             }
                         field
                     }
                 } else {
-                    if (scopeManager.isInFunction) {
-                        val v =
-                            scopeManager.withScope(scopeManager.currentFunction?.scope) {
-                                newVariableDeclaration(
-                                    node.name,
-                                    code = node.code,
-                                )
-                            }
-                        v
-                    } else {
-                        val v =
-                            newVariableDeclaration(
-                                node.name,
-                                code = node.code,
-                            )
-                        v
-                    }
+                    newVariableDeclaration(node.name)
                 }
 
+            decl.code = node.code
+            decl.location = node.location
             decl.isImplicit = true
 
             if (decl is FieldDeclaration) {
