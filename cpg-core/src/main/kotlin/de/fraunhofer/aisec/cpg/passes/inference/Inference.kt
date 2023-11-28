@@ -92,6 +92,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 } else {
                     newFunctionDeclaration(name ?: "", code)
                 }
+            inferred.isInferred = true
 
             debugWithFileLocation(
                 hint,
