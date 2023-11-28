@@ -100,7 +100,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     localNameOnly = true
                 }
 
-                newFunctionDeclaration(funcDecl.name.name, null, funcDecl, localNameOnly)
+                newFunctionDeclaration(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
         frontend.scopeManager.enterScope(func)

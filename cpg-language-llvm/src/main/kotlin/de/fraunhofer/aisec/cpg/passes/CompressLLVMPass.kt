@@ -190,7 +190,6 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     catch.newVariableDeclaration(
                         "e_${catch.name}",
                         UnknownType.getUnknownType(catch.language),
-                        "",
                         true,
                     )
                 catch.parameter = error

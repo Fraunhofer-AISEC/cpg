@@ -76,7 +76,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
         val lambda = newLambdaExpression(frontend.codeOf(lambdaExpr))
-        val anonymousFunction = newFunctionDeclaration("", frontend.codeOf(lambdaExpr))
+        val anonymousFunction = newFunctionDeclaration("", rawNode = lambdaExpr)
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
@@ -267,9 +267,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 this.newVariableDeclaration(
                     resolved.name,
                     declarationType,
-                    variable.toString(),
                     false,
-                    variable
+                    rawNode = variable
                 )
             if (declarationType is PointerType && declarationType.isArray) {
                 declaration.isArray = true
@@ -799,8 +798,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             member,
             methodCallExpr.name
         ) // This will also overwrite the code set to the empty string set above
-        callExpression =
-            this.newMemberCallExpression(member, isStatic, methodCallExpr.toString(), expr)
+        callExpression = this.newMemberCallExpression(member, isStatic, rawNode = expr)
         callExpression.type = typeString?.let { this.objectType(it) } ?: unknownType()
         val arguments = methodCallExpr.arguments
 
@@ -848,7 +846,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         // To be consistent with other languages, we need to create a NewExpression (for the "new X"
         // part) as well as a ConstructExpression (for the constructor call)
-        val newExpression = this.newNewExpression(expr.toString(), t)
+        val newExpression = this.newNewExpression(t, rawNode = expr)
         val arguments = objectCreationExpr.arguments
 
         val ctor = this.newConstructExpression()
@@ -892,8 +890,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 val constructorDeclaration =
                     this.newConstructorDeclaration(
                         anonymousRecord.name.localName,
-                        anonymousRecord.name.localName,
-                        anonymousRecord
+                        anonymousRecord,
+                        rawNode = implicit(anonymousRecord.name.localName)
                     )
 
                 ctor.arguments.forEachIndexed { i, arg ->

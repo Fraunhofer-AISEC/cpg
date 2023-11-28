@@ -417,7 +417,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
             reference is UnaryOperator && reference.operatorCode == "*" -> {
                 // Classic C-style function pointer call -> let's extract the target
-                callExpression = newCallExpression(reference, "", reference.code, false)
+                callExpression = newCallExpression(reference, "", false, rawNode = ctx)
             }
             ctx.functionNameExpression is IASTIdExpression &&
                 (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId -> {

@@ -62,8 +62,8 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
+    localNameOnly: Boolean = false,
     rawNode: Any? = null,
-    localNameOnly: Boolean = false
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
     node.applyMetadata(this, name, rawNode, localNameOnly)

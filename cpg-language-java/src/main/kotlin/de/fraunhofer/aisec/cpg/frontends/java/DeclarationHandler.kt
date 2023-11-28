@@ -62,8 +62,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val declaration =
             this.newConstructorDeclaration(
                 resolvedConstructor.name,
-                constructorDeclaration.toString(),
-                currentRecordDecl
+                currentRecordDecl,
+                rawNode = constructorDeclaration
             )
         frontend.scopeManager.addDeclaration(declaration)
         frontend.scopeManager.enterScope(declaration)
@@ -110,9 +110,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val functionDeclaration =
             this.newMethodDeclaration(
                 resolvedMethod.name,
-                methodDecl.toString(),
                 methodDecl.isStatic,
-                currentRecordDecl
+                currentRecordDecl,
+                rawNode = methodDecl
             )
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
@@ -167,8 +167,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             this.newVariableDeclaration(
                 "this",
                 recordDeclaration?.toType() ?: unknownType(),
-                "this",
-                false
+                false,
+                rawNode = implicit("this")
             )
         functionDeclaration.receiver = receiver
         frontend.scopeManager.addDeclaration(receiver)
@@ -183,7 +183,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         // Todo adapt name using a new type of scope "Namespace/Package scope"
 
         // add a type declaration
-        val recordDeclaration = this.newRecordDeclaration(fqn, "class", null, classInterDecl)
+        val recordDeclaration = this.newRecordDeclaration(fqn, "class", rawNode = classInterDecl)
         recordDeclaration.superClasses =
             classInterDecl.extendedTypes
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
@@ -270,8 +270,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             val constructorDeclaration =
                 this.newConstructorDeclaration(
                     recordDeclaration.name.localName,
-                    recordDeclaration.name.localName,
-                    recordDeclaration
+                    recordDeclaration,
+                    rawNode = implicit(recordDeclaration.name.localName)
                 )
             recordDeclaration.addConstructor(constructorDeclaration)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
@@ -299,11 +299,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                         "this$" + scope.name?.localName,
                         fieldType,
                         listOf(),
-                        null,
-                        null,
-                        null
+                        rawNode = implicit("this$" + scope.name?.localName)
                     )
-                field.isImplicit = true
                 frontend.scopeManager.addDeclaration(field)
                 frontend.scopeManager.leaveScope(recordDeclaration)
             }
@@ -318,7 +315,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         // TODO: can  field have more than one variable?
         val variable = fieldDecl.getVariable(0)
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
-        val location = frontend.locationOf(fieldDecl)
         val initializer =
             variable.initializer
                 .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
@@ -356,9 +352,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 variable.name.asString(),
                 type,
                 modifiers,
-                variable.toString(),
-                location,
-                initializer
+                initializer,
+                rawNode = fieldDecl
             )
         frontend.scopeManager.addDeclaration(fieldDeclaration)
         frontend.processAnnotations(fieldDeclaration, fieldDecl)
@@ -369,8 +364,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         enumDecl: com.github.javaparser.ast.body.EnumDeclaration
     ): EnumDeclaration {
         val name = enumDecl.nameAsString
-        val location = frontend.locationOf(enumDecl)
-        val enumDeclaration = this.newEnumDeclaration(name, enumDecl.toString(), location)
+        val enumDeclaration = this.newEnumDeclaration(name, rawNode = enumDecl)
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
 
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
@@ -384,11 +378,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumConstantDeclaration(
         enumConstDecl: com.github.javaparser.ast.body.EnumConstantDeclaration
     ): EnumConstantDeclaration {
-        return this.newEnumConstantDeclaration(
-            enumConstDecl.nameAsString,
-            enumConstDecl.toString(),
-            frontend.locationOf(enumConstDecl)
-        )
+        return this.newEnumConstantDeclaration(enumConstDecl.nameAsString, rawNode = enumConstDecl)
     }
 
     fun /* TODO refine return type*/ handleAnnotationDeclaration(

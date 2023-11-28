@@ -142,7 +142,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 name.localName,
                 unknownType(),
                 emptyList(),
-                location = frontend.locationOf(ctx),
                 initializer = initializer,
                 implicitInitializerAllowed = true,
                 rawNode = ctx
@@ -173,22 +172,22 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 // and the
                 // record declaration match
                 holder is RecordDeclaration && name.localName == holder.name.localName -> {
-                    newConstructorDeclaration(name, null, holder, ctx)
+                    newConstructorDeclaration(name, holder, rawNode = ctx)
                 }
                 // It's also a constructor, if the name is in the form A::A, and it has no type
                 // specifier
                 name.localName == name.parent.toString() &&
                     ((ctx as? IASTFunctionDefinition)?.declSpecifier as? IASTSimpleDeclSpecifier)
                         ?.type == IASTSimpleDeclSpecifier.t_unspecified -> {
-                    newConstructorDeclaration(name, null, null, ctx)
+                    newConstructorDeclaration(name, null, rawNode = ctx)
                 }
                 // It could also be a scoped function declaration.
                 scope?.astNode is NamespaceDeclaration -> {
-                    newFunctionDeclaration(name, null, ctx)
+                    newFunctionDeclaration(name, rawNode = ctx)
                 }
                 // Otherwise, it's a method to a known or unknown record
                 else -> {
-                    newMethodDeclaration(name, null, false, holder as? RecordDeclaration, ctx)
+                    newMethodDeclaration(name, false, holder as? RecordDeclaration, rawNode = ctx)
                 }
             }
 
@@ -250,7 +249,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 )
         } else {
             // a plain old function, outside any named scope
-            declaration = newFunctionDeclaration(name, null, ctx.parent)
+            declaration = newFunctionDeclaration(name, rawNode = ctx.parent)
         }
 
         // We want to determine, whether we are currently outside a named scope on the AST
@@ -415,7 +414,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     name,
                     unknownType(),
                     emptyList(),
-                    location = frontend.locationOf(ctx),
                     initializer = null,
                     implicitInitializerAllowed = false,
                     rawNode = ctx
@@ -456,17 +454,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         processMembers(ctx)
 
         if (recordDeclaration.constructors.isEmpty()) {
+            // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
                 newConstructorDeclaration(
                     recordDeclaration.name.localName,
-                    recordDeclaration.name.toString(),
-                    recordDeclaration
+                    recordDeclaration,
+                    rawNode = implicit(code = recordDeclaration.name.localName)
                 )
 
             createMethodReceiver(constructorDeclaration)
-
-            // set this as implicit
-            constructorDeclaration.isImplicit = true
 
             // and set the type, constructors always have implicitly the return type of their class
             constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)

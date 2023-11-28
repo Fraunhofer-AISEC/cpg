@@ -413,6 +413,11 @@ interface IsInferredProvider : MetadataProvider {
     val isInferred: Boolean
 }
 
+/** Provides information about the implicit status of a node. */
+interface IsImplicitProvider : MetadataProvider {
+    val isImplicit: Boolean
+}
+
 /** Returns a new [Inference] object starting from this node. */
 fun Node.startInference(ctx: TranslationContext) = Inference(this, ctx)
 

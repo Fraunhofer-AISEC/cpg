@@ -194,10 +194,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                     this.handle(propertyAccess) as? MemberExpression
                         ?: return ProblemExpression("node is not a member expression")
 
-                newMemberCallExpression(
-                    memberExpressionExpression,
-                    code = this.frontend.codeOf(node)
-                )
+                newMemberCallExpression(memberExpressionExpression, rawNode = node)
             } else {
                 // TODO: fqn - how?
                 val fqn = this.frontend.getIdentifierName(node)
@@ -205,7 +202,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
                 val ref = newReference(fqn)
 
-                newCallExpression(ref, fqn, this.frontend.codeOf(node), false)
+                newCallExpression(ref, fqn, false, rawNode = node)
             }
 
         // parse the arguments. the first node is the identifier, so we skip that

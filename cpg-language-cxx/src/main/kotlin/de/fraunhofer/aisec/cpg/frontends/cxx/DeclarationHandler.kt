@@ -644,19 +644,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         declSpecifier: IASTEnumerationSpecifier
     ): EnumDeclaration {
         val entries = mutableListOf<EnumConstantDeclaration>()
-        val enum =
-            newEnumDeclaration(
-                name = declSpecifier.name.toString(),
-                location = frontend.locationOf(ctx),
-            )
+        val enum = newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx)
 
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {
             val enumConst =
                 newEnumConstantDeclaration(
                     enumerator.name.toString(),
-                    frontend.codeOf(enumerator),
-                    frontend.locationOf(enumerator),
+                    rawNode = enumerator,
                 )
 
             // In C/C++, default enums are of type int

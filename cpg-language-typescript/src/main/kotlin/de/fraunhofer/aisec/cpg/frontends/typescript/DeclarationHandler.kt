@@ -58,16 +58,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
-        val field =
-            newFieldDeclaration(
-                name,
-                type,
-                listOf(),
-                this.frontend.codeOf(node),
-                this.frontend.locationOf(node),
-                null,
-                false,
-            )
+        val field = newFieldDeclaration(name, type, listOf(), null, false, rawNode = node)
 
         this.frontend.processAnnotations(field, node)
 
@@ -85,7 +76,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
-                this.frontend.codeOf(node)
+                rawNode = node
             )
 
         this.frontend.scopeManager.enterScope(record)
@@ -144,18 +135,18 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 "MethodDeclaration" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    newMethodDeclaration(name, this.frontend.codeOf(node), false, record)
+                    newMethodDeclaration(name, false, record, rawNode = node)
                 }
                 "Constructor" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
                     newConstructorDeclaration(
                         record?.name?.toString() ?: "",
-                        this.frontend.codeOf(node),
-                        record
+                        record,
+                        rawNode = node
                     )
                 }
-                else -> newFunctionDeclaration(name, this.frontend.codeOf(node))
+                else -> newFunctionDeclaration(name, rawNode = node)
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
@@ -197,8 +188,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
 
-        val declaration =
-            newVariableDeclaration(name, unknownType(), this.frontend.codeOf(node), false)
+        val declaration = newVariableDeclaration(name, unknownType(), false, rawNode = node)
         declaration.location = this.frontend.locationOf(node)
 
         // the last node that is not an identifier or an object binding pattern is an initializer

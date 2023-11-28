@@ -33,7 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -111,6 +113,10 @@ fun Node.applyMetadata(
 
     if (provider is IsInferredProvider) {
         this.isInferred = provider.isInferred
+    }
+
+    if (provider is IsImplicitProvider) {
+        this.isImplicit = provider.isImplicit
     }
 
     if (provider is ScopeProvider) {
@@ -220,4 +226,23 @@ fun NamespaceProvider.fqn(localName: String): Name {
 
 interface ContextProvider : MetadataProvider {
     val ctx: TranslationContext?
+}
+
+/**
+ * A small helper function that can be used in building a [Node] with [Node.isImplicit] set to true.
+ * In this case, no "rawNode" exists that can be used for the node builder. But, in order to
+ * optionally supply [Node.code] and/or [Node.location] this function can be used.
+ *
+ * This also sets [Node.isImplicit] to true.
+ */
+fun implicit(code: String? = null, location: PhysicalLocation? = null): Any {
+    return (object : IsImplicitProvider, CodeAndLocationProvider<Any> {
+        override fun setCodeAndLocation(cpgNode: Node, astNode: Any) {
+            cpgNode.code = code
+            cpgNode.location = location
+        }
+
+        override val isImplicit: Boolean
+            get() = true
+    })
 }

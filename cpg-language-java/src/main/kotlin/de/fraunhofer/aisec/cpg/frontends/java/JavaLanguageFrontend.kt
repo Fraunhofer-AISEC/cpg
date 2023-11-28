@@ -446,7 +446,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString)
+            val annotation = newAnnotation(expr.nameAsString, rawNode = expr)
             val members = ArrayList<AnnotationMember>()
 
             // annotations can be specified as member / value pairs
@@ -455,7 +455,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     val member =
                         newAnnotationMember(
                             pair.nameAsString,
-                            expressionHandler.handle(pair.value) as Expression
+                            expressionHandler.handle(pair.value) as Expression,
+                            rawNode = pair.value
                         )
                     members.add(member)
                 }
@@ -466,7 +467,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     val member =
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
-                            expressionHandler.handle(value.asLiteralExpr()) as Expression
+                            expressionHandler.handle(value.asLiteralExpr()) as Expression,
+                            rawNode = value
                         )
                     members.add(member)
                 }

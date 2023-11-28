@@ -83,12 +83,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
         val throwOperation =
-            this.newUnaryOperator(
-                "throw",
-                postfix = false,
-                prefix = true,
-                code = throwStmt.toString()
-            )
+            this.newUnaryOperator("throw", postfix = false, prefix = true, rawNode = stmt)
         throwOperation.input =
             frontend.expressionHandler.handle(throwStmt.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -605,8 +600,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             this.newVariableDeclaration(
                 catchCls.parameter.name.toString(),
                 concreteType,
-                catchCls.parameter.toString(),
-                false
+                rawNode = catchCls.parameter
             )
         parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)

@@ -49,9 +49,9 @@ internal class ScopeManagerTest : BaseTest() {
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
-        val namespaceA1 = frontend1.newNamespaceDeclaration("A", null)
+        val namespaceA1 = frontend1.newNamespaceDeclaration("A")
         s1.enterScope(namespaceA1)
-        val func1 = frontend1.newFunctionDeclaration("func1", null)
+        val func1 = frontend1.newFunctionDeclaration("func1")
         s1.addDeclaration(func1)
         s1.leaveScope(namespaceA1)
 
@@ -61,9 +61,9 @@ internal class ScopeManagerTest : BaseTest() {
         s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
-        val namespaceA2 = frontend2.newNamespaceDeclaration("A", null)
+        val namespaceA2 = frontend2.newNamespaceDeclaration("A")
         s2.enterScope(namespaceA2)
-        val func2 = frontend2.newFunctionDeclaration("func2", null)
+        val func2 = frontend2.newFunctionDeclaration("func2")
         s2.addDeclaration(func2)
         s2.leaveScope(namespaceA2)
 
@@ -122,7 +122,7 @@ internal class ScopeManagerTest : BaseTest() {
 
         assertEquals("A::B", s.currentNamespace.toString())
 
-        val func = frontend.newFunctionDeclaration("func", null)
+        val func = frontend.newFunctionDeclaration("func")
         s.addDeclaration(func)
 
         s.leaveScope(namespaceB)
