@@ -41,7 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, ResolutionStartHolder {
+open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
     /** The function body. Usually a [Block]. */
     @AST var body: Statement? = null
 
@@ -206,7 +206,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, Resoluti
             .toString()
     }
 
-    override val resolutionStartNodes: List<Node>
+    override val eogStarters: List<Node>
         get() = listOfNotNull(this)
 
     override fun equals(other: Any?): Boolean {

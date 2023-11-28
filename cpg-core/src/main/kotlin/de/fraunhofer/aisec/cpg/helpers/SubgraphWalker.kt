@@ -141,17 +141,22 @@ object SubgraphWalker {
             val ast = field.getAnnotation(AST::class.java)
             if (ast != null) {
                 try {
-                    // disable access mechanisms
-                    field.trySetAccessible()
-                    var obj = field[node]
+                    // We need to synchronize access to the field, because otherwise different
+                    // threads might restore the isAccessible property while this thread is still
+                    // accessing the field
+                    var obj =
+                        synchronized(field) {
+                            // disable access mechanisms
+                            field.trySetAccessible()
+                            val obj = field[node]
 
-                    // restore old state
-                    field.isAccessible = false
+                            // restore old state
+                            field.isAccessible = false
+                            obj
+                        }
+                            ?: continue
 
                     // skip, if null
-                    if (obj == null) {
-                        continue
-                    }
                     var outgoing = true // default
                     if (field.getAnnotation(Relationship::class.java) != null) {
                         outgoing =

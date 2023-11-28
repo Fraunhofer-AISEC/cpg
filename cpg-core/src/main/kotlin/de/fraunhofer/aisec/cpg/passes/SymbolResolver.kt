@@ -118,8 +118,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         for (tu in component.translationUnits) {
             currentTU = tu
             // gather all resolution start holders and their start nodes
-            val nodes =
-                tu.allChildren<ResolutionStartHolder>().flatMap { it.resolutionStartNodes }.toSet()
+            val nodes = tu.allEOGStarters.toSet()
 
             for (node in nodes) {
                 walker.iterate(node)

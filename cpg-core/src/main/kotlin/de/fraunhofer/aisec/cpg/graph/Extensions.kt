@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.astParent
 
 /**
@@ -53,6 +54,21 @@ inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? =
         filtered
     }
 }
+
+/**
+ * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
+ * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
+ * declarations, such as functions and variables. For a more detailed explanation, see
+ * [EOGStarterHolder].
+ *
+ * While it is in theory possible to retrieve this property from all nodes, most use cases should
+ * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
+ * [TranslationResult].
+ */
+val Node.allEOGStarters: List<Node>
+    get() {
+        return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }
+    }
 
 @JvmName("astNodes")
 fun Node.ast(): List<Node> {

@@ -147,25 +147,36 @@ class PassWithDepsContainer {
      *
      * @return The first pass that has no active dependencies on success. null otherwise.
      */
-    fun getAndRemoveFirstPassWithoutDependencies(): KClass<out Pass<*>>? {
-        var result: KClass<out Pass<*>>? = null
+    fun getAndRemoveFirstPassWithoutDependencies(): List<KClass<out Pass<*>>> {
+        val results = mutableListOf<KClass<out Pass<*>>>()
+        val it = workingList.listIterator()
 
-        for (currentElement in workingList) {
-            if (workingList.size > 1 && currentElement.isLastPass) {
-                // last pass can only be added at the end
+        while (it.hasNext()) {
+            val currentElement = it.next()
+            if (results.isEmpty() && currentElement.isLastPass && workingList.size == 1) {
+                it.remove()
+                return listOf(currentElement.pass)
+            }
+
+            // Keep going until our dependencies are met, this will collect passes that can run in
+            // parallel in results
+            if (
+                currentElement.dependencies.isEmpty() && !currentElement.isLastPass
+            ) { // no unsatisfied dependencies
+                val result = currentElement.pass
+                results.add(result)
+
+                // remove pass from the work-list
+                it.remove()
+            } else {
                 continue
             }
-
-            if (currentElement.dependencies.isEmpty()) { // no unsatisfied dependencies
-                result = currentElement.pass
-
-                // remove the pass from the other pass's dependencies
-                removeDependencyByClass(result)
-                workingList.remove(currentElement)
-                break
-            }
         }
-        return result
+
+        // remove the selected passes from the other pass's dependencies
+        results.forEach { removeDependencyByClass(it) }
+
+        return results
     }
 
     /**
