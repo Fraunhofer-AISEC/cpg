@@ -276,6 +276,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
-        gen.writeString(value.simpleName)
+        gen.writeString(value.qualifiedName)
     }
 }

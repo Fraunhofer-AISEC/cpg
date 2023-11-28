@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
@@ -61,18 +60,11 @@ abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
 abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
 
 /**
- * A [FunctionPass] is a pass that operates on a [FunctionDeclaration]. If used with [executePass],
- * one [Pass] object is instantiated for each [FunctionDeclaration] in each
- * [TranslationUnitDeclaration] in each [Component].
+ * A [EOGStarterPass] is a pass that operates on nodes that are contained in a [EOGStarterHolder].
+ * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
+ * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class FunctionPass(ctx: TranslationContext) : Pass<FunctionDeclaration>(ctx)
-
-/**
- * A pass target is an interface for a [Node] on which a [Pass] can operate, it should only be
- * implemented by [TranslationResult], [Component], [TranslationUnitDeclaration] and
- * [FunctionDeclaration].
- */
-interface PassTarget
+abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
 
 open class PassConfiguration {}
 
@@ -87,7 +79,7 @@ open class PassConfiguration {}
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
-sealed class Pass<T : PassTarget>(final override val ctx: TranslationContext) :
+sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
     Consumer<T>, ContextProvider {
     var name: String
         protected set
@@ -167,8 +159,9 @@ fun executePassesInParallel(
  * (in case of a [TranslationUnitPass]) or loop through each component or through each translation
  * unit. The individual loop elements become the "target" of the execution of [consumeTarget].
  */
+@Suppress("USELESS_CAST")
 fun executePass(
-    cls: KClass<out Pass<*>>,
+    cls: KClass<out Pass<out Node>>,
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend<*, *>>
@@ -206,11 +199,11 @@ fun executePass(
                 result.components.flatMap { it.translationUnits },
                 executedFrontends
             )
-        is FunctionPass -> {
+        is EOGStarterPass -> {
             consumeTargets(
-                (prototype as FunctionPass)::class,
+                (prototype as EOGStarterPass)::class,
                 ctx,
-                result.components.flatMap { it.translationUnits.flatMap { it.functions } },
+                result.allEOGStarters,
                 executedFrontends
             )
         }
@@ -226,7 +219,7 @@ fun executePass(
  * Depending on the configuration of [TranslationConfiguration.useParallelPasses], the individual
  * targets will either be consumed sequentially or in parallel.
  */
-private inline fun <reified T : PassTarget> consumeTargets(
+private inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     targets: List<T>,
@@ -250,18 +243,13 @@ private inline fun <reified T : PassTarget> consumeTargets(
  * different instances of the same [Pass] class are executed at the same time (on different [target]
  * nodes) using this function.
  */
-private inline fun <reified T : PassTarget> consumeTarget(
+private inline fun <reified T : Node> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
     executedFrontends: Collection<LanguageFrontend<*, *>>
 ): Pass<T>? {
-    val language =
-        if (target is LanguageProvider) {
-            target.language
-        } else {
-            null
-        }
+    val language = target.language
 
     val realClass = checkForReplacement(cls, language, ctx.config)
 
@@ -280,7 +268,7 @@ private inline fun <reified T : PassTarget> consumeTarget(
  * [language]. Currently, we only allow replacement on translation unit level, as this is the only
  * level which has a single language set.
  */
-fun <T : PassTarget> checkForReplacement(
+fun <T : Node> checkForReplacement(
     cls: KClass<out Pass<T>>,
     language: Language<*>?,
     config: TranslationConfiguration
@@ -289,5 +277,6 @@ fun <T : PassTarget> checkForReplacement(
         return cls
     }
 
+    @Suppress("UNCHECKED_CAST")
     return config.replacedPasses[Pair(cls, language::class)] as? KClass<out Pass<T>> ?: cls
 }

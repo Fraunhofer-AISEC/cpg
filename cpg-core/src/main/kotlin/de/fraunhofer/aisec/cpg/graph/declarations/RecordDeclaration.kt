@@ -37,8 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-open class RecordDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, ResolutionStartHolder {
+open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -173,7 +172,7 @@ open class RecordDeclaration :
             .toString()
     }
 
-    override val resolutionStartNodes: List<Node>
+    override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
 

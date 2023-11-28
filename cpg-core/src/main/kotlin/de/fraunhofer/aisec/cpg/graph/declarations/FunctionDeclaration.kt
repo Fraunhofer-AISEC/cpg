@@ -36,14 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.PassTarget
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration :
-    ValueDeclaration(), DeclarationHolder, ResolutionStartHolder, PassTarget {
+open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
     /** The function body. Usually a [Block]. */
     @AST var body: Statement? = null
 
@@ -208,7 +206,7 @@ open class FunctionDeclaration :
             .toString()
     }
 
-    override val resolutionStartNodes: List<Node>
+    override val eogStarters: List<Node>
         get() = listOfNotNull(this)
 
     override fun equals(other: Any?): Boolean {

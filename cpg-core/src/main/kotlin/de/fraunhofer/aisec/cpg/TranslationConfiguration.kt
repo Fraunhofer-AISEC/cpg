@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
@@ -93,14 +94,14 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<List<KClass<out Pass<*>>>>,
+    passes: List<List<KClass<out Pass<out Node>>>>,
     /**
      * This map offers the possibility to replace certain passes for specific languages with other
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
      * annotation on a [LanguageFrontend].
      */
     val replacedPasses:
-        Map<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>,
+        Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     languages: List<Language<*>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -166,7 +167,7 @@ private constructor(
     val addIncludesToGraph: Boolean
 
     /** A list containing a list of passes that run in parallel. */
-    @JsonIgnore val registeredPasses: List<List<KClass<out Pass<*>>>>
+    @JsonIgnore val registeredPasses: List<List<KClass<out Pass<out Node>>>>
 
     /**
      * A flattened list of [registeredPasses], mainly used for the JSON representation because

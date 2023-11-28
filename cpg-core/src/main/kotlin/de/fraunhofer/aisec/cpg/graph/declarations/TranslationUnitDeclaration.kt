@@ -31,14 +31,13 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.passes.PassTarget
-import java.util.Objects
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** The top most declaration, representing a translation unit, for example a file. */
 class TranslationUnitDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, PassTarget, ResolutionStartHolder {
+    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
@@ -126,7 +125,7 @@ class TranslationUnitDeclaration :
             .toString()
     }
 
-    override val resolutionStartNodes: List<Node>
+    override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
             // Add all top-level declarations

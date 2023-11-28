@@ -26,14 +26,23 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -45,7 +54,7 @@ import kotlin.contracts.contract
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(ctx) {
+open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     class Configuration(
         /**
@@ -61,8 +70,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(c
     }
 
     /** We perform the actions for each [FunctionDeclaration]. */
-    override fun accept(node: FunctionDeclaration) {
-        val max = passConfig<Configuration>()?.maxComplexity
+    override fun accept(node: Node) {
+        // For now, we only execute this for function declarations, we will support all EOG starters
+        // in the future.
+        if (node !is FunctionDeclaration) {
+            return
+        }
 
         // Skip empty functions
         if (node.body == null) {
@@ -70,14 +83,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(c
         }
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
+        val max = passConfig<Configuration>()?.maxComplexity
         val c = node.body?.cyclomaticComplexity ?: 0
-        if (max != null) {
-            if (c > max) {
-                log.info(
-                    "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
-                )
-                return
-            }
+        if (max != null && c > max) {
+            log.info(
+                "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+            )
+            return
         }
 
         log.debug("Handling {} (complexity: {})", node.name, c)
@@ -141,7 +153,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : FunctionPass(c
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        var writtenDeclaration: Declaration?
+        val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState
