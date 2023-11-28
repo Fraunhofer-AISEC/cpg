@@ -96,6 +96,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 } else {
                     newFunctionDeclaration(name ?: "")
                 }
+            inferred.code = code
 
             debugWithFileLocation(
                 hint,
@@ -230,7 +231,9 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 )
 
         // Non-Type Template Parameter
-        return newParameterDeclaration(name, expr.type, false)
+        val param = newParameterDeclaration(name, expr.type, false)
+        param.code = name
+        return param
     }
 
     private fun inferTemplateParameter(
@@ -240,6 +243,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
         val decl = newTypeParameterDeclaration(name)
+        decl.code = name
         decl.type = parameterizedType
 
         return decl
@@ -267,6 +271,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         val name = call.name.localName
         val code = call.code
         val inferred = newFunctionTemplateDeclaration(name)
+        inferred.code = code
         inferred.isInferred = true
 
         val inferredRealization =
