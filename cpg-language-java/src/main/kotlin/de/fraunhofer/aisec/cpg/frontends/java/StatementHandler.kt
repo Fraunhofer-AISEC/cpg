@@ -236,10 +236,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
 
         // Adds true expression node where default empty condition evaluates to true, remove here
-        // and in
-        // cpp StatementHandler
+        // and in cpp StatementHandler
         if (statement.condition == null) {
-            val literal: Literal<*> = this.newLiteral(true, this.primitiveType("boolean"), "true")
+            val literal: Literal<*> =
+                this.newLiteral(true, this.primitiveType("boolean")).implicit("true")
             statement.condition = literal
         }
         if (forStmt.update.size > 1) {
@@ -489,7 +489,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             start = getNextTokenWith("{", tokenRangeSelector.get().end)
             end = getPreviousTokenWith("}", tokenRange.get().end)
         }
-        val compoundStatement = this.newBlock(getCodeBetweenTokens(start, end))
+        val compoundStatement = this.newBlock()
+        compoundStatement.code = getCodeBetweenTokens(start, end)
         compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
         for (sentry in switchStmt.entries) {
             if (sentry.labels.isEmpty()) {
@@ -520,6 +521,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
+<<<<<<< HEAD
 
         val name = containingClass
         val node = this.newConstructExpression(name, rawNode = null)
@@ -536,6 +538,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 node.callee = this.newReference(it.name)
             }
         }
+=======
+        val node =
+            this.newConstructorCallExpression(
+                containingClass,
+                rawNode = explicitConstructorInvocationStmt
+            )
+>>>>>>> dc8011663 (Trying to type-safe rawNode)
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .map(frontend.expressionHandler::handle)
@@ -598,10 +607,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
         val parameter =
             this.newVariableDeclaration(
-                catchCls.parameter.name.toString(),
-                concreteType,
-                rawNode = catchCls.parameter
-            )
+                    catchCls.parameter.name.toString(),
+                    concreteType,
+                )
+                .locationAndCodeFrom(frontend, catchCls.parameter)
         parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body

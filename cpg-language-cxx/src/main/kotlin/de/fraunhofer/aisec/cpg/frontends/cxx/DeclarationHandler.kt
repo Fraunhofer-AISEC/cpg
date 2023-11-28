@@ -58,9 +58,9 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
  */
 class DeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
 
-    override fun handleNode(node: IASTDeclaration): Declaration {
+    override fun handleNode(node: IASTNode): Declaration {
         return when (node) {
             is IASTSimpleDeclaration -> handleSimpleDeclaration(node)
             is IASTFunctionDefinition -> handleFunctionDefinition(node)
@@ -89,7 +89,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
-        val declaration = newNamespaceDeclaration(ctx.name.toString(), frontend.codeOf(ctx))
+        val declaration = newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx)
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -275,9 +275,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                newFunctionTemplateDeclaration(name, frontend.codeOf(ctx))
+                newFunctionTemplateDeclaration(name, rawNode = ctx)
             } else {
-                newRecordTemplateDeclaration(name, frontend.codeOf(ctx))
+                newRecordTemplateDeclaration(name, rawNode = ctx)
             }
 
         templateDeclaration.location = frontend.locationOf(ctx)
@@ -626,12 +626,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (nameDecl: IASTDeclarator, _) = declarator.realName()
 
         val declaration =
-            frontend.typeManager.createTypeAlias(
-                frontend,
-                frontend.codeOf(ctx),
-                type,
-                frontend.typeOf(nameDecl.name)
-            )
+            frontend.typeManager.createTypeAlias(frontend, type, frontend.typeOf(nameDecl.name))
 
         // Add the declaration to the current scope
         frontend.scopeManager.addDeclaration(declaration)

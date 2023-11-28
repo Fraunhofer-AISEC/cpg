@@ -239,7 +239,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         // Adds true expression node where default empty condition evaluates to true, remove here
         // and in java StatementAnalyzer
         if (statement.conditionDeclaration == null && statement.condition == null) {
-            val literal: Literal<*> = newLiteral(true, primitiveType("bool"), "true")
+            val literal: Literal<*> =
+                newLiteral(true, primitiveType("bool")).implicit(code = "true")
             statement.condition = literal
         }
 

@@ -440,7 +440,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         call: CallExpression,
         pointer: Boolean,
     ) {
-        val cast = parent.newCastExpression(call.code)
+        val cast = newCastExpression()
+        cast.code = call.code
+        cast.language = call.language
         cast.location = call.location
         cast.castType =
             if (pointer) {

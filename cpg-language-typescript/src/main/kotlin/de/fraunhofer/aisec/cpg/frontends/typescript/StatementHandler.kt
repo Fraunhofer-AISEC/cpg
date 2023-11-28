@@ -82,7 +82,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleBlock(node: TypeScriptNode): Block {
-        val block = newBlock(this.frontend.codeOf(node))
+        val block = newBlock(rawNode = node)
 
         node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
 

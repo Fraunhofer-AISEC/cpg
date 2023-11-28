@@ -51,7 +51,11 @@ import org.slf4j.LoggerFactory
  * builder functions, will automatically have [Node.isInferred] set to true.
  */
 class Inference(val start: Node, override val ctx: TranslationContext) :
-    LanguageProvider, ScopeProvider, IsInferredProvider, ContextProvider {
+    LanguageProvider,
+    ScopeProvider,
+    IsInferredProvider,
+    ContextProvider,
+    RawNodeTypeProvider<Nothing> {
 
     override val language: Language<*>?
         get() = start.language
@@ -164,7 +168,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
             for (i in signature.indices) {
                 val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
                 val paramName = generateParamName(i, targetType)
-                val param = newParameterDeclaration(paramName, targetType, false, "")
+                val param = newParameterDeclaration(paramName, targetType, false)
                 param.argumentIndex = i
 
                 scopeManager.addDeclaration(param)
@@ -226,7 +230,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 )
 
         // Non-Type Template Parameter
-        return newParameterDeclaration(name, expr.type, false, name)
+        return newParameterDeclaration(name, expr.type, false)
     }
 
     private fun inferTemplateParameter(
@@ -235,7 +239,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         val parameterizedType = ParameterizedType(name, language)
         typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
-        val decl = newTypeParameterDeclaration(name, name)
+        val decl = newTypeParameterDeclaration(name)
         decl.type = parameterizedType
 
         return decl
@@ -262,7 +266,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
         val name = call.name.localName
         val code = call.code
-        val inferred = newFunctionTemplateDeclaration(name, code)
+        val inferred = newFunctionTemplateDeclaration(name)
         inferred.isInferred = true
 
         val inferredRealization =
@@ -321,7 +325,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
         // This could be a class or a struct. We start with a class and may have to fine-tune this
         // later.
-        val declaration = currentTU.newRecordDeclaration(type.typeName, kind, "")
+        val declaration = newRecordDeclaration(type.typeName, kind)
         declaration.isInferred = true
 
         // update the type

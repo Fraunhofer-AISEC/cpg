@@ -103,12 +103,7 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    // First, check if our raw node is a location provider, because in this case we can use the
-    // information directly. This is mostly used to deal with implicit()
-    if (rawNode is CodeAndLocationProvider<*>) {
-        (rawNode as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
-    } else if (provider is CodeAndLocationProvider<*> && rawNode != null) {
-        // Otherwise, we try to forward it to the provider
+    if (provider is CodeAndLocationProvider<*> && rawNode != null) {
         (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 
@@ -234,20 +229,29 @@ interface ContextProvider : MetadataProvider {
 }
 
 /**
+ * This [MetadataProvider] makes sure that we can type our node builder functions correctly. For
+ * language frontend and handlers, [T] should be set to the type of the raw node. For passes, [T]
+ * should be set to [Nothing], since we do not have raw nodes there.
+ */
+interface RawNodeTypeProvider<T> : MetadataProvider
+
+/**
  * A small helper function that can be used in building a [Node] with [Node.isImplicit] set to true.
  * In this case, no "rawNode" exists that can be used for the node builder. But, in order to
  * optionally supply [Node.code] and/or [Node.location] this function can be used.
  *
  * This also sets [Node.isImplicit] to true.
  */
-fun implicit(code: String? = null, location: PhysicalLocation? = null): Any {
-    return (object : IsImplicitProvider, CodeAndLocationProvider<Any> {
-        override fun setCodeAndLocation(cpgNode: Node, astNode: Any) {
-            cpgNode.code = code
-            cpgNode.location = location
-        }
+fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = null): T {
+    this.code = code
+    this.location = location
+    this.isImplicit = true
 
-        override val isImplicit: Boolean
-            get() = true
-    })
+    return this
+}
+
+fun <T : Node, S> T.locationAndCodeFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
+    frontend.setCodeAndLocation(this, rawNode)
+
+    return this
 }

@@ -333,7 +333,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs = newParameterDeclaration("va_args", unknownType(), true, "")
+            val varargs = newParameterDeclaration("va_args", unknownType(), true)
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -457,10 +457,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
                 newConstructorDeclaration(
-                    recordDeclaration.name.localName,
-                    recordDeclaration,
-                    rawNode = implicit(code = recordDeclaration.name.localName)
-                )
+                        recordDeclaration.name.localName,
+                        recordDeclaration,
+                    )
+                    .implicit(code = recordDeclaration.name.localName)
 
             createMethodReceiver(constructorDeclaration)
 

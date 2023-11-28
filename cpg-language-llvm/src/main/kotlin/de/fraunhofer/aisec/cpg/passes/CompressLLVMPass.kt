@@ -187,19 +187,20 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (reachableThrowNodes.isNotEmpty()) {
             if (catch.parameter == null) {
                 val error =
-                    catch.newVariableDeclaration(
+                    newVariableDeclaration(
                         "e_${catch.name}",
                         UnknownType.getUnknownType(catch.language),
                         true,
                     )
+                error.language = catch.language
                 catch.parameter = error
             }
             val exceptionReference =
-                catch.newReference(
+                newReference(
                     catch.parameter?.name,
                     catch.parameter?.type ?: UnknownType.getUnknownType(catch.language),
-                    ""
                 )
+            exceptionReference.language = catch.language
             exceptionReference.refersTo = catch.parameter
             reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
         }

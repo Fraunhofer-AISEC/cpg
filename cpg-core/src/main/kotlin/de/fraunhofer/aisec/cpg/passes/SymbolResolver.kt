@@ -417,7 +417,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             target
         } else {
             val declaration =
-                record.newFieldDeclaration(
+                newFieldDeclaration(
                     name.localName,
                     // we will set the type later through the type inference observer
                     unknownType(),
@@ -426,6 +426,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     false,
                 )
             record.addField(declaration)
+            declaration.language = record.language
             declaration.isInferred = true
 
             // We might be able to resolve the type later (or better), if a type is

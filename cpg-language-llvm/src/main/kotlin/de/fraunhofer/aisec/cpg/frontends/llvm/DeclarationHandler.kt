@@ -58,7 +58,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
-                    frontend.codeOf(value)
+                    rawNode = value
                 )
             }
         }
@@ -118,7 +118,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val type = frontend.typeOf(param)
 
             // TODO: support variardic
-            val decl = newParameterDeclaration(paramName, type, false, frontend.codeOf(param))
+            val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
             frontend.scopeManager.addDeclaration(decl)
             frontend.bindingsCache[paramSymbolName] = decl
@@ -206,7 +206,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct", "")
+        record = newRecordDeclaration(name, "struct")
 
         frontend.scopeManager.enterScope(record)
 

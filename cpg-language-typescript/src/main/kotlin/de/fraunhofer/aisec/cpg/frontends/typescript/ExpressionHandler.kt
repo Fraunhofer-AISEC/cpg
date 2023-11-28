@@ -65,12 +65,12 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val key = node.children?.first()?.let { this.handle(it) }
         val value = node.children?.last()?.let { this.handle(it) }
 
-        return newKeyValueExpression(key, value, this.frontend.codeOf(node))
+        return newKeyValueExpression(key, value, rawNode = node)
     }
 
     private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
         // this basically represents an HTML tag with attributes
-        val tag = newExpressionList(this.frontend.codeOf(node))
+        val tag = newExpressionList(rawNode = node)
 
         // it contains an Identifier node, we map this into the name
         this.frontend.getIdentifierName(node).let { tag.name = Name("</$it>") }
@@ -86,7 +86,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
         // this basically represents an HTML tag with attributes
-        val tag = newExpressionList(this.frontend.codeOf(node))
+        val tag = newExpressionList(rawNode = node)
 
         // it contains an Identifier node, we map this into the name
         this.frontend.getIdentifierName(node).let { tag.name = Name("<$it>") }
@@ -100,7 +100,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
-        val jsx = newExpressionList(this.frontend.codeOf(node))
+        val jsx = newExpressionList(rawNode = node)
 
         jsx.expressions = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
@@ -129,7 +129,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression
-        val lambda = newLambdaExpression(frontend.codeOf(node))
+        val lambda = newLambdaExpression(rawNode = node)
         lambda.function = func
 
         return lambda
@@ -139,11 +139,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val key = node.children?.first()?.let { this.handle(it) }
         val value = node.children?.last()?.let { this.handle(it) }
 
-        return newKeyValueExpression(key, value, this.frontend.codeOf(node))
+        return newKeyValueExpression(key, value, rawNode = node)
     }
 
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
-        val ile = newInitializerListExpression(unknownType(), this.frontend.codeOf(node))
+        val ile = newInitializerListExpression(unknownType(), rawNode = node)
 
         ile.initializers = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
 
@@ -163,13 +163,13 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.replace("'", "")
                 ?: ""
 
-        return newLiteral(value, primitiveType("string"), frontend.codeOf(node))
+        return newLiteral(value, primitiveType("string"), rawNode = node)
     }
 
     private fun handleIdentifier(node: TypeScriptNode): Expression {
         val name = this.frontend.codeOf(node)?.trim() ?: ""
 
-        return newReference(name, unknownType(), this.frontend.codeOf(node))
+        return newReference(name, unknownType(), rawNode = node)
     }
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
@@ -179,7 +179,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val name = node.children?.last()?.let { this.frontend.codeOf(it) } ?: ""
 
-        return newMemberExpression(name, base, unknownType(), ".", this.frontend.codeOf(node))
+        return newMemberExpression(name, base, unknownType(), ".", rawNode = node)
     }
 
     private fun handleCallExpression(node: TypeScriptNode): Expression {

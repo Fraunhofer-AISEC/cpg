@@ -74,7 +74,8 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         } else if (statement == null) {
             statement = s
         } else if (statement !is Block) {
-            val block = newBlock()
+            val block = Block()
+            block.language = this.language
             statement?.let { block.addStatement(it) }
             block.addStatement(s)
             statement = block

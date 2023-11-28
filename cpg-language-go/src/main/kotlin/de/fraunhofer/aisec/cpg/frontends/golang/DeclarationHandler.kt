@@ -65,10 +65,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 if (recvField?.names?.isNotEmpty() == true) {
                     method.receiver =
                         newVariableDeclaration(
-                            recvField.names[0].name,
-                            recordType,
-                            rawNode = recvField
-                        )
+                                recvField.names[0].name,
+                                recordType,
+                            )
+                            .locationAndCodeFrom(frontend, recvField)
                 }
 
                 if (recordType !is UnknownType) {
@@ -122,10 +122,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 if (returnVar.names.isNotEmpty()) {
                     val param =
                         newVariableDeclaration(
-                            returnVar.names[0].name,
-                            frontend.typeOf(returnVar.type),
-                            rawNode = returnVar
-                        )
+                                returnVar.names[0].name,
+                                frontend.typeOf(returnVar.type),
+                            )
+                            .locationAndCodeFrom(frontend, returnVar)
 
                     // Add parameter to scope
                     frontend.scopeManager.addDeclaration(param)
@@ -202,7 +202,9 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // (and make it an array afterwards)
                 val (type, variadic) = frontend.fieldTypeOf(param.type)
 
-                val p = newParameterDeclaration(name, type, variadic, rawNode = param)
+                val p =
+                    newParameterDeclaration(name, type, variadic)
+                        .locationAndCodeFrom(frontend, param)
 
                 frontend.scopeManager.addDeclaration(p)
                 frontend.setComment(p, param)
