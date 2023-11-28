@@ -214,7 +214,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-component/index.html">Component</a> : <a href="-node/index.html">Node</a>, <a href="../de.fraunhofer.aisec.cpg.passes/-pass-target/index.html">PassTarget</a></div><div class="brief "><p class="paragraph">A node which presents some kind of complete piece of software, e.g., an application, a library, microservice, ...</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-component/index.html">Component</a> : <a href="-node/index.html">Node</a></div><div class="brief "><p class="paragraph">A node which presents some kind of complete piece of software, e.g., an application, a library, microservice, ...</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -275,6 +275,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.annotation/-target/index.html"><span class="token annotation builtin">Target</span></a><span class="token punctuation">(</span><span>allowedTargets<span class="token operator"> = </span><span class="token punctuation">[</span><span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.annotation/-annotation-target/-a-n-n-o-t-a-t-i-o-n_-c-l-a-s-s/index.html">AnnotationTarget.ANNOTATION_CLASS</a></span><wbr><span class="token punctuation">]</span></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">annotation class </span><a href="-edge-property/index.html">EdgeProperty</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>key<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1316875126%2FClasslikes%2F1556141526" anchor-label="EOGStarterHolder" id="1316875126%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-e-o-g-starter-holder/index.html"><span>EOGStarter</span><wbr><span><span>Holder</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1316875126%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-e-o-g-starter-holder/index.html">EOGStarterHolder</a></div><div class="brief "><p class="paragraph">This interface needs to be implemented by <a href="-node/index.html">Node</a>s in the graph, wo serve as an entry-point to the EOG. This is primarily used in the <a href="../de.fraunhofer.aisec.cpg.passes/-symbol-resolver/index.html">SymbolResolver</a> for resolution, so that we can follow the EOG path from these nodes and resolve all symbols accordingly. But also other passes might be interested in all EOG start nodes. They can use the <a href="../de.fraunhofer.aisec.cpg.passes/-e-o-g-starter-pass/index.html">EOGStarterPass</a> to apply the pass on all such nodes in the graph.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -504,21 +519,6 @@
               </div>
             </div>
           </div>
-<a data-name="1306420556%2FClasslikes%2F1556141526" anchor-label="ResolutionStartHolder" id="1306420556%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-resolution-start-holder/index.html"><span>Resolution</span><wbr><span>Start</span><wbr><span><span>Holder</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1306420556%2FClasslikes%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-resolution-start-holder/index.html">ResolutionStartHolder</a></div><div class="brief "><p class="paragraph">This interface needs to be implemented by <a href="-node/index.html">Node</a>s in the graph, wo serve as an entry-point to resolution, so that we can follow the EOG path from these nodes and resolve all symbols accordingly in the <a href="../de.fraunhofer.aisec.cpg.passes/-symbol-resolver/index.html">SymbolResolver</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 <a data-name="1361825705%2FClasslikes%2F1556141526" anchor-label="ScopeProvider" id="1361825705%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -583,7 +583,22 @@
       </div>
       <div data-togglable="EXTENSION_PROPERTY">
         <h2 class="">Properties</h2>
-        <div class="table"><a data-name="2092913559%2FProperties%2F1556141526" anchor-label="arraySize" id="2092913559%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="110563529%2FProperties%2F1556141526" anchor-label="allEOGStarters" id="110563529%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="all-e-o-g-starters.html"><span>all</span><wbr><span><span>EOGStarters</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="110563529%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="-node/index.html">Node</a><span class="token punctuation">.</span><a href="all-e-o-g-starters.html">allEOGStarters</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-node/index.html">Node</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns a list of all <a href="-node/index.html">Node</a>s, starting from the current <a href="-node/index.html">Node</a>, which are the beginning of an EOG path created by the <a href="../de.fraunhofer.aisec.cpg.passes/-evaluation-order-graph-pass/index.html">EvaluationOrderGraphPass</a>. Typical examples include all top-level declarations, such as functions and variables. For a more detailed explanation, see <a href="-e-o-g-starter-holder/index.html">EOGStarterHolder</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2092913559%2FProperties%2F1556141526" anchor-label="arraySize" id="2092913559%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
