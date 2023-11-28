@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.Util.unwrapReference
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -62,7 +61,7 @@ class AssignExpression :
             field = value
             if (operatorCode == "=") {
                 field.forEach {
-                    val unwrapped = unwrapReference(it)
+                    val unwrapped = it.unwrapReference()
                     unwrapped?.let {
                         it.access = AccessValues.WRITE
                         it.dfgHandlerHint = true
@@ -70,7 +69,7 @@ class AssignExpression :
                 }
             } else {
                 field.forEach {
-                    val unwrapped = unwrapReference(it)
+                    val unwrapped = it.unwrapReference()
                     unwrapped?.let {
                         it.access = AccessValues.READWRITE
                         it.dfgHandlerHint = true

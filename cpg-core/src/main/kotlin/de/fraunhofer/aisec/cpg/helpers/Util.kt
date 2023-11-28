@@ -405,20 +405,4 @@ object Util {
         ENTRIES,
         EXITS
     }
-
-    fun unwrapReference(node: Node?): Reference? {
-        return if (node is Reference) node
-        else if (node is UnaryOperator && (node.operatorCode == "*" || node.operatorCode == "&"))
-            unwrapReference(node.input)
-        else if (node is CastExpression) unwrapReference(node.expression)
-        else if (
-            node is BinaryOperator &&
-                (node.operatorCode == "&" || node.operatorCode == "*") &&
-                node.lhs is CastExpression &&
-                (node.lhs as CastExpression).expression is ProblemExpression
-        )
-        // TODO: This is only a hotfix for a bug in the language frontend.
-        unwrapReference(node.rhs)
-        else if (node is SubscriptExpression) unwrapReference(node.arrayExpression) else null
-    }
 }
