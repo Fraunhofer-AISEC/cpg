@@ -74,7 +74,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         when (opcode) {
             LLVMRet -> {
-                val ret = newReturnStatement(frontend.codeOf(instr))
+                val ret = newReturnStatement()
 
                 val numOps = LLVMGetNumOperands(instr)
                 if (numOps != 0) {
@@ -98,7 +98,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMUnreachable -> {
                 // Does nothing
-                return newEmptyStatement(frontend.codeOf(instr))
+                return newEmptyStatement()
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
@@ -133,7 +133,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMPHI -> {
                 frontend.phiList.add(instr)
-                return newEmptyStatement(frontend.codeOf(instr))
+                return newEmptyStatement()
             }
             LLVMSelect -> {
                 return declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
@@ -143,7 +143,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 log.info(
                     "userop instruction is not a real instruction. Replacing it with empty statement"
                 )
-                return newEmptyStatement(frontend.codeOf(instr))
+                return newEmptyStatement()
             }
             LLVMVAArg -> {
                 return handleVaArg(instr)
@@ -244,7 +244,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             gotoStatement.name = name
             gotoStatement
         } else {
-            val emptyStatement = newEmptyStatement(frontend.codeOf(instr))
+            val emptyStatement = newEmptyStatement()
             emptyStatement.name = name
             emptyStatement
         }
@@ -1036,7 +1036,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {goto label1} else {goto label2}
-            val ifStatement = newIfStatement(frontend.codeOf(instr))
+            val ifStatement = newIfStatement()
             val condition = frontend.getOperandValueAtIndex(instr, 0)
             ifStatement.condition = condition
 
@@ -1182,7 +1182,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [CompressLLVMPass] will move this instruction to the correct location
      */
     private fun handleLandingpad(instr: LLVMValueRef): Statement {
-        val catchInstr = newCatchClause(frontend.codeOf(instr))
+        val catchInstr = newCatchClause()
         /* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */
         val numClauses = LLVMGetNumClauses(instr)
         var catchType = ""
@@ -1501,7 +1501,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val labelName = getBasicBlockName(bb)
 
         if (labelName != "") {
-            val labelStatement = newLabelStatement(labelName)
+            val labelStatement = newLabelStatement()
             labelStatement.name = Name(labelName)
             labelStatement.label = labelName
             labelStatement.subStatement = compound
@@ -1630,7 +1630,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)
         val labelName = LLVMGetBasicBlockName(bb).string
         goto.labelName = labelName
-        val label = newLabelStatement(labelName)
+        val label = newLabelStatement()
         label.name = Name(labelName)
         // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
         // to the CPG goto statement

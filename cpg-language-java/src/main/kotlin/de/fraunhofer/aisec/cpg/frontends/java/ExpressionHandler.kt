@@ -255,7 +255,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     // Not sure how to handle this exactly yet
     private fun handleVariableDeclarationExpr(expr: Expression): DeclarationStatement {
         val variableDeclarationExpr = expr.asVariableDeclarationExpr()
-        val declarationStatement = newDeclarationStatement(variableDeclarationExpr.toString())
+        val declarationStatement = newDeclarationStatement()
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
             frontend.setCodeAndLocation(declaration, variable)

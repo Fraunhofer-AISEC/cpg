@@ -346,6 +346,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (ref == null) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
+                    decl.language = expr.language
                     decl.location = expr.location
                     decl.isImplicit = true
 

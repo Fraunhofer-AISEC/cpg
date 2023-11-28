@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 fun <T, V> RawNodeTypeProvider<T>.newLiteral(
     value: V,
     type: Type = unknownType(),
-    rawNode: T? = null,
+    rawNode: Any? = null,
 ): Literal<V> {
     val node = Literal<V>()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -66,10 +66,7 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
  * prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newBinaryOperator(
-    operatorCode: String,
-    rawNode: T? = null
-): BinaryOperator {
+fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = null): BinaryOperator {
     val node =
         if (
             this is LanguageProvider &&
@@ -97,11 +94,11 @@ fun <T> RawNodeTypeProvider<T>.newBinaryOperator(
  * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newUnaryOperator(
+fun MetadataProvider.newUnaryOperator(
     operatorCode: String,
     postfix: Boolean,
     prefix: Boolean,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): UnaryOperator {
     val node = UnaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -122,11 +119,11 @@ fun <T> RawNodeTypeProvider<T>.newUnaryOperator(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newAssignExpression(
+fun MetadataProvider.newAssignExpression(
     operatorCode: String = "=",
     lhs: List<Expression> = listOf(),
     rhs: List<Expression> = listOf(),
-    rawNode: T? = null
+    rawNode: Any? = null
 ): AssignExpression {
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -146,9 +143,9 @@ fun <T> RawNodeTypeProvider<T>.newAssignExpression(
  * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newNewExpression(
+fun MetadataProvider.newNewExpression(
     type: Type = unknownType(),
-    rawNode: T? = null
+    rawNode: Any? = null
 ): NewExpression {
     val node = NewExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -166,9 +163,9 @@ fun <T> RawNodeTypeProvider<T>.newNewExpression(
  * prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newConstructExpression(
+fun MetadataProvider.newConstructExpression(
     name: CharSequence? = EMPTY_NAME,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): ConstructExpression {
     val node = ConstructExpression()
     node.applyMetadata(this, name, rawNode, true)
@@ -184,12 +181,12 @@ fun <T> RawNodeTypeProvider<T>.newConstructExpression(
  * prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newConditionalExpression(
+fun MetadataProvider.newConditionalExpression(
     condition: Expression,
     thenExpression: Expression?,
     elseExpression: Expression?,
     type: Type = unknownType(),
-    rawNode: T? = null
+    rawNode: Any? = null
 ): ConditionalExpression {
     val node = ConditionalExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -210,10 +207,10 @@ fun <T> RawNodeTypeProvider<T>.newConditionalExpression(
  * prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newKeyValueExpression(
+fun MetadataProvider.newKeyValueExpression(
     key: Expression? = null,
     value: Expression? = null,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): KeyValueExpression {
     val node = KeyValueExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -232,7 +229,7 @@ fun <T> RawNodeTypeProvider<T>.newKeyValueExpression(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newLambdaExpression(rawNode: T? = null): LambdaExpression {
+fun MetadataProvider.newLambdaExpression(rawNode: Any? = null): LambdaExpression {
     val node = LambdaExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -246,7 +243,7 @@ fun <T> RawNodeTypeProvider<T>.newLambdaExpression(rawNode: T? = null): LambdaEx
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newBlock(rawNode: T? = null): Block {
+fun MetadataProvider.newBlock(rawNode: Any? = null): Block {
     val node = Block()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -261,11 +258,11 @@ fun <T> RawNodeTypeProvider<T>.newBlock(rawNode: T? = null): Block {
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newCallExpression(
+fun MetadataProvider.newCallExpression(
     callee: Expression? = null,
     fqn: CharSequence? = null,
     template: Boolean = false,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): CallExpression {
     val node = CallExpression()
     node.applyMetadata(this, fqn, rawNode, true)
@@ -289,10 +286,10 @@ fun <T> RawNodeTypeProvider<T>.newCallExpression(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newMemberCallExpression(
+fun MetadataProvider.newMemberCallExpression(
     callee: Expression?,
     isStatic: Boolean = false,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): MemberCallExpression {
     val node = MemberCallExpression()
     node.applyMetadata(
@@ -320,12 +317,12 @@ fun <T> RawNodeTypeProvider<T>.newMemberCallExpression(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newMemberExpression(
+fun MetadataProvider.newMemberExpression(
     name: CharSequence?,
     base: Expression,
     memberType: Type = unknownType(),
     operatorCode: String? = ".",
-    rawNode: T? = null
+    rawNode: Any? = null
 ): MemberExpression {
     val node = MemberExpression()
     node.applyMetadata(this, name, rawNode, true)
@@ -345,7 +342,7 @@ fun <T> RawNodeTypeProvider<T>.newMemberExpression(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newCastExpression(rawNode: T? = null): CastExpression {
+fun MetadataProvider.newCastExpression(rawNode: Any? = null): CastExpression {
     val node = CastExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -360,11 +357,11 @@ fun <T> RawNodeTypeProvider<T>.newCastExpression(rawNode: T? = null): CastExpres
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newTypeIdExpression(
+fun MetadataProvider.newTypeIdExpression(
     operatorCode: String,
     type: Type = unknownType(),
     referencedType: Type = unknownType(),
-    rawNode: T? = null
+    rawNode: Any? = null
 ): TypeIdExpression {
     val node = TypeIdExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -384,7 +381,7 @@ fun <T> RawNodeTypeProvider<T>.newTypeIdExpression(
  * prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newSubscriptExpression(rawNode: T? = null): SubscriptExpression {
+fun MetadataProvider.newSubscriptExpression(rawNode: Any? = null): SubscriptExpression {
     val node = SubscriptExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -399,10 +396,10 @@ fun <T> RawNodeTypeProvider<T>.newSubscriptExpression(rawNode: T? = null): Subsc
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newRangeExpression(
+fun MetadataProvider.newRangeExpression(
     floor: Expression? = null,
     ceiling: Expression? = null,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): RangeExpression {
     val node = RangeExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -421,7 +418,7 @@ fun <T> RawNodeTypeProvider<T>.newRangeExpression(
  * prepended argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newNewArrayExpression(rawNode: T? = null): NewArrayExpression {
+fun MetadataProvider.newNewArrayExpression(rawNode: Any? = null): NewArrayExpression {
     val node = NewArrayExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -436,10 +433,10 @@ fun <T> RawNodeTypeProvider<T>.newNewArrayExpression(rawNode: T? = null): NewArr
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newReference(
+fun MetadataProvider.newReference(
     name: CharSequence?,
     type: Type = unknownType(),
-    rawNode: T? = null
+    rawNode: Any? = null
 ): Reference {
     val node = Reference()
     node.applyMetadata(this, name, rawNode, true)
@@ -457,7 +454,7 @@ fun <T> RawNodeTypeProvider<T>.newReference(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newDeleteExpression(rawNode: T? = null): DeleteExpression {
+fun MetadataProvider.newDeleteExpression(rawNode: Any? = null): DeleteExpression {
     val node = DeleteExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -472,7 +469,7 @@ fun <T> RawNodeTypeProvider<T>.newDeleteExpression(rawNode: T? = null): DeleteEx
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newExpressionList(rawNode: T? = null): ExpressionList {
+fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
     val node = ExpressionList()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -488,9 +485,9 @@ fun <T> RawNodeTypeProvider<T>.newExpressionList(rawNode: T? = null): Expression
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newInitializerListExpression(
+fun MetadataProvider.newInitializerListExpression(
     targetType: Type = unknownType(),
-    rawNode: T? = null
+    rawNode: Any? = null
 ): InitializerListExpression {
     val node = InitializerListExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -529,10 +526,10 @@ fun MetadataProvider.newTypeExpression(
  * argument.
  */
 @JvmOverloads
-fun <T> RawNodeTypeProvider<T>.newProblemExpression(
+fun MetadataProvider.newProblemExpression(
     problem: String = "",
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
-    rawNode: T? = null
+    rawNode: Any? = null
 ): ProblemExpression {
     val node = ProblemExpression(problem, type)
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -541,7 +538,7 @@ fun <T> RawNodeTypeProvider<T>.newProblemExpression(
     return node
 }
 
-fun <T> RawNodeTypeProvider<T>.newProblemType(rawNode: T? = null): ProblemType {
+fun MetadataProvider.newProblemType(rawNode: Any? = null): ProblemType {
     val node = ProblemType()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
