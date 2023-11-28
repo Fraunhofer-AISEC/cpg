@@ -346,7 +346,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val blockStmt = stmt.asBlockStmt()
 
         // first of, all we need a compound statement
-        val compoundStatement = this.newBlock(stmt.toString())
+        val compoundStatement = this.newBlock(rawNode = stmt)
         frontend.scopeManager.enterScope(compoundStatement)
         for (child in blockStmt.statements) {
             val statement = handle(child)

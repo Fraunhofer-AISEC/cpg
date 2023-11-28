@@ -103,7 +103,12 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+    // First, check if our raw node is a location provider, because in this case we can use the
+    // information directly. This is mostly used to deal with implicit()
+    if (rawNode is CodeAndLocationProvider<*>) {
+        (rawNode as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
+    } else if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+        // Otherwise, we try to forward it to the provider
         (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 

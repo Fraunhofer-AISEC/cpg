@@ -114,14 +114,14 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
+            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), rawNode = context)
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context?.packageDeclaration?.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), codeOf(packDecl))
+                    newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
                 setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)

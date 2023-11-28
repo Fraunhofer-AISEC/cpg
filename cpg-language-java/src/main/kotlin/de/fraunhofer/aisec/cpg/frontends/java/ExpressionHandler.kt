@@ -135,7 +135,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      */
     private fun handleArrayCreationExpr(expr: Expression): Statement {
         val arrayCreationExpr = expr as ArrayCreationExpr
-        val creationExpression = this.newNewArrayExpression(expr.toString())
+        val creationExpression = this.newNewArrayExpression(rawNode = expr)
 
         // in Java, an array creation expression either specifies an initializer or dimensions
 
@@ -464,39 +464,39 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 newLiteral(
                     literalExpr.asIntegerLiteralExpr().asNumber(),
                     this.primitiveType("int"),
-                    value
+                    rawNode = expr
                 )
             is StringLiteralExpr ->
                 newLiteral(
                     literalExpr.asStringLiteralExpr().asString(),
                     this.primitiveType("java.lang.String"),
-                    value
+                    rawNode = expr
                 )
             is BooleanLiteralExpr ->
                 newLiteral(
                     literalExpr.asBooleanLiteralExpr().value,
                     this.primitiveType("boolean"),
-                    value
+                    rawNode = expr
                 )
             is CharLiteralExpr ->
                 newLiteral(
                     literalExpr.asCharLiteralExpr().asChar(),
                     this.primitiveType("char"),
-                    value
+                    rawNode = expr
                 )
             is DoubleLiteralExpr ->
                 newLiteral(
                     literalExpr.asDoubleLiteralExpr().asDouble(),
                     this.primitiveType("double"),
-                    value
+                    rawNode = expr
                 )
             is LongLiteralExpr ->
                 newLiteral(
                     literalExpr.asLongLiteralExpr().asNumber(),
                     this.primitiveType("long"),
-                    value
+                    rawNode = expr
                 )
-            is NullLiteralExpr -> newLiteral<Any?>(null, this.objectType("null"), value)
+            is NullLiteralExpr -> newLiteral<Any?>(null, this.objectType("null"), rawNode = expr)
             else -> null
         }
     }
