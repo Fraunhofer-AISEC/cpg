@@ -401,7 +401,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
                 if (it.isInferred && inferDfgForUnresolvedSymbols) {
-                    handleUnresolvedCalls(call, it)
+                    handleUnresolvedCalls(call, call)
                 } else {
                     Util.attachCallParameters(it, call.arguments)
                 }
