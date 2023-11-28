@@ -232,6 +232,9 @@ interface ContextProvider : MetadataProvider {
  * This [MetadataProvider] makes sure that we can type our node builder functions correctly. For
  * language frontend and handlers, [T] should be set to the type of the raw node. For passes, [T]
  * should be set to [Nothing], since we do not have raw nodes there.
+ *
+ * Note: This does not work yet to 100 % satisfaction and is therefore not yet activated in the
+ * builders.
  */
 interface RawNodeTypeProvider<T> : MetadataProvider
 
@@ -250,7 +253,14 @@ fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = nu
     return this
 }
 
-fun <T : Node, S> T.locationAndCodeFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
+fun <T : Node> T.codeAndLocationFrom(other: Node): T {
+    this.code = other.code
+    this.location = other.location
+
+    return this
+}
+
+fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
     frontend.setCodeAndLocation(this, rawNode)
 
     return this

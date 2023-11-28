@@ -68,7 +68,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                                 recvField.names[0].name,
                                 recordType,
                             )
-                            .locationAndCodeFrom(frontend, recvField)
+                            .codeAndLocationFrom(frontend, recvField)
                 }
 
                 if (recordType !is UnknownType) {
@@ -125,7 +125,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                                 returnVar.names[0].name,
                                 frontend.typeOf(returnVar.type),
                             )
-                            .locationAndCodeFrom(frontend, returnVar)
+                            .codeAndLocationFrom(frontend, returnVar)
 
                     // Add parameter to scope
                     frontend.scopeManager.addDeclaration(param)
@@ -204,7 +204,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                 val p =
                     newParameterDeclaration(name, type, variadic)
-                        .locationAndCodeFrom(frontend, param)
+                        .codeAndLocationFrom(frontend, param)
 
                 frontend.scopeManager.addDeclaration(p)
                 frontend.setComment(p, param)

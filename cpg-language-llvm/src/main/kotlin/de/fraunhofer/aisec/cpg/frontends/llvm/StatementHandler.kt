@@ -678,7 +678,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
                 log.debug(
-                    "Trying to access a field within the record declaration of ${record.name}"
+                    "Trying to access a field within the record declaration of {}",
+                    record.name
                 )
 
                 // look for the field
@@ -853,14 +854,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a
-     * [BlockStatement] if the value is assigned to another variable.
+     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a [Block] if
+     * the value is assigned to another variable.
      */
     private fun handleAtomicrmw(instr: LLVMValueRef): Statement {
-        // TODO(oxisto): The rawNodes here are all pointing to the instr instead of individual
-        // pieces
         val lhs = LLVMGetValueName(instr).string
-        val instrStr = frontend.codeOf(instr)
         val operation = LLVMGetAtomicRMWBinOp(instr)
         val ptr = frontend.getOperandValueAtIndex(instr, 0)
         val value = frontend.getOperandValueAtIndex(instr, 1)
@@ -868,10 +866,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val exchOp = newAssignExpression("=", rawNode = instr)
         exchOp.name = Name("atomicrmw")
 
-        val ptrDeref = newUnaryOperator("*", false, true, rawNode = instr)
+        val ptrDeref = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
         ptrDeref.input = ptr
 
-        val ptrDerefExch = newUnaryOperator("*", false, true, rawNode = instr)
+        val ptrDerefExch = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
         ptrDerefExch.input = frontend.getOperandValueAtIndex(instr, 0)
         exchOp.lhs = listOf(ptrDerefExch)
 
@@ -981,7 +979,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // set lhs = *ptr, then perform the replacement
             val compoundStatement = newBlock(rawNode = instr)
 
-            val ptrDerefAssignment = newUnaryOperator("*", false, true, rawNode = instr)
+            val ptrDerefAssignment =
+                newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
             ptrDerefAssignment.input = frontend.getOperandValueAtIndex(instr, 0)
 
             compoundStatement.statements =
@@ -999,7 +998,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleIndirectbrStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
-        val nodeCode = frontend.codeOf(instr)
         if (numOps < 2)
             throw TranslationException(
                 "Indirectbr statement without address and at least one target"
@@ -1228,7 +1226,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * modified value is constructed.
      */
     private fun handleInsertelement(instr: LLVMValueRef): Statement {
-        val instrStr = frontend.codeOf(instr)
         val compoundStatement = newBlock(rawNode = instr)
 
         // TODO: Probably we should make a proper copy of the array
@@ -1278,8 +1275,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * barely used and also the features of LLVM are very limited in that scenario.
      */
     private fun handleShufflevector(instr: LLVMValueRef): Statement {
-        val instrStr = frontend.codeOf(instr)
-
         val list = newInitializerListExpression(frontend.typeOf(instr), rawNode = instr)
         val elementType = frontend.typeOf(instr).dereference()
 
@@ -1480,8 +1475,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Handles a basic block and returns a [BlockStatement] comprised of the statements of this
-     * block or a [LabelStatement] if the basic block has a label.
+     * Handles a basic block and returns a [Block] comprised of the statements of this block or a
+     * [LabelStatement] if the basic block has a label.
      */
     private fun handleBasicBlock(bb: LLVMBasicBlockRef): Statement {
         val compound = newBlock(rawNode = bb)

@@ -177,14 +177,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleForStatement(stmt: Statement): ForStatement {
         val forStmt = stmt.asForStmt()
-        val code: String
-        val tokenRange = forStmt.tokenRange
-        code =
-            if (tokenRange.isPresent) {
-                tokenRange.get().toString()
-            } else {
-                stmt.toString()
-            }
         val statement = this.newForStatement()
         frontend.setCodeAndLocation(statement, stmt)
         frontend.scopeManager.enterScope(statement)
@@ -302,7 +294,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     private fun handleEmptyStatement(stmt: Statement): EmptyStatement {
-        val emptyStmt = stmt.asEmptyStmt()
         return this.newEmptyStatement()
     }
 
@@ -382,8 +373,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                         getNextTokenWith(":", optionalTokenRange.get().begin)
                     )
             }
-            val defaultStatement =
-                this.newDefaultStatement()
+            val defaultStatement = this.newDefaultStatement()
             defaultStatement.location =
                 getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
             return defaultStatement
@@ -610,7 +600,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     catchCls.parameter.name.toString(),
                     concreteType,
                 )
-                .locationAndCodeFrom(frontend, catchCls.parameter)
+                .codeAndLocationFrom(frontend, catchCls.parameter)
         parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body
