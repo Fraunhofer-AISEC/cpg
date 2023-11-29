@@ -1061,8 +1061,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testDesignatedInitializerAsAssignment() {
-        val file = File("src/test/resources/components/designatedInitializer.cpp")
+    fun testCPPDesignatedInitializer() {
+        val file = File("src/test/resources/cxx/designated.cpp")
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -1074,13 +1074,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(method.body is Block)
 
         val statements = (method.body as Block).statements
-        assertEquals(6, statements.size)
+        assertEquals(5, statements.size)
         assertTrue(statements[0] is DeclarationStatement)
         assertTrue(statements[1] is DeclarationStatement)
         assertTrue(statements[2] is DeclarationStatement)
         assertTrue(statements[3] is DeclarationStatement)
-        assertTrue(statements[4] is DeclarationStatement)
-        assertTrue(statements[5] is ReturnStatement)
+        assertTrue(statements[4] is ReturnStatement)
 
         var initializer =
             ((statements[0] as DeclarationStatement).singleDeclaration as VariableDeclaration)
@@ -1131,16 +1130,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(initializer.initializers[1] is AssignExpression)
 
         die = initializer.initializers[0] as AssignExpression
-        assertTrue(die.lhs[0] is Literal<*>)
-        assertTrue(die.rhs[0] is Literal<*>)
-        assertEquals(3, (die.lhs[0] as Literal<*>).value)
-        assertEquals(1, (die.rhs[0] as Literal<*>).value)
+        assertLiteralValue(3, (die.lhs[0] as SubscriptExpression).subscriptExpression)
+        assertLiteralValue(1, die.rhs[0])
 
         die = initializer.initializers[1] as AssignExpression
-        assertTrue(die.lhs[0] is Literal<*>)
-        assertTrue(die.rhs[0] is Literal<*>)
-        assertEquals(5, (die.lhs[0] as Literal<*>).value)
-        assertEquals(2, (die.rhs[0] as Literal<*>).value)
+        assertLiteralValue(5, (die.lhs[0] as SubscriptExpression).subscriptExpression)
+        assertLiteralValue(2, die.rhs[0])
 
         val o = declaration.variables["o"]
         assertNotNull(o)
