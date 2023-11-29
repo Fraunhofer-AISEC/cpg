@@ -7,7 +7,7 @@
 
 struct Outer {
   struct Point p;
-}
+};
 
 struct Point
 {

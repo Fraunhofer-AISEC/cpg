@@ -1055,11 +1055,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        // should be four method nodes
-        assertEquals(2, declaration.declarations.size)
-
-        val method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
-        assertEquals("main()int", method!!.signature)
+        val method = declaration.functions["main"]
+        assertNotNull(method)
+        assertEquals("main()int", method.signature)
         assertTrue(method.body is Block)
 
         val statements = (method.body as Block).statements
@@ -1067,7 +1065,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(statements[0] is DeclarationStatement)
         assertTrue(statements[1] is DeclarationStatement)
         assertTrue(statements[2] is DeclarationStatement)
-        assertTrue(statements[3] is ReturnStatement)
+        assertTrue(statements[3] is DeclarationStatement)
+        assertTrue(statements[4] is DeclarationStatement)
+        assertTrue(statements[5] is ReturnStatement)
 
         var initializer =
             ((statements[0] as DeclarationStatement).singleDeclaration as VariableDeclaration)
@@ -1110,7 +1110,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(20, (die.rhs[0] as Literal<*>).value)
 
         initializer =
-            ((statements[2] as DeclarationStatement).singleDeclaration as VariableDeclaration)
+            ((statements[3] as DeclarationStatement).singleDeclaration as VariableDeclaration)
                 .initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(2, initializer.initializers.size)
@@ -1128,6 +1128,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(die.rhs[0] is Literal<*>)
         assertEquals(5, (die.lhs[0] as Literal<*>).value)
         assertEquals(2, (die.rhs[0] as Literal<*>).value)
+
+        val o = declaration.variables["o"]
+        assertNotNull(o)
     }
 
     @Test
