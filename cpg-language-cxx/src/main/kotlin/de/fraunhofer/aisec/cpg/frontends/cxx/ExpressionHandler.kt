@@ -599,11 +599,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        return newAssignExpression(
-            lhs = lhs,
-            rhs = listOfNotNull(rhs),
-            rawNode = ctx
-        )
+        return newAssignExpression(lhs = lhs, rhs = listOfNotNull(rhs), rawNode = ctx)
     }
 
     private fun handleCDesignatedInitializer(ctx: CASTDesignatedInitializer): AssignExpression {
@@ -619,15 +615,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         oneLhs = handle(des.subscriptExpression)
                     }
                     is CASTFieldDesignator -> {
-                        oneLhs =
-                            newReference(des.name.toString(), unknownType(), rawNode = des)
+                        oneLhs = newReference(des.name.toString(), unknownType(), rawNode = des)
                     }
                     is CASTArrayRangeDesignator -> {
                         oneLhs =
                             newRangeExpression(
                                 handle(des.rangeFloor),
                                 handle(des.rangeCeiling),
-                                des.getRawSignature()
+                                rawNode = des
                             )
                         oneLhs.operatorCode = "..."
                     }
@@ -647,11 +642,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        return newAssignExpression(
-            lhs = lhs,
-            rhs = listOfNotNull(rhs),
-            rawNode = ctx
-        )
+        return newAssignExpression(lhs = lhs, rhs = listOfNotNull(rhs), rawNode = ctx)
     }
 
     private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression {
