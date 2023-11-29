@@ -657,7 +657,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     // Then we loop through all designators and chain them. Only field designators
                     // can be chained in this way
                     for (field in
-                        ctx.designators.toList().filterIsInstance<CPPASTFieldDesignator>()) {
+                        ctx.designators.toList().filterIsInstance<CASTFieldDesignator>()) {
                         // the old ref is our new base
                         ref = newMemberExpression(field.name.toString(), ref, rawNode = field)
                     }

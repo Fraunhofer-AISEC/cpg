@@ -1057,6 +1057,15 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val foo3 = tu.variables["foo3"]
         assertNotNull(foo3)
+
+        val init = foo3.initializer
+        assertIs<InitializerListExpression>(init)
+
+        val assign = init.initializers.firstOrNull()
+        assertIs<AssignExpression>(assign)
+
+        val lhs = assign.lhs<SubscriptExpression>(0)
+        assertNotNull(lhs)
     }
 
     @Test
