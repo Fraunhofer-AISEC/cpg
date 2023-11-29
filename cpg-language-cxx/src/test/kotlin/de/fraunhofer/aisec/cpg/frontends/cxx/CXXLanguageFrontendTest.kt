@@ -1063,7 +1063,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(method.body is Block)
 
         val statements = (method.body as Block).statements
-        assertEquals(4, statements.size)
+        assertEquals(6, statements.size)
         assertTrue(statements[0] is DeclarationStatement)
         assertTrue(statements[1] is DeclarationStatement)
         assertTrue(statements[2] is DeclarationStatement)

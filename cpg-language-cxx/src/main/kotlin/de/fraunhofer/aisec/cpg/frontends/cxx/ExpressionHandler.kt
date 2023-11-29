@@ -559,47 +559,66 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleCXXDesignatedInitializer(ctx: CPPASTDesignatedInitializer): AssignExpression {
+    private fun handleCXXDesignatedInitializer(ctx: CPPASTDesignatedInitializer): Expression {
         val rhs = handle(ctx.operand)
-        val lhs = ArrayList<Expression>()
-        if (ctx.designators.isEmpty()) {
+
+        // We need to check the first designator first
+        val des = ctx.designators.firstOrNull()
+        if (des == null) {
             Util.errorWithFileLocation(frontend, ctx, log, "no designator found")
-        } else {
-            for (des in ctx.designators) {
-                var oneLhs: Expression? = null
-                when (des) {
-                    is CPPASTArrayDesignator -> {
-                        oneLhs = handle(des.subscriptExpression)
-                    }
-                    is CPPASTFieldDesignator -> {
-                        oneLhs = newReference(des.name.toString(), unknownType(), rawNode = des)
-                    }
-                    is CPPASTArrayRangeDesignator -> {
-                        oneLhs =
-                            newRangeExpression(
-                                handle(des.rangeFloor),
-                                handle(des.rangeCeiling),
-                                des.getRawSignature()
-                            )
-                        oneLhs.operatorCode = "..."
-                    }
-                    else -> {
-                        Util.errorWithFileLocation(
-                            frontend,
-                            ctx,
-                            log,
-                            "Unknown designated lhs {}",
-                            des.javaClass.toGenericString()
-                        )
-                    }
-                }
-                if (oneLhs != null) {
-                    lhs.add(oneLhs)
-                }
-            }
+            return newProblemExpression("no designator found")
         }
 
-        return newAssignExpression(lhs = lhs, rhs = listOfNotNull(rhs), rawNode = ctx)
+        val lhs =
+            when (des) {
+                is CPPASTArrayDesignator -> {
+                    handle(des.subscriptExpression)
+                }
+                is CPPASTFieldDesignator -> {
+                    // We need to start with our target (which we need to find in a hacky way) as
+                    // first ref
+                    val baseName =
+                        (((ctx.parent as? IASTInitializerList)?.parent as? IASTInitializer)?.parent
+                                as? IASTDeclarator)
+                            ?.name
+                            .toString()
+                    var ref = newReference(baseName)
+                    // Then we loop through all designators and chain them. Only field designators
+                    // can be chained in this way
+                    for (field in
+                        ctx.designators.toList().filterIsInstance<CPPASTFieldDesignator>()) {
+                        // the old ref is our new base
+                        ref = newMemberExpression(field.name.toString(), ref, rawNode = des)
+                    }
+                    ref
+                }
+                is CPPASTArrayRangeDesignator -> {
+                    val range =
+                        newRangeExpression(
+                            handle(des.rangeFloor),
+                            handle(des.rangeCeiling),
+                            rawNode = des
+                        )
+                    range.operatorCode = "..."
+                    range
+                }
+                else -> {
+                    Util.errorWithFileLocation(
+                        frontend,
+                        ctx,
+                        log,
+                        "Unknown designated lhs {}",
+                        des.javaClass.toGenericString()
+                    )
+                    null
+                }
+            }
+
+        return newAssignExpression(
+            lhs = listOfNotNull(lhs),
+            rhs = listOfNotNull(rhs),
+            rawNode = ctx
+        )
     }
 
     private fun handleCDesignatedInitializer(ctx: CASTDesignatedInitializer): AssignExpression {
