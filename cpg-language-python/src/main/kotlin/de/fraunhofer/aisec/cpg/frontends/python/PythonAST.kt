@@ -234,7 +234,7 @@ interface PythonAST {
      */
     class AugAssign(pyObject: PyObject) : StmtBase(pyObject) {
         val target: ExprBase by lazy { "target" of pyObject }
-        val op: operator by lazy { "op" of pyObject }
+        val op: OperatorBase by lazy { "op" of pyObject }
         val value: ExprBase by lazy { "value" of pyObject }
     }
 
@@ -486,7 +486,7 @@ interface PythonAST {
      * ```
      */
     class BoolOp(pyObject: PyObject) : ExprBase(pyObject) {
-        val op: boolop by lazy { "op" of pyObject }
+        val op: BoolOpBase by lazy { "op" of pyObject }
         val values: List<ExprBase> by lazy { "values" of pyObject }
     }
 
@@ -509,7 +509,7 @@ interface PythonAST {
      */
     class BinOp(pyObject: PyObject) : ExprBase(pyObject) {
         val left: ExprBase by lazy { "left" of pyObject }
-        val op: operator by lazy { "op" of pyObject }
+        val op: OperatorBase by lazy { "op" of pyObject }
         val right: ExprBase by lazy { "right" of pyObject }
     }
 
@@ -520,7 +520,7 @@ interface PythonAST {
      * ```
      */
     class UnaryOp(pyObject: PyObject) : ExprBase(pyObject) {
-        val op: unaryop by lazy { "op" of pyObject }
+        val op: UnaryOpBase by lazy { "op" of pyObject }
         val operand: ExprBase by lazy { "operand" of pyObject }
     }
 
@@ -787,8 +787,10 @@ interface PythonAST {
      * ast.boolop = class boolop(AST)
      *  |  boolop = And | Or
      * ```
+     *
+     * To avoid conflicts with [BoolOp], we need to rename this class.
      */
-    abstract class boolop(pyObject: PyObject) : AST(pyObject)
+    abstract class BoolOpBase(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -796,14 +798,14 @@ interface PythonAST {
      *  |  And
      * ```
      */
-    class And(pyObject: PyObject) : boolop(pyObject)
+    class And(pyObject: PyObject) : BoolOpBase(pyObject)
 
     /**
      * ```
      * ast.Or = class Or(boolop)
      *  |  Or
      */
-    class Or(pyObject: PyObject) : boolop(pyObject)
+    class Or(pyObject: PyObject) : BoolOpBase(pyObject)
 
     /**
      * ```
@@ -931,7 +933,7 @@ interface PythonAST {
      *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
      * ```
      */
-    abstract class operator(pyObject: PyObject) : AST(pyObject)
+    abstract class OperatorBase(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -939,7 +941,7 @@ interface PythonAST {
      *  |  Add
      * ```
      */
-    class Add(pyObject: PyObject) : operator(pyObject)
+    class Add(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -947,7 +949,7 @@ interface PythonAST {
      *  |  Sub
      * ```
      */
-    class Sub(pyObject: PyObject) : operator(pyObject)
+    class Sub(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -955,7 +957,7 @@ interface PythonAST {
      *  |  Mult
      * ```
      */
-    class Mult(pyObject: PyObject) : operator(pyObject)
+    class Mult(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -963,7 +965,7 @@ interface PythonAST {
      *  |  MatMult
      * ```
      */
-    class MatMult(pyObject: PyObject) : operator(pyObject)
+    class MatMult(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -971,7 +973,7 @@ interface PythonAST {
      *  |  Div
      * ```
      */
-    class Div(pyObject: PyObject) : operator(pyObject)
+    class Div(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -979,7 +981,7 @@ interface PythonAST {
      *  |  Mod
      * ```
      */
-    class Mod(pyObject: PyObject) : operator(pyObject)
+    class Mod(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -987,7 +989,7 @@ interface PythonAST {
      *  |  Pow
      * ```
      */
-    class Pow(pyObject: PyObject) : operator(pyObject)
+    class Pow(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -995,7 +997,7 @@ interface PythonAST {
      *  |  LShift
      * ```
      */
-    class LShift(pyObject: PyObject) : operator(pyObject)
+    class LShift(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -1003,7 +1005,7 @@ interface PythonAST {
      *  |  RShift
      * ```
      */
-    class RShift(pyObject: PyObject) : operator(pyObject)
+    class RShift(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -1011,7 +1013,7 @@ interface PythonAST {
      *  |  BitOr
      * ```
      */
-    class BitOr(pyObject: PyObject) : operator(pyObject)
+    class BitOr(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -1019,7 +1021,7 @@ interface PythonAST {
      *  |  BitXor
      * ```
      */
-    class BitXor(pyObject: PyObject) : operator(pyObject)
+    class BitXor(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -1027,7 +1029,7 @@ interface PythonAST {
      *  |  BitAnd
      * ```
      */
-    class BitAnd(pyObject: PyObject) : operator(pyObject)
+    class BitAnd(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -1035,7 +1037,7 @@ interface PythonAST {
      *  |  FloorDiv
      * ```
      */
-    class FloorDiv(pyObject: PyObject) : operator(pyObject)
+    class FloorDiv(pyObject: PyObject) : OperatorBase(pyObject)
 
     /**
      * ```
@@ -1143,8 +1145,10 @@ interface PythonAST {
      * ast.unaryop = class unaryop(AST)
      *  |  unaryop = Invert | Not | UAdd | USub
      * ```
+     *
+     * To avoid conflicts with [UnaryOp], we need to rename this class.
      */
-    abstract class unaryop(pyObject: PyObject) : AST(pyObject)
+    abstract class UnaryOpBase(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1152,7 +1156,7 @@ interface PythonAST {
      *  |  Invert
      * ```
      */
-    class Invert(pyObject: PyObject) : unaryop(pyObject)
+    class Invert(pyObject: PyObject) : UnaryOpBase(pyObject)
 
     /**
      * ```
@@ -1160,14 +1164,14 @@ interface PythonAST {
      *  |  Not
      * ```
      */
-    class Not(pyObject: PyObject) : unaryop(pyObject)
+    class Not(pyObject: PyObject) : UnaryOpBase(pyObject)
     /**
      * ```
      * ast.UAdd = class UAdd(unaryop)
      *  |  UAdd
      * ```
      */
-    class UAdd(pyObject: PyObject) : unaryop(pyObject)
+    class UAdd(pyObject: PyObject) : UnaryOpBase(pyObject)
 
     /**
      * ```
@@ -1175,7 +1179,7 @@ interface PythonAST {
      *  |  USub
      * ```
      */
-    class USub(pyObject: PyObject) : unaryop(pyObject)
+    class USub(pyObject: PyObject) : UnaryOpBase(pyObject)
 
     /**
      * ```

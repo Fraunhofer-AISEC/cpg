@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
@@ -44,7 +45,7 @@ import kotlin.io.path.nameWithoutExtension
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<PythonAST.AST, Any>(language, ctx) {
+    LanguageFrontend<PythonAST.AST, PythonAST.AST?>(language, ctx) {
     private val jep = JepSingleton // configure Jep
 
     // val declarationHandler = DeclarationHandler(this)
@@ -52,8 +53,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
-    // fileContent can be stored as a class field because the CPG creates a new
-    // [PythonLanguageFrontend] instance per file
+    /**
+     * fileContent contains the whole file can be stored as a class field because the CPG creates a
+     * new [PythonLanguageFrontend] instance per file.
+     */
     private lateinit var fileContent: String
     private lateinit var uri: URI
 
@@ -61,23 +64,56 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
-        val absolutePath = file.absolutePath
-        jep.getInterp().use {
-            // TODO: PYTHON VERSION CHECK!
-            // TODO: add sanity check to [absolutePath] to avoid code injection
 
-            it.eval("import ast")
-            it.eval("import os")
-            it.eval("fh = open(\"$absolutePath\", \"r\")")
-            it.eval("parsed = ast.parse(fh.read(), filename=\"$absolutePath\", type_comments=True)")
+        jep.getInterp().use {
+            it.set("content", fileContent)
+            it.set("filename", file.absolutePath)
+            it.exec("import ast")
+            it.exec("import os")
+            it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
             return pythonASTtoCPG(pyAST, file.name)
         }
     }
 
-    override fun typeOf(type: Any): Type {
-        return autoType() // TODO
+    /**
+     * Type information is optional in python in form of annotations. So if a type annotation is
+     * present, we parse it, otherwise we assume that it is dynamically typed and thus return an
+     * [AutoType].
+     */
+    override fun typeOf(type: PythonAST.AST?): Type {
+        when (type) {
+            null -> {
+                // No type information -> we return an autoType to infer things magically
+                return autoType()
+            }
+            is PythonAST.Name -> {
+                // We have some kind of name here; let's quickly check, if this is a primitive type
+                val id = type.id
+                if (id in language.primitiveTypeNames) {
+                    return primitiveType(id)
+                }
+
+                // Otherwise, this could already be a fully qualified type
+                val name =
+                    if (language.namespaceDelimiter in id) {
+                        // TODO: This might create problem with nested classes
+                        parseName(id)
+                    } else {
+                        // If it is not, we want place it in the current namespace
+                        scopeManager.currentNamespace.fqn(id)
+                    }
+
+                return objectType(name)
+            }
+            else -> {
+                // The AST supplied us with some kind of type information, but we could not parse
+                // it, so we
+                // need to return the unknown type.
+                return unknownType()
+            }
+        }
     }
 
     override fun codeOf(astNode: PythonAST.AST): String? {
@@ -130,17 +166,22 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         val pythonASTModule =
             fromPython(pyAST) as? PythonAST.Module
                 ?: TODO() // could be one of ast.{Module,Interactive,Expression,FunctionType}
+
         val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
         scopeManager.resetToGlobal(tud)
+
         val nsdName = Path(path).nameWithoutExtension
         val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
         tud.addDeclaration(nsd)
+
         scopeManager.enterScope(nsd)
         for (stmt in pythonASTModule.body) {
             nsd.statements += statementHandler.handle(stmt)
         }
         scopeManager.leaveScope(nsd)
+
         scopeManager.addDeclaration(nsd)
+
         return tud
     }
 }

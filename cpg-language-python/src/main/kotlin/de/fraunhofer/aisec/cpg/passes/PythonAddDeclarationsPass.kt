@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -32,22 +33,31 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 
-// TODO depend on type resolver?
-@ExecuteFirst
+@DependsOn(TypeResolver::class)
+@ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
-class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), NamespaceProvider {
+class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     override fun cleanup() {
         // nothing to do
     }
+
+    /**
+     * Provide the [ScopeManager.currentScope] through the [ScopeProvider], so that [Node.scope] is
+     * automatically populated.
+     */
+    override val scope: Scope?
+        get() = scopeManager.currentScope
 
     override fun accept(p0: Component) {
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
@@ -95,6 +105,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                                         ?.receiver
                                         ?.name
                         ) {
+                            // We need to temporarily jump into the scope of the current record to
+                            // add the field
                             val field =
                                 scopeManager.withScope(scopeManager.currentRecord?.scope) {
                                     newFieldDeclaration(node.name)
@@ -102,7 +114,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
                             field
                         } else {
                             val v = newVariableDeclaration(node.name)
-
                             v
                         }
                     } else {
@@ -121,13 +132,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
             decl.isImplicit = true
 
             if (decl is FieldDeclaration) {
-                decl.scope = scopeManager.currentRecord?.scope
                 scopeManager.currentRecord?.addField(decl)
                 scopeManager.withScope(scopeManager.currentRecord?.scope) {
                     scopeManager.addDeclaration(decl)
                 }
             } else {
-                decl.scope = scopeManager.currentScope // TODO why do we need this?
                 scopeManager.addDeclaration(decl)
             }
             return decl
@@ -164,7 +173,4 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), N
             else -> TODO()
         }
     }
-
-    override val namespace: Name?
-        get() = scopeManager.currentNamespace
 }

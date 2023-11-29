@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, PythonAST.StmtBase>(::ProblemExpression, frontend) {
@@ -158,7 +157,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleClassDef(stmt: PythonAST.ClassDef): Statement {
         val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
-        stmt.bases.map { cls.superClasses.add(getTypeInCurrentNamespace(it)) }
+        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
         frontend.scopeManager.enterScope(cls)
 
@@ -389,9 +388,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleArgument(node: PythonAST.arg) {
-        val arg = newParameterDeclaration(name = node.arg, rawNode = node)
+        val type = frontend.typeOf(node.annotation)
+        val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
+
         frontend.scopeManager.addDeclaration(arg)
-        // TODO type hints?
     }
 
     /**
@@ -404,14 +404,5 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement(code = decl.code, rawNode = null) // TODO: rawNode
         declStmt.addDeclaration(decl)
         return declStmt
-    }
-
-    private fun getTypeInCurrentNamespace(it: PythonAST.AST): Type {
-        return if (it is PythonAST.Name) {
-            val namespace = frontend.scopeManager.currentNamespace?.localName
-            objectType(namespace + "." + it.id)
-        } else {
-            TODO()
-        }
     }
 }

@@ -137,6 +137,7 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     ArrayList(),
                     "",
                     null,
+                    null,
                     false,
                     base.language
                 )

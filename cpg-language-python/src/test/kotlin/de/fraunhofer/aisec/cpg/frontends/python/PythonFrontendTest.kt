@@ -37,17 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import java.net.URI
 import java.nio.file.Path
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
-    // TODO ensure gradle doesn't remove those classes
-    private val dummyRegion = Region()
-    private val dummyPhysicalLocation = PhysicalLocation(URI(""), dummyRegion)
-
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
@@ -139,7 +133,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.first()
         assertNotNull(s)
         assertLocalName("s", s)
-        // assertEquals(tu.primitiveType("str"), s.type) TODO decide how to handle types here
+        assertEquals(tu.primitiveType("str"), s.type)
 
         assertLocalName("bar", bar)
 
