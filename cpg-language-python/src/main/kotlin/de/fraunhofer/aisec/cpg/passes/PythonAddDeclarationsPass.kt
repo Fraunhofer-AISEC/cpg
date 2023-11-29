@@ -154,7 +154,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), S
                     val decl = handleReference(it)
                     if (decl != null) {
                         // We cannot assign an initializer here because this will lead to duplicate
-                        // DFG edges, but we need to propagate the type information
+                        // DFG edges, but we need to propagate the type information from our value
+                        // to the declaration. We therefore add the declaration to the observers of
+                        // the value's type, so that it gets informed and can change its own type
+                        // accordingly.
                         assignExpression
                             .findValue(it)
                             ?.registerTypeObserver(InitializerTypePropagation(decl))

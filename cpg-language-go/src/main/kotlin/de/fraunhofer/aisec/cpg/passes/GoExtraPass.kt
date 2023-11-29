@@ -474,5 +474,4 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
     override fun cleanup() {
         // Nothing to do
     }
-
 }
