@@ -1,10 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <inttypes.h>
-
 struct Point
 {
     int x, y, z;
@@ -22,6 +15,9 @@ int main()
     struct Point p2 = {.x = 20};
     struct Outer o = {.p.x = 10};
     int foo2[10] = { [3] = 1, [5] = 2 };
+
+    // This only works in C (!!)
+    int foo3[10] = { [0 ... 9] = 2 };
 
     return 0;
 }

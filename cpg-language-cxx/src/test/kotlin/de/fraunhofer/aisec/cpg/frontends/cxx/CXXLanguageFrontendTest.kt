@@ -1048,6 +1048,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
+    fun testCDesignatedInitializer() {
+        val file = File("src/test/resources/c/designated.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+
+        val foo3 = tu.variables["foo3"]
+        assertNotNull(foo3)
+    }
+
+    @Test
+    @Throws(Exception::class)
     fun testDesignatedInitializerAsAssignment() {
         val file = File("src/test/resources/components/designatedInitializer.cpp")
         val declaration =
