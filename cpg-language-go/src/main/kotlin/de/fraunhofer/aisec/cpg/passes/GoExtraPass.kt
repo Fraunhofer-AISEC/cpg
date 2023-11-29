@@ -475,18 +475,4 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         // Nothing to do
     }
 
-    class InitializerTypePropagation(private var decl: HasType, private var tupleIdx: Int = -1) :
-        HasType.TypeObserver {
-        override fun typeChanged(newType: Type, src: HasType) {
-            if (newType is TupleType && tupleIdx != -1) {
-                decl.type = newType.types.getOrElse(tupleIdx) { decl.unknownType() }
-            } else {
-                decl.type = newType
-            }
-        }
-
-        override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-            // TODO
-        }
-    }
 }

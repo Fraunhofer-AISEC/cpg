@@ -181,8 +181,16 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(2, (rhs.value as? Long)?.toInt())
 
-        val r = compStmt.statements[2] as? ReturnStatement
+        val r = compStmt.statements[3] as? ReturnStatement
         assertNotNull(r)
+
+        val s3 = tu.variables["s3"]
+        assertNotNull(s3)
+        assertLocalName("str", s3.type)
+
+        val baz = tu.functions["baz"]
+        assertNotNull(baz)
+        assertLocalName("str", baz.returnTypes.singleOrNull())
     }
 
     @Test

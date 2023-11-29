@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
@@ -151,11 +152,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), S
                 val resolved = scopeManager.resolveReference(it)
                 if (resolved == null) {
                     val decl = handleReference(it)
-                    assignExpression.findValue(it)?.let { value ->
-                        decl?.type = value.type
-                    } // TODO why do we need this (testCtor test case for example)?
+                    if (decl != null) {
+                        // We cannot assign an initializer here because this will lead to duplicate
+                        // DFG edges, but we need to propagate the type information
+                        assignExpression
+                            .findValue(it)
+                            ?.registerTypeObserver(InitializerTypePropagation(decl))
 
-                    decl?.let { d -> assignExpression.declarations += d }
+                        // Add it to our assign expression, so that we can find it in the AST
+                        assignExpression.declarations += decl
+                    }
                 }
             }
         }

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, PythonAST.StmtBase>(::ProblemExpression, frontend) {
@@ -214,10 +215,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        // HANDLE ANNOTATIONS
+        // Handle decorators (which are translated into CPG "annotations")
         result.addAnnotations(handleAnnotations(s))
 
-        // HANDLE ARGUMENTS
+        // Handle arguments
         if (s.args.posonlyargs.isNotEmpty()) {
             val problem =
                 newProblemDeclaration(
@@ -227,6 +228,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 )
             frontend.scopeManager.addDeclaration(problem)
         }
+
+        // Handle return type and calculate function type
+        if (result is ConstructorDeclaration) {
+            // Return type of the constructor is always its record declaration type
+            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
+        } else {
+            result.returnTypes = listOf(frontend.typeOf(s.returns))
+        }
+        result.type = FunctionType.computeType(result)
 
         if (recordDeclaration != null) {
             // first argument is the `receiver`

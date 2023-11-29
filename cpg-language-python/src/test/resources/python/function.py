@@ -5,4 +5,8 @@ def foo():
 def bar(s: str, s2: str):
     print("bar(s) here: ", s)
     a = 1 + 2
+    s3 = baz()
     return
+
+def baz() -> str:
+  return "foobar"
