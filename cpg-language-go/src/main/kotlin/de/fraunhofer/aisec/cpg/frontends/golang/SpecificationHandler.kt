@@ -55,9 +55,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         val include = newIncludeDeclaration(filename, rawNode = importSpec)
         include.name = parseName(name)
 
-        var alias = importSpec.name?.name
+        val alias = importSpec.name?.name
         if (alias != null && alias != name) {
-            var location = frontend.locationOf(importSpec)
+            val location = frontend.locationOf(importSpec)
 
             // If the name differs from the import name, we have an alias
             // Add an alias for the package on the current file
@@ -125,7 +125,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         Pair(field.names[0].name, listOf())
                     }
 
-                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
+                val decl = newFieldDeclaration(fieldName, type, modifiers)
+                frontend.setCodeAndLocation(decl, field)
                 frontend.scopeManager.addDeclaration(decl)
             }
         }
@@ -155,7 +156,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // "method" actually has a name, we declare a new method
                 // declaration.
                 if (field.names.isNotEmpty()) {
-                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
+                    val method = newMethodDeclaration(field.names[0].name)
+                    frontend.setCodeAndLocation(method, field)
                     method.type = type
 
                     frontend.scopeManager.enterScope(method)

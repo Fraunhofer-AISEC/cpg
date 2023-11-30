@@ -385,12 +385,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return annotations
     }
 
-    private fun makeBlock(
-        stmts: List<Python.ASTBASEstmt>,
-        code: String? = null,
-        rawNode: Python.AST? = null
-    ): Block {
-        val result = newBlock(code, rawNode)
+    private fun makeBlock(stmts: List<Python.ASTBASEstmt>, rawNode: Python.AST? = null): Block {
+        val result = newBlock(rawNode = rawNode)
         for (stmt in stmts) {
             result.addStatement(handle(stmt))
         }
@@ -411,7 +407,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * @return The wrapped [decl]
      */
     private fun wrapDeclarationToStatement(decl: Declaration): DeclarationStatement {
-        val declStmt = newDeclarationStatement(code = decl.code, rawNode = null) // TODO: rawNode
+        val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
         return declStmt
     }

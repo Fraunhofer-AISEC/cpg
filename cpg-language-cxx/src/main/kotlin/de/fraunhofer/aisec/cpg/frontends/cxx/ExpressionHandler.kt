@@ -54,9 +54,9 @@ import org.eclipse.cdt.internal.core.model.ASTStringUtil
  * handler.
  */
 class ExpressionHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTInitializerClause>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Expression, IASTNode>(Supplier(::ProblemExpression), lang) {
 
-    override fun handleNode(node: IASTInitializerClause): Expression {
+    override fun handleNode(node: IASTNode): Expression {
         return when (node) {
             is IASTLiteralExpression -> handleLiteralExpression(node)
             is IASTBinaryExpression -> handleBinaryExpression(node)
@@ -84,7 +84,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleLambdaExpression(node: CPPASTLambdaExpression): Expression {
-        val lambda = newLambdaExpression(frontend.codeOf(node))
+        val lambda = newLambdaExpression(rawNode = node)
 
         // Variables passed by reference are mutable. If we have initializers, we have to model the
         // variable explicitly.
@@ -210,8 +210,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // `new A`.
                 // Therefore, CDT does not have an explicit construct expression, so we need create
                 // an implicit one
-                initializer = newConstructExpression(t.name.localName, "${t.name.localName}()")
-                initializer.isImplicit = true
+                initializer =
+                    newConstructExpression(t.name.localName)
+                        .implicit(code = "${t.name.localName}()")
                 initializer.type = t
             }
 
@@ -346,7 +347,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     // this can either be just a meaningless bracket or it can be a cast expression
                     val typeName = (ctx.operand as IASTIdExpression).name.toString()
                     if (frontend.typeManager.typeExists(typeName)) {
-                        val cast = newCastExpression(frontend.codeOf(ctx))
+                        val cast = newCastExpression(rawNode = ctx)
                         cast.setCastOperator(0)
                         cast.castType = frontend.typeOf((ctx.operand as IASTIdExpression).name)
                         // The expression member can only be filled by the parent call
@@ -417,7 +418,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
             reference is UnaryOperator && reference.operatorCode == "*" -> {
                 // Classic C-style function pointer call -> let's extract the target
-                callExpression = newCallExpression(reference, "", reference.code, false)
+                callExpression = newCallExpression(reference, "", false, rawNode = ctx)
             }
             ctx.functionNameExpression is IASTIdExpression &&
                 (ctx.functionNameExpression as IASTIdExpression).name is CPPASTTemplateId -> {

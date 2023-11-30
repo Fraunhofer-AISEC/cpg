@@ -62,7 +62,7 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: @NonNull TranslationCont
     }
 
     private fun handleRootNode(node: RootNode): TranslationUnitDeclaration {
-        val tu = newTranslationUnitDeclaration(node.file, codeOf(node))
+        val tu = newTranslationUnitDeclaration(node.file, rawNode = node)
 
         scopeManager.resetToGlobal(tu)
 

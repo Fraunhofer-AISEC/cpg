@@ -92,7 +92,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): TryStatement {
-        val tryStatement = newTryStatement(tryBlockStatement.toString())
+        val tryStatement = newTryStatement()
         frontend.scopeManager.enterScope(tryStatement)
         val statement = handle(tryBlockStatement.tryBody) as Block?
         val catchClauses =
@@ -239,7 +239,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         // Adds true expression node where default empty condition evaluates to true, remove here
         // and in java StatementAnalyzer
         if (statement.conditionDeclaration == null && statement.condition == null) {
-            val literal: Literal<*> = newLiteral(true, primitiveType("bool"), "true")
+            val literal: Literal<*> =
+                newLiteral(true, primitiveType("bool")).implicit(code = "true")
             statement.condition = literal
         }
 
@@ -259,7 +260,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newForEachStatement(rawNode = ctx)
         frontend.scopeManager.enterScope(statement)
         val decl = frontend.declarationHandler.handle(ctx.declaration)
-        val `var` = newDeclarationStatement(decl?.code)
+        val `var` = newDeclarationStatement()
         `var`.singleDeclaration = decl
         val iterable: Statement? = frontend.expressionHandler.handle(ctx.initializerClause)
         statement.variable = `var`

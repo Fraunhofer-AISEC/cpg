@@ -82,7 +82,7 @@ open class PassConfiguration {}
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
 sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
-    Consumer<T>, ContextProvider, ScopeProvider {
+    Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
     var name: String
         protected set
 
