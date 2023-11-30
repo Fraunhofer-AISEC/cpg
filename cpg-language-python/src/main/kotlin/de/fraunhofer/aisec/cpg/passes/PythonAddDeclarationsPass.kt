@@ -149,22 +149,19 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), S
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
             (target as? Reference)?.let {
-                val resolved = scopeManager.resolveReference(it)
-                if (resolved == null) {
-                    val decl = handleReference(it)
-                    if (decl != null) {
-                        // We cannot assign an initializer here because this will lead to duplicate
-                        // DFG edges, but we need to propagate the type information from our value
-                        // to the declaration. We therefore add the declaration to the observers of
-                        // the value's type, so that it gets informed and can change its own type
-                        // accordingly.
-                        assignExpression
-                            .findValue(it)
-                            ?.registerTypeObserver(InitializerTypePropagation(decl))
+                val handled = handleReference(target)
+                if (handled is Declaration) {
+                    // We cannot assign an initializer here because this will lead to duplicate
+                    // DFG edges, but we need to propagate the type information from our value
+                    // to the declaration. We therefore add the declaration to the observers of
+                    // the value's type, so that it gets informed and can change its own type
+                    // accordingly.
+                    assignExpression
+                        .findValue(target)
+                        ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                        // Add it to our assign expression, so that we can find it in the AST
-                        assignExpression.declarations += decl
-                    }
+                    // Add it to our assign expression, so that we can find it in the AST
+                    assignExpression.declarations += handled
                 }
             }
         }
