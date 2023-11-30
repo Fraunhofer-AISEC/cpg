@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import org.checkerframework.checker.nullness.qual.NonNull
 import org.jruby.Ruby
 import org.jruby.ast.BlockNode
 import org.jruby.ast.MethodDefNode
@@ -40,7 +39,7 @@ import org.jruby.ast.RootNode
 import org.jruby.parser.Parser
 import org.jruby.parser.ParserConfiguration
 
-class RubyLanguageFrontend(language: RubyLanguage, ctx: @NonNull TranslationContext) :
+class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
     LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(language, ctx) {
     val declarationHandler: DeclarationHandler = DeclarationHandler(this)
     val expressionHandler: ExpressionHandler = ExpressionHandler(this)

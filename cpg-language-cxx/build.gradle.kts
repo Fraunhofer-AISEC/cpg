@@ -40,7 +40,16 @@ publishing {
 }
 
 dependencies {
-    api(libs.javaparser)
+    // Eclipse dependencies
+    api(libs.eclipse.runtime) {
+        // For some reason, this group name is wrong
+        exclude("org.osgi.service", "org.osgi.service.prefs")
+    }
+    api(libs.osgi.service)
+    api(libs.icu4j)
+
+    // CDT
+    api(libs.eclipse.cdt.core)
 
     testImplementation(libs.junit.params)
 }
