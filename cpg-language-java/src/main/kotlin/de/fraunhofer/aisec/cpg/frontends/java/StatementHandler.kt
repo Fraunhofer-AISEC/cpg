@@ -53,7 +53,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
@@ -526,36 +525,26 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-        var name = containingClass + this.language?.namespaceDelimiter + containingClass
-        val node =
-            this.newConstructExpression(
-                name,
-                explicitConstructorInvocationStmt.toString(),
-                explicitConstructorInvocationStmt
-            )
-        node.type = UnknownType.getUnknownType(language)
+
+        val name = containingClass
+        val node = this.newConstructExpression(name, rawNode = null)
+        node.type = unknownType()
+
+        // Create a reference either to "this"
         if (explicitConstructorInvocationStmt.isThis) {
             frontend.scopeManager.currentRecord?.toType()?.let { node.type = it }
             node.callee = this.newReference(name)
         } else {
-            frontend.scopeManager.currentRecord?.superTypes?.first()?.let {
+            // or to our direct (first) super type
+            frontend.scopeManager.currentRecord?.superTypes?.firstOrNull()?.let {
                 node.type = it
-                node.callee =
-                    this.newReference(
-                        it.name.toString() + this.language?.namespaceDelimiter + it.name.localName
-                    )
+                node.callee = this.newReference(it.name)
             }
         }
         val arguments =
             explicitConstructorInvocationStmt.arguments
-                .stream()
-                .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
-                .map { obj: de.fraunhofer.aisec.cpg.graph.statements.Statement? ->
-                    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression::class
-                        .java
-                        .cast(obj)
-                }
-                .collect(Collectors.toList())
+                .map(frontend.expressionHandler::handle)
+                .filterIsInstance<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression>()
         node.arguments = arguments
         return node
     }
