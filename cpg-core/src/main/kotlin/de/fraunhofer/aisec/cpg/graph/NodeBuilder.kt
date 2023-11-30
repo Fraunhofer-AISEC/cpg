@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -115,6 +116,11 @@ fun Node.applyMetadata(
 
     if (provider is ScopeProvider) {
         this.scope = provider.scope
+    } else {
+        LOGGER.warn(
+            "No scope provider was provided when creating the node {}. This might be an error",
+            name
+        )
     }
 
     if (provider is ContextProvider) {

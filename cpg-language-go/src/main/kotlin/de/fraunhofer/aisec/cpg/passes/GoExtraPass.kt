@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -109,10 +108,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(DFGPass::class)
-class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
-
-    override val scope: Scope?
-        get() = scopeManager.currentScope
+class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         // Add built-int functions, but only if one of the components contains a GoLanguage
