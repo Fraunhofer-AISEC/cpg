@@ -290,9 +290,11 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): DeclarationStatement {
+    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): Statement {
         return if (ctx.declaration is IASTASMDeclaration) {
-            newASMDeclarationStatement(rawNode = ctx)
+            // TODO: Specify the contained language through a language node and find a way to run a
+            //  frontend for sub-block if available
+            newDistinctLanguageBlock(rawNode = ctx)
         } else {
             val declarationStatement = newDeclarationStatement(rawNode = ctx)
             val declaration = frontend.declarationHandler.handle(ctx.declaration)
