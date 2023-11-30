@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
@@ -1081,5 +1082,43 @@ class PythonFrontendTest : BaseTest() {
             (secondLoop.variable as? Reference),
             barCall.arguments.first().prevDFG.firstOrNull()
         )
+    }
+
+    @Test
+    fun testArithmetics() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("calc.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val a = tu.refs["a"]
+        assertNotNull(a)
+
+        val result = a.evaluate(PythonValueEvaluator())
+        assertEquals(16.0, result)
+    }
+
+    class PythonValueEvaluator : ValueEvaluator() {
+        override fun computeBinaryOpEffect(
+            lhsValue: Any?,
+            rhsValue: Any?,
+            has: HasOperatorCode?,
+        ): Any? {
+            return if (has?.operatorCode == "**") {
+                when {
+                    lhsValue is Number && rhsValue is Number ->
+                        Math.pow(lhsValue.toDouble(), rhsValue.toDouble())
+                    else -> cannotEvaluate(has as Node, this)
+                }
+            } else {
+                super.computeBinaryOpEffect(lhsValue, rhsValue, has)
+            }
+        }
     }
 }
