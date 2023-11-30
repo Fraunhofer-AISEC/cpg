@@ -44,6 +44,7 @@ de.fraunhofer.aisec.cpg.frontends.llvm
 de.fraunhofer.aisec.cpg.passes
 module:cpg-language-python
 de.fraunhofer.aisec.cpg.frontends.python
+de.fraunhofer.aisec.cpg.passes
 module:cpg-language-ruby
 de.fraunhofer.aisec.cpg.frontends.ruby
 module:cpg-language-typescript
