@@ -97,17 +97,17 @@ fun MetadataProvider.newAssertStatement(
 }
 
 /**
- * Creates a new [ASMDeclarationStatement]. The [MetadataProvider] receiver will be used to fill
+ * Creates a new [DistinctLanguageBlock]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newASMDeclarationStatement(
+fun MetadataProvider.newDistinctLanguageBlock(
     code: String? = null,
     rawNode: Any? = null
-): ASMDeclarationStatement {
-    val node = ASMDeclarationStatement()
+): DistinctLanguageBlock {
+    val node = DistinctLanguageBlock()
     node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
     log(node)
