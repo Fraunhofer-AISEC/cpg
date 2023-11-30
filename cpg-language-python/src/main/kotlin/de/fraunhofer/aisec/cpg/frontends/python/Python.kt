@@ -39,7 +39,10 @@ import jep.python.PyObject
  */
 interface Python {
 
-    /** `ast.stmt` and `ast.expr` nodes have extra location properties as implemented here. */
+    /**
+     * `ast.stmt` [ASTBASEstmt] and `ast.expr` [ASTBASEexpr] nodes have extra location properties as
+     * implemented here.
+     */
     interface WithPythonLocation { // TODO make the fields accessible `by lazy`
         val pyObject: PyObject
 
