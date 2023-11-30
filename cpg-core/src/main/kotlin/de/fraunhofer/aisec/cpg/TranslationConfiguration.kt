@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
@@ -91,20 +94,21 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<KClass<out Pass<*>>>,
+    passes: List<List<KClass<out Pass<out Node>>>>,
     /**
      * This map offers the possibility to replace certain passes for specific languages with other
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
      * annotation on a [LanguageFrontend].
      */
     val replacedPasses:
-        Map<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>,
+        Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     languages: List<Language<*>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
     useUnityBuild: Boolean,
     useParallelFrontends: Boolean,
+    useParallelPasses: Boolean,
     inferenceConfiguration: InferenceConfiguration,
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
@@ -141,6 +145,8 @@ private constructor(
      */
     val useParallelFrontends: Boolean
 
+    val useParallelPasses: Boolean
+
     /**
      * This is the data structure for storing the compilation database. It stores a mapping from the
      * File to the list of files that have to be included to their path, specified by the parameter
@@ -160,8 +166,19 @@ private constructor(
     /** If true the (cpp) frontend connects a node to required includes. */
     val addIncludesToGraph: Boolean
 
+    /** A list containing a list of passes that run in parallel. */
+    @JsonIgnore val registeredPasses: List<List<KClass<out Pass<out Node>>>>
+
+    /**
+     * A flattened list of [registeredPasses], mainly used for the JSON representation because
+     * Jackson cannot deal with lists of lists very well.
+     */
     @get:JsonSerialize(contentUsing = KClassSerializer::class)
-    val registeredPasses: List<KClass<out Pass<*>>>
+    @get:JsonProperty("registeredPasses")
+    val flatRegisteredPasses: List<KClass<out Pass<*>>>
+        get() {
+            return registeredPasses.flatten()
+        }
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
@@ -177,6 +194,7 @@ private constructor(
         this.disableCleanup = disableCleanup
         this.useUnityBuild = useUnityBuild
         this.useParallelFrontends = useParallelFrontends
+        this.useParallelPasses = useParallelPasses
         this.inferenceConfiguration = inferenceConfiguration
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
@@ -227,6 +245,7 @@ private constructor(
         private var disableCleanup = false
         private var useUnityBuild = false
         private var useParallelFrontends = false
+        private var useParallelPasses = false
         private var inferenceConfiguration = InferenceConfiguration.Builder().build()
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
@@ -579,6 +598,11 @@ private constructor(
             return this
         }
 
+        fun useParallelPasses(b: Boolean): Builder {
+            useParallelPasses = b
+            return this
+        }
+
         fun inferenceConfiguration(configuration: InferenceConfiguration): Builder {
             inferenceConfiguration = configuration
             return this
@@ -606,6 +630,7 @@ private constructor(
                 disableCleanup,
                 useUnityBuild,
                 useParallelFrontends,
+                useParallelPasses,
                 inferenceConfiguration,
                 compilationDatabase,
                 matchCommentsToNodes,
@@ -659,6 +684,10 @@ private constructor(
                 }
             }
 
+            log.info(
+                "The following mermaid graph represents the pass dependencies: \n ${buildMermaid(softDependencies, hardDependencies)}"
+            )
+
             for (p in passes) {
                 var passFound = false
                 for ((pass) in workingList.getWorkingList()) {
@@ -681,6 +710,30 @@ private constructor(
         }
 
         /**
+         * Builds a markdown representation of a pass dependency graph, based on
+         * [Mermaid](https://mermaid.js.org) syntax.
+         */
+        private fun buildMermaid(
+            softDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>,
+            hardDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>
+        ): String {
+            var s = "```mermaid\n"
+            s += "flowchart TD;\n"
+            for ((pass, deps) in softDependencies.entries) {
+                for (dep in deps) {
+                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
+                }
+            }
+            for ((pass, deps) in hardDependencies.entries) {
+                for (dep in deps) {
+                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
+                }
+            }
+            s += "```"
+            return s
+        }
+
+        /**
          * This function reorders passes in order to meet their dependency requirements.
          * * soft dependencies [DependsOn] with `softDependency == true`: all passes registered as
          *   soft dependency will be executed before the current pass if they are registered
@@ -698,16 +751,17 @@ private constructor(
          *    [PassWithDepsContainer.workingList]
          * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
          *    dependencies
-         * 1. The first pass in the workingList without dependencies is added to the result and it
-         *    is removed from the other passes dependencies
+         * 1. A list of passes in the workingList without dependencies are added to the result, and
+         *    removed from the other passes dependencies
          * 1. The above step is repeated until all passes are added to the result
          *
-         * @return a sorted list of passes
+         * @return a sorted list of passes, with passes that can be run in parallel together in a
+         *   nested list.
          */
         @Throws(ConfigurationException::class)
-        private fun orderPasses(): List<KClass<out Pass<*>>> {
+        private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
-            val result = mutableListOf<KClass<out Pass<*>>>()
+            val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
             // duplicates
@@ -733,18 +787,22 @@ private constructor(
             }
             val firstPass = workingList.getAndRemoveFirstPass()
             if (firstPass != null) {
-                result.add(firstPass)
+                result.add(listOf(firstPass))
             }
             while (!workingList.isEmpty) {
                 val p = workingList.getAndRemoveFirstPassWithoutDependencies()
-                if (p != null) {
+                if (p.isNotEmpty()) {
                     result.add(p)
                 } else {
                     // failed to find a pass that can be added to the result -> deadlock :(
                     throw ConfigurationException("Failed to satisfy ordering requirements.")
                 }
             }
-            log.info("Passes after enforcing order: {}", result.map { it.simpleName })
+            log.info(
+                "Passes after enforcing order: {}",
+                result.map { list -> list.map { it.simpleName } }
+            )
+
             return result
         }
     }

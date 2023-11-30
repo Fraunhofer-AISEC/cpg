@@ -43,8 +43,7 @@ import org.neo4j.ogm.annotation.Relationship
  *
  * The name property of this node need to be a FQN for property resolution.
  */
-class NamespaceDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, ResolutionStartHolder {
+class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /**
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
@@ -93,7 +92,7 @@ class NamespaceDeclaration :
     override var statements: List<Statement> by
         PropertyEdgeDelegate(NamespaceDeclaration::statementEdges)
 
-    override val resolutionStartNodes: List<Node>
+    override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
             // Add all top-level declarations
