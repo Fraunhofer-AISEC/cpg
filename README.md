@@ -127,7 +127,7 @@ In the case of Golang, the necessary native code can be found in the `src/main/g
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
 
-Currently, only Python 3.{9,10,11,12} is supported.
+Currently, only Python 3.{9,10,11,12,13} is supported.
 
 ##### System Wide
 

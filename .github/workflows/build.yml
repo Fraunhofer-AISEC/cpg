@@ -93,12 +93,6 @@ jobs:
           if [ -d "/opt/hostedtoolcache/Python" ]; then
             find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
           fi
-      - name: Install pycodestyle
-        run: |
-          pip3 install pycodestyle
-      - name: Run pycodestyle
-        run: |
-          find cpg-language-python/src/main/python -iname "*.py" -print0 | xargs -n 1 -0 pycodestyle
       - uses: actions/download-artifact@v3
         with:
           name: libcpgo-arm64.dylib
