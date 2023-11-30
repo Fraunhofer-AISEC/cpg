@@ -51,10 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStatement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructorCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -517,7 +514,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructorCallExpression {
+    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructExpression {
         val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
@@ -528,21 +525,26 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-        val node =
-            this.newConstructorCallExpression(
-                containingClass,
-                explicitConstructorInvocationStmt.toString()
-            )
+
+        val name = containingClass
+        val node = this.newConstructExpression(name, rawNode = null)
+        node.type = unknownType()
+
+        // Create a reference either to "this"
+        if (explicitConstructorInvocationStmt.isThis) {
+            frontend.scopeManager.currentRecord?.toType()?.let { node.type = it }
+            node.callee = this.newReference(name)
+        } else {
+            // or to our direct (first) super type
+            frontend.scopeManager.currentRecord?.superTypes?.firstOrNull()?.let {
+                node.type = it
+                node.callee = this.newReference(it.name)
+            }
+        }
         val arguments =
             explicitConstructorInvocationStmt.arguments
-                .stream()
-                .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
-                .map { obj: de.fraunhofer.aisec.cpg.graph.statements.Statement? ->
-                    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression::class
-                        .java
-                        .cast(obj)
-                }
-                .collect(Collectors.toList())
+                .map(frontend.expressionHandler::handle)
+                .filterIsInstance<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression>()
         node.arguments = arguments
         return node
     }
