@@ -511,7 +511,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         } else {
             containingClass = currentRecord.name.toString()
         }
-<<<<<<< HEAD
 
         val name = containingClass
         val node = this.newConstructExpression(name, rawNode = null)
@@ -528,18 +527,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 node.callee = this.newReference(it.name)
             }
         }
-=======
-        val node =
-            this.newConstructorCallExpression(
-                containingClass,
-                rawNode = explicitConstructorInvocationStmt
-            )
->>>>>>> dc8011663 (Trying to type-safe rawNode)
+
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .map(frontend.expressionHandler::handle)
                 .filterIsInstance<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression>()
         node.arguments = arguments
+
         return node
     }
 

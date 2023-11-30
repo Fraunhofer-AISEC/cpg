@@ -567,43 +567,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val des = ctx.designators.firstOrNull()
         if (des == null) {
             Util.errorWithFileLocation(frontend, ctx, log, "no designator found")
-<<<<<<< HEAD
             return newProblemExpression("no designator found")
-=======
-        } else {
-            for (des in ctx.designators) {
-                var oneLhs: Expression? = null
-                when (des) {
-                    is CPPASTArrayDesignator -> {
-                        oneLhs = handle(des.subscriptExpression)
-                    }
-                    is CPPASTFieldDesignator -> {
-                        oneLhs = newReference(des.name.toString(), unknownType(), rawNode = des)
-                    }
-                    is CPPASTArrayRangeDesignator -> {
-                        oneLhs =
-                            newRangeExpression(
-                                handle(des.rangeFloor),
-                                handle(des.rangeCeiling),
-                                rawNode = des
-                            )
-                        oneLhs.operatorCode = "..."
-                    }
-                    else -> {
-                        Util.errorWithFileLocation(
-                            frontend,
-                            ctx,
-                            log,
-                            "Unknown designated lhs {}",
-                            des.javaClass.toGenericString()
-                        )
-                    }
-                }
-                if (oneLhs != null) {
-                    lhs.add(oneLhs)
-                }
-            }
->>>>>>> dc8011663 (Trying to type-safe rawNode)
         }
 
         // We need to start with our target (which we need to find in a hacky way) as
@@ -659,43 +623,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val des = ctx.designators.firstOrNull()
         if (des == null) {
             Util.errorWithFileLocation(frontend, ctx, log, "no designator found")
-<<<<<<< HEAD
             return newProblemExpression("no designator found")
-=======
-        } else {
-            for (des in ctx.designators) {
-                var oneLhs: Expression? = null
-                when (des) {
-                    is CPPASTArrayDesignator -> {
-                        oneLhs = handle(des.subscriptExpression)
-                    }
-                    is CPPASTFieldDesignator -> {
-                        oneLhs = newReference(des.name.toString(), unknownType(), rawNode = des)
-                    }
-                    is CPPASTArrayRangeDesignator -> {
-                        oneLhs =
-                            newRangeExpression(
-                                handle(des.rangeFloor),
-                                handle(des.rangeCeiling),
-                                rawNode = des
-                            )
-                        oneLhs.operatorCode = "..."
-                    }
-                    else -> {
-                        Util.errorWithFileLocation(
-                            frontend,
-                            ctx,
-                            log,
-                            "Unknown designated lhs {}",
-                            des.javaClass.toGenericString()
-                        )
-                    }
-                }
-                if (oneLhs != null) {
-                    lhs.add(oneLhs)
-                }
-            }
->>>>>>> dc8011663 (Trying to type-safe rawNode)
         }
 
         // We need to start with our target (which we need to find in a hacky way) as

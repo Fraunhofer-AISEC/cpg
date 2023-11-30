@@ -97,12 +97,9 @@ fun MetadataProvider.newAssertStatement(rawNode: Any? = null): AssertStatement {
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDistinctLanguageBlock(
-    code: String? = null,
-    rawNode: Any? = null
-): DistinctLanguageBlock {
+fun MetadataProvider.newDistinctLanguageBlock(rawNode: Any? = null): DistinctLanguageBlock {
     val node = DistinctLanguageBlock()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
     return node
