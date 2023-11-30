@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
@@ -80,7 +82,7 @@ open class PassConfiguration {}
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
 sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
-    Consumer<T>, ContextProvider {
+    Consumer<T>, ContextProvider, ScopeProvider {
     var name: String
         protected set
 
@@ -91,6 +93,14 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
     init {
         name = this.javaClass.name
     }
+
+    /**
+     * The current [Scope] of the [scopeManager]. Please note, that each pass is responsible for
+     * actually setting the correct scope within the [scopeManager], e.g., by using the
+     * [ScopedWalker].
+     */
+    override val scope: Scope?
+        get() = scopeManager.currentScope
 
     abstract fun cleanup()
 
