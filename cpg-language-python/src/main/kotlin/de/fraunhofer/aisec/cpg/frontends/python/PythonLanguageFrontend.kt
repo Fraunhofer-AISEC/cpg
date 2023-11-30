@@ -42,6 +42,7 @@ import java.net.URI
 import jep.python.PyObject
 import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
+import kotlin.math.min
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
@@ -128,7 +129,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             // remove not needed first characters of all lines (making the assumption, that we are
             // in an intended code block
             for (idx in mutableLines.indices) {
-                mutableLines[idx] = mutableLines[idx].substring(physicalLocation.region.startColumn)
+                mutableLines[idx] =
+                    mutableLines[idx].substring(
+                        min(physicalLocation.region.startColumn, mutableLines[idx].length)
+                    )
             }
 
             // remove not needed trailing characters of last line
@@ -136,7 +140,9 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             val toRemove =
                 mutableLines[lastLineIdx].length + physicalLocation.region.startColumn -
                     physicalLocation.region.endColumn
-            mutableLines[lastLineIdx] = mutableLines[lastLineIdx].dropLast(toRemove)
+            if (toRemove > 0) {
+                mutableLines[lastLineIdx] = mutableLines[lastLineIdx].dropLast(toRemove)
+            }
             return mutableLines.joinToString(separator = "\n") // TODO
         }
         return null
