@@ -38,28 +38,28 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, PythonAST.StmtBase>(::ProblemExpression, frontend) {
-    override fun handleNode(node: PythonAST.StmtBase): Statement {
+    PythonHandler<Statement, Python.ASTBASEstmt>(::ProblemExpression, frontend) {
+    override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
-            is PythonAST.ClassDef -> handleClassDef(node)
-            is PythonAST.FunctionDef -> handleFunctionDef(node)
-            is PythonAST.Pass -> return newEmptyStatement(rawNode = node)
-            is PythonAST.ImportFrom -> handleImportFrom(node)
-            is PythonAST.Assign -> handleAssign(node)
-            is PythonAST.Return -> handleReturn(node)
-            is PythonAST.If -> handleIf(node)
-            is PythonAST.AnnAssign -> handleAnnAssign(node)
-            is PythonAST.Expr -> handleExpressionStatement(node)
-            is PythonAST.For -> handleFor(node)
-            is PythonAST.While -> handleWhile(node)
-            is PythonAST.Import -> handleImport(node)
-            is PythonAST.Break -> newBreakStatement(rawNode = node)
-            is PythonAST.Continue -> newContinueStatement(rawNode = node)
+            is Python.ASTClassDef -> handleClassDef(node)
+            is Python.ASTFunctionDef -> handleFunctionDef(node)
+            is Python.ASTPass -> return newEmptyStatement(rawNode = node)
+            is Python.ASTImportFrom -> handleImportFrom(node)
+            is Python.ASTAssign -> handleAssign(node)
+            is Python.ASTReturn -> handleReturn(node)
+            is Python.ASTIf -> handleIf(node)
+            is Python.ASTAnnAssign -> handleAnnAssign(node)
+            is Python.ASTExpr -> handleExpressionStatement(node)
+            is Python.ASTFor -> handleFor(node)
+            is Python.ASTWhile -> handleWhile(node)
+            is Python.ASTImport -> handleImport(node)
+            is Python.ASTBreak -> newBreakStatement(rawNode = node)
+            is Python.ASTContinue -> newContinueStatement(rawNode = node)
             else -> TODO()
         }
     }
 
-    private fun handleImport(node: PythonAST.Import): Statement {
+    private fun handleImport(node: Python.ASTImport): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val v =
@@ -74,7 +74,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    private fun handleWhile(node: PythonAST.While): Statement {
+    private fun handleWhile(node: Python.ASTWhile): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body)
@@ -82,7 +82,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleFor(node: PythonAST.For): Statement {
+    private fun handleFor(node: Python.ASTFor): Statement {
         val ret = newForEachStatement(rawNode = node)
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
@@ -91,11 +91,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleExpressionStatement(node: PythonAST.Expr): Statement {
+    private fun handleExpressionStatement(node: Python.ASTExpr): Statement {
         return frontend.expressionHandler.handle(node.value)
     }
 
-    private fun handleAnnAssign(node: PythonAST.AnnAssign): Statement {
+    private fun handleAnnAssign(node: Python.ASTAnnAssign): Statement {
         // TODO: annotations
         val lhs = frontend.expressionHandler.handle(node.target)
         return if (node.value != null) {
@@ -109,7 +109,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleIf(node: PythonAST.If): Statement {
+    private fun handleIf(node: Python.ASTIf): Statement {
         val ret = newIfStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
@@ -127,20 +127,20 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleReturn(node: PythonAST.Return): Statement {
+    private fun handleReturn(node: Python.ASTReturn): Statement {
         val ret = newReturnStatement(rawNode = node)
         node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
         return ret
     }
 
-    private fun handleAssign(node: PythonAST.Assign): Statement {
+    private fun handleAssign(node: Python.ASTAssign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>) TODO()
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
-    private fun handleImportFrom(node: PythonAST.ImportFrom): Statement {
+    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (stmt in node.names) {
             val name =
@@ -156,7 +156,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    private fun handleClassDef(stmt: PythonAST.ClassDef): Statement {
+    private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
         val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
@@ -166,7 +166,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         for (s in stmt.body) {
             when (s) {
-                is PythonAST.FunctionDef -> handleFunctionDef(s, cls)
+                is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
                 else -> cls.addStatement(handleNode(s))
             }
         }
@@ -179,9 +179,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [PythonAST.FunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
+     * - A [Python.ASTFunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
      *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [PythonAST.FunctionDef] could be one of
+     * - A [Python.ASTFunctionDef] could be one of
      *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
      *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
      *       [ConstructorDeclaration]
@@ -191,7 +191,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(
-        s: PythonAST.FunctionDef,
+        s: Python.ASTFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
         val result =
@@ -340,11 +340,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAnnotations(
-        node: PythonAST.FunctionDef
+        node: Python.ASTFunctionDef
     ): Collection<de.fraunhofer.aisec.cpg.graph.Annotation> {
         val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
         for (decorator in node.decorator_list) {
-            if (decorator !is PythonAST.Call) {
+            if (decorator !is Python.ASTCall) {
                 TODO()
             }
 
@@ -386,9 +386,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun makeBlock(
-        stmts: List<PythonAST.StmtBase>,
+        stmts: List<Python.ASTBASEstmt>,
         code: String? = null,
-        rawNode: PythonAST.AST? = null
+        rawNode: Python.AST? = null
     ): Block {
         val result = newBlock(code, rawNode)
         for (stmt in stmts) {
@@ -397,7 +397,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return result
     }
 
-    private fun handleArgument(node: PythonAST.arg) {
+    private fun handleArgument(node: Python.ASTarg) {
         val type = frontend.typeOf(node.annotation)
         val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
 

@@ -32,24 +32,24 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Expression, PythonAST.ExprBase>(::ProblemExpression, frontend) {
-    override fun handleNode(node: PythonAST.ExprBase): Expression {
+    PythonHandler<Expression, Python.ASTBASEexpr>(::ProblemExpression, frontend) {
+    override fun handleNode(node: Python.ASTBASEexpr): Expression {
         return when (node) {
-            is PythonAST.Name -> handleName(node)
-            is PythonAST.Call -> handleCall(node)
-            is PythonAST.Constant -> handleConstant(node)
-            is PythonAST.Attribute -> handleAttribute(node)
-            is PythonAST.BinOp -> handleBinOp(node)
-            is PythonAST.Compare -> handleCompare(node)
-            is PythonAST.Dict -> handleDict(node)
-            is PythonAST.IfExp -> handleIfExp(node)
-            is PythonAST.Tuple -> handleTuple(node)
-            is PythonAST.PyList -> handleList(node)
+            is Python.ASTName -> handleName(node)
+            is Python.ASTCall -> handleCall(node)
+            is Python.ASTConstant -> handleConstant(node)
+            is Python.ASTAttribute -> handleAttribute(node)
+            is Python.ASTBinOp -> handleBinOp(node)
+            is Python.ASTCompare -> handleCompare(node)
+            is Python.ASTDict -> handleDict(node)
+            is Python.ASTIfExp -> handleIfExp(node)
+            is Python.ASTTuple -> handleTuple(node)
+            is Python.ASTList -> handleList(node)
             else -> TODO()
         }
     }
 
-    private fun handleList(node: PythonAST.PyList): Expression {
+    private fun handleList(node: Python.ASTList): Expression {
         val lst = mutableListOf<Expression>()
         for (e in node.elts) {
             lst += handle(e)
@@ -59,7 +59,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return ile
     }
 
-    private fun handleTuple(node: PythonAST.Tuple): Expression {
+    private fun handleTuple(node: Python.ASTTuple): Expression {
         val lst = mutableListOf<Expression>()
         for (e in node.elts) {
             lst += handle(e)
@@ -69,7 +69,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return ile
     }
 
-    private fun handleIfExp(node: PythonAST.IfExp): Expression {
+    private fun handleIfExp(node: Python.ASTIfExp): Expression {
         return newConditionalExpression(
             condition = handle(node.test),
             thenExpression = handle(node.body),
@@ -78,7 +78,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
-    private fun handleDict(node: PythonAST.Dict): Expression {
+    private fun handleDict(node: Python.ASTDict): Expression {
         val lst = mutableListOf<Expression>()
         for (i in node.values.indices) { // TODO: keys longer than values possible?
             lst +=
@@ -93,22 +93,22 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return ile
     }
 
-    private fun handleCompare(node: PythonAST.Compare): Expression {
+    private fun handleCompare(node: Python.ASTCompare): Expression {
         if (node.comparators.size != 1 || node.ops.size != 1) {
             return newProblemExpression("Multi compare is not (yet) supported.", rawNode = node)
         }
         val op =
             when (node.ops.first()) {
-                is PythonAST.Eq -> "=="
-                is PythonAST.NotEq -> "!="
-                is PythonAST.Lt -> "<"
-                is PythonAST.LtE -> "<="
-                is PythonAST.Gt -> ">"
-                is PythonAST.GtE -> ">="
-                is PythonAST.Is -> "is"
-                is PythonAST.IsNot -> "is not"
-                is PythonAST.In -> "in"
-                is PythonAST.NotIn -> "not in"
+                is Python.ASTEq -> "=="
+                is Python.ASTNotEq -> "!="
+                is Python.ASTLt -> "<"
+                is Python.ASTLtE -> "<="
+                is Python.ASTGt -> ">"
+                is Python.ASTGtE -> ">="
+                is Python.ASTIs -> "is"
+                is Python.ASTIsNot -> "is not"
+                is Python.ASTIn -> "in"
+                is Python.ASTNotIn -> "not in"
                 else -> TODO()
             }
         val ret = newBinaryOperator(op, rawNode = node)
@@ -117,22 +117,22 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleBinOp(node: PythonAST.BinOp): Expression {
+    private fun handleBinOp(node: Python.ASTBinOp): Expression {
         val op =
             when (node.op) {
-                is PythonAST.Add -> "+"
-                is PythonAST.Sub -> "-"
-                is PythonAST.Mult -> "*"
-                is PythonAST.MatMult -> "*"
-                is PythonAST.Div -> "/"
-                is PythonAST.Mod -> "%"
-                is PythonAST.Pow -> "**"
-                is PythonAST.LShift -> "<<"
-                is PythonAST.RShift -> ">>"
-                is PythonAST.BitOr -> "|"
-                is PythonAST.BitXor -> "^"
-                is PythonAST.BitAnd -> "&"
-                is PythonAST.FloorDiv -> "//"
+                is Python.ASTAdd -> "+"
+                is Python.ASTSub -> "-"
+                is Python.ASTMult -> "*"
+                is Python.ASTMatMult -> "*"
+                is Python.ASTDiv -> "/"
+                is Python.ASTMod -> "%"
+                is Python.ASTPow -> "**"
+                is Python.ASTLShift -> "<<"
+                is Python.ASTRShift -> ">>"
+                is Python.ASTBitOr -> "|"
+                is Python.ASTBitXor -> "^"
+                is Python.ASTBitAnd -> "&"
+                is Python.ASTFloorDiv -> "//"
                 else -> TODO()
             }
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
@@ -141,11 +141,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleAttribute(node: PythonAST.Attribute): Expression {
+    private fun handleAttribute(node: Python.ASTAttribute): Expression {
         return newMemberExpression(name = node.attr, base = handle(node.value), rawNode = node)
     }
 
-    private fun handleConstant(node: PythonAST.Constant): Expression {
+    private fun handleConstant(node: Python.ASTConstant): Expression {
         // TODO: this is ugly
 
         return if (
@@ -163,7 +163,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun easyConstant(node: PythonAST.Constant): Expression {
+    private fun easyConstant(node: Python.ASTConstant): Expression {
         // TODO check and add missing types
         val tpe =
             when (node.value) {
@@ -189,10 +189,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      *
      * TODO: cast, memberexpression, magic
      */
-    private fun handleCall(node: PythonAST.Call): Expression {
+    private fun handleCall(node: Python.ASTCall): Expression {
         val ret =
             when (node.func) {
-                is PythonAST.Attribute -> {
+                is Python.ASTAttribute -> {
                     newMemberCallExpression(
                         frontend.expressionHandler.handle(node.func),
                         rawNode = node
@@ -210,7 +210,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         // construct expression
                         val constructExpr =
                             newConstructExpression(
-                                (node.func as? PythonAST.Name)?.id,
+                                (node.func as? Python.ASTName)?.id,
                                 rawNode = node
                             )
                         constructExpr.type = record.toType()
@@ -232,7 +232,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleName(node: PythonAST.Name): Expression {
+    private fun handleName(node: Python.ASTName): Expression {
         val r = newReference(name = node.id, rawNode = node)
 
         /*

@@ -37,7 +37,7 @@ import jep.python.PyObject
  * - Python's `int` is mapped to `Int`
  * - Constants are mapped as `Any` (thus Jep's conversion to Java makes the translation)
  */
-interface PythonAST {
+interface Python {
 
     /** `ast.stmt` and `ast.expr` nodes have extra location properties as implemented here. */
     interface WithPythonLocation { // TODO make the fields accessible `by lazy`
@@ -86,7 +86,7 @@ interface PythonAST {
      *
      * Note: We currently only support `Module`s.
      */
-    abstract class mod(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEmod(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -94,10 +94,10 @@ interface PythonAST {
      *  |  Module(stmt* body, type_ignore* type_ignores)
      * ```
      */
-    class Module(pyObject: PyObject) : AST(pyObject) {
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+    class ASTModule(pyObject: PyObject) : AST(pyObject) {
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
 
-        val type_ignores: List<type_ignore> by lazy { "type_ignores" of pyObject }
+        val type_ignores: List<ASTtype_ignore> by lazy { "type_ignores" of pyObject }
     }
 
     /**
@@ -132,7 +132,7 @@ interface PythonAST {
      *  |  | Continue
      * ```
      */
-    abstract class StmtBase(pyObject: PyObject) : AST(pyObject), WithPythonLocation
+    abstract class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```
@@ -140,16 +140,16 @@ interface PythonAST {
      *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class FunctionDef(pyObject: PyObject) : StmtBase(pyObject) {
+    class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
-        val args: arguments by lazy { "args" of pyObject }
+        val args: ASTarguments by lazy { "args" of pyObject }
 
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
 
-        val decorator_list: List<ExprBase> by lazy { "decorator_list" of pyObject }
+        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
 
-        val returns: ExprBase? by lazy { "returns" of pyObject }
+        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
 
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
@@ -160,16 +160,16 @@ interface PythonAST {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class AsyncFunctionDef(pyObject: PyObject) : StmtBase(pyObject) {
+    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
-        val args: arguments by lazy { "args" of pyObject }
+        val args: ASTarguments by lazy { "args" of pyObject }
 
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
 
-        val decorator_list: List<ExprBase> by lazy { "decorator_list" of pyObject }
+        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
 
-        val returns: ExprBase? by lazy { "returns" of pyObject }
+        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
 
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
@@ -180,16 +180,16 @@ interface PythonAST {
      *  |  ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list)
      * ```
      */
-    class ClassDef(pyObject: PyObject) : StmtBase(pyObject) {
+    class ASTClassDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
-        val bases: List<ExprBase> by lazy { "bases" of pyObject }
+        val bases: List<ASTBASEexpr> by lazy { "bases" of pyObject }
 
-        val keywords: List<keyword> by lazy { "keywords" of pyObject }
+        val keywords: List<ASTkeyword> by lazy { "keywords" of pyObject }
 
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
 
-        val decorator_list: List<ExprBase> by lazy { "decorator_list" of pyObject }
+        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
     }
 
     /**
@@ -198,8 +198,8 @@ interface PythonAST {
      *  |  Return(expr? value)
      * ```
      */
-    class Return(pyObject: PyObject) : StmtBase(pyObject) {
-        val value: ExprBase? by lazy { "value" of pyObject }
+    class ASTReturn(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val value: ASTBASEexpr? by lazy { "value" of pyObject }
     }
 
     /**
@@ -208,8 +208,8 @@ interface PythonAST {
      *  |  Delete(expr* targets)
      * ```
      */
-    class Delete(pyObject: PyObject) : StmtBase(pyObject) {
-        val targets: List<ExprBase> by lazy { "targets" of pyObject }
+    class ASTDelete(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val targets: List<ASTBASEexpr> by lazy { "targets" of pyObject }
     }
 
     /**
@@ -218,10 +218,10 @@ interface PythonAST {
      *  |  Assign(expr* targets, expr value, string? type_comment)
      * ```
      */
-    class Assign(pyObject: PyObject) : StmtBase(pyObject) {
-        val targets: List<ExprBase> by lazy { "targets" of pyObject }
+    class ASTAssign(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val targets: List<ASTBASEexpr> by lazy { "targets" of pyObject }
 
-        val value: ExprBase by lazy { "value" of pyObject }
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
 
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
@@ -232,10 +232,10 @@ interface PythonAST {
      *  |  AugAssign(expr target, operator op, expr value)
      * ```
      */
-    class AugAssign(pyObject: PyObject) : StmtBase(pyObject) {
-        val target: ExprBase by lazy { "target" of pyObject }
-        val op: OperatorBase by lazy { "op" of pyObject }
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTAugAssign(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val op: ASTBASEoperator by lazy { "op" of pyObject }
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -244,10 +244,10 @@ interface PythonAST {
      *  |  AnnAssign(expr target, expr annotation, expr? value, int simple)
      * ```
      */
-    class AnnAssign(pyObject: PyObject) : StmtBase(pyObject) {
-        val target: ExprBase by lazy { "target" of pyObject }
-        val annotation: ExprBase by lazy { "annotation" of pyObject }
-        val value: ExprBase? by lazy { "value" of pyObject }
+    class ASTAnnAssign(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val annotation: ASTBASEexpr by lazy { "annotation" of pyObject }
+        val value: ASTBASEexpr? by lazy { "value" of pyObject }
         val simple: Int by lazy {
             "simple" of pyObject
         } // TODO: is this an `Int` from Kotlins perspective?
@@ -259,11 +259,11 @@ interface PythonAST {
      *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class For(pyObject: PyObject) : StmtBase(pyObject) {
-        val target: ExprBase by lazy { "target" of pyObject }
-        val iter: ExprBase by lazy { "iter" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
-        val orelse: List<StmtBase> by lazy { "orelse" of pyObject }
+    class ASTFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val iter: ASTBASEexpr by lazy { "iter" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
@@ -273,11 +273,11 @@ interface PythonAST {
      *  |  AsyncFor(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class AsyncFor(pyObject: PyObject) : StmtBase(pyObject) {
-        val target: ExprBase by lazy { "target" of pyObject }
-        val iter: ExprBase by lazy { "iter" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
-        val orelse: List<StmtBase> by lazy { "orelse" of pyObject }
+    class ASTAsyncFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val iter: ASTBASEexpr by lazy { "iter" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
@@ -287,10 +287,10 @@ interface PythonAST {
      *  |  While(expr test, stmt* body, stmt* orelse)
      * ```
      */
-    class While(pyObject: PyObject) : StmtBase(pyObject) {
-        val test: ExprBase by lazy { "test" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
-        val orelse: List<StmtBase> by lazy { "orelse" of pyObject }
+    class ASTWhile(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val test: ASTBASEexpr by lazy { "test" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
     }
 
     /**
@@ -299,10 +299,10 @@ interface PythonAST {
      *  |  If(expr test, stmt* body, stmt* orelse)
      * ```
      */
-    class If(pyObject: PyObject) : StmtBase(pyObject) {
-        val test: ExprBase by lazy { "test" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
-        val orelse: List<StmtBase> by lazy { "orelse" of pyObject }
+    class ASTIf(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val test: ASTBASEexpr by lazy { "test" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
     }
 
     /**
@@ -311,9 +311,9 @@ interface PythonAST {
      *  |  With(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class With(pyObject: PyObject) : StmtBase(pyObject) {
-        val items: withitem by lazy { "items" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+    class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val items: ASTwithitem by lazy { "items" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
@@ -323,9 +323,9 @@ interface PythonAST {
      *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class AsyncWith(pyObject: PyObject) : StmtBase(pyObject) {
-        val items: withitem by lazy { "items" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+    class ASTAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val items: ASTwithitem by lazy { "items" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
@@ -335,9 +335,9 @@ interface PythonAST {
      *  |  Match(expr subject, match_case* cases)
      * ```
      */
-    class Match(pyObject: PyObject) : StmtBase(pyObject) {
-        val subject: ExprBase by lazy { "subject" of pyObject }
-        val cases: List<match_case> by lazy { "cases" of pyObject }
+    class ASTMatch(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val subject: ASTBASEexpr by lazy { "subject" of pyObject }
+        val cases: List<ASTmatch_case> by lazy { "cases" of pyObject }
     }
 
     /**
@@ -346,9 +346,9 @@ interface PythonAST {
      *  |  Raise(expr? exc, expr? cause)
      * ```
      */
-    class Raise(pyObject: PyObject) : StmtBase(pyObject) {
-        val exc: ExprBase? by lazy { "exc" of pyObject }
-        val cause: ExprBase? by lazy { "cause" of pyObject }
+    class ASTRaise(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val exc: ASTBASEexpr? by lazy { "exc" of pyObject }
+        val cause: ASTBASEexpr? by lazy { "cause" of pyObject }
     }
 
     /**
@@ -357,11 +357,11 @@ interface PythonAST {
      *  |  Try(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
      * ```
      */
-    class Try(pyObject: PyObject) : StmtBase(pyObject) {
-        val body: List<StmtBase> by lazy { "body" of pyObject }
-        val handlers: List<excepthandler> by lazy { "handlers" of pyObject }
-        val orelse: List<StmtBase> by lazy { "orelse" of pyObject }
-        val stmt: List<StmtBase> by lazy { "StmtBase" of pyObject }
+    class ASTTry(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val handlers: List<ASTexcepthandler> by lazy { "handlers" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
+        val stmt: List<ASTBASEstmt> by lazy { "StmtBase" of pyObject }
     }
 
     /**
@@ -370,11 +370,11 @@ interface PythonAST {
      *  |  TryStar(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
      * ```
      */
-    class TryStar(pyObject: PyObject) : StmtBase(pyObject) {
-        val body: List<StmtBase> by lazy { "body" of pyObject }
-        val handlers: List<excepthandler> by lazy { "handlers" of pyObject }
-        val orelse: List<StmtBase> by lazy { "orelse" of pyObject }
-        val finalbody: List<StmtBase> by lazy { "finalbody" of pyObject }
+    class ASTTryStar(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val handlers: List<ASTexcepthandler> by lazy { "handlers" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
+        val finalbody: List<ASTBASEstmt> by lazy { "finalbody" of pyObject }
     }
 
     /**
@@ -383,9 +383,9 @@ interface PythonAST {
      *  |  Assert(expr test, expr? msg)
      * ```
      */
-    class Assert(pyObject: PyObject) : StmtBase(pyObject) {
-        val test: ExprBase by lazy { "test" of pyObject }
-        val msg: ExprBase? by lazy { "msg" of pyObject }
+    class ASTAssert(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val test: ASTBASEexpr by lazy { "test" of pyObject }
+        val msg: ASTBASEexpr? by lazy { "msg" of pyObject }
     }
 
     /**
@@ -394,8 +394,8 @@ interface PythonAST {
      *  |  Import(alias* names)
      * ```
      */
-    class Import(pyObject: PyObject) : StmtBase(pyObject) {
-        val names: List<alias> by lazy { "names" of pyObject }
+    class ASTImport(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val names: List<ASTalias> by lazy { "names" of pyObject }
     }
 
     /**
@@ -404,9 +404,9 @@ interface PythonAST {
      *  |  ImportFrom(identifier? module, alias* names, int? level)
      * ```
      */
-    class ImportFrom(pyObject: PyObject) : StmtBase(pyObject) {
+    class ASTImportFrom(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val module: String? by lazy { "module" of pyObject }
-        val names: List<alias> by lazy { "names" of pyObject }
+        val names: List<ASTalias> by lazy { "names" of pyObject }
         val level: Int? by lazy {
             "level" of pyObject
         } // TODO: is this an `Int` from Kotlins perspective?
@@ -418,7 +418,7 @@ interface PythonAST {
      *  |  Global(identifier* names)
      * ```
      */
-    class Global(pyObject: PyObject) : StmtBase(pyObject) {
+    class ASTGlobal(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val names: List<String> by lazy { "names" of pyObject }
     }
 
@@ -428,13 +428,13 @@ interface PythonAST {
      *  |  Nonlocal(identifier* names)
      * ```
      */
-    class Nonlocal(pyObject: PyObject) : StmtBase(pyObject) {
+    class ASTNonlocal(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val names: List<String> by lazy { "names" of pyObject }
     }
 
     /**
      * Represents `ast.Expr` expressions. Note: do not confuse with
-     * - [ExprBase] -> the expression class
+     * - [ASTBASEexpr] -> the expression class
      * - [Expression] -> the expression as part of `mod`
      *
      * ```
@@ -442,8 +442,8 @@ interface PythonAST {
      *  |  Expr(expr value)
      * ```
      */
-    class Expr(pyObject: PyObject) : StmtBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTExpr(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -452,7 +452,7 @@ interface PythonAST {
      *  |  Pass
      * ```
      */
-    class Pass(pyObject: PyObject) : StmtBase(pyObject)
+    class ASTPass(pyObject: PyObject) : ASTBASEstmt(pyObject)
 
     /**
      * ```
@@ -460,7 +460,7 @@ interface PythonAST {
      *  |  Break
      * ```
      */
-    class Break(pyObject: PyObject) : StmtBase(pyObject)
+    class ASTBreak(pyObject: PyObject) : ASTBASEstmt(pyObject)
 
     /**
      * ```
@@ -468,16 +468,16 @@ interface PythonAST {
      *  |  Continue
      * ```
      */
-    class Continue(pyObject: PyObject) : StmtBase(pyObject)
+    class ASTContinue(pyObject: PyObject) : ASTBASEstmt(pyObject)
 
     /**
      * Represents `ast.expr` expressions. Note: do not confuse with
-     * - [Expr] -> the expression statement
+     * - [ASTExpr] -> the expression statement
      * - [Expression] -> the expression as part of `mod`
      *
      * ast.expr = class expr(AST)
      */
-    abstract class ExprBase(pyObject: PyObject) : AST(pyObject), WithPythonLocation
+    abstract class ASTBASEexpr(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```
@@ -485,9 +485,9 @@ interface PythonAST {
      *  |  BoolOp(boolop op, expr* values)
      * ```
      */
-    class BoolOp(pyObject: PyObject) : ExprBase(pyObject) {
-        val op: BoolOpBase by lazy { "op" of pyObject }
-        val values: List<ExprBase> by lazy { "values" of pyObject }
+    class ASTBoolOp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val op: ASTBASEboolop by lazy { "op" of pyObject }
+        val values: List<ASTBASEexpr> by lazy { "values" of pyObject }
     }
 
     /**
@@ -496,9 +496,9 @@ interface PythonAST {
      *  |  NamedExpr(expr target, expr value)
      * ```
      */
-    class NamedExpr(pyObject: PyObject) : ExprBase(pyObject) {
-        val target: ExprBase by lazy { "target" of pyObject }
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTNamedExpr(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -507,10 +507,10 @@ interface PythonAST {
      *  |  BinOp(expr left, operator op, expr right)
      * ```
      */
-    class BinOp(pyObject: PyObject) : ExprBase(pyObject) {
-        val left: ExprBase by lazy { "left" of pyObject }
-        val op: OperatorBase by lazy { "op" of pyObject }
-        val right: ExprBase by lazy { "right" of pyObject }
+    class ASTBinOp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val left: ASTBASEexpr by lazy { "left" of pyObject }
+        val op: ASTBASEoperator by lazy { "op" of pyObject }
+        val right: ASTBASEexpr by lazy { "right" of pyObject }
     }
 
     /**
@@ -519,9 +519,9 @@ interface PythonAST {
      *  |  UnaryOp(unaryop op, expr operand)
      * ```
      */
-    class UnaryOp(pyObject: PyObject) : ExprBase(pyObject) {
-        val op: UnaryOpBase by lazy { "op" of pyObject }
-        val operand: ExprBase by lazy { "operand" of pyObject }
+    class ASTUnaryOp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val op: ASTBASEunaryop by lazy { "op" of pyObject }
+        val operand: ASTBASEexpr by lazy { "operand" of pyObject }
     }
 
     /**
@@ -530,9 +530,9 @@ interface PythonAST {
      *  |  Lambda(arguments args, expr body)
      * ```
      */
-    class Lambda(pyObject: PyObject) : ExprBase(pyObject) {
-        val args: arguments by lazy { "args" of pyObject }
-        val body: ExprBase by lazy { "body" of pyObject }
+    class ASTLambda(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val args: ASTarguments by lazy { "args" of pyObject }
+        val body: ASTBASEexpr by lazy { "body" of pyObject }
     }
 
     /**
@@ -541,10 +541,10 @@ interface PythonAST {
      *  |  IfExp(expr test, expr body, expr orelse)
      * ```
      */
-    class IfExp(pyObject: PyObject) : ExprBase(pyObject) {
-        val test: ExprBase by lazy { "test" of pyObject }
-        val body: ExprBase by lazy { "body" of pyObject }
-        val orelse: ExprBase by lazy { "orelse" of pyObject }
+    class ASTIfExp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val test: ASTBASEexpr by lazy { "test" of pyObject }
+        val body: ASTBASEexpr by lazy { "body" of pyObject }
+        val orelse: ASTBASEexpr by lazy { "orelse" of pyObject }
     }
 
     /**
@@ -553,9 +553,9 @@ interface PythonAST {
      *  |  Dict(expr* keys, expr* values)
      * ```
      */
-    class Dict(pyObject: PyObject) : ExprBase(pyObject) {
-        val keys: List<ExprBase?> by lazy { "keys" of pyObject }
-        val values: List<ExprBase> by lazy { "values" of pyObject }
+    class ASTDict(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val keys: List<ASTBASEexpr?> by lazy { "keys" of pyObject }
+        val values: List<ASTBASEexpr> by lazy { "values" of pyObject }
     }
 
     /**
@@ -564,8 +564,8 @@ interface PythonAST {
      *  |  Set(expr* elts)
      * ```
      */
-    class Set(pyObject: PyObject) : ExprBase(pyObject) {
-        val elts: List<ExprBase> by lazy { "elts" of pyObject }
+    class ASTSet(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val elts: List<ASTBASEexpr> by lazy { "elts" of pyObject }
     }
 
     /**
@@ -574,9 +574,9 @@ interface PythonAST {
      *  |  ListComp(expr elt, comprehension* generators)
      * ```
      */
-    class ListComp(pyObject: PyObject) : ExprBase(pyObject) {
-        val elt: ExprBase by lazy { "elt" of pyObject }
-        val generators: List<comprehension> by lazy { "generators" of pyObject }
+    class ASTListComp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val elt: ASTBASEexpr by lazy { "elt" of pyObject }
+        val generators: List<ASTcomprehension> by lazy { "generators" of pyObject }
     }
 
     /**
@@ -585,9 +585,9 @@ interface PythonAST {
      *  |  SetComp(expr elt, comprehension* generators)
      * ```
      */
-    class SetComp(pyObject: PyObject) : ExprBase(pyObject) {
-        val elt: ExprBase by lazy { "elt" of pyObject }
-        val generators: List<comprehension> by lazy { "generators" of pyObject }
+    class ASTSetComp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val elt: ASTBASEexpr by lazy { "elt" of pyObject }
+        val generators: List<ASTcomprehension> by lazy { "generators" of pyObject }
     }
 
     /**
@@ -596,10 +596,10 @@ interface PythonAST {
      *  |  DictComp(expr key, expr value, comprehension* generators)
      * ```
      */
-    class DictComp(pyObject: PyObject) : ExprBase(pyObject) {
-        val key: ExprBase by lazy { "key" of pyObject }
-        val value: ExprBase by lazy { "value" of pyObject }
-        val generators: List<comprehension> by lazy { "generators" of pyObject }
+    class ASTDictComp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val key: ASTBASEexpr by lazy { "key" of pyObject }
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
+        val generators: List<ASTcomprehension> by lazy { "generators" of pyObject }
     }
 
     /**
@@ -608,9 +608,9 @@ interface PythonAST {
      *  |  GeneratorExp(expr elt, comprehension* generators)
      * ```
      */
-    class GeneratorExp(pyObject: PyObject) : ExprBase(pyObject) {
-        val elt: ExprBase by lazy { "elt" of pyObject }
-        val generators: List<comprehension> by lazy { "generators" of pyObject }
+    class ASTGeneratorExp(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val elt: ASTBASEexpr by lazy { "elt" of pyObject }
+        val generators: List<ASTcomprehension> by lazy { "generators" of pyObject }
     }
 
     /**
@@ -619,8 +619,8 @@ interface PythonAST {
      *  |  Await(expr value)
      * ```
      */
-    class Await(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTAwait(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -629,8 +629,8 @@ interface PythonAST {
      *  |  Yield(expr? value)
      * ```
      */
-    class Yield(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase? by lazy { "value" of pyObject }
+    class ASTYield(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr? by lazy { "value" of pyObject }
     }
 
     /**
@@ -639,8 +639,8 @@ interface PythonAST {
      *  |  YieldFrom(expr value)
      * ```
      */
-    class YieldFrom(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTYieldFrom(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -649,10 +649,10 @@ interface PythonAST {
      *  |  Compare(expr left, cmpop* ops, expr* comparators)
      * ```
      */
-    class Compare(pyObject: PyObject) : ExprBase(pyObject) {
-        val left: ExprBase by lazy { "left" of pyObject }
-        val ops: List<cmpop> by lazy { "ops" of pyObject }
-        val comparators: List<ExprBase> by lazy { "comparators" of pyObject }
+    class ASTCompare(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val left: ASTBASEexpr by lazy { "left" of pyObject }
+        val ops: List<ASTBASEcmpop> by lazy { "ops" of pyObject }
+        val comparators: List<ASTBASEexpr> by lazy { "comparators" of pyObject }
     }
 
     /**
@@ -661,12 +661,12 @@ interface PythonAST {
      *  |  Call(expr func, expr* args, keyword* keywords)
      * ```
      */
-    class Call(pyObject: PyObject) : ExprBase(pyObject) {
-        val func: ExprBase by lazy { "func" of pyObject }
+    class ASTCall(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val func: ASTBASEexpr by lazy { "func" of pyObject }
 
-        val args: List<ExprBase> by lazy { "args" of pyObject }
+        val args: List<ASTBASEexpr> by lazy { "args" of pyObject }
 
-        val keywords: List<keyword> by lazy { "keywords" of pyObject }
+        val keywords: List<ASTkeyword> by lazy { "keywords" of pyObject }
     }
 
     /**
@@ -675,10 +675,10 @@ interface PythonAST {
      *  |  FormattedValue(expr value, int conversion, expr? format_spec)
      * ```
      */
-    class FormattedValue(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTFormattedValue(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
         val conversion: Int? by lazy { "value" of pyObject } // TODO: int in Kotlin as well?
-        val format_spec: ExprBase? by lazy { "format_spec" of pyObject }
+        val format_spec: ASTBASEexpr? by lazy { "format_spec" of pyObject }
     }
 
     /**
@@ -687,8 +687,8 @@ interface PythonAST {
      *  |  JoinedStr(expr* values)
      * ```
      */
-    class JoinedStr(pyObject: PyObject) : ExprBase(pyObject) {
-        val values: List<ExprBase> by lazy { "values" of pyObject }
+    class ASTJoinedStr(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val values: List<ASTBASEexpr> by lazy { "values" of pyObject }
     }
 
     /**
@@ -697,7 +697,7 @@ interface PythonAST {
      *  |  Constant(constant value, string? kind)
      * ```
      */
-    class Constant(pyObject: PyObject) : ExprBase(pyObject) {
+    class ASTConstant(pyObject: PyObject) : ASTBASEexpr(pyObject) {
         val value: Any by lazy { "value" of pyObject }
         val kind: String? by lazy { "kind" of pyObject }
     }
@@ -708,10 +708,10 @@ interface PythonAST {
      *  |  Attribute(expr value, identifier attr, expr_context ctx)
      * ```
      */
-    class Attribute(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTAttribute(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
         val attr: String by lazy { "attr" of pyObject }
-        val ctx: expr_context by lazy { "ctx" of pyObject }
+        val ctx: ASTBASEexpr_context by lazy { "ctx" of pyObject }
     }
 
     /**
@@ -720,10 +720,10 @@ interface PythonAST {
      *  |  Subscript(expr value, expr slice, expr_context ctx)
      * ```
      */
-    class Subscript(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
-        val slice: ExprBase by lazy { "slice" of pyObject }
-        val ctx: expr_context by lazy { "ctx" of pyObject }
+    class ASTSubscript(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
+        val slice: ASTBASEexpr by lazy { "slice" of pyObject }
+        val ctx: ASTBASEexpr_context by lazy { "ctx" of pyObject }
     }
 
     /**
@@ -732,9 +732,9 @@ interface PythonAST {
      *  |  Starred(expr value, expr_context ctx)
      * ```
      */
-    class Starred(pyObject: PyObject) : ExprBase(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
-        val ctx: expr_context by lazy { "ctx" of pyObject }
+    class ASTStarred(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
+        val ctx: ASTBASEexpr_context by lazy { "ctx" of pyObject }
     }
 
     /**
@@ -743,9 +743,9 @@ interface PythonAST {
      *  |  Name(identifier id, expr_context ctx)
      * ```
      */
-    class Name(pyObject: PyObject) : ExprBase(pyObject) {
+    class ASTName(pyObject: PyObject) : ASTBASEexpr(pyObject) {
         val id: String by lazy { "id" of pyObject }
-        val ctx: expr_context by lazy { "ctx" of pyObject }
+        val ctx: ASTBASEexpr_context by lazy { "ctx" of pyObject }
     }
 
     /**
@@ -754,9 +754,9 @@ interface PythonAST {
      *  |  List(expr* elts, expr_context ctx)
      * ```
      */
-    class PyList(pyObject: PyObject) : ExprBase(pyObject) {
-        val elts: List<ExprBase> by lazy { "elts" of pyObject }
-        val ctx: expr_context by lazy { "ctx" of pyObject }
+    class ASTList(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val elts: List<ASTBASEexpr> by lazy { "elts" of pyObject }
+        val ctx: ASTBASEexpr_context by lazy { "ctx" of pyObject }
     }
 
     /**
@@ -765,9 +765,9 @@ interface PythonAST {
      *  |  Tuple(expr* elts, expr_context ctx)
      * ```
      */
-    class Tuple(pyObject: PyObject) : ExprBase(pyObject) {
-        val elts: List<ExprBase> by lazy { "elts" of pyObject }
-        val ctx: expr_context by lazy { "ctx" of pyObject }
+    class ASTTuple(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val elts: List<ASTBASEexpr> by lazy { "elts" of pyObject }
+        val ctx: ASTBASEexpr_context by lazy { "ctx" of pyObject }
     }
 
     /**
@@ -776,10 +776,10 @@ interface PythonAST {
      *  |  Slice(expr? lower, expr? upper, expr? step)
      * ```
      */
-    class Slice(pyObject: PyObject) : ExprBase(pyObject) {
-        val lower: ExprBase? by lazy { "lower" of pyObject }
-        val upper: ExprBase? by lazy { "upper" of pyObject }
-        val step: ExprBase? by lazy { "step" of pyObject }
+    class ASTSlice(pyObject: PyObject) : ASTBASEexpr(pyObject) {
+        val lower: ASTBASEexpr? by lazy { "lower" of pyObject }
+        val upper: ASTBASEexpr? by lazy { "upper" of pyObject }
+        val step: ASTBASEexpr? by lazy { "step" of pyObject }
     }
 
     /**
@@ -788,9 +788,9 @@ interface PythonAST {
      *  |  boolop = And | Or
      * ```
      *
-     * To avoid conflicts with [BoolOp], we need to rename this class.
+     * To avoid conflicts with [ASTBoolOp], we need to rename this class.
      */
-    abstract class BoolOpBase(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEboolop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -798,14 +798,14 @@ interface PythonAST {
      *  |  And
      * ```
      */
-    class And(pyObject: PyObject) : BoolOpBase(pyObject)
+    class ASTAnd(pyObject: PyObject) : ASTBASEboolop(pyObject)
 
     /**
      * ```
      * ast.Or = class Or(boolop)
      *  |  Or
      */
-    class Or(pyObject: PyObject) : BoolOpBase(pyObject)
+    class ASTOr(pyObject: PyObject) : ASTBASEboolop(pyObject)
 
     /**
      * ```
@@ -813,7 +813,7 @@ interface PythonAST {
      *  |  cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
      * ```
      */
-    abstract class cmpop(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEcmpop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -821,7 +821,7 @@ interface PythonAST {
      *  |  Eq
      * ```
      */
-    class Eq(pyObject: PyObject) : cmpop(pyObject)
+    class ASTEq(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -829,7 +829,7 @@ interface PythonAST {
      *  |  NotEq
      * ```
      */
-    class NotEq(pyObject: PyObject) : cmpop(pyObject)
+    class ASTNotEq(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -837,7 +837,7 @@ interface PythonAST {
      *  |  Lt
      * ```
      */
-    class Lt(pyObject: PyObject) : cmpop(pyObject)
+    class ASTLt(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -845,7 +845,7 @@ interface PythonAST {
      *  |  LtE
      * ```
      */
-    class LtE(pyObject: PyObject) : cmpop(pyObject)
+    class ASTLtE(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -853,7 +853,7 @@ interface PythonAST {
      *  |  Gt
      * ```
      */
-    class Gt(pyObject: PyObject) : cmpop(pyObject)
+    class ASTGt(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -861,7 +861,7 @@ interface PythonAST {
      *  |  GtE
      * ```
      */
-    class GtE(pyObject: PyObject) : cmpop(pyObject)
+    class ASTGtE(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -869,7 +869,7 @@ interface PythonAST {
      *  |  Is
      * ```
      */
-    class Is(pyObject: PyObject) : cmpop(pyObject)
+    class ASTIs(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -877,7 +877,7 @@ interface PythonAST {
      *  |  IsNot
      * ```
      */
-    class IsNot(pyObject: PyObject) : cmpop(pyObject)
+    class ASTIsNot(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -885,7 +885,7 @@ interface PythonAST {
      *  |  In
      * ```
      */
-    class In(pyObject: PyObject) : cmpop(pyObject)
+    class ASTIn(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -893,7 +893,7 @@ interface PythonAST {
      *  |  NotIn
      * ```
      */
-    class NotIn(pyObject: PyObject) : cmpop(pyObject)
+    class ASTNotIn(pyObject: PyObject) : ASTBASEcmpop(pyObject)
 
     /**
      * ```
@@ -901,7 +901,7 @@ interface PythonAST {
      *  |  expr_context = Load | Store | Del
      * ```
      */
-    abstract class expr_context(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEexpr_context(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -909,7 +909,7 @@ interface PythonAST {
      *  |  Load
      * ```
      */
-    class Load(pyObject: PyObject) : expr_context(pyObject)
+    class ASTLoad(pyObject: PyObject) : ASTBASEexpr_context(pyObject)
 
     /**
      * ```
@@ -917,7 +917,7 @@ interface PythonAST {
      *  |  Store
      * ```
      */
-    class Store(pyObject: PyObject) : expr_context(pyObject)
+    class ASTStore(pyObject: PyObject) : ASTBASEexpr_context(pyObject)
 
     /**
      * ```
@@ -925,7 +925,7 @@ interface PythonAST {
      *  |  Del
      * ```
      */
-    class Del(pyObject: PyObject) : expr_context(pyObject)
+    class ASTDel(pyObject: PyObject) : ASTBASEexpr_context(pyObject)
 
     /**
      * ```
@@ -933,7 +933,7 @@ interface PythonAST {
      *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
      * ```
      */
-    abstract class OperatorBase(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEoperator(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -941,7 +941,7 @@ interface PythonAST {
      *  |  Add
      * ```
      */
-    class Add(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTAdd(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -949,7 +949,7 @@ interface PythonAST {
      *  |  Sub
      * ```
      */
-    class Sub(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTSub(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -957,7 +957,7 @@ interface PythonAST {
      *  |  Mult
      * ```
      */
-    class Mult(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTMult(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -965,7 +965,7 @@ interface PythonAST {
      *  |  MatMult
      * ```
      */
-    class MatMult(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTMatMult(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -973,7 +973,7 @@ interface PythonAST {
      *  |  Div
      * ```
      */
-    class Div(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTDiv(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -981,7 +981,7 @@ interface PythonAST {
      *  |  Mod
      * ```
      */
-    class Mod(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTMod(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -989,7 +989,7 @@ interface PythonAST {
      *  |  Pow
      * ```
      */
-    class Pow(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTPow(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -997,7 +997,7 @@ interface PythonAST {
      *  |  LShift
      * ```
      */
-    class LShift(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTLShift(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -1005,7 +1005,7 @@ interface PythonAST {
      *  |  RShift
      * ```
      */
-    class RShift(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTRShift(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -1013,7 +1013,7 @@ interface PythonAST {
      *  |  BitOr
      * ```
      */
-    class BitOr(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTBitOr(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -1021,7 +1021,7 @@ interface PythonAST {
      *  |  BitXor
      * ```
      */
-    class BitXor(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTBitXor(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -1029,7 +1029,7 @@ interface PythonAST {
      *  |  BitAnd
      * ```
      */
-    class BitAnd(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTBitAnd(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -1037,7 +1037,7 @@ interface PythonAST {
      *  |  FloorDiv
      * ```
      */
-    class FloorDiv(pyObject: PyObject) : OperatorBase(pyObject)
+    class ASTFloorDiv(pyObject: PyObject) : ASTBASEoperator(pyObject)
 
     /**
      * ```
@@ -1052,7 +1052,7 @@ interface PythonAST {
      *  |  | MatchOr(pattern* patterns)
      * ```
      */
-    abstract class pattern(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEpattern(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1060,8 +1060,8 @@ interface PythonAST {
      *  |  MatchValue(expr value)
      * ```
      */
-    class MatchValue(pyObject: PyObject) : pattern(pyObject) {
-        val value: ExprBase by lazy { "value" of pyObject }
+    class ASTMatchValue(pyObject: PyObject) : ASTBASEpattern(pyObject) {
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -1070,7 +1070,7 @@ interface PythonAST {
      *  |  MatchSingleton(constant value)
      * ```
      */
-    class MatchSingleton(pyObject: PyObject) : pattern(pyObject) {
+    class ASTMatchSingleton(pyObject: PyObject) : ASTBASEpattern(pyObject) {
         val value: Any by lazy { "value" of pyObject }
     }
 
@@ -1080,8 +1080,8 @@ interface PythonAST {
      *  |  MatchSequence(pattern* patterns)
      * ```
      */
-    class MatchSequence(pyObject: PyObject) : pattern(pyObject) {
-        val patterns: List<pattern> by lazy { "patterns" of pyObject }
+    class ASTMatchSequence(pyObject: PyObject) : ASTBASEpattern(pyObject) {
+        val patterns: List<ASTBASEpattern> by lazy { "patterns" of pyObject }
     }
 
     /**
@@ -1090,9 +1090,9 @@ interface PythonAST {
      *  |  MatchMapping(expr* keys, pattern* patterns, identifier? rest)
      * ```
      */
-    class MatchMapping(pyObject: PyObject) : pattern(pyObject) {
-        val key: List<ExprBase> by lazy { "keys" of pyObject }
-        val patterns: List<pattern> by lazy { "patterns" of pyObject }
+    class ASTMatchMapping(pyObject: PyObject) : ASTBASEpattern(pyObject) {
+        val key: List<ASTBASEexpr> by lazy { "keys" of pyObject }
+        val patterns: List<ASTBASEpattern> by lazy { "patterns" of pyObject }
         val rest: String? by lazy { "rest" of pyObject }
     }
 
@@ -1102,11 +1102,11 @@ interface PythonAST {
      *  |  MatchClass(expr cls, pattern* patterns, identifier* kwd_attrs, pattern* kwd_patterns)
      * ```
      */
-    class MatchClass(pyObject: PyObject) : pattern(pyObject) {
-        val cls: ExprBase by lazy { "cls" of pyObject }
-        val patterns: List<pattern> by lazy { "patterns" of pyObject }
+    class ASTMatchClass(pyObject: PyObject) : ASTBASEpattern(pyObject) {
+        val cls: ASTBASEexpr by lazy { "cls" of pyObject }
+        val patterns: List<ASTBASEpattern> by lazy { "patterns" of pyObject }
         val kwd_attrs: List<String> by lazy { "kwd_attrs" of pyObject }
-        val kwd_patterns: List<pattern> by lazy { "kwd_patterns" of pyObject }
+        val kwd_patterns: List<ASTBASEpattern> by lazy { "kwd_patterns" of pyObject }
     }
 
     /**
@@ -1115,7 +1115,7 @@ interface PythonAST {
      *  |  MatchStar(identifier? name)
      * ```
      */
-    class MatchStar(pyObject: PyObject) : pattern(pyObject) {
+    class ASTMatchStar(pyObject: PyObject) : ASTBASEpattern(pyObject) {
         val name: String? by lazy { "name" of pyObject }
     }
 
@@ -1125,8 +1125,8 @@ interface PythonAST {
      *  |  MatchAs(pattern? pattern, identifier? name)
      * ```
      */
-    class MatchAs(pyObject: PyObject) : pattern(pyObject) {
-        val pattern: pattern? by lazy { "pattern" of pyObject }
+    class ASTMatchAs(pyObject: PyObject) : ASTBASEpattern(pyObject) {
+        val pattern: ASTBASEpattern? by lazy { "pattern" of pyObject }
         val name: String? by lazy { "name" of pyObject }
     }
 
@@ -1136,8 +1136,8 @@ interface PythonAST {
      *  |  MatchOr(pattern* patterns)
      * ```
      */
-    class MatchOr(pyObject: PyObject) : pattern(pyObject) {
-        val patterns: List<pattern> by lazy { "patterns" of pyObject }
+    class ASTMatchOr(pyObject: PyObject) : ASTBASEpattern(pyObject) {
+        val patterns: List<ASTBASEpattern> by lazy { "patterns" of pyObject }
     }
 
     /**
@@ -1146,9 +1146,9 @@ interface PythonAST {
      *  |  unaryop = Invert | Not | UAdd | USub
      * ```
      *
-     * To avoid conflicts with [UnaryOp], we need to rename this class.
+     * To avoid conflicts with [ASTUnaryOp], we need to rename this class.
      */
-    abstract class UnaryOpBase(pyObject: PyObject) : AST(pyObject)
+    abstract class ASTBASEunaryop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1156,7 +1156,7 @@ interface PythonAST {
      *  |  Invert
      * ```
      */
-    class Invert(pyObject: PyObject) : UnaryOpBase(pyObject)
+    class ASTInvert(pyObject: PyObject) : ASTBASEunaryop(pyObject)
 
     /**
      * ```
@@ -1164,14 +1164,14 @@ interface PythonAST {
      *  |  Not
      * ```
      */
-    class Not(pyObject: PyObject) : UnaryOpBase(pyObject)
+    class ASTNot(pyObject: PyObject) : ASTBASEunaryop(pyObject)
     /**
      * ```
      * ast.UAdd = class UAdd(unaryop)
      *  |  UAdd
      * ```
      */
-    class UAdd(pyObject: PyObject) : UnaryOpBase(pyObject)
+    class ASTUAdd(pyObject: PyObject) : ASTBASEunaryop(pyObject)
 
     /**
      * ```
@@ -1179,7 +1179,7 @@ interface PythonAST {
      *  |  USub
      * ```
      */
-    class USub(pyObject: PyObject) : UnaryOpBase(pyObject)
+    class ASTUSub(pyObject: PyObject) : ASTBASEunaryop(pyObject)
 
     /**
      * ```
@@ -1187,7 +1187,7 @@ interface PythonAST {
      *  |  alias(identifier name, identifier? asname)
      * ```
      */
-    class alias(pyObject: PyObject) : AST(pyObject) {
+    class ASTalias(pyObject: PyObject) : AST(pyObject) {
         val name: String by lazy { "name" of pyObject }
         val asname: String? by lazy { "asname" of pyObject }
     }
@@ -1198,9 +1198,9 @@ interface PythonAST {
      *  |  arg(identifier arg, expr? annotation, string? type_comment)
      * ```
      */
-    class arg(pyObject: PyObject) : AST(pyObject) {
+    class ASTarg(pyObject: PyObject) : AST(pyObject) {
         val arg: String by lazy { "arg" of pyObject }
-        val annotation: ExprBase? by lazy { "annotation" of pyObject }
+        val annotation: ASTBASEexpr? by lazy { "annotation" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
@@ -1210,14 +1210,14 @@ interface PythonAST {
      *  |  arguments(arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs, expr* kw_defaults, arg? kwarg, expr* defaults)
      * ```
      */
-    class arguments(pyObject: PyObject) : AST(pyObject) {
-        val posonlyargs: List<arg> by lazy { "posonlyargs" of pyObject }
-        val args: List<arg> by lazy { "args" of pyObject }
-        val vararg: arg? by lazy { "vararg" of pyObject }
-        val kwonlyargs: List<arg> by lazy { "kwonlyargs" of pyObject }
-        val kw_defaults: List<ExprBase> by lazy { "kw_defaults" of pyObject }
-        val kwarg: arg? by lazy { "kwarg" of pyObject }
-        val defaults: List<ExprBase> by lazy { "defaults" of pyObject }
+    class ASTarguments(pyObject: PyObject) : AST(pyObject) {
+        val posonlyargs: List<ASTarg> by lazy { "posonlyargs" of pyObject }
+        val args: List<ASTarg> by lazy { "args" of pyObject }
+        val vararg: ASTarg? by lazy { "vararg" of pyObject }
+        val kwonlyargs: List<ASTarg> by lazy { "kwonlyargs" of pyObject }
+        val kw_defaults: List<ASTBASEexpr> by lazy { "kw_defaults" of pyObject }
+        val kwarg: ASTarg? by lazy { "kwarg" of pyObject }
+        val defaults: List<ASTBASEexpr> by lazy { "defaults" of pyObject }
     }
 
     /**
@@ -1226,10 +1226,10 @@ interface PythonAST {
      *  |  comprehension(expr target, expr iter, expr* ifs, int is_async)
      * ```
      */
-    class comprehension(pyObject: PyObject) : AST(pyObject) {
-        val target: ExprBase by lazy { "target" of pyObject }
-        val iter: ExprBase by lazy { "iter" of pyObject }
-        val ifs: List<ExprBase> by lazy { "ifs" of pyObject }
+    class ASTcomprehension(pyObject: PyObject) : AST(pyObject) {
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val iter: ASTBASEexpr by lazy { "iter" of pyObject }
+        val ifs: List<ASTBASEexpr> by lazy { "ifs" of pyObject }
         val is_async: Int by lazy { "is_async" of pyObject } // TODO: is this an `Int` in Kotlin?
     }
 
@@ -1241,10 +1241,10 @@ interface PythonAST {
      *
      * TODO: excepthandler <-> ExceptHandler
      */
-    class excepthandler(pyObject: PyObject) : AST(pyObject) {
-        val type: ExprBase by lazy { "type" of pyObject }
+    class ASTexcepthandler(pyObject: PyObject) : AST(pyObject) {
+        val type: ASTBASEexpr by lazy { "type" of pyObject }
         val name: String by lazy { "name" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
     }
 
     /**
@@ -1253,9 +1253,9 @@ interface PythonAST {
      *  |  keyword(identifier? arg, expr value)
      * ```
      */
-    class keyword(pyObject: PyObject) : AST(pyObject) {
+    class ASTkeyword(pyObject: PyObject) : AST(pyObject) {
         val arg: String? by lazy { "arg" of pyObject }
-        val value: ExprBase by lazy { "value" of pyObject }
+        val value: ASTBASEexpr by lazy { "value" of pyObject }
     }
 
     /**
@@ -1264,10 +1264,10 @@ interface PythonAST {
      *  |  match_case(pattern pattern, expr? guard, stmt* body)
      * ```
      */
-    class match_case(pyObject: PyObject) : AST(pyObject) {
-        val pattern: pattern by lazy { "pattern" of pyObject }
-        val guard: ExprBase? by lazy { "guard" of pyObject }
-        val body: List<StmtBase> by lazy { "body" of pyObject }
+    class ASTmatch_case(pyObject: PyObject) : AST(pyObject) {
+        val pattern: ASTBASEpattern by lazy { "pattern" of pyObject }
+        val guard: ASTBASEexpr? by lazy { "guard" of pyObject }
+        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
     }
 
     /**
@@ -1278,7 +1278,7 @@ interface PythonAST {
      *
      * TODO
      */
-    class type_ignore(pyObject: PyObject) : AST(pyObject)
+    class ASTtype_ignore(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1286,9 +1286,9 @@ interface PythonAST {
      *  |  withitem(expr context_expr, expr? optional_vars)
      * ```
      */
-    class withitem(pyObject: PyObject) : AST(pyObject) {
-        val context_expr: ExprBase by lazy { "context_expr" of pyObject }
-        val optional_vars: ExprBase? by lazy { "optional_vars" of pyObject }
+    class ASTwithitem(pyObject: PyObject) : AST(pyObject) {
+        val context_expr: ASTBASEexpr by lazy { "context_expr" of pyObject }
+        val optional_vars: ASTBASEexpr? by lazy { "optional_vars" of pyObject }
     }
 }
 
