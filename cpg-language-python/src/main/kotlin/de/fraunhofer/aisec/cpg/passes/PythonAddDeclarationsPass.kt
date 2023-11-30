@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -33,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -48,17 +46,10 @@ import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 @DependsOn(TypeResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
-class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
+class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun cleanup() {
         // nothing to do
     }
-
-    /**
-     * Provide the [ScopeManager.currentScope] through the [ScopeProvider], so that [Node.scope] is
-     * automatically populated.
-     */
-    override val scope: Scope?
-        get() = scopeManager.currentScope
 
     override fun accept(p0: Component) {
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
