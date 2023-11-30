@@ -787,8 +787,6 @@ interface Python {
      * ast.boolop = class boolop(AST)
      *  |  boolop = And | Or
      * ```
-     *
-     * To avoid conflicts with [ASTBoolOp], we need to rename this class.
      */
     abstract class ASTBASEboolop(pyObject: PyObject) : AST(pyObject)
 
@@ -1145,8 +1143,6 @@ interface Python {
      * ast.unaryop = class unaryop(AST)
      *  |  unaryop = Invert | Not | UAdd | USub
      * ```
-     *
-     * To avoid conflicts with [ASTUnaryOp], we need to rename this class.
      */
     abstract class ASTBASEunaryop(pyObject: PyObject) : AST(pyObject)
 
