@@ -42,10 +42,12 @@ import java.net.URI
 import jep.python.PyObject
 import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
+import kotlin.math.min
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST, Python.AST?>(language, ctx) {
+    private val lineSeparator = '\n' // TODO
     private val jep = JepSingleton // configure Jep
 
     // val declarationHandler = DeclarationHandler(this)
@@ -69,7 +71,6 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             it.set("content", fileContent)
             it.set("filename", file.absolutePath)
             it.exec("import ast")
-            it.exec("import os")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
@@ -116,30 +117,69 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         }
     }
 
+    /**
+     * This functions extracts the source code from the input file given a location. This is a bit
+     * tricky in Python, as indents are part of the syntax. We also don't want to include leading
+     * whitespaces/tabs in case of extracting a nested code fragment. Thus, we use the following
+     * approximation to retrieve the fragment's source code:
+     * 1) Get the relevant source code lines
+     * 2) Delete extra code at the end of the last line that is not part of the provided location
+     * 3) Remove trailing whitespaces / tabs
+     */
     override fun codeOf(astNode: Python.AST): String? {
-        val physicalLocation = locationOf(astNode)
-        if (physicalLocation != null) {
-            val lines =
-                fileContent
-                    .split('\n') // TODO
-                    .subList(physicalLocation.region.startLine - 1, physicalLocation.region.endLine)
-            val mutableLines = lines.toMutableList()
+        val location = locationOf(astNode)
+        if (location != null) {
+            var lines = getRelevantLines(location)
+            lines = removeExtraAtEnd(location, lines)
+            lines = fixStartColumn(location, lines)
 
-            // remove not needed first characters of all lines (making the assumption, that we are
-            // in an intended code block
-            for (idx in mutableLines.indices) {
-                mutableLines[idx] = mutableLines[idx].substring(physicalLocation.region.startColumn)
-            }
-
-            // remove not needed trailing characters of last line
-            val lastLineIdx = mutableLines.lastIndex
-            val toRemove =
-                mutableLines[lastLineIdx].length + physicalLocation.region.startColumn -
-                    physicalLocation.region.endColumn
-            mutableLines[lastLineIdx] = mutableLines[lastLineIdx].dropLast(toRemove)
-            return mutableLines.joinToString(separator = "\n") // TODO
+            return lines.joinToString(separator = lineSeparator.toString())
         }
         return null
+    }
+
+    private fun getRelevantLines(location: PhysicalLocation): MutableList<String> {
+        val lines =
+            fileContent
+                .split(lineSeparator)
+                .subList(location.region.startLine - 1, location.region.endLine)
+        return lines.toMutableList()
+    }
+
+    private fun fixStartColumn(
+        location: PhysicalLocation,
+        lines: MutableList<String>
+    ): MutableList<String> {
+        for (idx in lines.indices) {
+            val prefixLength = min(location.region.startColumn, lines[idx].length)
+            if (idx == 0) {
+                lines[idx] = lines[idx].substring(prefixLength)
+            } else {
+
+                for (j in 0..prefixLength - 1) {
+                    if (lines[idx][0] == ' ' || lines[idx][0] == '\t') {
+                        lines[idx] = lines[idx].substring(1)
+                    } else {
+                        break
+                    }
+                }
+            }
+        }
+        return lines
+    }
+
+    private fun removeExtraAtEnd(
+        location: PhysicalLocation,
+        lines: MutableList<String>
+    ): MutableList<String> {
+        val lastLineIdx = lines.lastIndex
+        val lastLineLength = lines[lastLineIdx].length
+        val locationEndColumn = location.region.endColumn
+        val toRemove = lastLineLength - locationEndColumn
+        if (toRemove > 0) {
+            lines[lastLineIdx] = lines[lastLineIdx].dropLast(toRemove)
+        }
+        return lines
     }
 
     override fun locationOf(astNode: Python.AST): PhysicalLocation? {
