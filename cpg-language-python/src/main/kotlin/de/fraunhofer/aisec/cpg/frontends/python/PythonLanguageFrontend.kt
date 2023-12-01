@@ -99,7 +99,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     continue
                 } else {
                     val start = token[2] as List<*>
-                    val end = token[2] as List<*>
+                    val end = token[3] as List<*>
                     val startLine = start[0] as Long
                     val startCol = start[1] as Long
                     val endLine = end[0] as Long
