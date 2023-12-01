@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -74,7 +75,48 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
-            return pythonASTtoCPG(pyAST, file.name)
+            val tud = pythonASTtoCPG(pyAST, file.name)
+
+            if (config.matchCommentsToNodes) {
+                it.exec("import tokenize")
+                it.exec("reader = tokenize.open(filename).readline")
+                it.exec("tokens = tokenize.generate_tokens(reader)")
+                it.exec("tokenList = list(tokens)")
+                val pyTokens = (it.getValue("tokenList") as? ArrayList<*>) ?: TODO()
+                addCommentsToCPG(tud, pyTokens)
+            }
+            return tud
+        }
+    }
+
+    private fun addCommentsToCPG(tud: TranslationUnitDeclaration, pyTokens: ArrayList<*>) {
+        val commentMatcher = CommentMatcher()
+        for (token in pyTokens) {
+            if (token !is List<*> || token.size != 5) {
+                TODO()
+            } else {
+                if (token[0] as Long != 61.toLong()) {
+                    continue
+                } else {
+                    val start = token[2] as List<*>
+                    val end = token[2] as List<*>
+                    val startLine = start[0] as Long
+                    val startCol = start[1] as Long
+                    val endLine = end[0] as Long
+                    val endCol = end[1] as Long
+
+                    commentMatcher.matchCommentToNode(
+                        token[1] as String,
+                        Region(
+                            startLine.toInt(),
+                            (startCol + 1).toInt(),
+                            endLine.toInt(),
+                            (endCol + 1).toInt()
+                        ),
+                        tud
+                    )
+                }
+            }
         }
     }
 
