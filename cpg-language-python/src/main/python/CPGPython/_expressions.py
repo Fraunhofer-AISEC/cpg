@@ -91,11 +91,17 @@ def handle_expression_impl(self, expr):
             return binop
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = ExpressionBuilderKt.newExpression(self.frontend, "")
+        r = ExpressionBuilderKt.newUnaryOperator(
+            self.frontend,
+            self.handle_operator_code(expr.op),
+            False,
+            True,
+            self.get_src_code(expr))
+        r.setInput(self.handle_expression(expr.operand))
         return r
     elif isinstance(expr, ast.Lambda):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = ExpressionBuilderKt.newExpression(self.frontend, "")
+        r = ExpressionBuilderKt.newLambdaExpression(self.frontend, "")
         return r
     elif isinstance(expr, ast.IfExp):
         test = self.handle_expression(expr.test)
@@ -220,6 +226,7 @@ def handle_expression_impl(self, expr):
         # - constructor call
         #
         # We parse node.func regularly using a visitor and decide what it is
+
         ref = self.handle_expression(expr.func)
         self.log_with_loc("Parsed ref as %s" % ref)
 
@@ -395,3 +402,13 @@ def handle_expression_impl(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = ExpressionBuilderKt.newExpression(self.frontend, "")
         return r
+
+
+def handle_cast(self, expr, refname):
+    cast = ExpressionBuilderKt.newCastExpression(
+        self.frontend, self.get_src_code(expr))
+    cast.setCastType(
+        NodeBuilderKt.parseType(self.frontend, str(refname)))
+    cast.setExpression(
+        self.handle_expression(expr.args[0]))
+    return cast

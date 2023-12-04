@@ -385,8 +385,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if (callable != null) {
             callable(node)
         } else {
-            LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
+            handleUnknown(node)
         }
+    }
+
+    protected open fun handleUnknown(node: Node) {
+        LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
     }
 
     protected fun handleDefault(node: Node) {
@@ -518,7 +522,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
-    protected fun handleCompoundStatement(node: CompoundStatement) {
+    protected open fun handleCompoundStatement(node: CompoundStatement) {
         // not all language handle compound statements as scoping blocks, so we need to avoid
         // creating new scopes here
         scopeManager.enterScopeIfExists(node)

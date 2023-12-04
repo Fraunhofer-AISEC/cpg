@@ -81,6 +81,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     var code: String? = null
 
+    @Labels var labels = mutableListOf<String>()
+
     /**
      * The language of this node. This property is set in [Node.applyMetadata] by a
      * [LanguageProvider] at the time when the node is created.

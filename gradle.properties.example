@@ -4,5 +4,7 @@ enableJavaFrontend=true
 enableCXXFrontend=true
 enableGoFrontend=true
 enablePythonFrontend=true
+enableOpenQasmFrontend=true
 enableLLVMFrontend=true
 enableTypeScriptFrontend=true
+enablePythonQiskitFrontend=true

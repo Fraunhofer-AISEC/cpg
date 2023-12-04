@@ -352,10 +352,16 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguage")
                 .loadIncludes(loadIncludes)
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
+                .registerPass(EdgeCachePass())
+                .registerPass(QiskitPass())
+                .registerPass(QuantumEOGPass())
+                .registerPass(QuantumDFGPass())
+                .registerPass(DFGConnectionPass())
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
@@ -466,6 +472,32 @@ class Application : Callable<Int> {
         }
 
         return EXIT_SUCCESS
+    }
+}
+
+class AstChildrenEventListener : EventListenerAdapter() {
+    override fun onPreSave(event: Event?) {
+        val node = event?.`object` as? Node ?: return
+
+        if (node is QuantumNode) {
+            node.labels += "QuantumNode"
+        }
+        if (node is QuantumGate) {
+            node.labels += "QuantumGate"
+        }
+        if (node is QuantumPauliGate) {
+            node.labels += "QuantumPauliGate"
+        }
+
+        node.astChildren = SubgraphWalker.getAstChildren(node)
+
+        // Special hack for call expressions, since Neo4J cannot handle the overridden name field
+        if (node is CallExpression) {
+            val field = Node::class.java.declaredFields.first { it.name == "name" }
+            field.isAccessible = true
+            field.set(node, node.name)
+            println(node)
+        }
     }
 }
 

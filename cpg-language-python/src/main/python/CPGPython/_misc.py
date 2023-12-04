@@ -199,6 +199,8 @@ def handle_operator_code(self, opcode):
         op = "&"
     elif isinstance(opcode, ast.FloorDiv):
         op = "//"
+    elif isinstance(opcode, ast.USub):
+        op = "-"
     else:
         self.log_with_loc(
             "Failed to identify the operator. Using an empty dummy.",
