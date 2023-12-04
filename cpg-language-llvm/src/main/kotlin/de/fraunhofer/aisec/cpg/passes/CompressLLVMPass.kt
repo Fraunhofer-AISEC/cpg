@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -57,7 +58,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // prevents to treat the final goto in the case or default statement as a normal
         // compound
         // statement which would lead to inlining the instructions BB but we want to keep the BB
-        // inside a CompoundStatement.
+        // inside a Block.
         for (node in
             flatAST.sortedBy { n ->
                 when (n) {
@@ -96,7 +97,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
             } else if (node is SwitchStatement) {
                 // Iterate over all statements in a body of the switch/case and replace a goto
                 // statement if it is the only one jumping to the target
-                val caseBodyStatements = node.statement as CompoundStatement
+                val caseBodyStatements = node.statement as Block
                 val newStatements = caseBodyStatements.statements.toMutableList()
                 for (i in 0 until newStatements.size) {
                     val subStatement =
@@ -108,7 +109,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         subStatement?.let { newStatements[i] = it }
                     }
                 }
-                (node.statement as CompoundStatement).statements = newStatements
+                (node.statement as Block).statements = newStatements
             } else if (
                 node is TryStatement &&
                     node.catchClauses.size == 1 &&
@@ -137,22 +138,21 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
             } else if (
                 node is TryStatement &&
                     node.catchClauses.size == 1 &&
-                    node.catchClauses[0].body?.statements?.get(0) is CompoundStatement
+                    node.catchClauses[0].body?.statements?.get(0) is Block
             ) {
                 // A compound statement which is wrapped in the catchClause. We can simply move
                 // it
                 // one layer up and make
                 // the compound statement the body of the catch clause.
-                val innerCompound =
-                    node.catchClauses[0].body?.statements?.get(0) as? CompoundStatement
+                val innerCompound = node.catchClauses[0].body?.statements?.get(0) as? Block
                 innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
                 fixThrowStatementsForCatch(node.catchClauses[0])
             } else if (node is TryStatement && node.catchClauses.isNotEmpty()) {
                 for (catch in node.catchClauses) {
                     fixThrowStatementsForCatch(catch)
                 }
-            } else if (node is CompoundStatement) {
-                // Get the last statement in a CompoundStatement and replace a goto statement
+            } else if (node is Block) {
+                // Get the last statement in a Block and replace a goto statement
                 // iff it is the only one jumping to the target
                 val goto = node.statements.lastOrNull()
                 if (
@@ -165,7 +165,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 ) {
                     val subStatement = goto.targetLabel?.subStatement
                     val newStatements = node.statements.dropLast(1).toMutableList()
-                    newStatements.addAll((subStatement as CompoundStatement).statements)
+                    newStatements.addAll((subStatement as Block).statements)
                     node.statements = newStatements
                 }
             }
@@ -187,20 +187,20 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (reachableThrowNodes.isNotEmpty()) {
             if (catch.parameter == null) {
                 val error =
-                    catch.newVariableDeclaration(
+                    newVariableDeclaration(
                         "e_${catch.name}",
                         UnknownType.getUnknownType(catch.language),
-                        "",
                         true,
                     )
+                error.language = catch.language
                 catch.parameter = error
             }
             val exceptionReference =
-                catch.newDeclaredReferenceExpression(
+                newReference(
                     catch.parameter?.name,
                     catch.parameter?.type ?: UnknownType.getUnknownType(catch.language),
-                    ""
                 )
+            exceptionReference.language = catch.language
             exceptionReference.refersTo = catch.parameter
             reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
         }

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
-import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
@@ -34,12 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateIn
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
-import de.fraunhofer.aisec.cpg.passes.CallResolver
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -48,13 +45,12 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression :
-    Expression(), HasType.TypeObserver, HasSecondaryTypeEdge, ArgumentHolder {
+open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. This
      * will have an effect on the [type]
      */
-    @PopulatedByPass(CallResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
         protected set
@@ -63,7 +59,7 @@ open class CallExpression :
      * A virtual property to quickly access the list of declarations that this call invokes without
      * property edges.
      */
-    @PopulatedByPass(CallResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     var invokes: List<FunctionDeclaration>
         get(): List<FunctionDeclaration> {
             val targets: MutableList<FunctionDeclaration> = ArrayList()
@@ -74,7 +70,7 @@ open class CallExpression :
         }
         set(value) {
             unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
-            invokeEdges = transformIntoOutgoingPropertyEdgeList(value, this)
+            invokeEdges = wrap(value, this)
             value.forEach { it.registerTypeObserver(this) }
         }
 
@@ -92,10 +88,9 @@ open class CallExpression :
     var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
 
     /**
-     * The expression that is being "called". This is currently not yet used in the [CallResolver]
-     * but will be in the future. In most cases, this is a [DeclaredReferenceExpression] and its
-     * [DeclaredReferenceExpression.refersTo] is intentionally left empty. It is not filled by the
-     * [VariableUsageResolver].
+     * The expression that is being "called". This is currently not yet used in the [SymbolResolver]
+     * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
+     * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @AST var callee: Expression? = null
 
@@ -189,26 +184,6 @@ open class CallExpression :
             template = value != null
         }
 
-    private val typeTemplateParameters: List<Type>
-        get() {
-            val types: MutableList<Type> = ArrayList()
-            for (n in templateParameters) {
-                if (n is Type) {
-                    types.add(n)
-                }
-            }
-            return types
-        }
-
-    private fun replaceTypeTemplateParameter(oldType: Type?, newType: Type) {
-        for (i in templateParameterEdges?.indices ?: listOf()) {
-            val propertyEdge = templateParameterEdges?.get(i)
-            if (propertyEdge?.end == oldType) {
-                propertyEdge?.end = newType
-            }
-        }
-    }
-
     /**
      * Adds a template parameter to this call expression. A parameter can either be an [Expression]
      * (usually a [Literal]) or a [Type].
@@ -275,23 +250,15 @@ open class CallExpression :
             return
         }
 
-        // TODO(oxisto): We could actually use the newType (which is a FunctionType now)
-        val types =
-            invokeEdges
-                .map(PropertyEdge<FunctionDeclaration>::end)
-                .mapNotNull {
-                    if (it.returnTypes.size == 1) {
-                        return@mapNotNull it.returnTypes.firstOrNull()
-                    } else if (it.returnTypes.size > 1) {
-                        return@mapNotNull TupleType(it.returnTypes)
-                    }
-                    null
-                }
-                .toSet()
-        val alternative = if (types.isNotEmpty()) types.first() else unknownType()
-        val commonType = types.commonType ?: alternative
+        if (newType !is FunctionType) {
+            return
+        }
 
-        this.type = commonType
+        if (newType.returnTypes.size == 1) {
+            this.type = newType.returnTypes.single()
+        } else if (newType.returnTypes.size > 1) {
+            this.type = TupleType(newType.returnTypes)
+        }
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
@@ -317,14 +284,4 @@ open class CallExpression :
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
-
-    override fun updateType(typeState: Collection<Type>) {
-        for (t in typeTemplateParameters) {
-            for (t2 in typeState) {
-                if (t2 == t) {
-                    replaceTypeTemplateParameter(t, t2)
-                }
-            }
-        }
-    }
 }

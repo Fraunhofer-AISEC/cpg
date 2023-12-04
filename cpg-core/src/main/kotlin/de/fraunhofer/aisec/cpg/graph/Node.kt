@@ -34,13 +34,8 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeSetDelegate
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -51,10 +46,13 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
-import kotlin.collections.ArrayList
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.*
+import org.neo4j.ogm.annotation.GeneratedValue
+import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.Labels
+import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -166,33 +164,17 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOG: List<Node>
-        get() = unwrap(prevEOGEdges, false)
-        set(value) {
-            val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
-
-            for ((idx, prev) in value.withIndex()) {
-                val propertyEdge = PropertyEdge(prev, this)
-                propertyEdge.addProperty(Properties.INDEX, idx)
-                propertyEdgesEOG.add(propertyEdge)
-            }
-
-            this.prevEOGEdges = propertyEdgesEOG
-        }
+    var prevEOG: List<Node> by PropertyEdgeDelegate(Node::prevEOGEdges, false)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOG: List<Node>
-        get() = unwrap(nextEOGEdges)
-        set(value) {
-            this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
-        }
+    var nextEOG: List<Node> by PropertyEdgeDelegate(Node::nextEOGEdges)
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var prevDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
-        internal set
+        protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
@@ -202,7 +184,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
-        internal set
+        protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
@@ -225,8 +207,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
     var prevPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevPDGEdges, false)
-
-    var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -356,10 +336,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
-    fun addTypedef(typedef: TypedefDeclaration) {
-        typedefs.add(typedef)
-    }
-
     fun addAnnotations(annotations: Collection<Annotation>) {
         this.annotations.addAll(annotations)
     }
@@ -429,7 +405,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                file == other.file &&
+                // We need to exclude "file" here, because in C++ the same header node can be
+                // imported in two different files and in this case, the "file" property will be
+                // different. Since want to squash those equal nodes, we will only consider all the
+                // other attributes, including "location" (which contains the *original* file
+                // location in the header file), but not "file".
+                // file == other.file &&
                 isImplicit == other.isImplicit
     }
 

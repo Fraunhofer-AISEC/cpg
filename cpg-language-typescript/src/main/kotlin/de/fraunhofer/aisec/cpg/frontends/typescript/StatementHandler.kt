@@ -26,13 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.newCompoundStatement
+import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
@@ -58,7 +58,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = newDeclarationStatement(this.frontend.codeOf(node))
+        val statement = newDeclarationStatement()
 
         val decl = this.frontend.declarationHandler.handle(node)
 
@@ -72,7 +72,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
-        val returnStmt = newReturnStatement(this.frontend.codeOf(node))
+        val returnStmt = newReturnStatement()
 
         node.children?.first()?.let {
             returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
@@ -81,8 +81,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         return returnStmt
     }
 
-    private fun handleBlock(node: TypeScriptNode): CompoundStatement {
-        val block = newCompoundStatement(this.frontend.codeOf(node))
+    private fun handleBlock(node: TypeScriptNode): Block {
+        val block = newBlock(rawNode = node)
 
         node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
 
@@ -98,7 +98,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement = newDeclarationStatement(this.frontend.codeOf(node))
+        val statement = newDeclarationStatement()
 
         // the declarations are contained in a VariableDeclarationList
         val nodes = node.firstChild("VariableDeclarationList")?.children

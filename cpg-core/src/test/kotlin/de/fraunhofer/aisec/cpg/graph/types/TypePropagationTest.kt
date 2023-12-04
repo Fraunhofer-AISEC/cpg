@@ -30,20 +30,27 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.*
 
 class TypePropagationTest {
     @Test
     fun testBinopTypePropagation() {
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
+
         val result =
-            TestLanguageFrontend().build {
+            frontend.build {
                 translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
@@ -61,8 +68,6 @@ class TypePropagationTest {
                     }
                 }
             }
-
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         val intVar = result.variables["intVar"]
         assertNotNull(intVar)
@@ -85,7 +90,15 @@ class TypePropagationTest {
 
     @Test
     fun testAssignTypePropagation() {
-        val frontend = TestLanguageFrontend()
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
 
         /**
          * This roughly represents the following program in C:
@@ -117,17 +130,11 @@ class TypePropagationTest {
                 }
             }
 
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
-        EvaluationOrderGraphPass(result.finalCtx)
-            .accept(result.components.first().translationUnits.first())
-        ControlFlowSensitiveDFGPass(result.finalCtx)
-            .accept(result.components.first().translationUnits.first())
-
         with(frontend) {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val assign = (main.body as? CompoundStatement)?.statements?.get(2) as? AssignExpression
+            val assign = (main.body as? Block)?.statements?.get(2) as? AssignExpression
             assertNotNull(assign)
 
             val shortVar = main.variables["shortVar"]
@@ -136,13 +143,13 @@ class TypePropagationTest {
             assertEquals(primitiveType("short"), shortVar.type)
             assertEquals(setOf(primitiveType("short")), shortVar.assignedTypes)
 
-            val rhs = assign.rhs.firstOrNull() as? DeclaredReferenceExpression
+            val rhs = assign.rhs.firstOrNull() as? Reference
             assertNotNull(rhs)
             assertIs<IntegerType>(rhs.type)
             assertLocalName("int", rhs.type)
             assertEquals(32, (rhs.type as IntegerType).bitWidth)
 
-            val shortVarRefLhs = assign.lhs.firstOrNull() as? DeclaredReferenceExpression
+            val shortVarRefLhs = assign.lhs.firstOrNull() as? Reference
             assertNotNull(shortVarRefLhs)
             // At this point, shortVar was target of an assignment of an int variable, however, the
             // int gets truncated into a short, so only short is part of the assigned types.
@@ -165,7 +172,15 @@ class TypePropagationTest {
 
     @Test
     fun testNewPropagation() {
-        val frontend = TestLanguageFrontend()
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
 
         /**
          * This roughly represents the following C++ code:
@@ -196,8 +211,6 @@ class TypePropagationTest {
                     }
                 }
             }
-
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         with(frontend) {
             val main = result.functions["main"]
@@ -380,7 +393,7 @@ class TypePropagationTest {
                     .commonType
             )
 
-            val assign = (body as CompoundStatement).statements<AssignExpression>(1)
+            val assign = (body as Block).statements<AssignExpression>(1)
             assertNotNull(assign)
 
             val bb = variables["bb"]
@@ -397,7 +410,7 @@ class TypePropagationTest {
                 bb.assignedTypes
             )
 
-            val returnStatement = (body as CompoundStatement).statements<ReturnStatement>(3)
+            val returnStatement = (body as Block).statements<ReturnStatement>(3)
             assertNotNull(returnStatement)
 
             val returnValue = returnStatement.returnValue

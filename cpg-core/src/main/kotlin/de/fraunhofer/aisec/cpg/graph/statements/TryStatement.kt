@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -40,9 +41,9 @@ class TryStatement : Statement() {
 
     var resources by PropertyEdgeDelegate(TryStatement::resourceEdges)
 
-    @AST var tryBlock: CompoundStatement? = null
+    @AST var tryBlock: Block? = null
 
-    @AST var finallyBlock: CompoundStatement? = null
+    @AST var finallyBlock: Block? = null
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
     @AST

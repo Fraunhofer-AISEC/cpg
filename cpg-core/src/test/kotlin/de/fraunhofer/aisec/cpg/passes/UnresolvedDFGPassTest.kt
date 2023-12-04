@@ -33,9 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -49,20 +48,14 @@ class UnresolvedDFGPassTest {
         val firstCall = result.calls { it.name.localName == "get" }[0]
         val osDecl = result.variables["os"]
         assertEquals(1, firstCall.prevDFG.size)
-        assertEquals(
-            osDecl,
-            (firstCall.prevDFG.firstOrNull() as? DeclaredReferenceExpression)?.refersTo
-        )
+        assertEquals(osDecl, (firstCall.prevDFG.firstOrNull() as? Reference)?.refersTo)
 
         // Flow from base and argument to return value
         val callWithParam = result.calls { it.name.localName == "get" }[1]
         assertEquals(2, callWithParam.prevDFG.size)
         assertEquals(
             osDecl,
-            callWithParam.prevDFG
-                .filterIsInstance<DeclaredReferenceExpression>()
-                .firstOrNull()
-                ?.refersTo
+            callWithParam.prevDFG.filterIsInstance<Reference>().firstOrNull()?.refersTo
         )
         assertEquals(4, callWithParam.prevDFG.filterIsInstance<Literal<*>>().firstOrNull()?.value)
 
@@ -133,12 +126,7 @@ class UnresolvedDFGPassTest {
                                 param("args", t("String[]"))
                                 body {
                                     declare {
-                                        variable(
-                                            "os",
-                                            t("Optional") {
-                                                (this as ObjectType).generics = listOf(t("String"))
-                                            }
-                                        ) {
+                                        variable("os", t("Optional", listOf(t("String")))) {
                                             memberCall("getOptionalString", ref("RandomClass")) {
                                                 isStatic = true
                                             }

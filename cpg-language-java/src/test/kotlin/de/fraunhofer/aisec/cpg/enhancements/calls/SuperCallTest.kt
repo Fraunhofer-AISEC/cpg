@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -99,10 +99,10 @@ internal class SuperCallTest : BaseTest() {
         val getSuperField = findByUniqueName(methods, "getSuperField")
         refs = getSuperField.allChildren<MemberExpression>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
-        assertTrue(fieldRef.base is DeclaredReferenceExpression)
+        assertTrue(fieldRef.base is Reference)
         assertRefersTo(fieldRef.base, getField.receiver)
         assertEquals(field, fieldRef.refersTo)
-        assertTrue(superFieldRef.base is DeclaredReferenceExpression)
+        assertTrue(superFieldRef.base is Reference)
         assertRefersTo(superFieldRef.base, getSuperField.receiver)
         assertEquals(superField, superFieldRef.refersTo)
     }

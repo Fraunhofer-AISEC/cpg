@@ -57,9 +57,11 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getStaticImports(recordDecl: RecordDeclaration): MutableSet<ValueDeclaration> {
+    protected fun getStaticImports(
+        recordDeclaration: RecordDeclaration
+    ): MutableSet<ValueDeclaration> {
         val partitioned =
-            recordDecl.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
+            recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
         val staticImports = mutableSetOf<ValueDeclaration>()
         val importPattern = Pattern.compile("(?<base>.*)\\.(?<member>.*)")
@@ -123,25 +125,27 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // now it gets weird: you can import a field and a number of methods that have the same
         // name, all with a *single* static import...
+        // TODO(oxisto): Move all of the following code to the [Inference] class
         val result = mutableSetOf<ValueDeclaration>()
         result.addAll(memberMethods)
         result.addAll(memberFields)
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                base.newFieldDeclaration(
+                newFieldDeclaration(
                     name,
                     UnknownType.getUnknownType(base.language),
                     ArrayList(),
-                    "",
-                    null,
                     null,
                     false,
-                    base.language
                 )
+            targetField.language = base.language
             targetField.isInferred = true
-            val targetMethod = base.newMethodDeclaration(name, "", true, base)
+
+            val targetMethod = newMethodDeclaration(name, true, base)
+            targetMethod.language = base.language
             targetMethod.isInferred = true
+
             base.addField(targetField)
             base.addMethod(targetMethod)
             result.add(targetField)

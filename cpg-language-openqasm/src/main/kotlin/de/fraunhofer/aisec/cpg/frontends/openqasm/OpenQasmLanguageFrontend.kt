@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.openqasm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
@@ -46,17 +45,14 @@ import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import org.eclipse.cdt.core.dom.ast.*
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 @RegisterExtraPass(OpenQASMPass::class)
 @RegisterExtraPass(QuantumEOGPass::class)
 @RegisterExtraPass(QuantumDFGPass::class)
 class OpenQasmLanguageFrontend(
     language: Language<OpenQasmLanguageFrontend>,
-    config: TranslationConfiguration,
-    scopeManager: ScopeManager
-) : LanguageFrontend(language, config, scopeManager) {
+    ctx: TranslationContext
+) : LanguageFrontend<ASTNode, Any>(language, ctx) { // TODO
 
     companion object {
         @kotlin.jvm.JvmField var OPENQASM_EXTENSIONS: List<String> = listOf(".qasm")
@@ -67,21 +63,20 @@ class OpenQasmLanguageFrontend(
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 
-    override fun <T> getCodeFromRawNode(astNode: T): String? {
-        if (astNode is ASTNode) {
-            return "TODO" // TODO
-        } else {
-            TODO()
-        }
+    override fun setComment(node: Node, astNode: ASTNode) {
+        TODO("Not yet implemented")
     }
 
-    override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        // will be invoked by native function
-        return null
+    override fun locationOf(astNode: ASTNode): PhysicalLocation? {
+        return null // TODO
     }
 
-    override fun <S, T> setComment(s: S, ctx: T) {
-        // will be invoked by native function
+    override fun codeOf(astNode: ASTNode): String? {
+        return "TODO" // TODO
+    }
+
+    override fun typeOf(type: Any): Type {
+        TODO("Not yet implemented")
     }
 
     private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
@@ -95,13 +90,9 @@ class OpenQasmLanguageFrontend(
 
     private fun toCpg(ast: ProgramNode): TranslationUnitDeclaration {
         val tu =
-            newTranslationUnitDeclaration(
-                ast.location.artifactLocation.uri.path,
-                code = getCodeFromRawNode(ast),
-                rawNode = ast
-            )
+            newTranslationUnitDeclaration(ast.location.artifactLocation.uri.path, rawNode = ast)
         scopeManager.resetToGlobal(tu)
-        val nsd = newNamespaceDeclaration("OpenQASM", code = getCodeFromRawNode(ast), rawNode = ast)
+        val nsd = newNamespaceDeclaration("OpenQASM", rawNode = ast)
         scopeManager.addDeclaration(nsd)
         tu.addDeclaration(nsd)
         scopeManager.enterScope(nsd)
@@ -134,7 +125,7 @@ class OpenQasmLanguageFrontend(
         val name = stmt.idNode.payload
         val cnt: Number =
             (stmt.designator?.payload as? DecimalIntegerLiteralExpressionNode)?.payload ?: TODO()
-        val collector = newCompoundStatement()
+        val collector = newBlock(rawNode = stmt)
         val tpe =
             when (stmt.type) {
                 "QREG" -> QuantumBitType()
@@ -142,13 +133,7 @@ class OpenQasmLanguageFrontend(
                 else -> TODO()
             }
         for (i in 0 until cnt as Int) {
-            val v =
-                newVariableDeclaration(
-                    "$name[$i]",
-                    type = tpe,
-                    code = getCodeFromRawNode(stmt),
-                    rawNode = stmt
-                )
+            val v = newVariableDeclaration("$name[$i]", type = tpe, rawNode = stmt)
             scopeManager.addDeclaration(v)
             collector.addDeclaration(v)
             // TODO type
@@ -157,7 +142,7 @@ class OpenQasmLanguageFrontend(
     }
 
     private fun handleMeasure(stmt: MeasureArrowAssignmentStatementNode): Statement {
-        val ret = newCompoundStatement()
+        val ret = newBlock(rawNode = stmt)
 
         // TODO third expr, first()
 
@@ -222,9 +207,9 @@ class OpenQasmLanguageFrontend(
             val rhsIdx = rhsStartIdx.toInt() + i
             val rhsIdxName = "$rhsName[$rhsIdx]"
 
-            val m = newCallExpression(newDeclaredReferenceExpression("measure"))
-            m.addArgument(newDeclaredReferenceExpression(lhsIdxName))
-            m.addArgument(newDeclaredReferenceExpression(rhsIdxName))
+            val m = newCallExpression(newReference("measure"))
+            m.addArgument(newReference(lhsIdxName))
+            m.addArgument(newReference(rhsIdxName))
             /* newAssignExpression(
                 lhs = listOf(newDeclaredReferenceExpression(lhsIdxName)),
                 rhs = listOf(newDeclaredReferenceExpression(rhsIdxName))
@@ -236,7 +221,7 @@ class OpenQasmLanguageFrontend(
     }
 
     private fun handleForStatement(stmt: ForStatementNode): Statement {
-        val f = newForStatement(code = getCodeFromRawNode(stmt), rawNode = stmt)
+        val f = newForStatement(rawNode = stmt)
         // TODO
         return f
     }
@@ -262,10 +247,9 @@ class OpenQasmLanguageFrontend(
                 else -> TODO()
             }
 
-        val collector = newCompoundStatement()
+        val collector = newBlock()
         for (i in 0 until cnt as Int) {
-            val v =
-                newVariableDeclaration("$name[$i]", code = getCodeFromRawNode(stmt), rawNode = stmt)
+            val v = newVariableDeclaration("$name[$i]", rawNode = stmt)
             scopeManager.addDeclaration(v)
             collector.addDeclaration(v)
             // TODO type
@@ -279,10 +263,9 @@ class OpenQasmLanguageFrontend(
         val cnt: Number =
             (stmt.qubitType.designator?.payload as? DecimalIntegerLiteralExpressionNode)?.payload
                 ?: TODO()
-        val collector = newCompoundStatement()
+        val collector = newBlock()
         for (i in 0 until cnt as Int) {
-            val v =
-                newVariableDeclaration("$name[$i]", code = getCodeFromRawNode(stmt), rawNode = stmt)
+            val v = newVariableDeclaration("$name[$i]", rawNode = stmt)
             scopeManager.addDeclaration(v)
             collector.addDeclaration(v)
             // TODO type
@@ -293,13 +276,8 @@ class OpenQasmLanguageFrontend(
     private fun handleGateCall(stmt: GateCallStatementNode): Statement {
         // handle gate call as function call
 
-        val callee =
-            newDeclaredReferenceExpression(
-                stmt.identifier?.payload,
-                code = getCodeFromRawNode(stmt),
-                rawNode = stmt
-            )
-        val call = newCallExpression(callee, code = getCodeFromRawNode(stmt), rawNode = stmt)
+        val callee = newReference(stmt.identifier?.payload, rawNode = stmt)
+        val call = newCallExpression(callee, rawNode = stmt)
         if (stmt.gateOperandList != null) {
             for (p in stmt.gateOperandList.payload) {
                 call.addArgument(handleCallArg(p))
@@ -324,11 +302,7 @@ class OpenQasmLanguageFrontend(
                 ?.payload
                 ?: TODO()
         name += "]"
-        return newDeclaredReferenceExpression(
-            name,
-            code = getCodeFromRawNode(IndexedIdentifier),
-            rawNode = IndexedIdentifier
-        )
+        return newReference(name, rawNode = IndexedIdentifier)
     }
 
     private fun handleGateStatement(stmt: GateStatementNode): Statement {
@@ -337,13 +311,7 @@ class OpenQasmLanguageFrontend(
         scopeManager.enterScope(func)
         if (stmt.identifierList != null) {
             for (p in stmt.identifierList.identifiers) {
-                func.addParameter(
-                    newParamVariableDeclaration(
-                        p,
-                        code = getCodeFromRawNode(stmt),
-                        rawNode = stmt.identifierList
-                    )
-                )
+                func.addParameter(newParameterDeclaration(p, rawNode = stmt.identifierList))
             }
         }
 
@@ -356,7 +324,7 @@ class OpenQasmLanguageFrontend(
     }
 
     private fun handleScopeNode(scope: ScopeNode): Statement {
-        val ret = newCompoundStatement(code = getCodeFromRawNode(scope), rawNode = scope)
+        val ret = newBlock(rawNode = scope)
         for (s in scope.stmtList) {
             ret.addStatement(handleStatement(s))
         }

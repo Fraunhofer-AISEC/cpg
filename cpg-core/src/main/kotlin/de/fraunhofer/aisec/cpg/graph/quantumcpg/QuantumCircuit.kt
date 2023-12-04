@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.quantumcpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 
-class QuantumCircuit(override val cpgNode: Node?) : CompoundStatement(), QuantumNode {
+class QuantumCircuit(override val cpgNode: Node?) : Block(), QuantumNode {
     var quantumBits: Array<QuantumBit>? = null
     var classicBits: Array<ClassicBit>? = null
     val operations = mutableListOf<QuantumOperation>()

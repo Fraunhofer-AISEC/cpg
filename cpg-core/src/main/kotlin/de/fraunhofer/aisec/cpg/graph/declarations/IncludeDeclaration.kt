@@ -34,6 +34,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
+/** This declaration represents either an include or an import, depending on the language. */
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
     @AST
@@ -43,6 +44,10 @@ class IncludeDeclaration : Declaration() {
     @AST
     private val problemEdges: MutableList<PropertyEdge<ProblemDeclaration>> = ArrayList()
 
+    /**
+     * This property refers to the file or directory or path. For example, in C this refers to an
+     * include header file. In Go, this refers to the package path (e.g., github.com/a/b)
+     */
     var filename: String? = null
 
     val includes: List<IncludeDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::includeEdges)

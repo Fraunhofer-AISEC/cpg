@@ -60,3 +60,5 @@ answerPythonQiskit=$(ask "Do you want to enable the Python Qiskit frontend? (cur
 setProperty "enablePythonQiskitFrontend" $answerPythonQiskit
 answerOpenQasm=$(ask "Do you want to enable the OpenQASM frontend? (currently $(getProperty "enableOpenQasmFrontend"))")
 setProperty "enableOpenQasmFrontend" $answerOpenQasm
+answerRuby=$(ask "Do you want to enable the Ruby frontend? (currently $(getProperty "enableRubyFrontend"))")
+setProperty "enableRubyFrontend" $answerRuby

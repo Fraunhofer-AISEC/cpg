@@ -25,15 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * This interfaces denotes that the given [Node] has a "type". Currently, we only have two known
@@ -48,8 +48,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * following:
      * - the type declared by the [Node], e.g., by a [ValueDeclaration]
      * - intrinsically tied to the node, e.g. an [IntegerType] in an integer [Literal]
-     * - the [Type] of a declaration a node is referring to, e.g., in a
-     *   [DeclaredReferenceExpression]
+     * - the [Type] of a declaration a node is referring to, e.g., in a [Reference]
      *
      * An implementation of this must be sure to invoke [informObservers].
      */
@@ -102,7 +101,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * A list of [TypeObserver] objects that will be informed about type changes, usually by
      * [informObservers].
      */
-    val typeObservers: MutableList<TypeObserver>
+    val typeObservers: MutableSet<TypeObserver>
 
     /**
      * A [TypeObserver] can be used by its implementing class to observe changes to the
@@ -185,7 +184,23 @@ interface HasType : ContextProvider, LanguageProvider {
     }
 }
 
-fun <T : Type> Node.registerType(type: T): T {
-    val c = ctx ?: throw TranslationException("context not available")
-    return c.typeManager.registerType(type)
+/**
+ * A special [HasType.TypeObserver] that can be used in cases where we cannot directly use an
+ * initializer but still want to depend on the type of the variable in [decl]. Most cases include
+ * languages that have implicit declarations that are later computed in a pass, such sa Go or
+ * Python.
+ */
+class InitializerTypePropagation(private var decl: HasType, private var tupleIdx: Int = -1) :
+    HasType.TypeObserver {
+    override fun typeChanged(newType: Type, src: HasType) {
+        if (newType is TupleType && tupleIdx != -1) {
+            decl.type = newType.types.getOrElse(tupleIdx) { decl.unknownType() }
+        } else {
+            decl.type = newType
+        }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // TODO
+    }
 }

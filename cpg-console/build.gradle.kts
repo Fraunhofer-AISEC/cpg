@@ -59,6 +59,5 @@ dependencies {
 
     implementation(libs.kotlin.script.runtime)
     implementation(libs.kotlin.coroutines.core)
-    implementation(libs.jline)
     implementation(libs.kotlin.ki.shell)
 }

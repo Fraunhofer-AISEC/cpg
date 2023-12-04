@@ -60,11 +60,9 @@ class AssignExpression :
         set(value) {
             field = value
             if (operatorCode == "=") {
-                field.forEach { (it as? DeclaredReferenceExpression)?.access = AccessValues.WRITE }
+                field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
             } else {
-                field.forEach {
-                    (it as? DeclaredReferenceExpression)?.access = AccessValues.READWRITE
-                }
+                field.forEach { (it as? Reference)?.access = AccessValues.READWRITE }
             }
         }
 
@@ -115,16 +113,16 @@ class AssignExpression :
      * we need to later resolve this in an additional pass. The declarations are then stored in
      * [declarations].
      */
-    override var declarations = mutableListOf<VariableDeclaration>()
+    @AST override var declarations = mutableListOf<VariableDeclaration>()
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
-    fun findValue(lhsExpr: HasType): Expression? {
+    fun findValue(lhsExpression: HasType): Expression? {
         return if (lhs.size > 1) {
             rhs.singleOrNull()
         } else {
             // Basically, we need to find out which index on the lhs this variable belongs to and
             // find the corresponding index on the rhs.
-            val idx = lhs.indexOf(lhsExpr)
+            val idx = lhs.indexOf(lhsExpression)
             if (idx == -1) {
                 null
             } else {
@@ -134,8 +132,8 @@ class AssignExpression :
     }
 
     /** Finds the targets(s) (within [lhs]) that are assigned to the particular [rhs] expression. */
-    fun findTargets(rhsExpr: HasType): List<Expression> {
-        val type = rhsExpr.type
+    fun findTargets(rhsExpression: HasType): List<Expression> {
+        val type = rhsExpression.type
 
         // There are now two possibilities: Either, we have a tuple type, that we need to
         // deconstruct, or we have a singular type
@@ -152,7 +150,7 @@ class AssignExpression :
         } else {
             // Basically, we need to find out which index on the rhs this variable belongs to and
             // find the corresponding index on the rhs.
-            val idx = rhs.indexOf(rhsExpr)
+            val idx = rhs.indexOf(rhsExpression)
             if (idx == -1) {
                 listOf()
             } else {

@@ -25,39 +25,36 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import java.nio.file.Path
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SizeEvaluatorTest {
+    private lateinit var tu: TranslationUnitDeclaration
+
+    @BeforeAll
+    fun beforeAll() {
+        tu = ValueEvaluationTests.getSizeExample().components.first().translationUnits.first()
+    }
+
     @Test
     fun testArraySize() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("size.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(JavaLanguage())
-            }
-
-        assertNotNull(tu)
-
         val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
         assertNotNull(mainClass)
         val main = mainClass.byNameOrNull<MethodDeclaration>("main")
@@ -79,18 +76,6 @@ class SizeEvaluatorTest {
 
     @Test
     fun testArraySizeFromSubscript() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("size.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(JavaLanguage())
-            }
-
-        assertNotNull(tu)
-
         val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
         assertNotNull(mainClass)
         val main = mainClass.byNameOrNull<MethodDeclaration>("main")
@@ -107,8 +92,8 @@ class SizeEvaluatorTest {
         assertNotNull(forLoop)
 
         val subscriptExpr =
-            ((forLoop.statement as CompoundStatement).statements[0] as AssignExpression).lhs<
-                ArraySubscriptionExpression
+            ((forLoop.statement as Block).statements[0] as AssignExpression).lhs<
+                SubscriptExpression
             >()
 
         value = evaluator.evaluate(subscriptExpr) as Int
@@ -117,18 +102,6 @@ class SizeEvaluatorTest {
 
     @Test
     fun testStringSize() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("size.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(JavaLanguage())
-            }
-
-        assertNotNull(tu)
-
         val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
         assertNotNull(mainClass)
         val main = mainClass.byNameOrNull<MethodDeclaration>("main")

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -132,7 +132,6 @@ object TestUtils {
                 .debugParser(true)
                 .failOnError(true)
                 .useParallelFrontends(true)
-                .defaultLanguages()
         if (usePasses) {
             builder.defaultPasses()
         }
@@ -155,7 +154,9 @@ object TestUtils {
     ): List<TranslationUnitDeclaration> {
         val config = builder.build()
         val analyzer = TranslationManager.builder().config(config).build()
-        return analyzer.analyze().get().translationUnits
+        val result = analyzer.analyze().get()
+
+        return result.components["application"]?.translationUnits ?: listOf()
     }
 
     @JvmOverloads
@@ -210,8 +211,8 @@ object TestUtils {
      * Asserts, that the expression given in [expression] refers to the expected declaration [b].
      */
     fun assertRefersTo(expression: Expression?, b: Declaration?) {
-        if (expression is DeclaredReferenceExpression) {
-            assertEquals(b, (expression as DeclaredReferenceExpression?)?.refersTo)
+        if (expression is Reference) {
+            assertEquals(b, (expression as Reference?)?.refersTo)
         } else {
             fail("not a reference")
         }
@@ -221,15 +222,16 @@ object TestUtils {
      * Asserts, that the call expression given in [call] refers to the expected function declaration
      * [func].
      */
-    fun assertInvokes(call: CallExpression, func: FunctionDeclaration?) {
+    fun assertInvokes(call: CallExpression?, func: FunctionDeclaration?) {
+        assertNotNull(call)
         assertContains(call.invokes, func)
     }
 
     /**
      * Asserts equality or containing of the expected usedNode in the usingNode. If
-     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [DeclaredReferenceExpression] where
-     * [DeclaredReferenceExpression.refersTo] is or contains `usedNode`. If this is not the case,
-     * usage can also be interpreted as equality of the two.
+     * [ENFORCE_REFERENCES] is true, `usingNode` must be a [Reference] where [Reference.refersTo] is
+     * or contains `usedNode`. If this is not the case, usage can also be interpreted as equality of
+     * the two.
      *
      * @param usingNode
      * - The node that shows usage of another node.
@@ -239,11 +241,11 @@ object TestUtils {
      */
     fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
         assertNotNull(usingNode)
-        if (usingNode !is DeclaredReferenceExpression && !ENFORCE_REFERENCES) {
+        if (usingNode !is Reference && !ENFORCE_REFERENCES) {
             assertSame(usedNode, usingNode)
         } else {
-            assertTrue(usingNode is DeclaredReferenceExpression)
-            val reference = usingNode as? DeclaredReferenceExpression
+            assertTrue(usingNode is Reference)
+            val reference = usingNode as? Reference
             assertEquals(usedNode, reference?.refersTo)
         }
     }
@@ -263,7 +265,7 @@ object TestUtils {
      * @param usedMember
      * - THe expected member that is used
      */
-    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Node?) {
+    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
         assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the
@@ -271,12 +273,12 @@ object TestUtils {
             assertUsageOf(usingNode, usedMember)
         } else {
             assertTrue(usingNode is MemberExpression)
-            val memberExpression = usingNode as MemberExpression?
-            assertNotNull(memberExpression)
+            val memberExpressionExpression = usingNode as MemberExpression?
+            assertNotNull(memberExpressionExpression)
 
-            val base = memberExpression.base
+            val base = memberExpressionExpression.base
             assertUsageOf(base, usedBase)
-            assertUsageOf(memberExpression.refersTo, usedMember)
+            assertUsageOf(memberExpressionExpression.refersTo, usedMember)
         }
     }
 }

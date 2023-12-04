@@ -55,11 +55,13 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
  * constructed by the powerset.
  */
-class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Node>>(elements) {
+class PowersetLattice(override val elements: IdentitySet<Node>) :
+    LatticeElement<Set<Node>>(elements) {
     override fun lub(other: LatticeElement<Set<Node>>) =
-        PowersetLattice((other.elements).union(this.elements))
+        PowersetLattice(this.elements.union(other.elements))
 
-    override fun duplicate() = PowersetLattice(this.elements.toSet())
+    override fun duplicate(): LatticeElement<Set<Node>> =
+        PowersetLattice(this.elements.toIdentitySet())
 
     override fun compareTo(other: LatticeElement<Set<Node>>): Int {
         return if (this.elements.containsAll(other.elements)) {
@@ -135,7 +137,7 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
             // upper bound
             this[newNode] = newLatticeElement.lub(current)
         } else {
-            this[newNode] = newLatticeElement.duplicate()
+            this[newNode] = newLatticeElement
         }
         return true
     }
@@ -147,13 +149,15 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
  */
 class Worklist<K : Any, N : Any, V>() {
     /** A mapping of nodes to the state which is currently available there. */
-    var globalState: MutableMap<K, State<N, V>> = mutableMapOf()
+    var globalState = IdentityHashMap<K, State<N, V>>()
         private set
 
     /** A list of all nodes which have already been visited. */
     private val alreadySeen = IdentitySet<K>()
 
-    constructor(globalState: MutableMap<K, State<N, V>> = mutableMapOf()) : this() {
+    constructor(
+        globalState: IdentityHashMap<K, State<N, V>> = IdentityHashMap<K, State<N, V>>()
+    ) : this() {
         this.globalState = globalState
     }
 
@@ -242,15 +246,29 @@ inline fun <reified K : Node, V> iterateEOG(
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>
 ): State<K, V>? {
-    val worklist = Worklist(mutableMapOf(Pair(startNode, startState)))
+    val initialState = IdentityHashMap<K, State<K, V>>()
+    initialState[startNode] = startState
+    val worklist = Worklist(initialState)
     worklist.push(startNode, startState)
 
     while (worklist.isNotEmpty()) {
         val (nextNode, state) = worklist.pop()
 
-        val newState = transformation(nextNode, state.duplicate(), worklist)
+        // This should check if we're not near the beginning/end of a basic block (i.e., there are
+        // no merge points or branches of the EOG nearby). If that's the case, we just parse the
+        // whole basic block and do not want to duplicate the state. Near the beginning/end, we do
+        // want to copy the state to avoid terminating the iteration too early by messing up with
+        // the state-changing checks.
+        val insideBB =
+            (nextNode.nextEOG.size == 1 && nextNode.prevEOG.singleOrNull()?.nextEOG?.size == 1)
+        val newState =
+            transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
-            nextNode.nextEOG.forEach { if (it is K) worklist.push(it, newState.duplicate()) }
+            nextNode.nextEOG.forEach {
+                if (it is K) {
+                    worklist.push(it, newState)
+                }
+            }
         }
     }
     return worklist.mop()
@@ -261,7 +279,7 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>
 ): State<N, V>? {
-    val globalState = mutableMapOf<K, State<N, V>>()
+    val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {
         globalState[startEdge] = startState
     }
@@ -271,10 +289,22 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     while (worklist.isNotEmpty()) {
         val (nextEdge, state) = worklist.pop()
 
-        val newState = transformation(nextEdge, state.duplicate(), worklist)
-        if (worklist.update(nextEdge, newState)) {
+        // This should check if we're not near the beginning/end of a basic block (i.e., there are
+        // no merge points or branches of the EOG nearby). If that's the case, we just parse the
+        // whole basic block and do not want to duplicate the state. Near the beginning/end, we do
+        // want to copy the state to avoid terminating the iteration too early by messing up with
+        // the state-changing checks.
+        val insideBB =
+            (nextEdge.end.nextEOG.size == 1 &&
+                nextEdge.end.prevEOG.size == 1 &&
+                nextEdge.start.nextEOG.size == 1)
+        val newState =
+            transformation(nextEdge, if (insideBB) state else state.duplicate(), worklist)
+        if (insideBB || worklist.update(nextEdge, newState)) {
             nextEdge.end.nextEOGEdges.forEach {
-                if (it is K) worklist.push(it, newState.duplicate())
+                if (it is K) {
+                    worklist.push(it, newState)
+                }
             }
         }
     }

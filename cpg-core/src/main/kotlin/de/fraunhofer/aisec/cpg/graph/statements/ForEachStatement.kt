@@ -27,7 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 
 class ForEachStatement : Statement(), BranchingNode, StatementHolder {
@@ -38,7 +39,7 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     @AST
     var variable: Statement? = null
         set(value) {
-            if (value is DeclaredReferenceExpression) {
+            if (value is Reference) {
                 value.access = AccessValues.WRITE
             }
             field = value
@@ -72,13 +73,14 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
             iterable = s
         } else if (statement == null) {
             statement = s
-        } else if (statement !is CompoundStatement) {
-            val newStmt = newCompoundStatement()
-            statement?.let { newStmt.addStatement(it) }
-            newStmt.addStatement(s)
-            statement = newStmt
+        } else if (statement !is Block) {
+            val block = Block()
+            block.language = this.language
+            statement?.let { block.addStatement(it) }
+            block.addStatement(s)
+            statement = block
         } else {
-            (statement as? CompoundStatement)?.addStatement(s)
+            (statement as? Block)?.addStatement(s)
         }
     }
 

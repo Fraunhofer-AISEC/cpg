@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -78,6 +80,23 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 "Tried to parse a defer statement but could not retrieve current function from scope manager."
             )
         }
+    }
+
+    /**
+     * We need to intentionally override [handleRecordDeclaration] to NOT create the EOG for its
+     * children, e.g., [RecordDeclaration.methods]. The reason for this is that Go only has external
+     * methods declarations, and we do a little cheat by adding the methods both to the namespace of
+     * the current file and to the [RecordDeclaration.methods].
+     *
+     * But, due to this, the original [EvaluationOrderGraphPass] would create the EOG for methods
+     * twice, once for the object in the [RecordDeclaration] and once for the declaration inside the
+     * [NamespaceDeclaration] of the current file.
+     */
+    override fun handleRecordDeclaration(node: RecordDeclaration) {
+        scopeManager.enterScope(node)
+        handleStatementHolder(node)
+        currentPredecessors.clear()
+        scopeManager.leaveScope(node)
     }
 
     override fun handleFunctionDeclaration(node: FunctionDeclaration) {

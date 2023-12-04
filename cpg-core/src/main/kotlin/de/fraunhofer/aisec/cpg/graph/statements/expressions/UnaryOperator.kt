@@ -27,13 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), HasType.TypeObserver {
+class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver {
     /** The expression on which the operation is applied. */
     @AST
     var input: Expression = ProblemExpression("could not parse input")
@@ -62,8 +63,8 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
         if (operatorCode == "++" || operatorCode == "--") {
             access = AccessValues.READWRITE
         }
-        if (input is DeclaredReferenceExpression) {
-            (input as? DeclaredReferenceExpression)?.access = access
+        if (input is Reference) {
+            (input as? Reference)?.access = access
         }
     }
 
@@ -110,6 +111,19 @@ class UnaryOperator : Expression(), HasType.TypeObserver {
                 }
                 .toSet()
         )
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.input = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.input == old) {
+            this.input = new
+            return true
+        }
+
+        return false
     }
 
     override fun equals(other: Any?): Boolean {

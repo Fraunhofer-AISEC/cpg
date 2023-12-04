@@ -1,7 +1,3 @@
-import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
-import java.io.BufferedOutputStream
-import java.io.ByteArrayOutputStream
-
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -49,7 +45,7 @@ allprojects {
 
     val dokkaPlugin by configurations
     dependencies {
-        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.8.10")
+        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.9.0")
     }
 }
 
@@ -76,7 +72,7 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
     val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
     val mapOf = mapOf(id to config)
 
-    dokkaMultiModuleTask.outputDirectory.set(file(buildDir.resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
+    dokkaMultiModuleTask.outputDirectory.set(file(layout.buildDirectory.asFile.get().resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 
@@ -160,3 +156,9 @@ val enableOpenQasmFrontend by extra {
     enableOpenQasmFrontend.toBoolean()
 }
 project.logger.lifecycle("OpenQASM frontend is ${if (enableOpenQasmFrontend) "enabled" else "disabled"}")
+
+val enableRubyFrontend: Boolean by extra {
+    val enableRubyFrontend: String? by project
+    enableRubyFrontend.toBoolean()
+}
+project.logger.lifecycle("Ruby frontend is ${if (enableRubyFrontend) "enabled" else "disabled"}")

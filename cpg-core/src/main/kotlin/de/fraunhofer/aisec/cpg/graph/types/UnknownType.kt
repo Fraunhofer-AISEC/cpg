@@ -54,11 +54,6 @@ class UnknownType private constructor() : Type() {
         return this
     }
 
-    override fun duplicate(): Type {
-        // We don't duplicate because we cannot change any properties.
-        return this
-    }
-
     override fun hashCode() = Objects.hash(super.hashCode())
 
     override fun equals(other: Any?): Boolean {

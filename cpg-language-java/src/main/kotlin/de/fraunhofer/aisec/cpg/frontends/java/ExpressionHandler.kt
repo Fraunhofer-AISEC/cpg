@@ -29,8 +29,30 @@ import com.github.javaparser.Range
 import com.github.javaparser.TokenRange
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.body.VariableDeclarator
-import com.github.javaparser.ast.expr.*
+import com.github.javaparser.ast.expr.ArrayAccessExpr
+import com.github.javaparser.ast.expr.ArrayCreationExpr
+import com.github.javaparser.ast.expr.ArrayInitializerExpr
+import com.github.javaparser.ast.expr.BinaryExpr
+import com.github.javaparser.ast.expr.BooleanLiteralExpr
+import com.github.javaparser.ast.expr.CharLiteralExpr
+import com.github.javaparser.ast.expr.ClassExpr
+import com.github.javaparser.ast.expr.DoubleLiteralExpr
+import com.github.javaparser.ast.expr.EnclosedExpr
 import com.github.javaparser.ast.expr.Expression
+import com.github.javaparser.ast.expr.FieldAccessExpr
+import com.github.javaparser.ast.expr.InstanceOfExpr
+import com.github.javaparser.ast.expr.IntegerLiteralExpr
+import com.github.javaparser.ast.expr.LiteralExpr
+import com.github.javaparser.ast.expr.LongLiteralExpr
+import com.github.javaparser.ast.expr.MethodCallExpr
+import com.github.javaparser.ast.expr.NameExpr
+import com.github.javaparser.ast.expr.NullLiteralExpr
+import com.github.javaparser.ast.expr.ObjectCreationExpr
+import com.github.javaparser.ast.expr.StringLiteralExpr
+import com.github.javaparser.ast.expr.SuperExpr
+import com.github.javaparser.ast.expr.ThisExpr
+import com.github.javaparser.ast.expr.UnaryExpr
+import com.github.javaparser.ast.expr.VariableDeclarationExpr
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
@@ -40,6 +62,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.function.Supplier
 import kotlin.collections.set
@@ -51,17 +75,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
-        val lambda = newLambdaExpression(frontend.codeOf(lambdaExpr))
-        val anonymousFunction = newFunctionDeclaration("", frontend.codeOf(lambdaExpr))
+        val lambda = newLambdaExpression(rawNode = lambdaExpr)
+        val anonymousFunction = newFunctionDeclaration("", rawNode = lambdaExpr)
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
             val param =
-                this.newParamVariableDeclaration(
-                    parameter.nameAsString,
-                    resolvedType,
-                    parameter.isVarArgs
-                )
+                newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
             anonymousFunction.addParameter(param)
             frontend.setCodeAndLocation(param, parameter)
             frontend.processAnnotations(param, parameter)
@@ -82,7 +102,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleCastExpr(expr: Expression): Statement {
         val castExpr = expr.asCastExpr()
-        val castExpression = this.newCastExpression(expr.toString())
+        val castExpression = newCastExpression(rawNode = expr)
         val expression =
             handle(castExpr.expression)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -103,15 +123,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [ArrayCreationExpression], which is usually used as an initializer of a
+     * Creates a new [NewArrayExpression], which is usually used as an initializer of a
      * [VariableDeclaration].
      *
      * @param expr the expression
-     * @return the [ArrayCreationExpression]
+     * @return the [NewArrayExpression]
      */
     private fun handleArrayCreationExpr(expr: Expression): Statement {
         val arrayCreationExpr = expr as ArrayCreationExpr
-        val creationExpression = this.newArrayCreationExpression(expr.toString())
+        val creationExpression = newNewArrayExpression(rawNode = expr)
 
         // in Java, an array creation expression either specifies an initializer or dimensions
 
@@ -143,7 +163,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
         // syntactic distance a CPP and JAVA CPG
-        val initList = this.newInitializerListExpression(arrayType, expr.toString())
+        val initList = newInitializerListExpression(arrayType, rawNode = expr)
         val initializers =
             arrayInitializerExpr.values
                 .map { handle(it) }
@@ -156,9 +176,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return initList
     }
 
-    private fun handleArrayAccessExpr(expr: Expression): ArraySubscriptionExpression {
+    private fun handleArrayAccessExpr(expr: Expression): SubscriptExpression {
         val arrayAccessExpr = expr as ArrayAccessExpr
-        val arraySubsExpression = this.newArraySubscriptionExpression(expr.toString())
+        val arraySubsExpression = newSubscriptExpression(rawNode = expr)
         (handle(arrayAccessExpr.name)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
             ?.let { arraySubsExpression.arrayExpression = it }
@@ -204,7 +224,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val elseExpr =
             handle(conditionalExpr.elseExpr)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-        return this.newConditionalExpression(condition, thenExpr, elseExpr, superType)
+        return newConditionalExpression(condition, thenExpr, elseExpr, superType)
     }
 
     private fun handleAssignmentExpression(expr: Expression): AssignExpression {
@@ -222,7 +242,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
         val assign =
-            this.newAssignExpression(
+            newAssignExpression(
                 assignExpr.operator.asString(),
                 listOf(lhs),
                 listOf(rhs),
@@ -235,31 +255,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     // Not sure how to handle this exactly yet
     private fun handleVariableDeclarationExpr(expr: Expression): DeclarationStatement {
         val variableDeclarationExpr = expr.asVariableDeclarationExpr()
-        val declarationStatement = this.newDeclarationStatement(variableDeclarationExpr.toString())
+        val declarationStatement = newDeclarationStatement()
         for (variable in variableDeclarationExpr.variables) {
-            val resolved = variable.resolve()
-            val declarationType = frontend.getTypeAsGoodAsPossible(variable, resolved)
-            val declaration =
-                this.newVariableDeclaration(
-                    resolved.name,
-                    declarationType,
-                    variable.toString(),
-                    false,
-                    variable
-                )
-            if (declarationType is PointerType && declarationType.isArray) {
-                declaration.isArray = true
-            }
-            val oInitializer = variable.initializer
-            if (oInitializer.isPresent) {
-                val initializer =
-                    handle(oInitializer.get())
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                if (initializer is ArrayCreationExpression) {
-                    declaration.isArray = true
-                }
-                declaration.initializer = initializer
-            }
+            val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
             frontend.setCodeAndLocation(declaration, variable)
             declarationStatement.addToPropertyEdgeDeclaration(declaration)
             frontend.processAnnotations(declaration, variableDeclarationExpr)
@@ -334,12 +332,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         }
                 }
             }
-            base =
-                this.newDeclaredReferenceExpression(
-                    scope.asNameExpr().nameAsString,
-                    baseType,
-                    scope.toString()
-                )
+            base = newReference(scope.asNameExpr().nameAsString, baseType, rawNode = scope)
             base.isStaticAccess = isStaticAccess
             frontend.setCodeAndLocation(base, fieldAccessExpr.scope)
         } else if (scope.isFieldAccessExpr) {
@@ -353,7 +346,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 // to this base
                 tester = tester.base
             }
-            if (tester is DeclaredReferenceExpression && tester.isStaticAccess) {
+            if (tester is Reference && tester.isStaticAccess) {
                 // try to get the name
                 val name: String
                 val tokenRange = scope.asFieldAccessExpr().tokenRange
@@ -372,11 +365,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         unknownType()
                     }
                 base =
-                    this.newDeclaredReferenceExpression(
-                        scope.asFieldAccessExpr().nameAsString,
-                        baseType,
-                        scope.toString()
-                    )
+                    newReference(scope.asFieldAccessExpr().nameAsString, baseType, rawNode = scope)
                 base.isStaticAccess = true
             }
             frontend.setCodeAndLocation(base, fieldAccessExpr.scope)
@@ -408,7 +397,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     unknownType()
                 }
             val memberExpression =
-                this.newMemberExpression(
+                newMemberExpression(
                     fieldAccessExpr.name.identifier,
                     base,
                     fieldType,
@@ -428,14 +417,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     unknownType()
                 }
             val memberExpression =
-                this.newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
+                newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
             memberExpression.isStaticAccess = true
             return memberExpression
         }
         if (base.location == null) {
             base.location = frontend.locationOf(fieldAccessExpr)
         }
-        return this.newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
+        return newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
     }
 
     private fun handleLiteralExpression(expr: Expression): Literal<*>? {
@@ -446,58 +435,58 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 newLiteral(
                     literalExpr.asIntegerLiteralExpr().asNumber(),
                     this.primitiveType("int"),
-                    value
+                    rawNode = expr
                 )
             is StringLiteralExpr ->
                 newLiteral(
                     literalExpr.asStringLiteralExpr().asString(),
                     this.primitiveType("java.lang.String"),
-                    value
+                    rawNode = expr
                 )
             is BooleanLiteralExpr ->
                 newLiteral(
                     literalExpr.asBooleanLiteralExpr().value,
                     this.primitiveType("boolean"),
-                    value
+                    rawNode = expr
                 )
             is CharLiteralExpr ->
                 newLiteral(
                     literalExpr.asCharLiteralExpr().asChar(),
                     this.primitiveType("char"),
-                    value
+                    rawNode = expr
                 )
             is DoubleLiteralExpr ->
                 newLiteral(
                     literalExpr.asDoubleLiteralExpr().asDouble(),
                     this.primitiveType("double"),
-                    value
+                    rawNode = expr
                 )
             is LongLiteralExpr ->
                 newLiteral(
                     literalExpr.asLongLiteralExpr().asNumber(),
                     this.primitiveType("long"),
-                    value
+                    rawNode = expr
                 )
-            is NullLiteralExpr -> newLiteral<Any?>(null, this.objectType("null"), value)
+            is NullLiteralExpr -> newLiteral(null, this.objectType("null"), rawNode = expr)
             else -> null
         }
     }
 
-    private fun handleClassExpression(expr: Expression): DeclaredReferenceExpression {
+    private fun handleClassExpression(expr: Expression): Reference {
         val classExpr = expr.asClassExpr()
         val type = frontend.typeOf(classExpr.type)
         val thisExpression =
-            this.newDeclaredReferenceExpression(
+            newReference(
                 classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
                 type,
-                classExpr.toString()
+                rawNode = expr
             )
         thisExpression.isStaticAccess = true
         frontend.setCodeAndLocation(thisExpression, classExpr)
         return thisExpression
     }
 
-    private fun handleThisExpression(expr: Expression): DeclaredReferenceExpression {
+    private fun handleThisExpression(expr: Expression): Reference {
         val thisExpr = expr.asThisExpr()
         val resolvedValueDeclaration = thisExpr.resolve()
         val type = this.objectType(resolvedValueDeclaration.qualifiedName)
@@ -512,17 +501,16 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (typeName.isPresent) {
             name = "this$" + typeName.get().identifier
         }
-        val thisExpression = this.newDeclaredReferenceExpression(name, type, thisExpr.toString())
+        val thisExpression = newReference(name, type, rawNode = expr)
         frontend.setCodeAndLocation(thisExpression, thisExpr)
         return thisExpression
     }
 
-    private fun handleSuperExpression(expr: Expression): DeclaredReferenceExpression {
+    private fun handleSuperExpression(expr: Expression): Reference {
         // The actual type is hard to determine at this point, as we may not have full information
         // about the inheritance structure. Thus, we delay the resolving to the variable resolving
         // process
-        val superExpression =
-            this.newDeclaredReferenceExpression(expr.toString(), unknownType(), expr.toString())
+        val superExpression = newReference(expr.toString(), unknownType(), rawNode = expr)
         frontend.setCodeAndLocation(superExpression, expr)
         return superExpression
     }
@@ -539,7 +527,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         //    try {
         //      ResolvedType resolvedType = nameExpr.calculateResolvedType();
         //      if (resolvedType.isReferenceType()) {
-        //        return newDeclaredReferenceExpression(
+        //        return newReference(
         //            nameExpr.getNameAsString(),
         //            new Type(((ReferenceTypeImpl) resolvedType).getQualifiedName()),
         //            nameExpr.toString());
@@ -548,7 +536,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         //        UnsolvedSymbolException
         //            e) { // this might throw, e.g. if the type is simply not defined (i.e., syntax
         // error)
-        //      return newDeclaredReferenceExpression(
+        //      return newReference(
         //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
         //    }
         val name = this.parseName(nameExpr.nameAsString)
@@ -603,7 +591,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 if (type == null) {
                     type = frontend.typeOf(symbol.type)
                 }
-                this.newDeclaredReferenceExpression(symbol.name, type, nameExpr.toString())
+                newReference(symbol.name, type, rawNode = nameExpr)
             }
         } catch (ex: UnsolvedSymbolException) {
             val typeString: String? =
@@ -623,8 +611,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 t = this.objectType(typeString)
                 t.typeOrigin = Type.Origin.GUESSED
             }
-            val declaredReferenceExpression =
-                this.newDeclaredReferenceExpression(name, t, nameExpr.toString())
+            val declaredReferenceExpression = newReference(name, t, rawNode = nameExpr)
             val recordDeclaration = frontend.scopeManager.currentRecord
             if (recordDeclaration != null && recordDeclaration.name.lastPartsMatch(name)) {
                 declaredReferenceExpression.refersTo = recordDeclaration
@@ -633,11 +620,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         } catch (ex: RuntimeException) {
             val t = unknownType()
             log.info("Unresolved symbol: {}", nameExpr.nameAsString)
-            this.newDeclaredReferenceExpression(nameExpr.nameAsString, t, nameExpr.toString())
+            newReference(nameExpr.nameAsString, t, rawNode = nameExpr)
         } catch (ex: NoClassDefFoundError) {
             val t = unknownType()
             log.info("Unresolved symbol: {}", nameExpr.nameAsString)
-            this.newDeclaredReferenceExpression(nameExpr.nameAsString, t, nameExpr.toString())
+            newReference(nameExpr.nameAsString, t, rawNode = nameExpr)
         }
     }
 
@@ -654,12 +641,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         // second, handle the value. this is the second argument of the operator call
         val rhs: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression =
-            this.newLiteral(
+            newLiteral(
                 typeAsGoodAsPossible.typeName,
                 this.objectType("class"),
-                binaryExpr.typeAsString
+                rawNode = binaryExpr
             )
-        val binaryOperator = this.newBinaryOperator("instanceof", binaryExpr.toString())
+        val binaryOperator = newBinaryOperator("instanceof", rawNode = binaryExpr)
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
         return binaryOperator
@@ -674,11 +661,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 ?: newProblemExpression("could not parse input")
         val unaryOperator =
-            this.newUnaryOperator(
+            newUnaryOperator(
                 unaryExpr.operator.asString(),
                 unaryExpr.isPostfix,
                 unaryExpr.isPrefix,
-                unaryExpr.toString()
+                rawNode = unaryExpr
             )
         unaryOperator.input = expression
         return unaryOperator
@@ -698,8 +685,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             handle(binaryExpr.right)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 ?: newProblemExpression("could not parse rhs")
-        val binaryOperator =
-            this.newBinaryOperator(binaryExpr.operator.asString(), binaryExpr.toString())
+        val binaryOperator = newBinaryOperator(binaryExpr.operator.asString(), rawNode = binaryExpr)
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
         return binaryOperator
@@ -745,7 +731,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     ?: newProblemExpression("Could not parse base")
 
             // If the base directly refers to a record, then this is a static call
-            if (base is DeclaredReferenceExpression && base.refersTo is RecordDeclaration) {
+            if (base is Reference && base.refersTo is RecordDeclaration) {
                 isStatic = true
             }
         } else {
@@ -767,7 +753,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         this.parseName(qualifiedName).parent
                     }
                 baseType = this.objectType(baseName ?: Type.UNKNOWN_TYPE_STRING)
-                base = this.newDeclaredReferenceExpression(baseName, baseType)
+                base = newReference(baseName, baseType)
             } else {
                 // Since it is possible to omit the "this" keyword, some methods in java do not have
                 // a base.
@@ -777,13 +763,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base = createImplicitThis()
             }
         }
-        val member = this.newMemberExpression(name, base, unknownType(), ".")
+        val member = newMemberExpression(name, base, unknownType(), ".")
         frontend.setCodeAndLocation(
             member,
             methodCallExpr.name
         ) // This will also overwrite the code set to the empty string set above
-        callExpression =
-            this.newMemberCallExpression(member, isStatic, methodCallExpr.toString(), expr)
+        callExpression = newMemberCallExpression(member, isStatic, rawNode = expr)
         callExpression.type = typeString?.let { this.objectType(it) } ?: unknownType()
         val arguments = methodCallExpr.arguments
 
@@ -811,8 +796,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val thisType =
             (frontend.scopeManager.currentFunction as MethodDeclaration?)?.receiver?.type
                 ?: unknownType()
-        base = this.newDeclaredReferenceExpression("this", thisType, "this")
-        base.isImplicit = true
+        base = newReference("this", thisType).implicit("this")
         return base
     }
 
@@ -831,10 +815,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         // To be consistent with other languages, we need to create a NewExpression (for the "new X"
         // part) as well as a ConstructExpression (for the constructor call)
-        val newExpression = this.newNewExpression(expr.toString(), t)
+        val newExpression = newNewExpression(t, rawNode = expr)
         val arguments = objectCreationExpr.arguments
 
-        val ctor = this.newConstructExpression()
+        val ctor = newConstructExpression()
         ctor.type = t
         frontend.setCodeAndLocation(ctor, expr)
 
@@ -873,15 +857,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
             if (anonymousRecord.constructors.isEmpty()) {
                 val constructorDeclaration =
-                    this.newConstructorDeclaration(
-                        anonymousRecord.name.localName,
-                        anonymousRecord.name.localName,
-                        anonymousRecord
-                    )
+                    newConstructorDeclaration(
+                            anonymousRecord.name.localName,
+                            anonymousRecord,
+                        )
+                        .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
                     constructorDeclaration.addParameter(
-                        newParamVariableDeclaration("arg${i}", arg.type)
+                        newParameterDeclaration("arg${i}", arg.type)
                     )
                 }
                 anonymousRecord.addConstructor(constructorDeclaration)
@@ -900,7 +884,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     init {
-        map[AssignExpr::class.java] = HandlerInterface { handleAssignmentExpression(it) }
+        map[com.github.javaparser.ast.expr.AssignExpr::class.java] = HandlerInterface {
+            handleAssignmentExpression(it)
+        }
         map[FieldAccessExpr::class.java] = HandlerInterface { handleFieldAccessExpression(it) }
         map[LiteralExpr::class.java] = HandlerInterface { handleLiteralExpression(it) }
         map[ThisExpr::class.java] = HandlerInterface { handleThisExpression(it) }
@@ -915,12 +901,18 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         }
         map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCallExpression(it) }
         map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
-        map[ConditionalExpr::class.java] = HandlerInterface { handleConditionalExpression(it) }
+        map[com.github.javaparser.ast.expr.ConditionalExpr::class.java] = HandlerInterface {
+            handleConditionalExpression(it)
+        }
         map[EnclosedExpr::class.java] = HandlerInterface { handleEnclosedExpression(it) }
         map[ArrayAccessExpr::class.java] = HandlerInterface { handleArrayAccessExpr(it) }
         map[ArrayCreationExpr::class.java] = HandlerInterface { handleArrayCreationExpr(it) }
         map[ArrayInitializerExpr::class.java] = HandlerInterface { handleArrayInitializerExpr(it) }
-        map[CastExpr::class.java] = HandlerInterface { handleCastExpr(it) }
-        map[LambdaExpr::class.java] = HandlerInterface { handleLambdaExpr(it) }
+        map[com.github.javaparser.ast.expr.CastExpr::class.java] = HandlerInterface {
+            handleCastExpr(it)
+        }
+        map[com.github.javaparser.ast.expr.LambdaExpr::class.java] = HandlerInterface {
+            handleLambdaExpr(it)
+        }
     }
 }

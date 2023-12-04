@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -49,6 +51,10 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     @AST
     var templateParameters: List<Node>? = null
 
+    /** Determines if this is a global variable. */
+    val isGlobal: Boolean
+        get() = this.scope is GlobalScope
+
     /**
      * C++ uses implicit constructor calls for statements like `A a;` but this only applies to types
      * that are actually classes and not just primitive types or typedef aliases of primitives.
@@ -66,7 +72,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         set(value) {
             field?.unregisterTypeObserver(this)
             field = value
-            if (value is DeclaredReferenceExpression) {
+            if (value is Reference) {
                 value.resolutionHelper = this
             }
             value?.registerTypeObserver(this)
@@ -85,19 +91,34 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
-        // Only accept type changes from our initializer, if any
-        if (src != initializer) {
+        // Only accept type changes from our initializer; or if the source is a tuple
+        if (src != initializer && src !is TupleDeclaration) {
             return
         }
 
-        // In the auto-inference case, we want to set the type of our declaration to the
-        // declared type of the initializer
+        // If our type is set to "auto", we want to derive our type from the initializer (or the
+        // tuple source)
         if (this.type is AutoType) {
-            type = newType
+            // If the source is a tuple, we need to check, if we are really part of the source tuple
+            // and if yes, on which position
+            if (src is TupleDeclaration && newType is TupleType) {
+                // We can then derive our appropriate type out of the tuple type based on the
+                // position in the tuple
+                val idx = src.elements.indexOf(this)
+                if (idx != -1) {
+                    type = newType.types.getOrElse(idx) { unknownType() }
+                }
+            } else {
+                // Otherwise, we can just set the type directly.
+                type = newType
+            }
         } else {
-            // Otherwise, we are at least interested in what the initializer's type is, to see
-            // whether we can fill our assigned types with that
-            addAssignedType(newType)
+            if (src !is TupleDeclaration) {
+                // If we are not in "auto" mode, we are at least interested in what the
+                // initializer's type is, to see
+                // whether we can fill our assigned types with that
+                addAssignedType(newType)
+            }
         }
     }
 

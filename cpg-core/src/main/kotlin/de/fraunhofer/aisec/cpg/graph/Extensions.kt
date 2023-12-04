@@ -29,12 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.astParent
 
 /**
@@ -53,6 +54,21 @@ inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? =
         filtered
     }
 }
+
+/**
+ * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
+ * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
+ * declarations, such as functions and variables. For a more detailed explanation, see
+ * [EOGStarterHolder].
+ *
+ * While it is in theory possible to retrieve this property from all nodes, most use cases should
+ * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
+ * [TranslationResult].
+ */
+val Node.allEOGStarters: List<Node>
+    get() {
+        return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }
+    }
 
 @JvmName("astNodes")
 fun Node.ast(): List<Node> {
@@ -168,8 +184,8 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    return if (this.body is CompoundStatement) {
-        return (body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+    return if (this.body is Block) {
+        return (body as? Block)?.statements?.filterIsInstance<T>()?.getOrNull(n)
     } else {
         if (n == 0 && this.body is T) {
             this.body as T
@@ -253,30 +269,38 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+fun Node.followNextDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
     val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableListOf<List<Node>>()
+    val worklist = mutableSetOf<List<Node>>()
     worklist.add(listOf(this)) // We start only with the "from" node (=this)
 
+    val alreadySeenNodes = mutableSetOf<Node>()
+
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.removeFirst()
+        val currentPath = worklist.maxBy { it.size }
+        worklist.remove(currentPath)
+        val currentNode = currentPath.last()
+        alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (currentPath.last().nextDFG.isEmpty()) {
+        if (currentNode.nextDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
+            if (collectFailedPaths) failedPaths.add(currentPath)
             continue
         }
 
-        for (next in currentPath.last().nextDFG) {
+        for (next in currentNode.nextDFG) {
             // Copy the path for each outgoing DFG edge and add the next node
-            val nextPath = mutableListOf<Node>()
-            nextPath.addAll(currentPath)
+            val nextPath = currentPath.toMutableList()
             nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -286,7 +310,11 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
+            if (
+                next !in currentPath &&
+                    (findAllPossiblePaths ||
+                        (next !in alreadySeenNodes && worklist.none { next in it }))
+            ) {
                 worklist.add(nextPath)
             }
         }
@@ -521,8 +549,8 @@ val Node?.methods: List<MethodDeclaration>
 val Node?.fields: List<FieldDeclaration>
     get() = this.allChildren()
 
-/** Returns all [ParamVariableDeclaration] children in this graph, starting with this [Node]. */
-val Node?.parameters: List<ParamVariableDeclaration>
+/** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
+val Node?.parameters: List<ParameterDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
@@ -545,8 +573,8 @@ val Node?.variables: List<VariableDeclaration>
 val Node?.literals: List<Literal<*>>
     get() = this.allChildren()
 
-/** Returns all [DeclaredReferenceExpression] children in this graph, starting with this [Node]. */
-val Node?.refs: List<DeclaredReferenceExpression>
+/** Returns all [Reference] children in this graph, starting with this [Node]. */
+val Node?.refs: List<Reference>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
@@ -565,10 +593,7 @@ val Node?.assignments: List<Assignment>
 val VariableDeclaration.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
-        val assignments =
-            start.assignments.filter {
-                (it.target as? DeclaredReferenceExpression)?.refersTo == this
-            }
+        val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
 
         // We need to measure the distance between the start and each assignment value
         return assignments
@@ -610,7 +635,7 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
 operator fun FunctionDeclaration.get(n: Int): Statement? {
     val body = this.body
 
-    if (body is CompoundStatement) {
+    if (body is Block) {
         return body[n]
     } else if (n == 0) {
         return body
@@ -652,10 +677,10 @@ fun Node.controlledBy(): List<Node> {
  * Returns the expression specifying the dimension (i.e., size) of the array during its
  * initialization.
  */
-val ArraySubscriptionExpression.arraySize: Expression
+val SubscriptExpression.arraySize: Expression
     get() =
-        (((this.arrayExpression as DeclaredReferenceExpression).refersTo as VariableDeclaration)
-                .initializer as ArrayCreationExpression)
+        (((this.arrayExpression as Reference).refersTo as VariableDeclaration).initializer
+                as NewArrayExpression)
             .dimensions[0]
 
 /**
@@ -670,4 +695,26 @@ private fun Node.eogDistanceTo(to: Node): Int {
     }
 
     return i
+}
+
+/**
+ * This is a small utility function to "unwrap" a [Reference] that it is wrapped in (multiple)
+ * [Expression] nodes. This will only work on expression that only have one "argument" (such as a
+ * unary operator), in order to avoid ambiguous results. This can be useful for data-flow analysis,
+ * if you want to quickly retrieve the reference that is affected by an operation. For example in
+ * C++ it is common to take an address of a variable and cast it into an appropriate type:
+ * ```cpp
+ * int64_t addr = (int64_t) &a;
+ * ```
+ *
+ * When called on the right-hand side of this assignment, this function will return `a`.
+ */
+fun Expression?.unwrapReference(): Reference? {
+    return when {
+        this is Reference -> this
+        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
+            this.input.unwrapReference()
+        this is CastExpression -> this.expression.unwrapReference()
+        else -> null
+    }
 }

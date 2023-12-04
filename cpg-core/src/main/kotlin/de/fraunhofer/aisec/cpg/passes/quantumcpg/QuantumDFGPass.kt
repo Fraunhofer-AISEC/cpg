@@ -25,20 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 @DependsOn(QuantumEOGPass::class)
-class QuantumDFGPass : Pass() {
+class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     val worklist: MutableList<QuantumOperation> = mutableListOf()
 
-    override fun accept(p0: TranslationResult) {
-        val allQuantumCircuits = p0.additionalNodes.filterIsInstance<QuantumCircuit>()
+    override fun accept(p0: Component) {
+        val allQuantumCircuits =
+            p0.translationUnits
+                .first()
+                .additionalNodes
+                .filterIsInstance<QuantumCircuit>() // TODO first
 
         for (circuit in allQuantumCircuits) {
 

@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Transient
 
 /**
@@ -42,8 +44,9 @@ import org.neo4j.ogm.annotation.Transient
  *
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
+@NodeEntity
 abstract class Expression : Statement(), HasType {
-    @Transient override val typeObservers = mutableListOf<HasType.TypeObserver>()
+    @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var type: Type = unknownType()
         set(value) {

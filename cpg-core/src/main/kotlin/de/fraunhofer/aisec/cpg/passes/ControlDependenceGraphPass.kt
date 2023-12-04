@@ -52,7 +52,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
     }
 
     /**
-     * Computes the CDG for the given [functionDecl]. It performs the following steps:
+     * Computes the CDG for the given [functionDeclaration]. It performs the following steps:
      * 1) Compute the "parent branching node" for each node and through which path the node is
      *    reached
      * 2) Find out which branch of a [BranchingNode] is actually conditional. The other ones aren't.
@@ -62,18 +62,19 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
      *    parent node and the path(s) through which the [BranchingNode] node is reachable. 3.c)
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
-    private fun handle(functionDecl: FunctionDeclaration) {
+    private fun handle(functionDeclaration: FunctionDeclaration) {
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
         // the node, we use the dominator's state instead (i.e., we move the node one layer upwards)
         val startState = PrevEOGState()
         startState.push(
-            functionDecl,
-            PrevEOGLattice(mapOf(Pair(functionDecl, setOf(functionDecl))))
+            functionDeclaration,
+            PrevEOGLattice(mapOf(Pair(functionDeclaration, setOf(functionDeclaration))))
         )
-        val finalState = iterateEOG(functionDecl.nextEOGEdges, startState, ::handleEdge) ?: return
+        val finalState =
+            iterateEOG(functionDeclaration.nextEOGEdges, startState, ::handleEdge) ?: return
 
-        val branchingNodeConditionals = getBranchingNodeConditions(functionDecl)
+        val branchingNodeConditionals = getBranchingNodeConditions(functionDeclaration)
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
@@ -84,7 +85,10 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                if (k != functionDecl && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
+                if (
+                    k != functionDeclaration &&
+                        v.containsAll(branchingNodeConditionals[k] ?: setOf())
+                ) {
                     // We are reachable from all the branches of branch. Add this parent to the
                     // worklist or update an existing entry. Also consider already existing entries
                     // in finalDominators list and update it (if necessary)
@@ -125,12 +129,12 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
      *
      * This method collects the merging points. It also includes the function declaration itself.
      */
-    private fun getBranchingNodeConditions(functionDecl: FunctionDeclaration) =
+    private fun getBranchingNodeConditions(functionDeclaration: FunctionDeclaration) =
         mapOf(
             // For the function declaration, there's only the path through the function declaration
             // itself.
-            Pair(functionDecl, setOf(functionDecl)),
-            *functionDecl
+            Pair(functionDeclaration, setOf(functionDeclaration)),
+            *functionDeclaration
                 .allChildren<BranchingNode>()
                 .map { branchingNode ->
                     val mergingPoints =

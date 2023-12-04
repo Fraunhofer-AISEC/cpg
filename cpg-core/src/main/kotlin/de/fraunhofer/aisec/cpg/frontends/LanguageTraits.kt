@@ -27,15 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.CallResolver
-import java.util.regex.Pattern
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 
 /**
  * A language trait is a feature or trait that is common to a group of programming languages. Any
@@ -44,16 +42,16 @@ import java.util.regex.Pattern
  *
  * Currently, this interface has no methods. However, in the future, this could be used to execute
  * language/frontend-specific code for the particular trait. This could help to fine-tune the
- * [de.fraunhofer.aisec.cpg.passes.CallResolver] for specific languages.
+ * [CallResolver] for specific languages.
  */
 interface LanguageTrait
 
 /** A language trait, that specifies that this language has support for templates or generics. */
 interface HasGenerics : LanguageTrait {
-    /** The char starting the template specific code (e.g. '<') */
+    /** The char starting the template specific code (e.g. `<`) */
     val startCharacter: Char
 
-    /** The char ending the template specific code (e.g. '>') */
+    /** The char ending the template specific code (e.g. `>`) */
     val endCharacter: Char
 }
 
@@ -116,7 +114,7 @@ interface HasComplexCallResolution : LanguageTrait {
         call: CallExpression,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
-        callResolver: CallResolver
+        callResolver: SymbolResolver
     ): List<FunctionDeclaration>
 
     /**
@@ -131,7 +129,7 @@ interface HasComplexCallResolution : LanguageTrait {
     fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern,
+        name: String,
         ctx: TranslationContext
     ): List<FunctionDeclaration>
 }
@@ -170,7 +168,6 @@ interface HasSuperClasses : LanguageTrait {
         callee: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
-        recordMap: Map<Name, RecordDeclaration>
     ): Boolean
 }
 
@@ -222,4 +219,19 @@ interface HasShortCircuitOperators : LanguageTrait {
      */
     val operatorCodes: Set<String>
         get() = conjunctiveOperators.union(disjunctiveOperators)
+}
+
+/**
+ * A language trait, that specifies that this language treats functions "first-class citizens",
+ * meaning they can be assigned to variables and passed as arguments to other functions.
+ */
+interface HasFirstClassFunctions
+
+/**
+ * A language trait, that specifies that this language has an "anonymous" identifier, used for
+ * unused parameters or suppressed assignments.
+ */
+interface HasAnonymousIdentifier {
+    val anonymousIdentifier: String
+        get() = "_"
 }

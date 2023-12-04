@@ -55,7 +55,11 @@ class CXXAmbiguitiesTest {
     @Test
     fun testCallVsFunctionDeclaration() {
         val file = File("src/test/resources/call_me_crazy.h")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+            }
         assertNotNull(tu)
 
         // make sure we still have only one declaration in the file (the record)
@@ -87,7 +91,10 @@ class CXXAmbiguitiesTest {
     @Test
     fun testFunctionCallOrTypeCast() {
         val file = File("src/test/resources/function_ptr_or_type_cast.c")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
         assertNotNull(tu)
 
         val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
@@ -124,7 +131,10 @@ class CXXAmbiguitiesTest {
     @Test
     fun testMethodOrFunction() {
         val file = File("src/test/resources/method_or_function_call.cpp")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         assertNotNull(tu)
 
         val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")

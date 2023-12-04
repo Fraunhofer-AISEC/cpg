@@ -166,9 +166,11 @@ class OpenQASMLexer(private val file: File) {
     private fun handleBinaryInteger() {
         TODO()
     }
+
     private fun handleHexInteger() {
         TODO()
     }
+
     private fun handleOctalInteger() {
         TODO()
     }
@@ -777,6 +779,7 @@ class OpenQASMLexer(private val file: File) {
     private fun isValidUnicode(c: Char): Boolean {
         return false // TODO implement me
     }
+
     private fun isFirstIdCharacter(c: Char): Boolean {
         // fragment FirstIdCharacter: '_' | ValidUnicode | Letter;
         return c == '_' || isValidUnicode(c) || c.isLetter()

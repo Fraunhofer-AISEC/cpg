@@ -194,14 +194,41 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
-fun dataFlow(from: Node, to: Node): QueryTree<Boolean> {
-    val evalRes = from.followNextDFGEdgesUntilHit { it == to }
+fun dataFlow(
+    from: Node,
+    to: Node,
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true
+): QueryTree<Boolean> {
+    val evalRes =
+        from.followNextDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths) { it == to }
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "data flow from $from to $to"
+    )
+}
+
+/**
+ * Checks if a data flow is possible between the nodes [from] as a source and a node fulfilling
+ * [predicate].
+ */
+fun dataFlow(
+    from: Node,
+    predicate: (Node) -> Boolean,
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true
+): QueryTree<Boolean> {
+    val evalRes =
+        from.followNextDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths, predicate)
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
+    if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    return QueryTree(
+        evalRes.fulfilled.isNotEmpty(),
+        allPaths.toMutableList(),
+        "data flow from $from to ${evalRes.fulfilled.map { it.last() }}"
     )
 }
 
@@ -359,12 +386,14 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
                     it.any { it2 ->
                         if (it2 is AssignmentHolder) {
                             it2.assignments.any { assign ->
-                                val prevMemberFrom = (from as? MemberExpression)?.prevDFG
-                                val nextMemberTo = (assign.target as? MemberExpression)?.nextDFG
+                                val prevMemberFromExpr = (from as? MemberExpression)?.prevDFG
+                                val nextMemberToExpr = (assign.target as? MemberExpression)?.nextDFG
                                 assign.target == from ||
-                                    prevMemberFrom != null &&
-                                        nextMemberTo != null &&
-                                        prevMemberFrom.any { it3 -> nextMemberTo.contains(it3) }
+                                    prevMemberFromExpr != null &&
+                                        nextMemberToExpr != null &&
+                                        prevMemberFromExpr.any { it3 ->
+                                            nextMemberToExpr.contains(it3)
+                                        }
                             }
                         } else {
                             false

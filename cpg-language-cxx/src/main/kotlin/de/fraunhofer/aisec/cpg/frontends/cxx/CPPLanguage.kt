@@ -35,11 +35,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
-import java.util.regex.Pattern
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
-class CPPLanguage :
+open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
@@ -117,11 +116,10 @@ class CPPLanguage :
         call: CallExpression,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
-        callResolver: CallResolver
+        callResolver: SymbolResolver
     ): List<FunctionDeclaration> {
         var invocationCandidates = mutableListOf<FunctionDeclaration>()
-        val records =
-            possibleContainingTypes.mapNotNull { callResolver.recordMap[it.root.name] }.toSet()
+        val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
             invocationCandidates.addAll(
                 callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
@@ -158,15 +156,13 @@ class CPPLanguage :
     override fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern,
+        name: String,
         ctx: TranslationContext
     ): List<FunctionDeclaration> {
         val invocationCandidate =
             mutableListOf<FunctionDeclaration>(
                 *recordDeclaration.methods
-                    .filter { m ->
-                        namePattern.matcher(m.name).matches() && m.hasSignature(call.signature)
-                    }
+                    .filter { m -> m.name.lastPartsMatch(name) && m.hasSignature(call.signature) }
                     .toTypedArray()
             )
         if (invocationCandidate.isEmpty()) {
@@ -175,8 +171,8 @@ class CPPLanguage :
                 resolveWithDefaultArgs(
                     call,
                     recordDeclaration.methods.filter { m ->
-                        (namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/ &&
-                            call.signature.size < m.signatureTypes.size)
+                        m.name.lastPartsMatch(name) /*&& !m.isImplicit()*/ &&
+                            call.signature.size < m.signatureTypes.size
                     }
                 )
             )
@@ -187,7 +183,7 @@ class CPPLanguage :
                 resolveWithImplicitCast(
                     call,
                     recordDeclaration.methods.filter { m ->
-                        namePattern.matcher(m.name).matches() /*&& !m.isImplicit()*/
+                        m.name.lastPartsMatch(name) /*&& !m.isImplicit()*/
                     }
                 )
             )

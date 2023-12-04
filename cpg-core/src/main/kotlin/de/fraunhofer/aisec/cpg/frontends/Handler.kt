@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend </L></T></S>
  */
-abstract class Handler<ResultNode : Node, HandlerNode, L : LanguageFrontend<HandlerNode, *>>(
+abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in HandlerNode, *>>(
     protected val configConstructor: Supplier<ResultNode>,
     /** Returns the frontend which used this handler. */
     val frontend: L
@@ -53,7 +53,8 @@ abstract class Handler<ResultNode : Node, HandlerNode, L : LanguageFrontend<Hand
     CodeAndLocationProvider<HandlerNode> by frontend,
     ScopeProvider by frontend,
     NamespaceProvider by frontend,
-    ContextProvider by frontend {
+    ContextProvider by frontend,
+    RawNodeTypeProvider<HandlerNode> {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
 
@@ -140,8 +141,10 @@ abstract class Handler<ResultNode : Node, HandlerNode, L : LanguageFrontend<Hand
             ret = configConstructor.get()
         }
 
-        frontend.process(ctx, ret)
-        lastNode = ret
+        if (ret != null) {
+            frontend.process(ctx, ret)
+            lastNode = ret
+        }
 
         return ret
     }

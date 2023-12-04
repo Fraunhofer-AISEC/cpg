@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -915,7 +915,7 @@ internal class EOGTest : BaseTest() {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
@@ -930,21 +930,18 @@ internal class EOGTest : BaseTest() {
         assertNotNull(lambda)
 
         // The "outer" EOG is assembled correctly.
-        assertTrue(lambda in lambdaVar.prevEOG)
+        assertTrue(lambda in lambdaVar.nextEOG)
         val printFunctionCall = function.calls["print_function"]
         assertNotNull(printFunctionCall)
-        assertTrue(printFunctionCall in lambda.prevEOG)
+        assertTrue(printFunctionCall in lambdaVar.prevEOG)
 
         // The "inner" EOG is assembled correctly.
-        val body = (lambda.function?.body as? CompoundStatement)
+        val body = (lambda.function?.body as? Block)
         assertNotNull(body)
         assertEquals(1, lambda.function?.nextEOG?.size)
-        assertEquals(
-            "std::cout",
-            (lambda.function?.nextEOG?.get(0) as? DeclaredReferenceExpression)?.name.toString()
-        )
+        assertEquals("std::cout", (lambda.function?.nextEOG?.get(0) as? Reference)?.name.toString())
 
-        val cout = lambda.function?.nextEOG?.get(0) as? DeclaredReferenceExpression
+        val cout = lambda.function?.nextEOG?.get(0) as? Reference
         assertNotNull(cout)
         assertEquals(1, cout.nextEOG.size)
         assertEquals("Hello ", (cout.nextEOG[0] as? Literal<*>)?.value.toString())
@@ -957,12 +954,9 @@ internal class EOGTest : BaseTest() {
         val binOpLeft = hello.nextEOG[0] as? BinaryOperator
         assertNotNull(binOpLeft)
         assertEquals(1, binOpLeft.nextEOG.size)
-        assertEquals(
-            "number",
-            (binOpLeft.nextEOG[0] as? DeclaredReferenceExpression)?.name.toString()
-        )
+        assertEquals("number", (binOpLeft.nextEOG[0] as? Reference)?.name.toString())
 
-        val number = binOpLeft.nextEOG[0] as? DeclaredReferenceExpression
+        val number = binOpLeft.nextEOG[0] as? Reference
         assertNotNull(number)
         assertEquals(1, number.nextEOG.size)
         assertEquals("<<", (number.nextEOG[0] as? BinaryOperator)?.operatorCode)
@@ -970,12 +964,9 @@ internal class EOGTest : BaseTest() {
         val binOpCenter = (number.nextEOG[0] as? BinaryOperator)
         assertNotNull(binOpCenter)
         assertEquals(1, binOpCenter.nextEOG.size)
-        assertEquals(
-            "std::endl",
-            (binOpCenter.nextEOG[0] as? DeclaredReferenceExpression)?.name.toString()
-        )
+        assertEquals("std::endl", (binOpCenter.nextEOG[0] as? Reference)?.name.toString())
 
-        val endl = (binOpCenter.nextEOG[0] as? DeclaredReferenceExpression)
+        val endl = (binOpCenter.nextEOG[0] as? Reference)
         assertNotNull(endl)
         assertEquals(1, endl.nextEOG.size)
         assertEquals("<<", (endl.nextEOG[0] as? BinaryOperator)?.operatorCode)
@@ -983,18 +974,9 @@ internal class EOGTest : BaseTest() {
         val binOpRight = (endl.nextEOG[0] as? BinaryOperator)
         assertNotNull(binOpRight)
         assertEquals(1, binOpRight.nextEOG.size)
-        assertTrue(binOpRight.nextEOG.firstOrNull() is CompoundStatement)
+        assertTrue(binOpRight.nextEOG.firstOrNull() is Block)
 
-        assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? CompoundStatement)?.nextEOG?.size)
-    }
-
-    @Test
-    @Throws(Exception::class)
-    @Ignore
-    fun testEOGInvariant() {
-        val file = File("src/main/java/de/fraunhofer/aisec/cpg/passes/CallResolver.java")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-        assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu))
+        assertEquals(0, (binOpRight.nextEOG.firstOrNull() as? Block)?.nextEOG?.size)
     }
 
     /**
@@ -1007,7 +989,10 @@ internal class EOGTest : BaseTest() {
     private fun translateToNodes(path: String): List<Node> {
         val toTranslate = File(path)
         val topLevel = toTranslate.parentFile.toPath()
-        val tu = analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         var nodes = SubgraphWalker.flattenAST(tu)
         // TODO: until explicitly added Return Statements are either removed again or code and
         // region set properly

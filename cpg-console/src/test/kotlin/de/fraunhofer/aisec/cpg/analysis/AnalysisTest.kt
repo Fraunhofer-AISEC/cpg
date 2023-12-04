@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.console.fancyCode
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
@@ -45,7 +46,7 @@ class AnalysisTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/array.cpp"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<CPPLanguage>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -60,7 +61,7 @@ class AnalysisTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/Array.java"))
                 .defaultPasses()
-                .defaultLanguages()
+                .registerLanguage<JavaLanguage>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -75,8 +76,7 @@ class AnalysisTest {
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/Array.java"))
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()

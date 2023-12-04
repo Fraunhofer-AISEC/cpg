@@ -30,16 +30,20 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
-abstract class ValueDeclaration : Declaration(), HasType {
-    override val typeObservers = mutableListOf<HasType.TypeObserver>()
+@NodeEntity
+abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
+
+    override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     /** The type of this declaration. */
     override var type: Type = unknownType()
@@ -60,6 +64,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
 
+    override var aliases = mutableSetOf<HasAliases>()
+
     override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
             if (field == value) {
@@ -71,23 +77,23 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
 
     /**
-     * Links to all the [DeclaredReferenceExpression]s accessing the variable and the respective
-     * access value (read, write, readwrite).
+     * Links to all the [Reference]s accessing the variable and the respective access value (read,
+     * write, readwrite).
      */
-    @PopulatedByPass(VariableUsageResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "USAGE")
-    var usageEdges: MutableList<PropertyEdge<DeclaredReferenceExpression>> = ArrayList()
+    var usageEdges: MutableList<PropertyEdge<Reference>> = ArrayList()
 
     /** All usages of the variable/field. */
-    @PopulatedByPass(VariableUsageResolver::class)
-    var usages: List<DeclaredReferenceExpression>
+    @PopulatedByPass(SymbolResolver::class)
+    var usages: List<Reference>
         get() = unwrap(usageEdges, true)
         /** Set all usages of the variable/field and assembles the access properties. */
         set(usages) {
             usageEdges =
                 usages
                     .stream()
-                    .map { ref: DeclaredReferenceExpression ->
+                    .map { ref: Reference ->
                         val edge = PropertyEdge(this, ref)
                         edge.addProperty(Properties.ACCESS, ref.access)
                         edge
@@ -96,7 +102,7 @@ abstract class ValueDeclaration : Declaration(), HasType {
         }
 
     /** Adds a usage of the variable/field and assembles the access property. */
-    fun addUsage(reference: DeclaredReferenceExpression) {
+    fun addUsage(reference: Reference) {
         val usageEdge = PropertyEdge(this, reference)
         usageEdge.addProperty(Properties.ACCESS, reference.access)
         usageEdges.add(usageEdge)

@@ -42,6 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
  * accurate as possible when propagating types, the [InitializerListExpression.type] property MUST
  * be set before adding any values to [InitializerListExpression.initializers].
  */
+// TODO Merge and/or refactor
 class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
@@ -68,7 +69,14 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        // Not supported, too complex
+        val idx = initializerEdges.indexOfFirst { it.end == old }
+        if (idx != -1) {
+            old.unregisterTypeObserver(this)
+            initializerEdges[idx].end = new
+            new.registerTypeObserver(this)
+            return true
+        }
+
         return false
     }
 
@@ -78,7 +86,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         // entries in generated code), we skip it here.
         //
         // So we just have to look what kind of object we are initializing (its type is stored in
-        // our "type), to see whether we need to propagate something at all. If it has an array
+        // our "type"), to see whether we need to propagate something at all. If it has an array
         // type, we need to propagate an array version of the incoming type. If our "target" is a
         // regular object type, we do NOT propagate anything at all, because in this case we get the
         // types of individual fields, and we are not interested in those (yet).

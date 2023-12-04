@@ -117,8 +117,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     ctx.name.toString(),
                     unknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
-                    ctx.rawSignature,
-                    implicitInitializerAllowed,
+                    implicitInitializerAllowed = implicitInitializerAllowed,
+                    rawNode = ctx
                 )
 
             // Add this declaration to the current scope
@@ -142,10 +142,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 name.localName,
                 unknownType(),
                 emptyList(),
-                ctx.rawSignature,
-                frontend.locationOf(ctx),
-                initializer,
-                true
+                initializer = initializer,
+                implicitInitializerAllowed = true,
+                rawNode = ctx
             )
 
         frontend.scopeManager.addDeclaration(declaration)
@@ -173,22 +172,22 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 // and the
                 // record declaration match
                 holder is RecordDeclaration && name.localName == holder.name.localName -> {
-                    newConstructorDeclaration(name, null, holder, ctx)
+                    newConstructorDeclaration(name, holder, rawNode = ctx)
                 }
                 // It's also a constructor, if the name is in the form A::A, and it has no type
                 // specifier
                 name.localName == name.parent.toString() &&
                     ((ctx as? IASTFunctionDefinition)?.declSpecifier as? IASTSimpleDeclSpecifier)
                         ?.type == IASTSimpleDeclSpecifier.t_unspecified -> {
-                    newConstructorDeclaration(name, null, null, ctx)
+                    newConstructorDeclaration(name, null, rawNode = ctx)
                 }
                 // It could also be a scoped function declaration.
                 scope?.astNode is NamespaceDeclaration -> {
-                    newFunctionDeclaration(name, null, ctx)
+                    newFunctionDeclaration(name, rawNode = ctx)
                 }
                 // Otherwise, it's a method to a known or unknown record
                 else -> {
-                    newMethodDeclaration(name, null, false, holder as? RecordDeclaration, ctx)
+                    newMethodDeclaration(name, false, holder as? RecordDeclaration, rawNode = ctx)
                 }
             }
 
@@ -250,7 +249,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 )
         } else {
             // a plain old function, outside any named scope
-            declaration = newFunctionDeclaration(name, null, ctx.parent)
+            declaration = newFunctionDeclaration(name, rawNode = ctx.parent)
         }
 
         // We want to determine, whether we are currently outside a named scope on the AST
@@ -295,7 +294,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         for (param in ctx.parameters) {
             val arg = frontend.parameterDeclarationHandler.handle(param)
 
-            if (arg is ParamVariableDeclaration) {
+            if (arg is ParameterDeclaration) {
                 // check for void type parameters
                 if (arg.type is IncompleteType) {
                     if (arg.name.isNotEmpty()) {
@@ -334,7 +333,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs = newParamVariableDeclaration("va_args", unknownType(), true, "")
+            val varargs = newParameterDeclaration("va_args", unknownType(), true)
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -401,19 +400,23 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val recordDeclaration = frontend.scopeManager.currentRecord
         if (recordDeclaration == null) {
             // variable
-            result = newVariableDeclaration(name, unknownType(), ctx.rawSignature, true)
+            result =
+                newVariableDeclaration(
+                    name,
+                    unknownType(),
+                    implicitInitializerAllowed = true,
+                    rawNode = ctx
+                )
         } else {
             // field
-            val code = ctx.rawSignature
             result =
                 newFieldDeclaration(
                     name,
                     unknownType(),
                     emptyList(),
-                    code,
-                    frontend.locationOf(ctx),
-                    null,
-                    false,
+                    initializer = null,
+                    implicitInitializerAllowed = false,
+                    rawNode = ctx
                 )
         }
 
@@ -435,7 +438,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             newRecordDeclaration(
                 ctx.name.toString(),
                 kind,
-                ctx.rawSignature,
+                rawNode = ctx,
             )
 
         // Handle C++ classes
@@ -451,17 +454,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         processMembers(ctx)
 
         if (recordDeclaration.constructors.isEmpty()) {
+            // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
                 newConstructorDeclaration(
-                    recordDeclaration.name.localName,
-                    recordDeclaration.name.toString(),
-                    recordDeclaration
-                )
+                        recordDeclaration.name.localName,
+                        recordDeclaration,
+                    )
+                    .implicit(code = recordDeclaration.name.localName)
 
             createMethodReceiver(constructorDeclaration)
-
-            // set this as implicit
-            constructorDeclaration.isImplicit = true
 
             // and set the type, constructors always have implicitly the return type of their class
             constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
@@ -478,12 +479,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * Handles template parameters that are types
      *
      * @param ctx
-     * @return TypeParamDeclaration with its name
+     * @return TypeParameterDeclaration with its name
      */
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
-    ): TypeParamDeclaration {
-        return newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature, ctx)
+    ): TypeParameterDeclaration {
+        return newTypeParameterDeclaration(ctx.rawSignature, rawNode = ctx)
     }
 
     private fun processMembers(ctx: IASTCompositeTypeSpecifier) {

@@ -12,6 +12,7 @@ val enableLLVMFrontend: Boolean by rootProject.extra
 val enableTypeScriptFrontend: Boolean by rootProject.extra
 val enableOpenQasmFrontend: Boolean by rootProject.extra
 
+val enableRubyFrontend: Boolean by rootProject.extra
 
 dependencies {
     if (enableJavaFrontend) api(project(":cpg-language-java"))
@@ -23,4 +24,5 @@ dependencies {
     if (enableTypeScriptFrontend) api(project(":cpg-language-typescript"))
     if (enableOpenQasmFrontend) api(project(":cpg-language-openqasm"))
 
+    if (enableRubyFrontend) api(project(":cpg-language-ruby"))
 }

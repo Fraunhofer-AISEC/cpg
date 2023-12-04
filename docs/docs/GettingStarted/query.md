@@ -49,7 +49,7 @@ all (==> false)
 --------
     Starting at CallExpression[name=memcpy,location=vulnerable.cpp(3:5-3:38),type=UNKNOWN,base=<null>]: 5 > 11 (==> false)
 ------------------------
-        sizeof(DeclaredReferenceExpression[DeclaredReferenceExpression[name=array,location=vulnerable.cpp(3:12-3:17),type=PointerType[name=char[]]],refersTo=VariableDeclaration[name=array,location=vulnerable.cpp(2:10-2:28),initializer=Literal[location=vulnerable.cpp(2:21-2:28),type=PointerType[name=char[]],value=hello]]]) (==> 5)
+        sizeof(Reference[Reference[name=array,location=vulnerable.cpp(3:12-3:17),type=PointerType[name=char[]]],refersTo=VariableDeclaration[name=array,location=vulnerable.cpp(2:10-2:28),initializer=Literal[location=vulnerable.cpp(2:21-2:28),type=PointerType[name=char[]],value=hello]]]) (==> 5)
 ----------------------------------------
 ------------------------
         sizeof(Literal[location=vulnerable.cpp(3:19-3:32),type=PointerType[name=char[]],value=Hello world]) (==> 11)
@@ -112,6 +112,11 @@ set of analyses and functions to use them. These are:
 
 - **min(n: Node)**: Minimal value of a node
 - **max(n: Node)**: Maximal value of a node
+- **evaluate(evaluator: ValueEvaluator)**: Evaluates the value of a node. You
+  can use different evaluators which can affect the possible results. In general,
+  it makes sense to check if the evaluation succeeded and/or transfer the types.
+  E.g., the default value evaluator could return different numbers (transferring
+  them e.g. with `toLong()` or `toFloat()` could make sense), a string, or an error.
 - **sizeof(n: Node)**: The length of an array or string
 - **dataFlow(from: Node, to: Node)**: Checks if a data flow is possible between
   the nodes `from` as a source and `to` as sink.

@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.newParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
@@ -47,19 +47,12 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleParameterDeclaration(
-        ctx: IASTParameterDeclaration
-    ): ParamVariableDeclaration {
+    private fun handleParameterDeclaration(ctx: IASTParameterDeclaration): ParameterDeclaration {
         // Parse the type
         val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
 
         val paramVariableDeclaration =
-            newParamVariableDeclaration(
-                ctx.declarator.name.toString(),
-                type,
-                false,
-                ctx.rawSignature
-            )
+            newParameterDeclaration(ctx.declarator.name.toString(), type, false, rawNode = ctx)
 
         // Add default values
         if (ctx.declarator.initializer != null) {

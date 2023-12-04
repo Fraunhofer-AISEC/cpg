@@ -25,38 +25,36 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumMeasure
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 
 @DependsOn(QuantumDFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class DFGConnectionPass : Pass() {
+class DFGConnectionPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(t: TranslationResult) {
+    override fun accept(comp: Component) {
 
-        val flatTr = SubgraphWalker.flattenAST(t)
-        val transpileCalls = t.calls("transpile")
+        val flatTr = SubgraphWalker.flattenAST(comp)
+        val transpileCalls = comp.calls("transpile")
         for (call in transpileCalls) {
             // Get the circuit variable that we're talking about
-            val circuit = call.arguments.first() as DeclaredReferenceExpression
+            val circuit = call.arguments.first() as Reference
 
             val thisQuantumCircuit =
-                t.additionalNodes.firstOrNull {
-                    it is QuantumCircuit && it.cpgNode == circuit.refersTo
+                comp.translationUnits.first().additionalNodes.firstOrNull { // TODO first
+                    (it is QuantumCircuit) && (it.cpgNode == circuit.refersTo)
                 } as QuantumCircuit?
 
             val measures = thisQuantumCircuit?.operations?.filterIsInstance<QuantumMeasure>()
@@ -105,7 +103,7 @@ class DFGConnectionPass : Pass() {
                     countsDicts.flatMap { countsDict -> findAccessToCountsDictKey(countsDict) }
                 val bitAccesses =
                     keyAccesses.flatMap { keyAccess ->
-                        flatTr.filterIsInstance<ArraySubscriptionExpression>().filter { flatNode ->
+                        flatTr.filterIsInstance<SubscriptExpression>().filter { flatNode ->
                             keyAccess
                                 .followNextDFGEdgesUntilHit { it == flatNode }
                                 .fulfilled

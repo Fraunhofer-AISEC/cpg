@@ -1,4 +1,5 @@
 org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dkotlin.daemon.jvm.options=-Xmx4g
+systemProp.sonar.gradle.skipCompile=true
 
 enableJavaFrontend=true
 enableCXXFrontend=true
@@ -8,3 +9,5 @@ enableOpenQasmFrontend=true
 enableLLVMFrontend=true
 enableTypeScriptFrontend=true
 enablePythonQiskitFrontend=true
+
+enableRubyFrontend=true

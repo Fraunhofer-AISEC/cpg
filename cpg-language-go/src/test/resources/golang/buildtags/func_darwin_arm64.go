@@ -1,0 +1,3 @@
+package buildtags
+
+func someSpecific() {}
