@@ -25,47 +25,46 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
-import java.io.File
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.types.*
 import java.nio.file.Paths
+import kotlin.io.path.createTempFile
+import kotlin.reflect.jvm.javaField
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
+import org.neo4j.ogm.annotation.Relationship
+import picocli.CommandLine
 
 @Tag("integration")
 class ApplicationTest {
+    private fun createTranslationResult(): Pair<Application, TranslationResult> {
+        val topLevel = Paths.get("src").resolve("test").resolve("resources").toAbsolutePath()
+        val path = topLevel.resolve("client.cpp").toAbsolutePath()
 
-    private var translationResult: TranslationResult? = null
+        val cmd = CommandLine(Application::class.java)
+        cmd.parseArgs(path.toString())
+        val application = cmd.getCommand<Application>()
+
+        val translationConfiguration = application.setupTranslationConfiguration()
+        val translationResult =
+            TranslationManager.builder().config(translationConfiguration).build().analyze().get()
+        return application to translationResult
+    }
 
     @Test
     @Throws(InterruptedException::class)
     fun testPush() {
-        val topLevel = Paths.get("src").resolve("test").resolve("resources").toAbsolutePath()
-        val path = topLevel.resolve("client.cpp").toAbsolutePath()
-        val file = File(path.toString())
-        assert(file.exists() && !file.isDirectory && !file.isHidden)
-        val translationConfiguration =
-            TranslationConfiguration.builder()
-                .sourceLocations(file)
-                .topLevel(topLevel.toFile())
-                .defaultPasses()
-                .defaultLanguages()
-                .debugParser(true)
-                .build()
-        val translationManager =
-            TranslationManager.builder().config(translationConfiguration).build()
-        translationResult = translationManager.analyze().get()
+        val (application, translationResult) = createTranslationResult()
 
         assertEquals(31, translationResult.functions.size)
 
-        val application = Application()
-
-        application.pushToNeo4j(translationResult!!)
+        application.pushToNeo4j(translationResult)
 
         val sessionAndSessionFactoryPair = application.connect()
 
@@ -81,5 +80,47 @@ class ApplicationTest {
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
+    }
+
+    @Test
+    fun testSerializeCpgViaOGM() {
+        val (application, translationResult) = createTranslationResult()
+
+        assertEquals(31, translationResult.functions.size)
+
+        val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
+        val graph = application.buildJsonGraph(nodes, edges)
+        val connectToFuncDel =
+            graph.nodes.firstOrNull {
+                it.labels.contains(FunctionDeclaration::class.simpleName) &&
+                    it.properties["name"] == "connectTo"
+            }
+        assertNotNull(connectToFuncDel)
+
+        val connectToCallExpr =
+            graph.nodes.firstOrNull {
+                it.labels.contains(CallExpression::class.simpleName) &&
+                    it.properties["name"] == "connectTo"
+            }
+        assertNotNull(connectToCallExpr)
+
+        val invokesEdge =
+            graph.edges.firstOrNull {
+                it.type ==
+                    (CallExpression::invokeEdges.javaField?.getAnnotation(Relationship::class.java))
+                        ?.value &&
+                    it.startNode == connectToCallExpr.id &&
+                    it.endNode == connectToFuncDel.id
+            }
+        assertNotNull(invokesEdge)
+    }
+
+    @Test
+    fun testExportToJson() {
+        val (application, translationResult) = createTranslationResult()
+        assertEquals(31, translationResult.functions.size)
+        val path = createTempFile().toFile()
+        application.exportToJson(translationResult, path)
+        assert(path.length() > 0)
     }
 }

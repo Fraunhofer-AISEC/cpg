@@ -59,7 +59,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
     }
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is TypeParamDeclaration || declaration is ParamVariableDeclaration) {
+        if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {
             addIfNotContains(this.parameterEdges, declaration)
         } else if (declaration is FunctionDeclaration) {
             addIfNotContains(realizationEdges, declaration)

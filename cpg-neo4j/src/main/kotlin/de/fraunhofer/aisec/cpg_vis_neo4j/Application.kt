@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumPauliGate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.DFGConnectionPass
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.QiskitPass
@@ -43,10 +45,17 @@ import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
+import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
+import org.neo4j.ogm.context.EntityGraphMapper
+import org.neo4j.ogm.context.MappingContext
+import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
+import org.neo4j.ogm.cypher.compiler.builders.node.DefaultNodeBuilder
+import org.neo4j.ogm.cypher.compiler.builders.node.DefaultRelationshipBuilder
 import org.neo4j.ogm.exception.ConnectionException
+import org.neo4j.ogm.metadata.MetaData
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
 import org.neo4j.ogm.session.event.Event
@@ -71,6 +80,18 @@ private const val DEFAULT_PORT = 7687
 private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
+
+data class JsonNode(val id: Long, val labels: Set<String>, val properties: Map<String, Any>)
+
+data class JsonEdge(
+    val id: Long,
+    val type: String,
+    val startNode: Long,
+    val endNode: Long,
+    val properties: Map<String, Any>
+)
+
+data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -110,6 +131,12 @@ class Application : Callable<Int> {
             description = ["The path to an optional a JSON compilation database"]
         )
         var jsonCompilationDatabase: File? = null
+
+        @CommandLine.Option(
+            names = ["--list-passes"],
+            description = ["Prints the list available passes"]
+        )
+        var listPasses: Boolean = false
     }
 
     @CommandLine.Option(
@@ -175,6 +202,18 @@ class Application : Callable<Int> {
     private var noDefaultPasses: Boolean = false
 
     @CommandLine.Option(
+        names = ["--custom-pass-list"],
+        description =
+            [
+                "Add custom list of passes (includes --no-default-passes) which is" +
+                    " passed as a comma-separated list; give either pass name if pass is in list," +
+                    " or its FQDN" +
+                    " (e.g. --custom-pass-list=DFGPass,CallResolver)"
+            ]
+    )
+    private var customPasses: String = "DEFAULT"
+
+    @CommandLine.Option(
         names = ["--no-neo4j"],
         description = ["Do not push cpg into neo4j [used for debugging]"]
     )
@@ -207,6 +246,129 @@ class Application : Callable<Int> {
     )
     private var benchmarkJson: File? = null
 
+    @CommandLine.Option(names = ["--export-json"], description = ["Export cpg as json"])
+    private var exportJsonFile: File? = null
+
+    private var passClassList =
+        listOf(
+            TypeHierarchyResolver::class,
+            ImportResolver::class,
+            SymbolResolver::class,
+            DFGPass::class,
+            EvaluationOrderGraphPass::class,
+            TypeResolver::class,
+            ControlFlowSensitiveDFGPass::class,
+            FilenameMapper::class
+        )
+    private var passClassMap = passClassList.associateBy { it.simpleName }
+
+    /** The list of available passes that can be registered. */
+    private val passList: List<String>
+        get() = passClassList.mapNotNull { it.simpleName }
+
+    private val packages: Array<String> =
+        arrayOf("de.fraunhofer.aisec.cpg.graph", "de.fraunhofer.aisec.cpg.frontends")
+
+    /**
+     * Create node and relationship builders to map the cpg via OGM. This method is not a public API
+     * of the OGM, thus we use reflection to access the related methods.
+     *
+     * @param translationResult, translationResult to map
+     */
+    fun translateCPGToOGMBuilders(
+        translationResult: TranslationResult
+    ): Pair<List<DefaultNodeBuilder>?, List<DefaultRelationshipBuilder>?> {
+        val meta = MetaData(*packages)
+        val con = MappingContext(meta)
+        val entityGraphMapper = EntityGraphMapper(meta, con)
+
+        translationResult.components.map { entityGraphMapper.map(it, depth) }
+        for (tud in translationResult.translationUnits) {
+            tud.additionalNodes.map { entityGraphMapper.map(it, depth) }
+        }
+
+        val compiler = entityGraphMapper.compileContext().compiler
+
+        // get private fields of `CypherCompiler` via reflection
+        val getNewNodeBuilders =
+            MultiStatementCypherCompiler::class.java.getDeclaredField("newNodeBuilders")
+        val getNewRelationshipBuilders =
+            MultiStatementCypherCompiler::class.java.getDeclaredField("newRelationshipBuilders")
+        getNewNodeBuilders.isAccessible = true
+        getNewRelationshipBuilders.isAccessible = true
+
+        // We only need `newNodeBuilders` and `newRelationshipBuilders` as we are "importing" to an
+        // empty "db" and all nodes and relations will be new
+        val newNodeBuilders =
+            (getNewNodeBuilders[compiler] as? ArrayList<*>)?.filterIsInstance<DefaultNodeBuilder>()
+        val newRelationshipBuilders =
+            (getNewRelationshipBuilders[compiler] as? ArrayList<*>)?.filterIsInstance<
+                DefaultRelationshipBuilder
+            >()
+        return newNodeBuilders to newRelationshipBuilders
+    }
+
+    /**
+     * Use the provided node and relationship builders to create list of nodes and edges
+     *
+     * @param newNodeBuilders, input node builders
+     * @param newRelationshipBuilders, input relationship builders
+     */
+    fun buildJsonGraph(
+        newNodeBuilders: List<DefaultNodeBuilder>?,
+        newRelationshipBuilders: List<DefaultRelationshipBuilder>?
+    ): JsonGraph {
+        // create simple json structure with flat list of nodes and edges
+        val nodes =
+            newNodeBuilders?.map {
+                val node = it.node()
+                JsonNode(
+                    node.id,
+                    node.labels.toSet(),
+                    node.propertyList.associate { prop -> prop.key to prop.value }
+                )
+            }
+                ?: emptyList()
+        val edges =
+            newRelationshipBuilders
+                // For some reason, there are edges without start or end node??
+                ?.filter { it.edge().startNode != null }
+                ?.map {
+                    val edge = it.edge()
+                    JsonEdge(
+                        edge.id,
+                        edge.type,
+                        edge.startNode,
+                        edge.endNode,
+                        edge.propertyList.associate { prop -> prop.key to prop.value }
+                    )
+                }
+                ?: emptyList()
+
+        return JsonGraph(nodes, edges)
+    }
+
+    /**
+     * Exports the TranslationResult to json. Serialization is done via the Neo4j OGM.
+     *
+     * @param translationResult, input translationResult, not null
+     * @param path, path to output json file
+     */
+    fun exportToJson(translationResult: TranslationResult, path: File) {
+        val bench = Benchmark(this.javaClass, "Export cpg to json", false, translationResult)
+        log.info("Export graph to json using import depth: $depth")
+
+        val (nodes, edges) = translateCPGToOGMBuilders(translationResult)
+        val graph = buildJsonGraph(nodes, edges)
+        val objectMapper = ObjectMapper()
+        objectMapper.writeValue(path, graph)
+
+        log.info(
+            "Exported ${graph.nodes.size} Nodes and ${graph.edges.size} Edges to json file ${path.absoluteFile}"
+        )
+        bench.addMeasurement()
+    }
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -220,9 +382,8 @@ class Application : Callable<Int> {
         val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
         log.info(
-            "Count base nodes to save: " +
-                translationResult.components.size +
-                translationResult.additionalNodes.size
+            "Count base nodes to save: " + translationResult.components.size // +
+            // translationResult.additionalNodes.size TODO
         )
 
         val sessionAndSessionFactoryPair = connect()
@@ -231,7 +392,9 @@ class Application : Callable<Int> {
         session.beginTransaction().use { transaction ->
             if (!noPurgeDb) session.purgeDatabase()
             session.save(translationResult.components, depth)
-            session.save(translationResult.additionalNodes, depth)
+            for (tud in translationResult.translationUnits) {
+                session.save(tud.additionalNodes, depth)
+            }
             transaction.commit()
         }
 
@@ -263,12 +426,7 @@ class Application : Callable<Int> {
                         .credentials(neo4jUsername, neo4jPassword)
                         .verifyConnection(VERIFY_CONNECTION)
                         .build()
-                sessionFactory =
-                    SessionFactory(
-                        configuration,
-                        "de.fraunhofer.aisec.cpg.graph",
-                        "de.fraunhofer.aisec.cpg.frontends"
-                    )
+                sessionFactory = SessionFactory(configuration, *packages)
                 sessionFactory.register(AstChildrenEventListener())
 
                 session = sessionFactory.openSession()
@@ -317,11 +475,12 @@ class Application : Callable<Int> {
      *   point to a file, is a directory or point to a hidden file or the paths does not have the
      *   same top level path.
      */
-    private fun setupTranslationConfiguration(): TranslationConfiguration {
+    fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .topLevel(topLevel)
-                .defaultLanguages()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
@@ -332,11 +491,11 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
-                .registerPass(EdgeCachePass())
-                .registerPass(QiskitPass())
-                .registerPass(QuantumEOGPass())
-                .registerPass(QuantumDFGPass())
-                .registerPass(DFGConnectionPass())
+                .registerPass<EdgeCachePass>()
+                .registerPass<QiskitPass>()
+                .registerPass<QuantumEOGPass>()
+                .registerPass<QuantumDFGPass>()
+                .registerPass<DFGConnectionPass>()
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
@@ -349,12 +508,27 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses) {
+        if (!noDefaultPasses && customPasses == "DEFAULT") {
             translationConfiguration.defaultPasses()
+        } else if (!noDefaultPasses && customPasses != "DEFAULT") {
+            val pieces = customPasses.split(",")
+            for (pass in pieces) {
+                if (pass.contains(".")) {
+                    translationConfiguration.registerPass(
+                        Class.forName(pass).kotlin as KClass<out Pass<*>>
+                    )
+                } else {
+                    if (pass !in passClassMap) {
+                        throw ConfigurationException("Asked to produce unknown pass")
+                    }
+                    passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
+                }
+            }
         }
+        translationConfiguration.registerPass(PrepareSerialization::class)
 
-        if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
-            val db = fromFile(mutuallyExclusiveParameters.jsonCompilationDatabase!!)
+        mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
+            val db = fromFile(it)
             if (db.isNotEmpty()) {
                 translationConfiguration.useCompilationDatabase(db)
                 translationConfiguration.sourceLocations(db.sourceFiles)
@@ -393,6 +567,14 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
+        if (mutuallyExclusiveParameters.listPasses) {
+            log.info("List of passes:")
+            passList.iterator().forEach { log.info("- $it") }
+            log.info("--")
+            log.info("End of list. Stopping.")
+            return EXIT_SUCCESS
+        }
+
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
@@ -405,6 +587,7 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
+        exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
             pushToNeo4j(translationResult)
         }

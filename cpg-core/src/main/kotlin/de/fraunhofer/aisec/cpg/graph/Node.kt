@@ -26,32 +26,29 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
+import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.Labels
@@ -61,7 +58,15 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider {
+open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, ContextProvider {
+    /**
+     * Because we are updating type information in the properties of the node, we need a reference
+     * to managers such as the [TypeManager] instance which is responsible for this particular node.
+     * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
+     * [ContextProvider] is provided.
+     */
+    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+
     /**
      * This property holds the full name using our new [Name] class. It is currently not persisted
      * in the graph database.
@@ -82,7 +87,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<out LanguageFrontend>? = null
+    override var language: Language<*>? = null
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in
@@ -110,16 +115,38 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @PopulatedByPass(FilenameMapper::class) var file: String? = null
 
     /** Incoming control flow edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
-    /** outgoing control flow edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    /** Outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
+
+    /**
+     * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
+     * Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
+    var nextCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+        protected set
+
+    var nextCDG by PropertyEdgeDelegate(Node::nextCDGEdges, true)
+
+    /**
+     * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
+     * Dependence Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
+    var prevCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+        protected set
+
+    var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, false)
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
@@ -137,37 +164,49 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOG: List<Node>
-        get() = unwrap(prevEOGEdges, false)
-        set(value) {
-            val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
-
-            for ((idx, prev) in value.withIndex()) {
-                val propertyEdge = PropertyEdge(prev, this)
-                propertyEdge.addProperty(Properties.INDEX, idx)
-                propertyEdgesEOG.add(propertyEdge)
-            }
-
-            this.prevEOGEdges = propertyEdgesEOG
-        }
+    var prevEOG: List<Node> by PropertyEdgeDelegate(Node::prevEOGEdges, false)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOG: List<Node>
-        get() = unwrap(nextEOGEdges)
-        set(value) {
-            this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
-        }
+    var nextEOG: List<Node> by PropertyEdgeDelegate(Node::nextEOGEdges)
 
+    /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFG: MutableSet<Node> = HashSet()
+    var prevDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+        protected set
 
+    /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    @Relationship(value = "DFG")
-    var nextDFG: MutableSet<Node> = HashSet()
+    var prevDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevDFGEdges, false)
 
-    var typedefs: MutableSet<TypedefDeclaration> = HashSet()
+    /** Outgoing data flow edges */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
+    var nextDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+        protected set
+
+    /** Virtual property for accessing [nextDFGEdges] without property edges. */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    var nextDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::nextDFGEdges, true)
+
+    /** Outgoing Program Dependence Edges. */
+    @PopulatedByPass(ProgramDependenceGraphPass::class)
+    @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
+    var nextPDGEdges: MutableSet<PropertyEdge<Node>> = mutableSetOf()
+        protected set
+
+    /** Virtual property for accessing the children of the Program Dependence Graph (PDG). */
+    var nextPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::nextPDGEdges, true)
+
+    /** Incoming Program Dependence Edges. */
+    @PopulatedByPass(ProgramDependenceGraphPass::class)
+    @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
+    var prevPDGEdges: MutableSet<PropertyEdge<Node>> = mutableSetOf()
+        protected set
+
+    /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
+    var prevPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevPDGEdges, false)
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -216,32 +255,72 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         nextEOGEdges.clear()
     }
 
-    fun addNextDFG(next: Node) {
-        nextDFG.add(next)
-        next.prevDFG.add(this)
+    fun addNextDFG(
+        next: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge = PropertyEdge(this, next, properties)
+        nextDFGEdges.add(edge)
+        next.prevDFGEdges.add(edge)
     }
 
     fun removeNextDFG(next: Node?) {
         if (next != null) {
-            nextDFG.remove(next)
-            next.prevDFG.remove(this)
+            val thisRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(nextDFGEdges) { it.end === next }
+            nextDFGEdges.removeAll(thisRemove)
+
+            val nextRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(next.prevDFGEdges) { it.start == this }
+            next.prevDFGEdges.removeAll(nextRemove)
         }
     }
 
-    fun addPrevDFG(prev: Node) {
-        prevDFG.add(prev)
-        prev.nextDFG.add(this)
+    open fun addPrevDFG(
+        prev: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge = PropertyEdge(prev, this, properties)
+        prevDFGEdges.add(edge)
+        prev.nextDFGEdges.add(edge)
     }
 
-    fun addAllPrevDFG(prev: Collection<Node>) {
-        prevDFG.addAll(prev)
-        prev.forEach { it.nextDFG.add(this) }
+    fun addPrevCDG(prev: Node) {
+        val edge = PropertyEdge(prev, this)
+        prevCDGEdges.add(edge)
+        prev.nextCDGEdges.add(edge)
+    }
+
+    fun addAllPrevDFG(
+        prev: Collection<Node>,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        prev.forEach { addPrevDFG(it, properties.toMutableMap()) }
+    }
+
+    fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {
+        addAllPrevPDGEdges(prev.map { PropertyEdge(it, this) }, dependenceType)
+    }
+
+    fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>, dependenceType: DependenceType) {
+
+        prev.forEach {
+            val edge = PropertyEdge(it).apply { addProperty(Properties.DEPENDENCE, dependenceType) }
+            this.prevPDGEdges.add(edge)
+            val other = if (it.start != this) it.start else it.end
+            other.nextPDGEdges.add(edge)
+        }
     }
 
     fun removePrevDFG(prev: Node?) {
         if (prev != null) {
-            prevDFG.remove(prev)
-            prev.nextDFG.remove(this)
+            val thisRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(prevDFGEdges) { it.start === prev }
+            prevDFGEdges.removeAll(thisRemove)
+
+            val prevRemove =
+                PropertyEdge.findPropertyEdgesByPredicate(prev.nextDFGEdges) { it.end === this }
+            prev.nextDFGEdges.removeAll(prevRemove)
         }
     }
 
@@ -255,10 +334,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         for (prev in ArrayList(nextDFG)) {
             removeNextDFG(prev)
         }
-    }
-
-    fun addTypedef(typedef: TypedefDeclaration) {
-        typedefs.add(typedef)
     }
 
     fun addAnnotations(annotations: Collection<Annotation>) {
@@ -275,15 +350,19 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
-        for (n in nextDFG) {
-            n.prevDFG.remove(this)
+        for (n in nextDFGEdges) {
+            val remove =
+                PropertyEdge.findPropertyEdgesByPredicate(n.end.prevDFGEdges) { it.start == this }
+            n.end.prevDFGEdges.removeAll(remove)
         }
-        nextDFG.clear()
+        nextDFGEdges.clear()
 
-        for (n in prevDFG) {
-            n.nextDFG.remove(this)
+        for (n in prevDFGEdges) {
+            val remove =
+                PropertyEdge.findPropertyEdgesByPredicate(n.start.nextDFGEdges) { it.end == this }
+            n.start.nextDFGEdges.removeAll(remove)
         }
-        prevDFG.clear()
+        prevDFGEdges.clear()
 
         for (n in nextEOGEdges) {
             val remove =
@@ -326,7 +405,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                file == other.file &&
+                // We need to exclude "file" here, because in C++ the same header node can be
+                // imported in two different files and in this case, the "file" property will be
+                // different. Since want to squash those equal nodes, we will only consider all the
+                // other attributes, including "location" (which contains the *original* file
+                // location in the header file), but not "file".
+                // file == other.file &&
                 isImplicit == other.isImplicit
     }
 
@@ -350,7 +434,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     companion object {
         @JvmField var TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE
 
-        protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
+        @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
     }

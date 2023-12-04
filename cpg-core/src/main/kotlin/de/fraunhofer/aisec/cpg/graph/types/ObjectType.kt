@@ -25,17 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.HasType.SecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.transformIntoOutgoingPropertyEdgeList
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType.Companion.getUnknownType
+import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -43,24 +42,27 @@ import org.neo4j.ogm.annotation.Relationship
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
  * This also includes primitive data types.
  */
-open class ObjectType : Type, SecondaryTypeEdge {
+open class ObjectType : Type {
     /**
-     * Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
+     * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
+     * available. This is set by the [TypeResolver].
      */
-    var recordDeclaration: RecordDeclaration? = null
+    @PopulatedByPass(TypeResolver::class) var recordDeclaration: RecordDeclaration? = null
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
     var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
+        private set
 
     var generics by PropertyEdgeDelegate(ObjectType::genericsPropertyEdges)
+        private set
 
     constructor(
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
-        language: Language<out LanguageFrontend>?
+        language: Language<*>?
     ) : super(typeName, language) {
-        this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
+        this.genericsPropertyEdges = wrap(generics, this)
         isPrimitive = primitive
         this.language = language
     }
@@ -69,10 +71,10 @@ open class ObjectType : Type, SecondaryTypeEdge {
         type: Type?,
         generics: List<Type>,
         primitive: Boolean,
-        language: Language<out LanguageFrontend>?
+        language: Language<*>?
     ) : super(type) {
         this.language = language
-        this.genericsPropertyEdges = transformIntoOutgoingPropertyEdgeList(generics, this)
+        this.genericsPropertyEdges = wrap(generics, this)
         isPrimitive = primitive
     }
 
@@ -80,25 +82,6 @@ open class ObjectType : Type, SecondaryTypeEdge {
     constructor() : super() {
         genericsPropertyEdges = ArrayList()
         isPrimitive = false
-    }
-
-    override fun updateType(typeState: Collection<Type>) {
-        for (t in generics) {
-            for (t2 in typeState) {
-                if (t2 == t) {
-                    replaceGenerics(t, t2)
-                }
-            }
-        }
-    }
-
-    fun replaceGenerics(oldType: Type?, newType: Type) {
-        for (i in genericsPropertyEdges.indices) {
-            val propertyEdge = genericsPropertyEdges[i]
-            if (propertyEdge.end.equals(oldType)) {
-                propertyEdge.end = newType
-            }
-        }
     }
 
     /** @return PointerType to a ObjectType, e.g. int* */
@@ -111,27 +94,11 @@ open class ObjectType : Type, SecondaryTypeEdge {
     }
 
     /**
-     * @return UnknownType, as we cannot infer any type information when dereferencing an
+     * @return UnknownType, as we cannot infer any type information when de-referencing an
      *   ObjectType, as it is just some memory and its interpretation is unknown
      */
     override fun dereference(): Type {
-        return getUnknownType(language)
-    }
-
-    override fun duplicate(): Type {
-        return ObjectType(this, generics, isPrimitive, language)
-    }
-
-    fun addGeneric(generic: Type) {
-        val propertyEdge = PropertyEdge(this, generic)
-        propertyEdge.addProperty(Properties.INDEX, genericsPropertyEdges.size)
-        genericsPropertyEdges.add(propertyEdge)
-    }
-
-    fun addGenerics(generics: List<Type>) {
-        for (generic in generics) {
-            addGeneric(generic)
-        }
+        return unknownType()
     }
 
     override fun isSimilar(t: Type?): Boolean {

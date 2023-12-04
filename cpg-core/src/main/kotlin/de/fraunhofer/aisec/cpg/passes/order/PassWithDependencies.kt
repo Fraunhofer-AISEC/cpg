@@ -25,7 +25,38 @@
  */
 package de.fraunhofer.aisec.cpg.passes.order
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.Pass
+import kotlin.reflect.KClass
+import kotlin.reflect.full.hasAnnotation
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** A simple helper class to match a pass with dependencies. */
-data class PassWithDependencies(val pass: Pass, val dependencies: MutableSet<Class<out Pass>>)
+data class PassWithDependencies(
+    val pass: KClass<out Pass<*>>,
+    val softDependencies: MutableSet<KClass<out Pass<*>>>,
+    val hardDependencies: MutableSet<KClass<out Pass<*>>>
+) {
+    val dependencies: Set<KClass<out Pass<*>>>
+        get() {
+            return softDependencies + hardDependencies
+        }
+
+    val isFirstPass: Boolean
+        get() {
+            return pass.hasAnnotation<ExecuteFirst>()
+        }
+
+    val isLastPass: Boolean
+        get() {
+            return pass.hasAnnotation<ExecuteLast>()
+        }
+
+    override fun toString(): String {
+        return ToStringBuilder(this, Node.TO_STRING_STYLE)
+            .append("pass", pass.simpleName)
+            .append("softDependencies", softDependencies.map { it.simpleName })
+            .append("hardDependencies", hardDependencies.map { it.simpleName })
+            .toString()
+    }
+}

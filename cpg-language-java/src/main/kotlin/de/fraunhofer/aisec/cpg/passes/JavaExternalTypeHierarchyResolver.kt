@@ -29,11 +29,11 @@ import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
@@ -43,32 +43,32 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @ExecuteBefore(ImportResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
-class JavaExternalTypeHierarchyResolver : Pass() {
-    override fun accept(translationResult: TranslationResult) {
+class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
+    override fun accept(component: Component) {
+        val provider =
+            object : ContextProvider, LanguageProvider {
+                override val language = JavaLanguage()
+                override val ctx: TranslationContext = this@JavaExternalTypeHierarchyResolver.ctx
+            }
         val resolver = CombinedTypeSolver()
 
         resolver.add(ReflectionTypeSolver())
-        var root = translationResult.config.topLevel
-        if (root == null && translationResult.config.softwareComponents.size == 1) {
+        var root = config.topLevel
+        if (root == null && config.softwareComponents.size == 1) {
             root =
-                translationResult.config.softwareComponents[
-                        translationResult.config.softwareComponents.keys.first()]
-                    ?.let { CommonPath.commonPath(it) }
+                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
+                    CommonPath.commonPath(it)
+                }
         }
         if (root == null) {
-            log.warn(
-                "Could not determine source root for {}",
-                translationResult.config.softwareComponents
-            )
+            log.warn("Could not determine source root for {}", config.softwareComponents)
         } else {
             log.info("Source file root used for type solver: {}", root)
             resolver.add(JavaParserTypeSolver(root))
         }
 
-        val tm = TypeManager.getInstance()
-
         // Iterate over all known types and add their (direct) supertypes.
-        for (t in HashSet(tm.firstOrderTypes)) {
+        for (t in HashSet(typeManager.firstOrderTypes)) {
             // TODO: Do we have to check if the type's language is JavaLanguage?
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {
@@ -76,7 +76,7 @@ class JavaExternalTypeHierarchyResolver : Pass() {
                     val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
                     for (anc in resolvedSuperTypes) {
                         // Add all resolved supertypes to the type.
-                        val superType = TypeParser.createFrom(anc.qualifiedName, t.language)
+                        val superType = provider.objectType(anc.qualifiedName)
                         superType.typeOrigin = Type.Origin.RESOLVED
                         t.superTypes.add(superType)
                     }

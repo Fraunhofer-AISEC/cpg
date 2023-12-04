@@ -27,24 +27,21 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.Util.distinctBy
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Transient
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), HasType.TypeListener {
+class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver {
     /** The expression on which the operation is applied. */
     @AST
     var input: Expression = ProblemExpression("could not parse input")
         set(value) {
-            field.unregisterTypeListener(this)
+            field.unregisterTypeObserver(this)
             field = value
-            input.registerTypeListener(this)
+            input.registerTypeObserver(this)
             changeExpressionAccess()
         }
 
@@ -61,106 +58,14 @@ class UnaryOperator : Expression(), HasType.TypeListener {
     /** Specifies, whether this a pre fix operation. */
     var isPrefix = false
 
-    @Transient private val checked: MutableList<HasType.TypeListener> = ArrayList()
-
     private fun changeExpressionAccess() {
         var access = AccessValues.READ
         if (operatorCode == "++" || operatorCode == "--") {
             access = AccessValues.READWRITE
         }
-        if (input is DeclaredReferenceExpression) {
-            (input as? DeclaredReferenceExpression)?.access = access
+        if (input is Reference) {
+            (input as? Reference)?.access = access
         }
-    }
-
-    private fun getsDataFromInput(
-        curr: HasType.TypeListener,
-        target: HasType.TypeListener
-    ): Boolean {
-        val worklist: MutableList<HasType.TypeListener> = ArrayList()
-        worklist.add(curr)
-        while (!worklist.isEmpty()) {
-            val tl = worklist.removeAt(0)
-            if (!checked.contains(tl)) {
-                checked.add(tl)
-                if (tl === target) {
-                    return true
-                }
-                if (curr is HasType) {
-                    worklist.addAll((curr as HasType).typeListeners)
-                }
-            }
-        }
-        return false
-    }
-
-    private fun getsDataFromInput(listener: HasType.TypeListener): Boolean {
-        checked.clear()
-        for (l in input.typeListeners) {
-            if (getsDataFromInput(l, listener)) return true
-        }
-        return false
-    }
-
-    override fun typeChanged(src: HasType, root: MutableList<HasType>, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-        val previous = type
-        if (src === input) {
-            var newType = src.propagationType
-            if (operatorCode == "*") {
-                newType = newType.dereference()
-            } else if (operatorCode == "&") {
-                newType = newType.reference(PointerType.PointerOrigin.POINTER)
-            }
-            setType(newType, root)
-        } else {
-            // Our input didn't change, so we don't need to (de)reference the type
-            setType(src.propagationType, root)
-
-            // Pass the type on to the input in an inversely (de)referenced way
-            var newType: Type? = src.propagationType
-            if (operatorCode == "*") {
-                newType = src.propagationType.reference(PointerType.PointerOrigin.POINTER)
-            } else if (operatorCode == "&") {
-                newType = src.propagationType.dereference()
-            }
-
-            input.setType(newType!!, mutableListOf(this))
-        }
-        if (previous != type) {
-            type.typeOrigin = Type.Origin.DATAFLOW
-        }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: MutableList<HasType>) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-        if (src is HasType.TypeListener && getsDataFromInput(src as HasType.TypeListener)) {
-            return
-        }
-        var currSubTypes: MutableList<Type> = ArrayList(possibleSubTypes)
-        val newSubTypes = src.possibleSubTypes
-        currSubTypes.addAll(newSubTypes)
-        if (operatorCode == "*") {
-            currSubTypes =
-                currSubTypes
-                    .stream()
-                    .filter(distinctBy { obj: Type -> obj.typeName })
-                    .map { obj: Type -> obj.dereference() }
-                    .collect(Collectors.toList())
-        } else if (operatorCode == "&") {
-            currSubTypes =
-                currSubTypes
-                    .stream()
-                    .filter(distinctBy { obj: Type -> obj.typeName })
-                    .map { t: Type -> t.reference(PointerType.PointerOrigin.POINTER) }
-                    .collect(Collectors.toList())
-        }
-        _possibleSubTypes.clear()
-        setPossibleSubTypes(currSubTypes, root) // notify about the new type
     }
 
     override fun toString(): String {
@@ -172,6 +77,55 @@ class UnaryOperator : Expression(), HasType.TypeListener {
             .toString()
     }
 
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Only accept type changes from out input
+        if (src != input) {
+            return
+        }
+
+        val type =
+            when (operatorCode) {
+                "*" -> newType.dereference()
+                "&" -> newType.pointer()
+                else -> newType
+            }
+
+        this.type = type
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Only accept type changes from out input
+        if (src != input) {
+            return
+        }
+
+        // Apply our operator to all assigned types and forward them to us
+        this.addAssignedTypes(
+            assignedTypes
+                .map {
+                    when (operatorCode) {
+                        "*" -> it.dereference()
+                        "&" -> it.pointer()
+                        else -> it
+                    }
+                }
+                .toSet()
+        )
+    }
+
+    override fun addArgument(expression: Expression) {
+        this.input = expression
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.input == old) {
+            this.input = new
+            return true
+        }
+
+        return false
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -179,17 +133,14 @@ class UnaryOperator : Expression(), HasType.TypeListener {
         if (other !is UnaryOperator) {
             return false
         }
-        val that = other
-        return super.equals(that) &&
-            isPostfix == that.isPostfix &&
-            isPrefix == that.isPrefix &&
-            input == that.input &&
-            operatorCode == that.operatorCode
+        return super.equals(other) &&
+            isPostfix == other.isPostfix &&
+            isPrefix == other.isPrefix &&
+            input == other.input &&
+            operatorCode == other.operatorCode
     }
 
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
+    override fun hashCode() = super.hashCode()
 
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"

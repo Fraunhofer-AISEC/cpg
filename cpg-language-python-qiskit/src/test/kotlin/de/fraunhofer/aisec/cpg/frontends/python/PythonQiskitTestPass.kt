@@ -52,8 +52,8 @@ class PythonQiskitTestPass : BaseTest() {
                 true
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass(QuantumEOGPass())
-                it.registerPass(QiskitPass())
+                it.registerPass<QuantumEOGPass>()
+                it.registerPass<QiskitPass>()
             }
 
         assertNotNull(tu)
@@ -68,10 +68,10 @@ class PythonQiskitTestPass : BaseTest() {
                 topLevel,
                 true
             ) {
-                it.registerPass(EdgeCachePass())
+                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass(QiskitPass())
-                it.registerPass(QuantumEOGPass())
+                it.registerPass<QiskitPass>()
+                it.registerPass<QuantumEOGPass>()
             }
 
         assertNotNull(tu)

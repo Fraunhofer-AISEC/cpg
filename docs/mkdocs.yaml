@@ -1,0 +1,173 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+
+# Project information
+site_name: Code Property Graph
+site_url: https://fraunhofer-aisec.github.io/cpg/
+site_author: Fraunhofer AISEC
+site_description: Language-agnostic code analysis
+
+# Repository
+repo_name: Fraunhofer-AISEC/cpg
+repo_url: https://github.com/Fraunhofer-AISEC/cpg
+edit_uri: edit/main/docs/
+
+# Copyright
+copyright: >
+  <p>
+    <a href="https://www.aisec.fraunhofer.de/en/data_protection.html">Privacy Policy</a>, <a href="#__consent">Change cookie settings</a>
+  </p>
+  Copyright &copy; 2023 Fraunhofer AISEC
+# Configuration
+theme:
+  name: material
+
+  icon:
+    repo: fontawesome/brands/github
+
+  language: en
+  features:
+    - content.code.annotate
+    # - content.tabs.link
+    - content.tooltips
+    # - header.autohide
+    # - navigation.expand
+    # - navigation.indexes
+    # - navigation.instant
+    # - navigation.prune
+    # - navigation.sections
+    - navigation.tabs
+    # - navigation.tabs.sticky
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    # - toc.integrate
+
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: light
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  font: false
+
+extra_css:
+  - stylesheets/extra.css
+  - assets/fonts/Inter/inter.css
+
+# Plugins
+plugins:
+  - glightbox:
+      zoomable: true
+  - search
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      fallback_to_build_date: true
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Fraunhofer-AISEC
+      name: Visit us on GitHub to get involved.
+    - icon: fontawesome/solid/envelope
+      link: mailto:cpg@aisec.fraunhofer.de
+      name: Email us about the CPG project.
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/FraunhoferAISEC
+      name: Follow Fraunhofer AISEC on Twitter.
+
+  consent:
+    title: Consent
+    description: >-
+      We use external services to enrich information presented on our website. This information is not essential 
+      for the operation of this website. You can opt-in, if you want to see additional information. Your choice 
+      will be saved in a cookie.
+    actions:
+      - reject
+      - accept
+      - manage
+    cookies:
+      github:
+        name: GitHub
+        checked: false
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:materialx.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - "Home": index.md
+  - "Getting Started":
+      - GettingStarted/index.md
+      - "Installing the CPG library": GettingStarted/installation.md
+      - "Usage as library": GettingStarted/library.md
+      - "Using the Interactive CLI": GettingStarted/cli.md
+      - "Using the Query API": GettingStarted/query.md
+      - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
+  - "Specifications":
+      - CPG/specs/index.md
+      - "Graph Schema": CPG/specs/graph.md
+      - "Dataflow Graph (DFG)": CPG/specs/dfg.md
+      - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
+  - "Implementation":
+      - CPG/impl/index.md
+      - "Language Frontends": CPG/impl/language.md
+      - "Scopes": CPG/impl/scopes.md
+      - "Passes": CPG/impl/passes.md
+  - "Contributing":
+      - "Contributing to the CPG library": Contributing/index.md
+    # This assumes that the most recent dokka build was generated with the "main" tag!
+  - "API Reference": dokka/main

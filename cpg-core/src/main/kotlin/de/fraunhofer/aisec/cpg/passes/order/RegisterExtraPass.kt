@@ -25,11 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.passes.order
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
 
-/** Register a new pass required by a fronted. */
+/**
+ * Register a new default pass required by a frontend. Passes annotated this way are collected by
+ * [TranslationConfiguration.Builder.registerExtraFrontendPasses] and automatically registered in
+ * [TranslationConfiguration.Builder.build], but only if
+ * [TranslationConfiguration.Builder.defaultPasses] was called.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class RegisterExtraPass(val value: KClass<out Pass>)
+annotation class RegisterExtraPass(val value: KClass<out Pass<*>>)

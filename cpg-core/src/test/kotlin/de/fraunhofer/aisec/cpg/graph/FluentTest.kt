@@ -33,21 +33,20 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.test.*
 
 class FluentTest {
     @Test
     fun test() {
-        val scopeManager = ScopeManager()
         val result =
-            TestLanguageFrontend(scopeManager).build {
-                translationResult(TranslationConfiguration.builder().build()) {
+            TestLanguageFrontend().build {
+                translationResult {
                     translationUnit("file.cpp") {
                         function("main", t("int")) {
                             param("argc", t("int"))
@@ -62,7 +61,8 @@ class FluentTest {
                                         elseStmt { call("printf") { literal("else") } }
                                     }
                                 }
-                                call("do") { call("some::func") }
+                                declare { variable("some", t("SomeClass")) }
+                                call("do") { call("some.func") }
 
                                 returnStmt { ref("a") + literal(2) }
                             }
@@ -70,7 +70,6 @@ class FluentTest {
                     }
                 }
             }
-        val tu = result.translationUnits.firstOrNull()
 
         // Let's assert that we did this correctly
         val main = result.functions["main"]
@@ -83,7 +82,7 @@ class FluentTest {
         assertLocalName("argc", argc)
         assertLocalName("int", argc.type)
 
-        val body = main.body as? CompoundStatement
+        val body = main.body as? Block
         assertNotNull(body)
         assertTrue {
             body.scope is FunctionScope
@@ -131,7 +130,7 @@ class FluentTest {
         assertNotNull(printf)
         assertEquals("else", printf.arguments[0]<Literal<*>>()?.value)
 
-        var ref = condition.lhs<DeclaredReferenceExpression>()
+        var ref = condition.lhs<Reference>()
         assertNotNull(ref)
         assertLocalName("argc", ref)
 
@@ -139,18 +138,17 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Third line is th
-        // e CallExpression (containing another MemberCallExpression as argument)
-        val call = main[2] as? CallExpression
+        // Fourth line is the CallExpression (containing another MemberCallExpression as argument)
+        val call = main[3] as? CallExpression
         assertNotNull(call)
         assertLocalName("do", call)
 
         val mce = call.arguments[0] as? MemberCallExpression
         assertNotNull(mce)
-        assertFullName("some::func", mce)
+        assertFullName("UNKNOWN.func", mce)
 
-        // Fourth line is the ReturnStatement
-        val returnStatement = main[3] as? ReturnStatement
+        // Fifth line is the ReturnStatement
+        val returnStatement = main[4] as? ReturnStatement
         assertNotNull(returnStatement)
         assertNotNull(returnStatement.scope)
 
@@ -159,7 +157,7 @@ class FluentTest {
         assertNotNull(binOp.scope)
         assertEquals("+", binOp.operatorCode)
 
-        ref = binOp.lhs as? DeclaredReferenceExpression
+        ref = binOp.lhs as? Reference
         assertNotNull(ref)
         assertNotNull(ref.scope)
         assertNull(ref.refersTo)
@@ -170,9 +168,12 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        VariableUsageResolver().accept(result)
+        EvaluationOrderGraphPass(result.finalCtx)
+            .accept(result.components.first().translationUnits.first())
+        SymbolResolver(result.finalCtx).accept(result.components.first())
 
-        // Now the reference should be resolved
+        // Now the reference should be resolved and the MCE name set
         assertRefersTo(ref, variable)
+        assertFullName("SomeClass::func", mce)
     }
 }

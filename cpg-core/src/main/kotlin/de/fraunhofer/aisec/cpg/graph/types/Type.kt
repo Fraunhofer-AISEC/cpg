@@ -26,15 +26,17 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -42,14 +44,17 @@ import org.neo4j.ogm.annotation.Relationship
  * this class. Contains information which is included in any Type such as name, storage, qualifier
  * and origin
  */
+@NodeEntity
 abstract class Type : Node {
     /** All direct supertypes of this type. */
     @PopulatedByPass(TypeHierarchyResolver::class)
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
     var superTypes = mutableSetOf<Type>()
         protected set
+
     var isPrimitive = false
         protected set
+
     open var typeOrigin: Origin? = null
 
     constructor() {
@@ -57,7 +62,7 @@ abstract class Type : Node {
     }
 
     constructor(typeName: String?) {
-        name = language.parseName(typeName!!)
+        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
         typeOrigin = Origin.UNRESOLVED
     }
 
@@ -66,17 +71,18 @@ abstract class Type : Node {
         typeOrigin = type?.typeOrigin
     }
 
-    constructor(typeName: CharSequence, language: Language<out LanguageFrontend>?) {
-        if (this is FunctionType) {
-            name = Name(typeName.toString(), null, language)
-        } else {
-            name = language.parseName(typeName)
-        }
+    constructor(typeName: CharSequence, language: Language<*>?) {
+        name =
+            if (this is FunctionType) {
+                Name(typeName.toString(), null, language)
+            } else {
+                language.parseName(typeName)
+            }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(fullTypeName: Name, language: Language<out LanguageFrontend>?) {
+    constructor(fullTypeName: Name, language: Language<*>?) {
         name = fullTypeName.clone()
         typeOrigin = Origin.UNRESOLVED
         this.language = language
@@ -91,9 +97,17 @@ abstract class Type : Node {
     }
 
     /**
+     * Creates a new [Type] based on a reference of this type. The main usage is to create pointer
+     * and array types. This function does NOT invoke [TypeManager.registerType] and should only be
+     * used internally. For the public API, the extension functions, such as [Type.array] should be
+     * used instead.
+     *
      * @param pointer Reason for the reference (array of pointer)
      * @return Returns a reference to the current Type. E.g. when creating a pointer to an existing
      *   ObjectType
+     *
+     * TODO(oxisto) Ideally, we would make this function "internal", but there is a bug in the Go
+     *   frontend, so that we still need this function :(
      */
     abstract fun reference(pointer: PointerOrigin?): Type
 
@@ -102,7 +116,9 @@ abstract class Type : Node {
      *   pointer type we obtain the type the pointer is pointing towards
      */
     abstract fun dereference(): Type
+
     open fun refreshNames() {}
+
     var root: Type
         /**
          * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
@@ -126,17 +142,16 @@ abstract class Type : Node {
             }
         }
 
-    /** @return Creates an exact copy of the current type (chain) */
-    abstract fun duplicate(): Type
-
     val typeName: String
         get() = name.toString()
+
     open val referenceDepth: Int
         /**
          * @return number of steps that are required in order to traverse the type chain until the
          *   root is reached
          */
         get() = 0
+
     val isFirstOrderType: Boolean
         /**
          * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a
@@ -144,8 +159,10 @@ abstract class Type : Node {
          */
         get() =
             (this is ObjectType ||
+                this is AutoType ||
                 this is UnknownType ||
                 this is FunctionType ||
+                this is ProblemType ||
                 this is TupleType // TODO(oxisto): convert FunctionPointerType to second order type
                 ||
                 this is FunctionPointerType ||
@@ -166,7 +183,7 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return if (other !is Type) false else name == other.name && language == other.language
+        return other is Type && name == other.name && language == other.language
     }
 
     override fun hashCode() = Objects.hash(name, language)
@@ -178,4 +195,43 @@ abstract class Type : Node {
     companion object {
         const val UNKNOWN_TYPE_STRING = "UNKNOWN"
     }
+
+    /**
+     * An ancestor is an item in a tree of types spanning from one particular [Type] to all of its
+     * [Type.superTypes] (and their [Type.superTypes], and so on). Each item holds information about
+     * the current "depth" within the tree.
+     */
+    class Ancestor(val type: Type, var depth: Int) {
+        override fun hashCode(): Int {
+            return Objects.hash(type)
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) {
+                return true
+            }
+            if (other !is Ancestor) {
+                return false
+            }
+            return type == other.type
+        }
+
+        override fun toString(): String {
+            return ToStringBuilder(this, TO_STRING_STYLE)
+                .append("type", type.name)
+                .append("depth", depth)
+                .toString()
+        }
+    }
 }
+
+/** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
+var Type.recordDeclaration: RecordDeclaration?
+    get() {
+        return (this as? ObjectType)?.recordDeclaration
+    }
+    set(value) {
+        if (this is ObjectType) {
+            this.recordDeclaration = value
+        }
+    }

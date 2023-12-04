@@ -56,10 +56,8 @@ class PropertyEdgeConverter : CompositeAttributeConverter<Map<Properties, Any?>>
     override fun toGraphProperties(value: Map<Properties, Any?>): Map<String, Any?> {
         val result: MutableMap<String, Any?> = HashMap()
         for ((key, propertyValue) in value) {
-            if (serializer.containsKey(propertyValue!!.javaClass.name)) {
-                val serializedProperty: Any =
-                    serializer[propertyValue.javaClass.name]!!.apply(propertyValue)
-                result[key.name] = serializedProperty
+            if (propertyValue != null && serializer.containsKey(propertyValue.javaClass.name)) {
+                result[key.name] = serializer[propertyValue.javaClass.name]?.apply(propertyValue)
             } else {
                 result[key.name] = propertyValue
             }
@@ -71,7 +69,8 @@ class PropertyEdgeConverter : CompositeAttributeConverter<Map<Properties, Any?>>
         val result: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
         for (prop in Properties.values()) {
             if (deserializer.containsKey(prop.name)) {
-                val deserializedProperty = deserializer[prop.name]!!.apply(value[prop.name]!!)
+                val deserializedProperty =
+                    value[prop.name]?.let { deserializer[prop.name]?.apply(it) }
                 result[prop] = deserializedProperty
             } else {
                 result[prop] = value[prop.name]

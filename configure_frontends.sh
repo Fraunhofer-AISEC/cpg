@@ -46,6 +46,8 @@ fi
 
 answerJava=$(ask "Do you want to enable the Java frontend? (currently $(getProperty "enableJavaFrontend"))")
 setProperty "enableJavaFrontend" $answerJava
+answerCXX=$(ask "Do you want to enable the C/C++ frontend? (currently $(getProperty "enableCXXFrontend"))")
+setProperty "enableCXXFrontend" $answerCXX
 answerGo=$(ask "Do you want to enable the Go frontend? (currently $(getProperty "enableGoFrontend"))")
 setProperty "enableGoFrontend" $answerGo
 answerPython=$(ask "Do you want to enable the Python frontend? (currently $(getProperty "enablePythonFrontend"))")
@@ -58,3 +60,5 @@ answerPythonQiskit=$(ask "Do you want to enable the Python Qiskit frontend? (cur
 setProperty "enablePythonQiskitFrontend" $answerPythonQiskit
 answerOpenQasm=$(ask "Do you want to enable the OpenQASM frontend? (currently $(getProperty "enableOpenQasmFrontend"))")
 setProperty "enableOpenQasmFrontend" $answerOpenQasm
+answerRuby=$(ask "Do you want to enable the Ruby frontend? (currently $(getProperty "enableRubyFrontend"))")
+setProperty "enableRubyFrontend" $answerRuby

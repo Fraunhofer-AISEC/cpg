@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -48,18 +48,17 @@ import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 
 @RequiredFrontend(PythonLanguageFrontend::class)
-@DependsOn(VariableUsageResolver::class)
-@DependsOn(CallResolver::class)
+@DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(EdgeCachePass::class)
 @ExecuteBefore(QuantumEOGPass::class)
 @ExecuteBefore(QuantumDFGPass::class)
-class QiskitPass : Pass() {
+class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val quantumCircuitsMap = HashMap<Node, QuantumCircuit>()
 
-    override fun accept(p0: TranslationResult) {
+    override fun accept(comp: Component) {
 
-        val flatAST = SubgraphWalker.flattenAST(p0)
+        val flatAST = SubgraphWalker.flattenAST(comp.translationUnits.first()) // TODO first
 
         val allQuantumCircuits =
             flatAST.filter { n ->
@@ -99,17 +98,14 @@ class QiskitPass : Pass() {
         val allQuantumExpressions =
             flatAST.filter { n ->
                 n is MemberCallExpression &&
-                    n.base is DeclaredReferenceExpression &&
-                    quantumCircuitsMap.containsKey(
-                        ((n.base as? DeclaredReferenceExpression)?.refersTo) as? Node
-                    )
+                    n.base is Reference &&
+                    quantumCircuitsMap.containsKey(((n.base as? Reference)?.refersTo) as? Node)
             }
 
         for (expr in allQuantumExpressions) {
             val currentCircuit: QuantumCircuit =
                 quantumCircuitsMap[
-                    ((expr as? MemberCallExpression)?.base as? DeclaredReferenceExpression)
-                        ?.refersTo as? Node]
+                    ((expr as? MemberCallExpression)?.base as? Reference)?.refersTo as? Node]
                     ?: TODO()
             var newGate: QuantumGate? = null
 
@@ -174,7 +170,10 @@ class QiskitPass : Pass() {
                                                     ?: TODO()
                                             ),
                                         )
-                                    p0.additionalNodes.add(newMeasureNode)
+                                    comp.translationUnits
+                                        .first()
+                                        .additionalNodes
+                                        .add(newMeasureNode) // TODO first
                                     currentCircuit.statements += newMeasureNode
                                 }
                             }
@@ -221,19 +220,22 @@ class QiskitPass : Pass() {
                     binOp.rhs = lit
                     cIf.condition = binOp
                     cIf.thenStatement = newGate
-                    p0.additionalNodes.add(cIf)
-                    p0.additionalNodes.add(newGate) // not sure if we want it this way
+                    comp.translationUnits.first().additionalNodes.add(cIf) // TODO first
+                    comp.translationUnits
+                        .first()
+                        .additionalNodes
+                        .add(newGate) // not sure if we want it this way // TODO first
                     currentCircuit.statements += cIf
                 } else {
                     currentCircuit.statements += newGate
-                    p0.additionalNodes.add(newGate)
+                    comp.translationUnits.first().additionalNodes.add(newGate) // TODO first
                 }
             }
         }
 
         // save the new nodes
         for (node in quantumCircuitsMap.values) {
-            p0.additionalNodes.add(node)
+            comp.translationUnits.first().additionalNodes.add(node) // TODO first
         }
     }
 

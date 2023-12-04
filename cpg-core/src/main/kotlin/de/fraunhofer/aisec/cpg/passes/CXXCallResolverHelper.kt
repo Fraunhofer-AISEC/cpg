@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.util.HashMap
 import java.util.regex.Pattern
 
@@ -41,17 +40,12 @@ import java.util.regex.Pattern
  * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
  *   signature by means of casting
  */
-fun compatibleSignatures(
-    callSignature: List<Type?>,
-    functionSignature: List<Type>,
-    provider: ScopeProvider
-): Boolean {
+fun compatibleSignatures(callSignature: List<Type>, functionSignature: List<Type>): Boolean {
     return if (callSignature.size == functionSignature.size) {
         for (i in callSignature.indices) {
             if (
-                callSignature[i]!!.isPrimitive != functionSignature[i].isPrimitive &&
-                    !TypeManager.getInstance()
-                        .isSupertypeOf(functionSignature[i], callSignature[i], provider)
+                callSignature[i].isPrimitive != functionSignature[i].isPrimitive &&
+                    !callSignature[i].isDerivedFrom(functionSignature[i])
             ) {
                 return false
             }
@@ -71,7 +65,7 @@ fun compatibleSignatures(
 fun getCallSignatureWithDefaults(
     call: CallExpression,
     functionDeclaration: FunctionDeclaration
-): List<Type?> {
+): List<Type> {
     val callSignature = mutableListOf(*call.signature.toTypedArray())
     if (call.signature.size < functionDeclaration.parameters.size) {
         callSignature.addAll(
@@ -105,12 +99,13 @@ fun resolveWithImplicitCast(
     for (functionDeclaration in initialInvocationCandidates) {
         val callSignature = getCallSignatureWithDefaults(call, functionDeclaration)
         // Check if the signatures match by implicit casts
-        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes, call)) {
+        if (compatibleSignatures(callSignature, functionDeclaration.signatureTypes)) {
             val implicitCastTargets =
                 signatureWithImplicitCastTransformation(
+                    call,
                     getCallSignatureWithDefaults(call, functionDeclaration),
                     call.arguments,
-                    functionDeclaration.signatureTypes
+                    functionDeclaration.signatureTypes,
                 )
             if (implicitCasts == null) {
                 implicitCasts = implicitCastTargets
@@ -119,7 +114,7 @@ fun resolveWithImplicitCast(
                 // to the same target type
                 checkMostCommonImplicitCast(implicitCasts, implicitCastTargets)
             }
-            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes, call)) {
+            if (compatibleSignatures(call.signature, functionDeclaration.signatureTypes)) {
                 invocationTargetsWithImplicitCast.add(functionDeclaration)
             } else {
                 invocationTargetsWithImplicitCastAndDefaults.add(functionDeclaration)
@@ -238,69 +233,11 @@ fun resolveConstructorWithDefaults(
 fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
     val namePattern =
         Pattern.compile(
-            "(" + Pattern.quote(recordDeclaration!!.name.toString()) + "\\.)?" + Pattern.quote(name)
+            "(" + Pattern.quote(recordDeclaration?.name.toString()) + "\\.)?" + Pattern.quote(name)
         )
     val invocationCandidate =
         recordDeclaration.methods.filter { namePattern.matcher(it.name.toString()).matches() }
     return invocationCandidate.isEmpty()
-}
-
-/**
- * @param constructExpression we want to find an invocation target for
- * @param recordDeclaration associated with the Object the ConstructExpression constructs
- * @return a ConstructDeclaration that matches the signature of the ConstructExpression by applying
- *   one or more implicit casts to the primitive type arguments of the ConstructExpressions. The
- *   arguments are proxied through a CastExpression to the type required by the
- *   ConstructDeclaration.
- */
-fun resolveConstructorWithImplicitCast(
-    constructExpression: ConstructExpression,
-    recordDeclaration: RecordDeclaration
-): ConstructorDeclaration? {
-    for (constructorDeclaration in recordDeclaration.constructors) {
-        val workingSignature = mutableListOf(*constructExpression.signature.toTypedArray())
-        val defaultParameterSignature = constructorDeclaration.defaultParameterSignature
-        if (constructExpression.arguments.size <= defaultParameterSignature.size) {
-            workingSignature.addAll(
-                defaultParameterSignature.subList(
-                    constructExpression.arguments.size,
-                    defaultParameterSignature.size
-                )
-            )
-        }
-        if (
-            compatibleSignatures(
-                constructExpression.signature,
-                constructorDeclaration.signatureTypes,
-                constructExpression
-            )
-        ) {
-            val implicitCasts =
-                signatureWithImplicitCastTransformation(
-                    constructExpression.signature,
-                    constructExpression.arguments,
-                    constructorDeclaration.signatureTypes
-                )
-            applyImplicitCastToArguments(constructExpression, implicitCasts)
-            return constructorDeclaration
-        } else if (
-            compatibleSignatures(
-                workingSignature,
-                constructorDeclaration.signatureTypes,
-                constructExpression
-            )
-        ) {
-            val implicitCasts =
-                signatureWithImplicitCastTransformation(
-                    getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
-                    constructExpression.arguments,
-                    constructorDeclaration.signatureTypes
-                )
-            applyImplicitCastToArguments(constructExpression, implicitCasts)
-            return constructorDeclaration
-        }
-    }
-    return null
 }
 
 /**
@@ -309,7 +246,7 @@ fun resolveConstructorWithImplicitCast(
  * realizations of the Template 3. Set return type of the CallExpression and checks if it uses a
  * ParameterizedType and therefore has to be instantiated 4. Set Template Parameters Edge from the
  * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to
- * ParamVariableDeclaration in TemplateDeclaration
+ * ParameterDeclaration in TemplateDeclaration
  *
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
@@ -327,7 +264,8 @@ fun applyTemplateInstantiation(
     function: FunctionDeclaration,
     initializationSignature: Map<Declaration?, Node?>,
     initializationType: Map<Node?, TemplateDeclaration.TemplateInitialization?>,
-    orderedInitializationSignature: Map<Declaration, Int>
+    orderedInitializationSignature: Map<Declaration, Int>,
+    ctx: TranslationContext
 ): List<FunctionDeclaration> {
     val templateInstantiationParameters =
         mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
@@ -355,9 +293,10 @@ fun applyTemplateInstantiation(
     val templateCallSignature = templateCall.signature
     val callSignatureImplicit =
         signatureWithImplicitCastTransformation(
+            templateCall,
             templateCallSignature,
             templateCall.arguments,
-            templateFunctionSignature
+            templateFunctionSignature,
         )
     for (i in callSignatureImplicit.indices) {
         val cast = callSignatureImplicit[i]
@@ -366,12 +305,11 @@ fun applyTemplateInstantiation(
         }
     }
 
-    // Add DFG edges from the instantiation Expression to the ParamVariableDeclaration in the
+    // Add DFG edges from the instantiation Expression to the ParameterDeclaration in the
     // Template.
     for ((declaration) in initializationSignature) {
-        if (declaration is ParamVariableDeclaration) {
-            declaration.addPrevDFG(initializationSignature[declaration]!!)
-            initializationSignature[declaration]!!.addNextDFG(declaration)
+        if (declaration is ParameterDeclaration) {
+            initializationSignature[declaration]?.let { declaration.addPrevDFG(it) }
         }
     }
 
@@ -392,9 +330,10 @@ fun applyTemplateInstantiation(
  *   FunctionDeclaration cannot be reached through implicit casts
  */
 fun signatureWithImplicitCastTransformation(
+    call: CallExpression,
     callSignature: List<Type?>,
     arguments: List<Expression>,
-    functionSignature: List<Type>
+    functionSignature: List<Type>,
 ): MutableList<CastExpression?> {
     val implicitCasts = mutableListOf<CastExpression?>()
     if (callSignature.size != functionSignature.size) return implicitCasts
@@ -402,8 +341,9 @@ fun signatureWithImplicitCastTransformation(
     for (i in callSignature.indices) {
         val callType = callSignature[i]
         val funcType = functionSignature[i]
-        if (callType!!.isPrimitive && funcType.isPrimitive && callType != funcType) {
+        if (callType?.isPrimitive == true && funcType.isPrimitive && callType != funcType) {
             val implicitCast = CastExpression()
+            implicitCast.ctx = call.ctx
             implicitCast.isImplicit = true
             implicitCast.castType = funcType
             implicitCast.language = funcType.language
@@ -423,15 +363,15 @@ fun signatureWithImplicitCastTransformation(
  *
  * @param initialization mapping of the declaration of the template parameters to the explicit
  *   values the template is instantiated with
- * @return mapping of the parameterized types to the corresponding TypeParamDeclaration in the
+ * @return mapping of the parameterized types to the corresponding TypeParameterDeclaration in the
  *   template
  */
 fun getParameterizedSignaturesFromInitialization(
     initialization: Map<Declaration?, Node?>
-): Map<ParameterizedType, TypeParamDeclaration> {
-    val parameterizedSignature: MutableMap<ParameterizedType, TypeParamDeclaration> = HashMap()
+): Map<ParameterizedType, TypeParameterDeclaration> {
+    val parameterizedSignature: MutableMap<ParameterizedType, TypeParameterDeclaration> = HashMap()
     for (templateParam in initialization.keys) {
-        if (templateParam is TypeParamDeclaration) {
+        if (templateParam is TypeParameterDeclaration) {
             parameterizedSignature[templateParam.type as ParameterizedType] = templateParam
         }
     }
@@ -456,7 +396,7 @@ fun getParameterizedSignaturesFromInitialization(
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
  *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
  *   initialization -&gt; initialization not possible
  */
 fun getTemplateInitializationSignature(
@@ -518,7 +458,7 @@ fun getTemplateInitializationSignature(
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
  *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+ *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
  *   initialization -&gt; initialization not possible
  */
 fun constructTemplateInitializationSignatureFromTemplateParameters(
@@ -537,7 +477,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
                 instantiationSignature[templateParameter] = callParameter
                 instantiationType[callParameter] =
                     TemplateDeclaration.TemplateInitialization.EXPLICIT
-                if (templateParameter is TypeParamDeclaration) {
+                if (templateParameter is TypeParameterDeclaration) {
                     explicitInstantiated.add(templateParameter.type as ParameterizedType)
                 }
                 orderedInitializationSignature[templateParameter] = i
@@ -563,22 +503,21 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
  *
  * @param callParameterArg
  * @param templateParameter
- * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
- *   ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+ * @return If the TemplateParameter is an TypeParameterDeclaration, the callParameter must be an
+ *   ObjectType => returns true If the TemplateParameter is a ParameterDeclaration, the
  *   callParameterArg must be an Expression and its type must match the type of the
- *   ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+ *   ParameterDeclaration (same type or subtype) => returns true Otherwise return false
  */
 fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
     if (callParameter is TypeExpression) {
         callParameter = callParameter.type
     }
-    return if (callParameter is Type && templateParameter is TypeParamDeclaration) {
+    return if (callParameter is Type && templateParameter is TypeParameterDeclaration) {
         callParameter is ObjectType
-    } else if (callParameter is Expression && templateParameter is ParamVariableDeclaration) {
+    } else if (callParameter is Expression && templateParameter is ParameterDeclaration) {
         callParameter.type == templateParameter.type ||
-            TypeManager.getInstance()
-                .isSupertypeOf(templateParameter.type, callParameter.type, callParameterArg)
+            callParameter.type.isDerivedFrom(templateParameter.type)
     } else {
         false
     }
@@ -628,7 +567,7 @@ fun handleImplicitTemplateParameter(
 
 /**
  * @param function FunctionDeclaration realization of the template
- * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParamDeclarations
+ * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParameterDeclarations
  *   that define them, used to backwards resolve
  * @param initializationSignature mapping between the ParamDeclaration of the template and the
  *   corresponding instantiations
@@ -638,7 +577,7 @@ fun handleImplicitTemplateParameter(
  */
 fun getCallSignature(
     function: FunctionDeclaration,
-    parameterizedTypeResolution: Map<ParameterizedType, TypeParamDeclaration>,
+    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
     initializationSignature: Map<Declaration?, Node?>
 ): List<Type> {
     val templateCallSignature = mutableListOf<Type>()
@@ -682,7 +621,10 @@ fun checkArgumentValidity(
             ) // Use provided arguments
         callArguments.addAll(
             functionDeclaration.defaultParameters
-                .subList(callArguments.size, functionDeclaration.defaultParameters.size)
+                .subList(
+                    callArguments.size,
+                    functionDeclaration.defaultParameters.size
+                ) // TODO: Could be replaced with functionDeclaration.parameters.size
                 .filterNotNull()
         ) // Extend by defaults
         for (i in callArguments.indices) {

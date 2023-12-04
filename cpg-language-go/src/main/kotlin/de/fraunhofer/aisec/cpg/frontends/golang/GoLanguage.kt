@@ -25,18 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.HasGenerics
-import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
-import de.fraunhofer.aisec.cpg.frontends.HasStructs
-import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
 class GoLanguage :
-    Language<GoLanguageFrontend>(), HasShortCircuitOperators, HasGenerics, HasStructs {
+    Language<GoLanguageFrontend>(),
+    HasShortCircuitOperators,
+    HasGenerics,
+    HasStructs,
+    HasFirstClassFunctions,
+    HasAnonymousIdentifier {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class
@@ -108,13 +113,115 @@ class GoLanguage :
             // TODO: Actually, this should be a type alias to uint8
             "byte" to IntegerType("uint8", 8, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#string
-            "string" to StringType("string", this)
+            "string" to StringType("string", this),
+            // https://go.dev/ref/spec#Package_unsafe
+            "unsafe.ArbitraryType" to ObjectType("unsafe.ArbitraryType", listOf(), false, this),
+            // https://go.dev/ref/spec#Package_unsafe
+            "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this)
         )
 
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager,
-    ): GoLanguageFrontend {
-        return GoLanguageFrontend(this, config, scopeManager)
+    override fun isDerivedFrom(
+        type: Type,
+        superType: Type,
+        hint: HasType?,
+        superHint: HasType?
+    ): Boolean {
+        if (
+            type == superType ||
+                // "any" accepts any type
+                superType == primitiveType("any") ||
+                // the unsafe.ArbitraryType is a fake type in the unsafe package, that also accepts
+                // any type
+                superType == primitiveType("unsafe.ArbitraryType")
+        ) {
+            return true
+        }
+
+        // This makes lambda expression works, as long as we have the dedicated a
+        // FunctionPointerType
+        if (type is FunctionPointerType && superType is FunctionType) {
+            return type == superType.reference(PointerType.PointerOrigin.POINTER)
+        }
+
+        // the unsafe.IntegerType is a fake type in the unsafe package, that accepts any integer
+        // type
+        if (type is IntegerType && superType == primitiveType("unsafe.IntegerType")) {
+            return true
+        }
+
+        // If we encounter an auto type as part of the function declaration, we accept this as any
+        // type
+        if (
+            (type is ObjectType && superType is AutoType) ||
+                (type is PointerType && type.isArray && superType.root is AutoType)
+        ) {
+            return true
+        }
+
+        // We accept the "nil" literal for the following super types:
+        // - pointers
+        // - interfaces
+        // - maps
+        // - slices (which we model also as a pointer type)
+        // - channels
+        // - function types
+        if (hint.isNil) {
+            return superType is PointerType ||
+                superType.isInterface ||
+                superType.isMap ||
+                superType.isChannel ||
+                superType is FunctionType
+        }
+
+        // We accept all kind of numbers if the literal is part of the call expression
+        if (superHint is FunctionDeclaration && hint is Literal<*>) {
+            return type is NumericType && superType is NumericType
+        }
+
+        // We additionally want to emulate the behaviour of Go's interface system here
+        if (superType.isInterface) {
+            var b = true
+            val target = (type.root as? ObjectType)?.recordDeclaration
+
+            // Our target struct type needs to implement all the functions of the interface
+            // TODO(oxisto): Differentiate on the receiver (pointer vs non-pointer)
+            for (method in superType.recordDeclaration?.methods ?: listOf()) {
+                if (target?.methods?.firstOrNull { it.signature == method.signature } != null) {
+                    b = false
+                }
+            }
+
+            return b
+        }
+
+        return false
+    }
+
+    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+        if (operation.operatorCode == "==") {
+            return super.propagateTypeOfBinaryOperation(operation)
+        }
+
+        // Deal with literals. Numeric literals can also be used in simple arithmetic of the
+        // underlying type is numeric
+        return when {
+            operation.lhs is Literal<*> && (operation.lhs as Literal<*>).type is NumericType -> {
+                val type = operation.rhs.type
+                if (type is NumericType || type.underlyingType is NumericType) {
+                    type
+                } else {
+                    unknownType()
+                }
+            }
+            operation.rhs is Literal<*> && (operation.rhs as Literal<*>).type is NumericType -> {
+                val type = operation.lhs.type
+                if (type is NumericType || type.underlyingType is NumericType) {
+                    type
+                } else {
+                    unknownType()
+                }
+            }
+            else -> super.propagateTypeOfBinaryOperation(operation)
+        }
     }
 }

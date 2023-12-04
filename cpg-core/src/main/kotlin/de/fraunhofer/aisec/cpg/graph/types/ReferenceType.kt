@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -37,7 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * called.
  */
 class ReferenceType : Type, SecondOrderType {
-    override var elementType: Type = newUnknownType()
+    override var elementType: Type = unknownType()
 
     constructor() : super()
 
@@ -68,16 +68,8 @@ class ReferenceType : Type, SecondOrderType {
         return elementType.dereference()
     }
 
-    override fun duplicate(): Type {
-        return ReferenceType(this, elementType)
-    }
-
     override fun isSimilar(t: Type?): Boolean {
         return t is ReferenceType && t.elementType == this && super.isSimilar(t)
-    }
-
-    fun refreshName() {
-        name = elementType.name.append("&")
     }
 
     override fun equals(other: Any?): Boolean {

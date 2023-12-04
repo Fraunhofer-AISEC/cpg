@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 
 /**
@@ -41,27 +42,35 @@ class CommentMatcher {
      * Searches amongst the children of the node to find the child that contains the provided
      * region.
      */
-    fun getEnclosingChild(node: Node, location: Region): Node {
-        var children = SubgraphWalker.getAstChildren(node).toMutableList()
+    fun getEnclosingChild(
+        node: Node,
+        location: Region,
+        artifactLocation: PhysicalLocation.ArtifactLocation?
+    ): Node {
+        // If there's an ArtifactLocation specified, it should at least be in the same file.
+        var children =
+            SubgraphWalker.getAstChildren(node)
+                .filter {
+                    artifactLocation == null || artifactLocation == it.location?.artifactLocation
+                }
+                .toMutableList()
         // As some frontends add regional implicit namespaces we have to search amongst its children
         // instead.
         children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap {
-                SubgraphWalker.getAstChildren(it).filter { !children.contains(it) }
+            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
+                SubgraphWalker.getAstChildren(namespace).filter { it !in children }
             }
         )
-        var enclosing =
-            children
-                .filter {
-                    val nodeRegion: Region = it.location?.let { it.region } ?: Region()
-                    nodeRegion.startLine <= location.startLine &&
-                        nodeRegion.endLine >= location.endLine &&
-                        (nodeRegion.startLine != location.startLine ||
-                            nodeRegion.startColumn <= location.startColumn) &&
-                        (nodeRegion.endLine != location.endLine ||
-                            nodeRegion.endColumn >= location.endColumn)
-                }
-                .firstOrNull()
+        val enclosing =
+            children.firstOrNull {
+                val nodeRegion: Region = it.location?.region ?: Region()
+                nodeRegion.startLine <= location.startLine &&
+                    nodeRegion.endLine >= location.endLine &&
+                    (nodeRegion.startLine != location.startLine ||
+                        nodeRegion.startColumn <= location.startColumn) &&
+                    (nodeRegion.endLine != location.endLine ||
+                        nodeRegion.endColumn >= location.endColumn)
+            }
         return enclosing ?: node
     }
 
@@ -71,29 +80,40 @@ class CommentMatcher {
      * don't have a successor starting in the same line but they have a predecessor in the same
      * line, the comment is matched to that closest predecessor.
      */
-    fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDeclaration) {
+    fun matchCommentToNode(
+        comment: String,
+        location: Region,
+        tu: TranslationUnitDeclaration,
+        artifactLocation: PhysicalLocation.ArtifactLocation? = null
+    ) {
         var enclosingNode: Node = tu
-        var smallestEnclosingNode: Node = getEnclosingChild(tu, location)
+        var smallestEnclosingNode: Node = getEnclosingChild(tu, location, artifactLocation)
         while (enclosingNode != smallestEnclosingNode) {
             enclosingNode = smallestEnclosingNode
-            smallestEnclosingNode = getEnclosingChild(smallestEnclosingNode, location)
+            smallestEnclosingNode =
+                getEnclosingChild(smallestEnclosingNode, location, artifactLocation)
         }
 
-        var children = SubgraphWalker.getAstChildren(smallestEnclosingNode).toMutableList()
+        var children =
+            SubgraphWalker.getAstChildren(smallestEnclosingNode)
+                .filter {
+                    artifactLocation == null || artifactLocation == it.location?.artifactLocation
+                }
+                .toMutableList()
 
         // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
         // children with a location
         children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap {
-                SubgraphWalker.getAstChildren(it).filter { !children.contains(it) }
+            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
+                SubgraphWalker.getAstChildren(namespace).filter { it !in children }
             }
         )
 
         // Searching for the closest successor to our comment amongst the children of the smallest
         // enclosing nodes
-        var successors =
+        val successors =
             children.filter {
-                val nodeRegion: Region = it.location?.region?.let { it } ?: Region()
+                val nodeRegion: Region = it.location?.region ?: Region()
                 nodeRegion.startLine >= location.endLine &&
                     (nodeRegion.startLine > location.endLine ||
                         nodeRegion.startColumn >= location.endColumn)
@@ -110,11 +130,11 @@ class CommentMatcher {
         val closestLine = closest?.location?.region?.startLine ?: location.endLine + 1
 
         // If the closest successor is not in the same line there may be a more adequate predecessor
-        // to associated the comment to (Has to be in the same line)
+        // to associate the comment to (Has to be in the same line)
         if (closest == null || closestLine > location.endLine) {
-            var predecessor =
+            val predecessor =
                 children.filter {
-                    val nodeRegion: Region = it.location?.region?.let { it } ?: Region()
+                    val nodeRegion: Region = it.location?.region ?: Region()
                     nodeRegion.endLine <= location.startLine &&
                         (nodeRegion.endLine < location.startLine ||
                             nodeRegion.endColumn <= location.startColumn)

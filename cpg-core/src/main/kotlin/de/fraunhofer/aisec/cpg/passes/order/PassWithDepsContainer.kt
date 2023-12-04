@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg.passes.order
 import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import java.lang.reflect.InvocationTargetException
 import java.util.*
+import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotations
 
 /**
  * A simple helper class for keeping track of passes and their (currently not satisfied)
@@ -61,9 +62,10 @@ class PassWithDepsContainer {
      * Iterate through all elements and remove the provided dependency [cls] from all passes in the
      * working list.
      */
-    private fun removeDependencyByClass(cls: Class<out Pass>) {
-        for ((_, value) in workingList) {
-            value.remove(cls)
+    private fun removeDependencyByClass(cls: KClass<out Pass<*>>) {
+        for (pass in workingList) {
+            pass.softDependencies.remove(cls)
+            pass.hardDependencies.remove(cls)
         }
     }
 
@@ -72,17 +74,17 @@ class PassWithDepsContainer {
     }
 
     fun getFirstPasses(): List<PassWithDependencies> {
-        return workingList.filter { it.pass.isFirstPass }
+        return workingList.filter { it.isFirstPass }
     }
 
     fun getLastPasses(): List<PassWithDependencies> {
-        return workingList.filter { it.pass.isLastPass }
+        return workingList.filter { it.isLastPass }
     }
 
-    private fun dependencyPresent(dep: Class<out Pass>): Boolean {
+    private fun dependencyPresent(dep: KClass<out Pass<*>>): Boolean {
         var result = false
         for (currentElement in workingList) {
-            if (dep == currentElement.pass.javaClass) {
+            if (dep == currentElement.pass) {
                 result = true
                 break
             }
@@ -91,24 +93,20 @@ class PassWithDepsContainer {
         return result
     }
 
-    private fun createNewPassWithDependency(cls: Class<out Pass>): PassWithDependencies {
-        val newPass =
-            try {
-                cls.getConstructor().newInstance()
-            } catch (e: InstantiationException) {
-                throw ConfigurationException(e)
-            } catch (e: InvocationTargetException) {
-                throw ConfigurationException(e)
-            } catch (e: IllegalAccessException) {
-                throw ConfigurationException(e)
-            } catch (e: NoSuchMethodException) {
-                throw ConfigurationException(e)
-            }
+    private fun createNewPassWithDependency(cls: KClass<out Pass<*>>): PassWithDependencies {
+        val softDependencies = mutableSetOf<KClass<out Pass<*>>>()
+        val hardDependencies = mutableSetOf<KClass<out Pass<*>>>()
 
-        val deps: MutableSet<Class<out Pass>> = HashSet()
-        deps.addAll(newPass.hardDependencies)
-        deps.addAll(newPass.softDependencies)
-        return PassWithDependencies(newPass, deps)
+        val dependencies = cls.findAnnotations<DependsOn>()
+        for (d in dependencies) {
+            if (d.softDependency) {
+                softDependencies += d.value
+            } else {
+                hardDependencies += d.value
+            }
+        }
+
+        return PassWithDependencies(cls, softDependencies, hardDependencies)
     }
 
     /**
@@ -119,7 +117,7 @@ class PassWithDepsContainer {
         val it = workingList.listIterator()
         while (it.hasNext()) {
             val current = it.next()
-            for (dependency in current.pass.hardDependencies) {
+            for (dependency in current.hardDependencies) {
                 if (!dependencyPresent(dependency)) {
                     log.info(
                         "Registering a required hard dependency which was not registered explicitly: {}",
@@ -131,11 +129,11 @@ class PassWithDepsContainer {
         }
 
         // add required dependencies to the working list
-        val missingPasses: MutableList<Class<out Pass>> = ArrayList()
+        val missingPasses: MutableList<KClass<out Pass<*>>> = ArrayList()
 
         // initially populate the missing dependencies list given the current passes
         for (currentElement in workingList) {
-            for (dependency in currentElement.pass.hardDependencies) {
+            for (dependency in currentElement.hardDependencies) {
                 if (!dependencyPresent(dependency)) {
                     missingPasses.add(dependency)
                 }
@@ -149,25 +147,36 @@ class PassWithDepsContainer {
      *
      * @return The first pass that has no active dependencies on success. null otherwise.
      */
-    fun getAndRemoveFirstPassWithoutDependencies(): Pass? {
-        var result: Pass? = null
+    fun getAndRemoveFirstPassWithoutDependencies(): List<KClass<out Pass<*>>> {
+        val results = mutableListOf<KClass<out Pass<*>>>()
+        val it = workingList.listIterator()
 
-        for (currentElement in workingList) {
-            if (workingList.size > 1 && currentElement.pass.isLastPass) {
-                // last pass can only be added at the end
+        while (it.hasNext()) {
+            val currentElement = it.next()
+            if (results.isEmpty() && currentElement.isLastPass && workingList.size == 1) {
+                it.remove()
+                return listOf(currentElement.pass)
+            }
+
+            // Keep going until our dependencies are met, this will collect passes that can run in
+            // parallel in results
+            if (
+                currentElement.dependencies.isEmpty() && !currentElement.isLastPass
+            ) { // no unsatisfied dependencies
+                val result = currentElement.pass
+                results.add(result)
+
+                // remove pass from the work-list
+                it.remove()
+            } else {
                 continue
             }
-
-            if (currentElement.dependencies.isEmpty()) { // no unsatisfied dependencies
-                result = currentElement.pass
-
-                // remove the pass from the other pass's dependencies
-                removeDependencyByClass(result.javaClass)
-                workingList.remove(currentElement)
-                break
-            }
         }
-        return result
+
+        // remove the selected passes from the other pass's dependencies
+        results.forEach { removeDependencyByClass(it) }
+
+        return results
     }
 
     /**
@@ -177,7 +186,7 @@ class PassWithDepsContainer {
      *
      * @return The first pass if present. Otherwise, null.
      */
-    fun getAndRemoveFirstPass(): Pass? {
+    fun getAndRemoveFirstPass(): KClass<out Pass<*>>? {
         val firstPasses = getFirstPasses()
         if (firstPasses.size > 1) {
             throw ConfigurationException(
@@ -186,10 +195,10 @@ class PassWithDepsContainer {
         }
         return if (firstPasses.isNotEmpty()) {
             val firstPass = firstPasses.first()
-            if (firstPass.pass.hardDependencies.isNotEmpty()) {
+            if (firstPass.hardDependencies.isNotEmpty()) {
                 throw ConfigurationException("The first pass has a hard dependency.")
             } else {
-                removeDependencyByClass(firstPass.pass.javaClass)
+                removeDependencyByClass(firstPass.pass)
                 workingList.remove(firstPass)
                 firstPass.pass
             }

@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumMeasure
@@ -35,7 +36,7 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)
-class QuantumEOGPass : EvaluationOrderGraphPass() {
+class QuantumEOGPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
     private val nodeTracker = HashSet<Node>()
 
     init {
@@ -63,20 +64,13 @@ class QuantumEOGPass : EvaluationOrderGraphPass() {
         pushToEOG(node)
     }
 
-    override fun accept(result: TranslationResult) {
-
-        scopeManager = result.scopeManager
-
+    override fun accept(tu: TranslationUnitDeclaration) {
         // We only want to start at the circuit(s)
-        val circuits = result.additionalNodes.filterIsInstance<QuantumCircuit>()
+        val circuits = tu.additionalNodes.filterIsInstance<QuantumCircuit>()
 
         for (circuit in circuits) {
             createEOG(circuit)
         }
-    }
-
-    override fun handleUnknown(node: Node) {
-        println(node)
     }
 
     override fun cleanup() {

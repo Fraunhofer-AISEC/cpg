@@ -6,13 +6,11 @@ plugins {
 
     `java-library`
     jacoco
-    kotlin("jvm")
-    id("org.jetbrains.dokka")
     signing
     `maven-publish`
+    kotlin("jvm")
+    id("org.jetbrains.dokka")
 }
-
-group = "de.fraunhofer.aisec"
 
 java {
     withSourcesJar()
@@ -25,7 +23,7 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.0/cdt-11.0.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
         metadataSources {
             artifact()
         }
@@ -79,20 +77,6 @@ publishing {
             }
         }
     }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
 }
 
 signing {
@@ -120,7 +104,7 @@ kotlin {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xcontext-receivers")
     }
 }
 
@@ -128,7 +112,11 @@ tasks.withType<KotlinCompile> {
 // common testing configuration
 //
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        if (!project.hasProperty("integration")) {
+            excludeTags("integration")
+        }
+    }
     maxHeapSize = "4048m"
 }
 

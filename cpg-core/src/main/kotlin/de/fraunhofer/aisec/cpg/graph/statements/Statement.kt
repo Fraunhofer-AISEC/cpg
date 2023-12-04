@@ -34,12 +34,14 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.*
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This [Node] is the most basic node type that represents source code elements which represents
  * executable code.
  */
+@NodeEntity
 abstract class Statement : Node(), DeclarationHolder {
     /**
      * A list of local variables associated to this statement, defined by their [ ] extracted from

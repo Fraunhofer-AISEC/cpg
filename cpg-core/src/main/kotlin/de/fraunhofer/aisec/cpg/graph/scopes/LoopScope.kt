@@ -61,7 +61,7 @@ class LoopScope(loopStatement: Statement) :
                 else -> {
                     LOGGER.error(
                         "Currently the component {} is not supported as loop scope.",
-                        astNode!!.javaClass
+                        astNode?.javaClass
                     )
                     ArrayList()
                 }
@@ -89,6 +89,7 @@ class LoopScope(loopStatement: Statement) :
                     mutableListOf()
                 }
             }
+
     private val breaks = mutableListOf<BreakStatement>()
     private val continues = mutableListOf<ContinueStatement>()
 

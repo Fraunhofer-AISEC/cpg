@@ -47,6 +47,9 @@ class TypedefDeclaration : Declaration() {
     override fun hashCode() = Objects.hash(super.hashCode(), type, alias)
 
     override fun toString(): String {
-        return ToStringBuilder(this).append("type", type).append("alias", alias).toString()
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .append("type", type)
+            .append("alias", alias)
+            .toString()
     }
 }

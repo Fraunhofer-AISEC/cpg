@@ -86,7 +86,7 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         // by walking through the NFA starting with the start state, this algorithm only converts
         // the
         // reachable part of the NFA
-        while (statesToExplore.size > 0) {
+        while (statesToExplore.isNotEmpty()) {
             // get the state to explore next (starts with the new start state created above)
             val (currentDfaState, epsilonClosure) = statesToExplore.removeFirst()
             // for each state in the epsilonClosure of the currently explored state, we have to get
@@ -106,7 +106,7 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
                 if (transitionClosure in epsilonClosures) {
                     // if the transitionClosure is already in the DFA, get the DFA state it
                     // corresponds to
-                    nextDfaState = epsilonClosures[transitionClosure]!!
+                    epsilonClosures[transitionClosure]?.let { nextDfaState = it }
                 } else {
                     // else create a new DFA state and add it to the known and to be explored states
                     nextDfaState =

@@ -29,16 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import java.nio.charset.StandardCharsets
 import java.util.*
-import java.util.function.Function
-import java.util.function.Predicate
 import org.slf4j.Logger
 
 object Util {
@@ -149,37 +142,9 @@ object Util {
         else refNodes.containsAll(nodeSide)
     }
 
-    @Throws(IOException::class)
-    fun inputStreamToString(inputStream: InputStream): String {
-        ByteArrayOutputStream().use { result ->
-            val buffer = ByteArray(1024)
-            var length: Int
-            while (inputStream.read(buffer).also { length = it } != -1) {
-                result.write(buffer, 0, length)
-            }
-            return result.toString(StandardCharsets.UTF_8)
-        }
-    }
-
-    @JvmStatic
-    fun <T> distinctBy(by: Function<in T, *>): Predicate<T> {
-        val seen = mutableSetOf<Any>()
-        return Predicate { t: T -> seen.add(by.apply(t)) }
-    }
-
-    fun getExtension(file: File): String {
-        val pos = file.name.lastIndexOf('.')
-        return if (pos > 0) {
-            file.name.substring(pos).lowercase(Locale.getDefault())
-        } else {
-            ""
-        }
-    }
-
-    @JvmStatic
-    fun <S> warnWithFileLocation(
-        lang: LanguageFrontend,
-        astNode: S,
+    inline fun <AstNode> warnWithFileLocation(
+        lang: LanguageFrontend<AstNode, *>,
+        astNode: AstNode,
         log: Logger,
         format: String?,
         vararg arguments: Any?
@@ -187,17 +152,16 @@ object Util {
         log.warn(
             String.format(
                 "%s: %s",
-                PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)),
+                PhysicalLocation.locationLink(lang.locationOf(astNode)),
                 format
             ),
             *arguments
         )
     }
 
-    @JvmStatic
-    fun <S> errorWithFileLocation(
-        lang: LanguageFrontend,
-        astNode: S,
+    inline fun <AstNode> errorWithFileLocation(
+        lang: LanguageFrontend<AstNode, *>,
+        astNode: AstNode,
         log: Logger,
         format: String?,
         vararg arguments: Any?
@@ -205,25 +169,45 @@ object Util {
         log.error(
             String.format(
                 "%s: %s",
-                PhysicalLocation.locationLink(lang.getLocationFromRawNode(astNode)),
+                PhysicalLocation.locationLink(lang.locationOf(astNode)),
                 format
             ),
             *arguments
         )
     }
 
-    @JvmStatic
-    fun warnWithFileLocation(node: Node, log: Logger, format: String?, vararg arguments: Any?) {
+    inline fun warnWithFileLocation(
+        node: Node,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?
+    ) {
         log.warn(
             String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
             *arguments
         )
     }
 
-    @JvmStatic
-    fun errorWithFileLocation(node: Node, log: Logger, format: String?, vararg arguments: Any?) {
+    inline fun errorWithFileLocation(
+        node: Node,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?
+    ) {
         log.error(
             String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            *arguments
+        )
+    }
+
+    inline fun debugWithFileLocation(
+        node: Node?,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?
+    ) {
+        log.debug(
+            String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
             *arguments
         )
     }
@@ -345,7 +329,7 @@ object Util {
                     }
                     break
                 } else {
-                    param.addPrevDFG(arguments[j]!!)
+                    param.addPrevDFG(arguments[j])
                 }
             }
             j++
@@ -390,19 +374,19 @@ object Util {
      *
      * @param n
      * @param branchingExp
-     * @param branchingDecl
+     * @param branchingDeclaration
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
         n: Node,
         branchingExp: Node?,
-        branchingDecl: Node?
+        branchingDeclaration: Node?
     ) {
         var conditionNodes = mutableListOf<Node>()
         if (branchingExp != null) {
             conditionNodes = mutableListOf()
             conditionNodes.add(branchingExp)
-        } else if (branchingDecl != null) {
-            conditionNodes = getAdjacentDFGNodes(branchingDecl, true)
+        } else if (branchingDeclaration != null) {
+            conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
         }
         conditionNodes.forEach { n.addPrevDFG(it) }
     }

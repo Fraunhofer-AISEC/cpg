@@ -38,7 +38,8 @@ import java.util.*
  */
 class IncompleteType : Type {
     constructor() : super("void", null)
-    constructor(type: Type?) : super(type!!)
+
+    constructor(type: Type?) : super(type)
 
     /** @return PointerType to a IncompleteType, e.g. void* */
     override fun reference(pointer: PointerOrigin?): Type {
@@ -48,10 +49,6 @@ class IncompleteType : Type {
     /** @return dereferencing void results in void therefore the same type is returned */
     override fun dereference(): Type {
         return this
-    }
-
-    override fun duplicate(): Type {
-        return IncompleteType(this)
     }
 
     override fun equals(other: Any?): Boolean {

@@ -2,17 +2,6 @@ rootProject.name = "cpg"
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-plugins {
-    id("com.gradle.enterprise") version("3.11.3")
-}
-
-gradleEnterprise {
-    buildScan {
-        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-        termsOfServiceAgree = "yes"
-    }
-}
-
 include(":cpg-all")
 include(":cpg-core")
 include(":cpg-analysis")
@@ -23,6 +12,10 @@ include(":cpg-console")
 val enableJavaFrontend: Boolean by extra {
     val enableJavaFrontend: String? by settings
     enableJavaFrontend.toBoolean()
+}
+val enableCXXFrontend: Boolean by extra {
+    val enableCXXFrontend: String? by settings
+    enableCXXFrontend.toBoolean()
 }
 val enableGoFrontend: Boolean by extra {
     val enableGoFrontend: String? by settings
@@ -48,11 +41,18 @@ val enableOpenQasmFrontend by extra {
     val enableOpenQasmFrontend: String by settings
     enableOpenQasmFrontend.toBoolean()
 }
+val enableRubyFrontend: Boolean by extra {
+    val enableRubyFrontend: String? by settings
+    enableRubyFrontend.toBoolean()
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
+if (enableCXXFrontend) include(":cpg-language-cxx")
 if (enableGoFrontend) include(":cpg-language-go")
 if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")
 if (enablePythonQiskitFrontend) include(":cpg-language-python-qiskit")
 if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableOpenQasmFrontend) include(":cpg-language-openqasm")
+
+if (enableRubyFrontend) include(":cpg-language-ruby")

@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.openqasm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -41,13 +39,6 @@ class OpenQasmLanguage : Language<OpenQasmLanguageFrontend>(), HasShortCircuitOp
     override val frontend: KClass<out OpenQasmLanguageFrontend> = OpenQasmLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
-
-    override fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager
-    ): OpenQasmLanguageFrontend {
-        return OpenQasmLanguageFrontend(this, config, scopeManager)
-    }
 
     /** TODO */
     @Transient override val builtInTypes = emptyMap<String, Type>()

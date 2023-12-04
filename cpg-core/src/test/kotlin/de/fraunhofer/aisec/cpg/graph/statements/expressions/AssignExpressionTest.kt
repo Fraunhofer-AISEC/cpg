@@ -25,15 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import kotlin.test.*
@@ -41,20 +37,20 @@ import kotlin.test.*
 class AssignExpressionTest {
     @Test
     fun propagateSimple() {
-        with(TestLanguage()) {
-            val refA = newDeclaredReferenceExpression("a")
-            val refB = newDeclaredReferenceExpression("b")
+        with(TestLanguageFrontend()) {
+            val refA = newReference("a")
+            val refB = newReference("b")
 
             // Simple assignment from "b" to "a". Both types are unknown at this point
             val stmt = newAssignExpression(lhs = listOf(refA), rhs = listOf(refB))
 
             // Type listeners should be configured
-            assertContains(refB.typeListeners, stmt)
+            assertContains(refB.typeObservers, stmt)
 
-            // Suddenly, we now we know the type of b.
-            refB.type = parseType("MyClass")
-            // It should now propagate to a
-            assertLocalName("MyClass", refA.type)
+            // Suddenly, we now we know the type of "b".
+            refB.type = objectType("MyClass")
+            // It should now propagate to the assigned type of "a"
+            assertContains(refA.assignedTypes, objectType("MyClass"))
 
             val assignments = stmt.assignments
             assertEquals(1, assignments.size)
@@ -65,17 +61,18 @@ class AssignExpressionTest {
     fun propagateTuple() {
         with(TestLanguageFrontend()) {
             val result = build {
-                translationResult(TranslationConfiguration.builder().build()) {
+                translationResult {
                     translationUnit {
                         val func =
                             function(
                                 "func",
-                                returnTypes = listOf(parseType("MyClass"), parseType("error"))
+                                returnTypes = listOf(objectType("MyClass"), objectType("error"))
                             )
+
                         function("main") {
-                            val refA = newDeclaredReferenceExpression("a")
-                            val refErr = newDeclaredReferenceExpression("err")
-                            val refFunc = newDeclaredReferenceExpression("func")
+                            val refA = newReference("a")
+                            val refErr = newReference("err")
+                            val refFunc = newReference("func")
                             refFunc.refersTo = func
                             val call = newCallExpression(refFunc)
 
@@ -83,39 +80,44 @@ class AssignExpressionTest {
                             val stmt =
                                 newAssignExpression(lhs = listOf(refA, refErr), rhs = listOf(call))
 
-                            body = newCompoundStatement()
-                            body as CompoundStatement += stmt
+                            body = newBlock()
+                            body as Block += stmt
                         }
                     }
                 }
             }
 
             val tu = result.translationUnits.firstOrNull()
-            val call = tu.calls["func"]
-            val func = tu.functions["func"]
-            val refA = tu.refs["a"]
-            val refErr = tu.refs["err"]
+            with(tu) {
+                val call = tu.calls["func"]
+                val func = tu.functions["func"]
+                val refA = tu.refs["a"]
+                val refErr = tu.refs["err"]
 
-            assertNotNull(call)
-            assertNotNull(func)
-            assertNotNull(refA)
-            assertNotNull(refErr)
+                assertNotNull(call)
+                assertNotNull(func)
+                assertNotNull(refA)
+                assertNotNull(refErr)
 
-            // This should now set the correct type of the call expression
-            call.invokes = listOf(func)
-            assertIs<TupleType>(call.type)
+                // This should now set the correct type of the call expression
+                call.invokes = listOf(func)
+                assertIs<TupleType>(call.type)
 
-            assertLocalName("MyClass", refA.type)
-            assertLocalName("error", refErr.type)
+                // We should at least know the "assigned" type of the references. Their declared
+                // type is
+                // still unknown to us, because we don't know the declarations.
+                assertContains(refA.assignedTypes, objectType("MyClass"))
+                assertContains(refErr.assignedTypes, objectType("error"))
 
-            // Invoke the DFG pass
-            DFGPass().accept(result)
+                // Invoke the DFG pass
+                DFGPass(ctx).accept(result.components.first())
 
-            assertTrue(refA.prevDFG.contains(call))
-            assertTrue(refErr.prevDFG.contains(call))
+                assertTrue(refA.prevDFG.contains(call))
+                assertTrue(refErr.prevDFG.contains(call))
 
-            val assignments = tu.assignments
-            assertEquals(2, assignments.size)
+                val assignments = tu.assignments
+                assertEquals(2, assignments.size)
+            }
         }
     }
 }

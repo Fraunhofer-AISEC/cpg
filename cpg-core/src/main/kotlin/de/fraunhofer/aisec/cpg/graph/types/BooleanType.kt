@@ -26,17 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 
 /** Instances of this class represent boolean types. */
 class BooleanType(
     typeName: CharSequence = "bool",
     bitWidth: Int? = 1,
-    language: Language<out LanguageFrontend>? = null,
+    language: Language<*>? = null,
     modifier: Modifier = Modifier.NOT_APPLICABLE
-) : NumericType(typeName, bitWidth, language, modifier) {
-
-    override fun duplicate(): Type {
-        return BooleanType(this.name, bitWidth, language, modifier)
-    }
-}
+) : NumericType(typeName, bitWidth, language, modifier)

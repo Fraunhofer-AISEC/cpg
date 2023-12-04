@@ -80,7 +80,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression",
+    "name": "de.fraunhofer.aisec.cpg.graph.NewArrayExpression",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -90,7 +90,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression",
+    "name": "de.fraunhofer.aisec.cpg.graph.SubscriptExpression",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -130,12 +130,12 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.CompoundStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.BlockStatement",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression",
+    "name": "de.fraunhofer.aisec.cpg.graph.BlockStatementExpression",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -170,7 +170,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression",
+    "name": "de.fraunhofer.aisec.cpg.graph.Reference",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -213,7 +213,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation",
+    "name": "de.fraunhofer.aisec.cpg.graph.ConstructorCallExpression",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -323,7 +323,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration",
+    "name": "de.fraunhofer.aisec.cpg.graph.ParameterDeclaration",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },

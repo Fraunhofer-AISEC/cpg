@@ -27,13 +27,15 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-open class IfStatement : Statement(), ArgumentHolder {
+open class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** C++ initializer statement. */
     @AST var initializerStatement: Statement? = null
 
@@ -43,18 +45,17 @@ open class IfStatement : Statement(), ArgumentHolder {
     /** The condition to be evaluated. */
     @AST var condition: Expression? = null
 
+    override val branchedBy: Node?
+        get() = condition ?: conditionDeclaration
+
     /** C++ constexpr construct. */
     var isConstExpression = false
 
-    /**
-     * The statement that is executed, if the condition is evaluated as true. Usually a
-     * [CompoundStatement].
-     */
+    /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
     @AST var thenStatement: Statement? = null
 
     /**
-     * The statement that is executed, if the condition is evaluated as false. Usually a
-     * [CompoundStatement].
+     * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */
     @AST var elseStatement: Statement? = null
 

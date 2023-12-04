@@ -28,26 +28,17 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Consumer
-import java.util.function.Predicate
-import java.util.stream.Collectors
-import org.apache.commons.lang3.tuple.MutablePair
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
@@ -70,7 +61,7 @@ object SubgraphWalker {
             // Note: we cannot use computeIfAbsent here, because we are calling our function
             // recursively and this would result in a ConcurrentModificationException
             if (fieldCache.containsKey(cacheKey)) {
-                return fieldCache[cacheKey]!!
+                return fieldCache[cacheKey] ?: ArrayList()
             }
             val fields = ArrayList<Field>()
             fields.addAll(getAllFields(classType.superclass))
@@ -150,17 +141,22 @@ object SubgraphWalker {
             val ast = field.getAnnotation(AST::class.java)
             if (ast != null) {
                 try {
-                    // disable access mechanisms
-                    field.trySetAccessible()
-                    var obj = field[node]
+                    // We need to synchronize access to the field, because otherwise different
+                    // threads might restore the isAccessible property while this thread is still
+                    // accessing the field
+                    var obj =
+                        synchronized(field) {
+                            // disable access mechanisms
+                            field.trySetAccessible()
+                            val obj = field[node]
 
-                    // restore old state
-                    field.isAccessible = false
+                            // restore old state
+                            field.isAccessible = false
+                            obj
+                        }
+                            ?: continue
 
                     // skip, if null
-                    if (obj == null) {
-                        continue
-                    }
                     var outgoing = true // default
                     if (field.getAnnotation(Relationship::class.java) != null) {
                         outgoing =
@@ -224,7 +220,7 @@ object SubgraphWalker {
 
     /**
      * Function returns two lists in a list. The first list contains all eog nodes with no
-     * predecesor in the subgraph with root 'n'. The second list contains eog edges that have no
+     * predecessor in the subgraph with root 'n'. The second list contains eog edges that have no
      * successor in the subgraph with root 'n'. The first List marks the entry and the second marks
      * the exit nodes of the cfg in this subgraph.
      *
@@ -235,34 +231,19 @@ object SubgraphWalker {
         val border = Border()
         val flattedASTTree = flattenAST(n)
         val eogNodes =
-            flattedASTTree
-                .stream()
-                .filter { node: Node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
-                .collect(Collectors.toList())
+            flattedASTTree.filter { node: Node ->
+                node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty()
+            }
         // Nodes that are incoming edges, no other node
         border.entries =
-            eogNodes.filter { node: Node ->
-                node.prevEOG.any { prev: Node -> !eogNodes.contains(prev) }
-            }
+            eogNodes
+                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
+                .toMutableList()
         border.exits =
-            eogNodes.filter { node: Node ->
-                node.nextEOG.any { next: Node -> !eogNodes.contains(next) }
-            }
+            eogNodes
+                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
+                .toMutableList()
         return border
-    }
-
-    fun refreshType(node: Node) {
-        // Using a visitor to avoid loops in the AST
-        node.accept(
-            Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
-                    if (t is HasType) {
-                        (t as HasType).refreshType()
-                    }
-                }
-            }
-        )
     }
 
     /**
@@ -271,14 +252,16 @@ object SubgraphWalker {
      * EOG subgraph, EOG entries and exits in a CFG subgraph.
      */
     class Border {
-        var entries: List<Node> = ArrayList()
-        var exits: List<Node> = ArrayList()
+        var entries = mutableListOf<Node>()
+        var exits = mutableListOf<Node>()
     }
 
     class IterativeGraphWalker {
         private var todo: Deque<Pair<Node, Node?>>? = null
         var backlog: Deque<Node>? = null
             private set
+
+        var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
 
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
@@ -306,11 +289,9 @@ object SubgraphWalker {
          * Once "parent" has been visited, we continue descending into its children. First into
          * "child1", followed by "subchild". Once we are done there, we return to "child1". At this
          * point, the exit handler notifies the user that "subchild" is being exited. Afterwards we
-         * exit "child1", and after "child2" is done, "parent" is exited. This callback is important
-         * for tracking declaration scopes, as e.g. anything declared in "child1" is also visible to
-         * "subchild", but not to "child2".
+         * exit "child1", and after "child2" is done, "parent" is exited.
          */
-        private val onScopeExit: MutableList<Consumer<Node>> = ArrayList()
+        private val onNodeExit: MutableList<Consumer<Node>> = ArrayList()
 
         /**
          * The core iterative AST traversal algorithm: In a depth-first way we descend into the
@@ -323,14 +304,14 @@ object SubgraphWalker {
             backlog = ArrayDeque()
             val seen: MutableSet<Node> = LinkedHashSet()
             todo?.push(Pair<Node, Node?>(root, null))
-            while (!(todo as ArrayDeque<Pair<Node, Node?>>).isEmpty()) {
+            while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
                 val (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
                 if (
-                    !(backlog as ArrayDeque<Node>).isEmpty() &&
-                        (backlog as ArrayDeque<Node>).peek().equals(current)
+                    (backlog as ArrayDeque<Node>).isNotEmpty() &&
+                        (backlog as ArrayDeque<Node>).peek() == current
                 ) {
                     val exiting = (backlog as ArrayDeque<Node>).pop()
-                    onScopeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
+                    onNodeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
                 } else {
                     // re-place the current node as a marker for the above check to find out when we
                     // need to exit a scope
@@ -340,10 +321,8 @@ object SubgraphWalker {
                         Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
                     )
                     val unseenChildren =
-                        getAstChildren(current)
-                            .stream()
-                            .filter(Predicate.not { o: Node -> seen.contains(o) })
-                            .collect(Collectors.toList())
+                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+
                     seen.addAll(unseenChildren)
                     unseenChildren.asReversed().forEach { child: Node ->
                         (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
@@ -361,13 +340,13 @@ object SubgraphWalker {
             onNodeVisit2.add(callback)
         }
 
-        fun registerOnScopeExit(callback: Consumer<Node>) {
-            onScopeExit.add(callback)
+        fun registerOnNodeExit(callback: Consumer<Node>) {
+            onNodeExit.add(callback)
         }
 
         fun clearCallbacks() {
             onNodeVisit.clear()
-            onScopeExit.clear()
+            onNodeExit.clear()
         }
 
         fun getTodo(): Deque<Node> {
@@ -376,30 +355,27 @@ object SubgraphWalker {
     }
 
     /**
-     * Handles declaration scope monitoring for iterative traversals. If this is not required, use
-     * [IterativeGraphWalker] for less overhead.
-     *
-     * Declaration scopes are similar to [de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager]
-     * scopes: [ValueDeclaration]s located inside a scope (i.e. are children of the scope root) are
-     * visible to any children of the scope root. Scopes can be layered, where declarations from
-     * parent scopes are visible to the children but not the other way around.
+     * This class traverses the graph in a similar way as the [IterativeGraphWalker], but with the
+     * added feature, that a [ScopeManager] is populated with the scope information of the current
+     * node. This way, we can call functions on the supplied [scopeManager] and emulate that we are
+     * currently in the scope of the "consumed" node in the callback. This can be useful for
+     * resolving declarations or other scope-related tasks.
      */
     class ScopedWalker {
-        // declarationScope -> (parentScope, declarations)
-        private val nodeToParentBlockAndContainedValueDeclarations:
-            MutableMap<
-                Node, org.apache.commons.lang3.tuple.Pair<Node, MutableList<ValueDeclaration>>
-            > =
-            IdentityHashMap()
+        lateinit var strategy: (Node) -> Iterator<Node>
         private var walker: IterativeGraphWalker? = null
         private val scopeManager: ScopeManager
 
-        constructor(lang: LanguageFrontend) {
+        constructor(lang: LanguageFrontend<*, *>) {
             scopeManager = lang.scopeManager
         }
 
-        constructor(scopeManager: ScopeManager) {
+        constructor(
+            scopeManager: ScopeManager,
+            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+        ) {
             this.scopeManager = scopeManager
+            this.strategy = strategy
         }
 
         /**
@@ -407,6 +383,7 @@ object SubgraphWalker {
          * the root node of the current declaration scope, the currently visited node.
          */
         private val handlers = mutableListOf<TriConsumer<RecordDeclaration?, Node?, Node?>>()
+
         fun clearCallbacks() {
             handlers.clear()
         }
@@ -423,89 +400,41 @@ object SubgraphWalker {
             )
         }
 
+        fun registerHandler(handler: Consumer<Node?>) {
+            handlers.add(
+                TriConsumer { _: RecordDeclaration?, _: Node?, currNode: Node? ->
+                    handler.accept(currNode)
+                }
+            )
+        }
+
         /**
          * Wraps [IterativeGraphWalker] to handle declaration scopes.
          *
          * @param root The node where AST descent is started
          */
         fun iterate(root: Node) {
-            walker = IterativeGraphWalker()
-            handlers.forEach { h -> walker!!.registerOnNodeVisit { n -> handleNode(n, h) } }
-            walker!!.registerOnScopeExit { exiting: Node -> leaveScope(exiting) }
-            walker!!.iterate(root)
+            val walker = IterativeGraphWalker()
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n -> handleNode(n, h) } }
+
+            this.walker = walker
+
+            walker.iterate(root)
         }
 
         private fun handleNode(
             current: Node,
             handler: TriConsumer<RecordDeclaration?, Node?, Node?>
         ) {
-            scopeManager.enterScopeIfExists(current)
-            val parent = walker!!.backlog!!.peek()
+            // Jump to the node's scope, if it is different from ours.
+            if (scopeManager.currentScope != current.scope) {
+                scopeManager.jumpTo(current.scope)
+            }
 
-            // TODO: actually we should not handle this in handleNode but have something similar to
-            // onScopeEnter because the method declaration already correctly sets the scope
+            val parent = walker?.backlog?.peek()
+
             handler.accept(scopeManager.currentRecord, parent, current)
-        }
-
-        private fun leaveScope(exiting: Node) {
-            scopeManager.leaveScope(exiting)
-        }
-
-        fun collectDeclarations(current: Node?) {
-            if (current == null) return
-
-            var parentBlock: Node? = null
-
-            // get containing Record or Compound
-            for (node in walker!!.backlog!!) {
-                if (
-                    node is RecordDeclaration ||
-                        node is CompoundStatement ||
-                        node is FunctionDeclaration // can also be a translationunit for global (c)
-                        // functions
-                        ||
-                        node is TranslationUnitDeclaration
-                ) {
-                    parentBlock = node
-                    break
-                }
-            }
-            nodeToParentBlockAndContainedValueDeclarations[current] =
-                MutablePair(parentBlock, ArrayList())
-            if (current is ValueDeclaration) {
-                LOGGER.trace("Adding variable {}", current.code)
-                if (parentBlock == null) {
-                    LOGGER.warn("Parent block is empty during subgraph run")
-                } else {
-                    nodeToParentBlockAndContainedValueDeclarations[parentBlock]?.right?.add(current)
-                }
-            }
-        }
-
-        /**
-         * @param scope
-         * @param predicate
-         * @return
-         */
-        @Deprecated("""The scope manager should be used instead.
-      """)
-        fun getDeclarationForScope(
-            scope: Node,
-            predicate: Predicate<ValueDeclaration?>
-        ): Optional<out ValueDeclaration?> {
-            var currentScope = scope
-
-            // iterate all declarations from the current scope and all its parent scopes
-            while (nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
-                val entry = nodeToParentBlockAndContainedValueDeclarations[currentScope]!!
-                for (`val` in entry.right) {
-                    if (predicate.test(`val`)) {
-                        return Optional.of(`val`)
-                    }
-                }
-                currentScope = entry.left
-            }
-            return Optional.empty()
         }
     }
 }

@@ -29,25 +29,19 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.stream.Collectors
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
@@ -71,59 +65,58 @@ private constructor(
      * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(): CompletableFuture<TranslationResult> {
-        val result = TranslationResult(this, ScopeManager())
-
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync {
-            val outerBench =
-                Benchmark(
-                    TranslationManager::class.java,
-                    "Translation into full graph",
-                    false,
-                    result
-                )
-            val executedPasses = mutableSetOf<Pass>()
-            var executedFrontends = setOf<LanguageFrontend>()
+        return CompletableFuture.supplyAsync { analyzeNonAsync() }
+    }
 
-            try {
-                // Parse Java/C/CPP files
-                var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
-                executedFrontends = runFrontends(result, config)
-                bench.addMeasurement()
+    private fun analyzeNonAsync(): TranslationResult {
+        var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
-                // Apply passes
-                for (pass in config.registeredPasses) {
-                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    if (pass.runsWithCurrentFrontend(executedFrontends)) {
-                        executedPasses.add(pass)
-                        pass.accept(result)
-                    }
-                    bench.addMeasurement()
+        // Build a new global translation context
+        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+
+        // Build a new translation result
+        val result = TranslationResult(this, ctx)
+
+        val outerBench =
+            Benchmark(TranslationManager::class.java, "Translation into full graph", false, result)
+
+        try {
+            // Parse Java/C/CPP files
+            var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+            executedFrontends = runFrontends(ctx, result)
+            bench.addMeasurement()
+
+            if (config.useParallelPasses) {
+                // Execute list of parallel passes together in parallel
+                for (list in config.registeredPasses) {
+                    executePassesInParallel(list, ctx, result, executedFrontends)
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")
                     }
                 }
-            } catch (ex: TranslationException) {
-                throw CompletionException(ex)
-            } finally {
-                outerBench.addMeasurement()
-                if (!config.disableCleanup) {
-                    log.debug("Cleaning up {} Passes", executedPasses.size)
-
-                    executedPasses.forEach { it.cleanup() }
-
-                    log.debug("Cleaning up {} Frontends", executedFrontends.size)
-
-                    executedFrontends.forEach { it.cleanup() }
-                    TypeManager.getInstance().cleanup()
+            } else {
+                // Execute all passes in sequence
+                for (pass in config.registeredPasses.flatten()) {
+                    executePass(pass, ctx, result, executedFrontends)
+                    if (result.isCancelled) {
+                        log.warn("Analysis interrupted, stopping Pass evaluation")
+                    }
                 }
             }
-            result
-        }
-    }
+        } catch (ex: TranslationException) {
+            throw CompletionException(ex)
+        } finally {
+            outerBench.addMeasurement()
+            if (!config.disableCleanup) {
+                log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
-    val passes: List<Pass>
-        get() = config.registeredPasses
+                executedFrontends.forEach { it.cleanup() }
+            }
+        }
+
+        return result
+    }
 
     fun isCancelled(): Boolean {
         return isCancelled.get()
@@ -134,38 +127,36 @@ private constructor(
      * of AST nodes.
      *
      * @param result the translation result that is being mutated
-     * @param config the translation configuration
+     * @param ctx the translation context
      * @throws TranslationException if the language front-end runs into an error and
      *   [TranslationConfiguration.failOnError]
      * * is `true`.
      */
     @Throws(TranslationException::class)
     private fun runFrontends(
-        result: TranslationResult,
-        config: TranslationConfiguration,
-    ): Set<LanguageFrontend> {
-        val usedFrontends = mutableSetOf<LanguageFrontend>()
-        for (sc in this.config.softwareComponents.keys) {
+        ctx: TranslationContext,
+        result: TranslationResult
+    ): Set<LanguageFrontend<*, *>> {
+        val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+        for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
             result.addComponent(component)
 
-            var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
+            var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
-            var useParallelFrontends = config.useParallelFrontends
+            var useParallelFrontends = ctx.config.useParallelFrontends
 
             val list =
                 sourceLocations.flatMap { file ->
                     if (file.isDirectory) {
-                        Files.find(
-                                file.toPath(),
-                                999,
-                                { _: Path?, fileAttr: BasicFileAttributes ->
-                                    fileAttr.isRegularFile
-                                }
-                            )
-                            .map { it.toFile() }
-                            .collect(Collectors.toList())
+                        val files =
+                            file
+                                .walkTopDown()
+                                .onEnter { !it.name.startsWith(".") }
+                                .filter { it.isFile && !it.name.startsWith(".") }
+                                .toList()
+                        files
                     } else {
                         val frontendClass = file.language?.frontend
                         val supportsParallelParsing =
@@ -186,15 +177,16 @@ private constructor(
                         listOf(file)
                     }
                 }
-            if (config.useUnityBuild) {
+            if (ctx.config.useUnityBuild) {
                 val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
                 tmpFile.deleteOnExit()
 
                 PrintWriter(tmpFile).use { writer ->
                     list.forEach {
-                        if (CXXLanguageFrontend.CXX_EXTENSIONS.contains(Util.getExtension(it))) {
-                            if (config.topLevel != null) {
-                                val topLevel = config.topLevel.toPath()
+                        val cxxExtensions = listOf("c", "cpp", "cc", "cxx")
+                        if (cxxExtensions.contains(it.extension)) {
+                            if (ctx.config.topLevel != null) {
+                                val topLevel = ctx.config.topLevel.toPath()
                                 writer.write(
                                     """
 #include "${topLevel.relativize(it.toPath())}"
@@ -216,39 +208,24 @@ private constructor(
                 }
 
                 sourceLocations = listOf(tmpFile)
-                if (config.compilationDatabase != null) {
+                if (ctx.config.compilationDatabase != null) {
                     // merge include paths from all translation units
-                    config.compilationDatabase.addIncludePath(
+                    ctx.config.compilationDatabase.addIncludePath(
                         tmpFile,
-                        config.compilationDatabase.allIncludePaths
+                        ctx.config.compilationDatabase.allIncludePaths
                     )
                 }
             } else {
                 sourceLocations = list
             }
 
-            TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend)
-
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(component, result, sourceLocations)
+                    parseParallel(component, result, ctx, sourceLocations)
                 } else {
-                    parseSequentially(component, result, sourceLocations)
+                    parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
-
-            if (!config.typeSystemActiveInFrontend) {
-                TypeManager.setTypeSystemActive(true)
-
-                result.components.forEach { s ->
-                    s.translationUnits.forEach {
-                        val bench =
-                            Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                        result.scopeManager.activateTypes(it)
-                        bench.stop()
-                    }
-                }
-            }
         }
 
         return usedFrontends
@@ -257,25 +234,29 @@ private constructor(
     private fun parseParallel(
         component: Component,
         result: TranslationResult,
+        globalCtx: TranslationContext,
         sourceLocations: Collection<File>
-    ): Set<LanguageFrontend> {
-        val usedFrontends = mutableSetOf<LanguageFrontend>()
+    ): Set<LanguageFrontend<*, *>> {
+        val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         log.info("Parallel parsing started")
-        val futures = mutableListOf<CompletableFuture<Optional<LanguageFrontend>>>()
-        val parallelScopeManagers = mutableListOf<ScopeManager>()
+        val futures = mutableListOf<CompletableFuture<LanguageFrontend<*, *>?>>()
+        val parallelContexts = mutableListOf<TranslationContext>()
 
-        val futureToFile: MutableMap<CompletableFuture<Optional<LanguageFrontend>>, File> =
+        val futureToFile: MutableMap<CompletableFuture<LanguageFrontend<*, *>?>, File> =
             IdentityHashMap()
 
         for (sourceLocation in sourceLocations) {
-            val scopeManager = ScopeManager()
-            parallelScopeManagers.add(scopeManager)
+            // Build a new translation context for this parallel parsing process. We need to do this
+            // until we can use a single scope manager concurrently. We can re-use the global
+            // configuration and type manager.
+            val ctx = TranslationContext(globalCtx.config, ScopeManager(), globalCtx.typeManager)
+            parallelContexts.add(ctx)
 
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(component, scopeManager, sourceLocation)
+                        return@supplyAsync parse(component, ctx, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -287,7 +268,8 @@ private constructor(
 
         for (future in futures) {
             try {
-                future.get().ifPresent { f: LanguageFrontend ->
+                val f = future.get()
+                if (f != null) {
                     handleCompletion(result, usedFrontends, futureToFile[future], f)
                 }
             } catch (e: InterruptedException) {
@@ -295,12 +277,17 @@ private constructor(
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
                 log.error("Error parsing ${futureToFile[future]}", e)
-                Thread.currentThread().interrupt()
+                // We previously called Thread.currentThread().interrupt here, however
+                // it is unsure, why. Therefore, instead of just removing this line, we
+                // "disabled" it and left this comment here for future generations. If
+                // we see that it is really not needed we can remove it completely at some
+                // point.
+                // Thread.currentThread().interrupt()
             }
         }
 
         // We want to merge everything into the final scope manager of the result
-        result.scopeManager.mergeFrom(parallelScopeManagers)
+        globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
 
         log.info("Parallel parsing completed")
 
@@ -311,14 +298,14 @@ private constructor(
     private fun parseSequentially(
         component: Component,
         result: TranslationResult,
+        ctx: TranslationContext,
         sourceLocations: Collection<File>
-    ): Set<LanguageFrontend> {
-        val usedFrontends = mutableSetOf<LanguageFrontend>()
+    ): Set<LanguageFrontend<*, *>> {
+        val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         for (sourceLocation in sourceLocations) {
-            log.info("Parsing {}", sourceLocation.absolutePath)
-
-            parse(component, result.scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
+            val f = parse(component, ctx, sourceLocation)
+            if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -328,9 +315,9 @@ private constructor(
 
     private fun handleCompletion(
         result: TranslationResult,
-        usedFrontends: MutableSet<LanguageFrontend>,
+        usedFrontends: MutableSet<LanguageFrontend<*, *>>,
         sourceLocation: File?,
-        f: LanguageFrontend
+        f: LanguageFrontend<*, *>
     ) {
         usedFrontends.add(f)
 
@@ -339,18 +326,20 @@ private constructor(
             result.scratch.computeIfAbsent(TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND) {
                 mutableMapOf<String, String>()
             } as MutableMap<String, String>
-        sfToFe[sourceLocation!!.name] = f.javaClass.simpleName
+        sourceLocation?.name?.let { sfToFe[it] = f.javaClass.simpleName }
     }
 
     @Throws(TranslationException::class)
     private fun parse(
         component: Component,
-        scopeManager: ScopeManager,
-        sourceLocation: File
-    ): Optional<LanguageFrontend> {
-        var frontend: LanguageFrontend? = null
+        ctx: TranslationContext,
+        sourceLocation: File,
+    ): LanguageFrontend<*, *>? {
+        log.info("Parsing {}", sourceLocation.absolutePath)
+
+        var frontend: LanguageFrontend<*, *>? = null
         try {
-            frontend = getFrontend(sourceLocation, scopeManager)
+            frontend = getFrontend(sourceLocation, ctx)
 
             if (frontend == null) {
                 log.error("Found no parser frontend for ${sourceLocation.name}")
@@ -360,7 +349,7 @@ private constructor(
                         "Found no parser frontend for ${sourceLocation.name}"
                     )
                 }
-                return Optional.empty()
+                return null
             }
             component.translationUnits.add(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
@@ -369,22 +358,19 @@ private constructor(
                 throw ex
             }
         }
-        return Optional.ofNullable(frontend)
+        return frontend
     }
 
-    private fun getFrontend(
-        file: File,
-        scopeManager: ScopeManager,
-    ): LanguageFrontend? {
+    private fun getFrontend(file: File, ctx: TranslationContext): LanguageFrontend<*, *>? {
         val language = file.language
 
         return if (language != null) {
             try {
                 // Make sure, that our simple types are also known to the type manager
-                language.builtInTypes.values.forEach { TypeManager.getInstance().registerType(it) }
+                language.builtInTypes.values.forEach { ctx.typeManager.registerType(it) }
 
                 // Return a new language frontend
-                language.newFrontend(config, scopeManager)
+                language.newFrontend(ctx)
             } catch (e: Exception) {
                 when (e) {
                     is InstantiationException,

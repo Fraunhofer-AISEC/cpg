@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 
-class ForStatement : Statement() {
+class ForStatement : Statement(), BranchingNode {
     @AST var statement: Statement? = null
 
     @AST var initializerStatement: Statement? = null
@@ -40,6 +40,9 @@ class ForStatement : Statement() {
     @AST var condition: Expression? = null
 
     @AST var iterationStatement: Statement? = null
+
+    override val branchedBy: Node?
+        get() = condition ?: conditionDeclaration
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

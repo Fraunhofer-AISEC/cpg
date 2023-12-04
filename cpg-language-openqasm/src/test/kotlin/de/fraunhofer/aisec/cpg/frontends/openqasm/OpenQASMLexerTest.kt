@@ -45,6 +45,7 @@ class OpenQASMLexerTest : BaseTest() {
         lexer.run()
         assert(lexer.tokens.isNotEmpty())
     }
+
     @Test
     fun testLexer2() {
         val topLevel = Path.of("src", "test", "resources", "openqasm")
@@ -53,6 +54,7 @@ class OpenQASMLexerTest : BaseTest() {
         lexer.run()
         assert(lexer.tokens.isNotEmpty())
     }
+
     @Test
     fun testLexer3() {
         val topLevel = Path.of("src", "test", "resources", "openqasm")

@@ -37,8 +37,8 @@ object CommonPath {
         val longestPrefix = StringBuilder()
         val splitPaths =
             paths
-                .map {
-                    it.absolutePath
+                .map { file ->
+                    file.absolutePath
                         .split(Pattern.quote(File.separator).toRegex())
                         .dropLastWhile { it.isEmpty() }
                         .toTypedArray()

@@ -36,6 +36,7 @@ Parser based on the "lexer grammar qasm3Lexer" published at https://openqasm.com
  */
 class OpenQASMParser(private val tokens: List<Token>) {
     private var idx = 0
+
     fun parse(): ProgramNode {
         // program: version? statement* EOF;
 
@@ -1268,6 +1269,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         val lastToken = eat(RBraceToken::class)
         return ScopeNode(locationAdderHelper(firstToken, lastToken), stmts)
     }
+
     private fun handleVersionNode(): VersionNode {
         val openQASMToken = tokens[idx] as? OpenQASMToken
         idx++
@@ -1333,12 +1335,15 @@ class OpenQASMParser(private val tokens: List<Token>) {
     private fun locationAdderHelper(t1: Token, t2: Token): PhysicalLocation {
         return locationAdderHelper(t1.location, t2.location)
     }
+
     private fun locationAdderHelper(n1: ASTNode, n2: ASTNode): PhysicalLocation {
         return locationAdderHelper(n1.location, n2.location)
     }
+
     private fun locationAdderHelper(n: ASTNode, t: Token): PhysicalLocation {
         return locationAdderHelper(n.location, t.location)
     }
+
     private fun locationAdderHelper(t: Token, n: ASTNode): PhysicalLocation {
         return locationAdderHelper(t.location, n.location)
     }

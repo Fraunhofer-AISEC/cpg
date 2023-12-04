@@ -150,11 +150,11 @@ internal fun acceptsSameLanguage(
     // if the algorithm does not return before here, the graphs are equal!
     // But most of the time, we want to additionally make sure that both DFAs
     // are in the same state currently
-    return if (compareCurrentState) {
-        val currentState1 = findSet(dfa.currentState!!) // FIND-SET(p')
-        val currentState2 = findSet(otherDfa.currentState!!) // FIND-SET(q')
+    val dfaCurrentState = dfa.currentState
+    val otherDfaCurrentState = otherDfa.currentState
+    return if (compareCurrentState && dfaCurrentState != null && otherDfaCurrentState != null) {
+        val currentState1 = findSet(dfaCurrentState) // FIND-SET(p')
+        val currentState2 = findSet(otherDfaCurrentState) // FIND-SET(q')
         currentState1 == currentState2
-    } else {
-        true
-    }
+    } else !(dfaCurrentState == null || otherDfaCurrentState == null)
 }

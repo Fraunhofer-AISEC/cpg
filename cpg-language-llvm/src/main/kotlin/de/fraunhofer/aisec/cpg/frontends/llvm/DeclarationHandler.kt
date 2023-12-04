@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
@@ -58,7 +58,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
-                    frontend.getCodeFromRawNode(value)
+                    rawNode = value
                 )
             }
         }
@@ -74,8 +74,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         // the pointer type
         val type = frontend.typeOf(valueRef)
 
-        val variableDeclaration =
-            newVariableDeclaration(name, type, frontend.getCodeFromRawNode(valueRef), false)
+        val variableDeclaration = newVariableDeclaration(name, type, false, rawNode = valueRef)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -98,8 +97,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-        val functionDeclaration =
-            newFunctionDeclaration(name.string, frontend.getCodeFromRawNode(func))
+        val functionDeclaration = newFunctionDeclaration(name.string, rawNode = func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
@@ -107,7 +105,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         val funcType = LLVMGetElementType(funcPtrType)
         val returnType = LLVMGetReturnType(funcType)
 
-        functionDeclaration.type = frontend.typeFrom(returnType)
+        functionDeclaration.type = frontend.typeOf(returnType)
 
         frontend.scopeManager.enterScope(functionDeclaration)
 
@@ -120,13 +118,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val type = frontend.typeOf(param)
 
             // TODO: support variardic
-            val decl =
-                newParamVariableDeclaration(
-                    paramName,
-                    type,
-                    false,
-                    frontend.getCodeFromRawNode(param)
-                )
+            val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
             frontend.scopeManager.addDeclaration(decl)
             frontend.bindingsCache[paramSymbolName] = decl
@@ -155,18 +147,18 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // as a compound statement
 
             // Take the entry block as our body
-            if (LLVMGetEntryBasicBlock(func) == bb && stmt is CompoundStatement) {
+            if (LLVMGetEntryBasicBlock(func) == bb && stmt is Block) {
                 functionDeclaration.body = stmt
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
-                functionDeclaration.body = newCompoundStatement()
+                functionDeclaration.body = newBlock()
                 if (stmt != null) {
-                    (functionDeclaration.body as CompoundStatement).addStatement(stmt)
+                    (functionDeclaration.body as Block).addStatement(stmt)
                 }
             } else {
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
                 if (stmt != null) {
-                    (functionDeclaration.body as? CompoundStatement)?.addStatement(stmt)
+                    (functionDeclaration.body as? Block)?.addStatement(stmt)
                 }
             }
 
@@ -214,7 +206,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct", "")
+        record = newRecordDeclaration(name, "struct")
 
         frontend.scopeManager.enterScope(record)
 
@@ -222,22 +214,12 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         for (i in 0 until size) {
             val a = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = frontend.typeFrom(a, alreadyVisited)
+            val fieldType = frontend.typeOf(a, alreadyVisited)
 
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field =
-                newFieldDeclaration(
-                    fieldName,
-                    fieldType,
-                    listOf(),
-                    "",
-                    null,
-                    null,
-                    false,
-                    frontend.language
-                )
+            val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
 
             frontend.scopeManager.addDeclaration(field)
         }
@@ -260,8 +242,9 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         alreadyVisited: MutableMap<LLVMTypeRef, Type?>
     ): String {
         val typeStr = LLVMPrintTypeToString(typeRef).string
-        if (typeStr in frontend.typeCache && frontend.typeCache[typeStr] != null) {
-            return frontend.typeCache[typeStr]!!.name.localName
+        if (typeStr in frontend.typeCache) {
+            val localName = frontend.typeCache[typeStr]?.name?.localName
+            if (localName != null) return localName
         }
 
         var name = "literal"
@@ -270,7 +253,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         for (i in 0 until size) {
             val field = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = frontend.typeFrom(field, alreadyVisited)
+            val fieldType = frontend.typeOf(field, alreadyVisited)
 
             name += "_${fieldType.typeName}"
         }

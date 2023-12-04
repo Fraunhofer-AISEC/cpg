@@ -27,18 +27,24 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.newUnknownType
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.io.File
 import kotlin.reflect.KClass
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -48,7 +54,7 @@ import kotlin.reflect.KClass
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend> : Node() {
+abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
 
@@ -78,11 +84,14 @@ abstract class Language<T : LanguageFrontend> : Node() {
     /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>
 
-    /** Creates a new [LanguageFrontend] object to parse the language. */
-    abstract fun newFrontend(
-        config: TranslationConfiguration,
-        scopeManager: ScopeManager = ScopeManager(),
-    ): T
+    /**
+     * Creates a new [LanguageFrontend] object to parse the language. It requires the
+     * [TranslationContext], which holds the necessary managers.
+     */
+    open fun newFrontend(ctx: TranslationContext): T {
+        return this.frontend.primaryConstructor?.call(this, ctx)
+            ?: throw TranslationException("could not instantiate language frontend")
+    }
 
     /**
      * Returns the type conforming to the given [typeString]. If no matching type is found in the
@@ -111,30 +120,25 @@ abstract class Language<T : LanguageFrontend> : Node() {
     }
 
     init {
-        this.also { this.language = it }
+        this.also { language ->
+            this.language = language
+            language::class.simpleName?.let { this.name = Name(it) }
+        }
     }
 
     private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
-        return if (lhs is FloatingPointType && rhs !is FloatingPointType) {
-            lhs
-        } else if (lhs !is FloatingPointType && rhs is FloatingPointType) {
-            rhs
-        } else if (lhs is FloatingPointType && rhs is FloatingPointType) {
-            // We take the one with the bigger bitwidth
-            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
-                lhs
-            } else {
-                rhs
-            }
-        } else if (lhs is IntegerType && rhs is IntegerType) {
-            // We take the one with the bigger bitwidth
-            if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
-                lhs
-            } else {
-                rhs
-            }
-        } else {
-            newUnknownType()
+        return when {
+            lhs is FloatingPointType && rhs !is FloatingPointType && rhs is NumericType -> lhs
+            lhs !is FloatingPointType && lhs is NumericType && rhs is FloatingPointType -> rhs
+            lhs is FloatingPointType && rhs is FloatingPointType ||
+                lhs is IntegerType && rhs is IntegerType ->
+                // We take the one with the bigger bitwidth
+                if (((lhs as NumericType).bitWidth ?: 0) >= ((rhs as NumericType).bitWidth ?: 0)) {
+                    lhs
+                } else {
+                    rhs
+                }
+            else -> unknownType()
         }
     }
 
@@ -147,42 +151,120 @@ abstract class Language<T : LanguageFrontend> : Node() {
             // A comparison, so we return the type "boolean"
             return this.builtInTypes.values.firstOrNull { it is BooleanType }
                 ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
-                    ?: newUnknownType()
+                    ?: unknownType()
         }
 
         return when (operation.operatorCode) {
             "+" ->
-                if (operation.lhs.propagationType is StringType) {
+                if (operation.lhs.type is StringType) {
                     // string + anything => string
-                    operation.lhs.propagationType
-                } else if (operation.rhs.propagationType is StringType) {
+                    operation.lhs.type
+                } else if (operation.rhs.type is StringType) {
                     // anything + string => string
-                    operation.rhs.propagationType
+                    operation.rhs.type
                 } else {
-                    arithmeticOpTypePropagation(
-                        operation.lhs.propagationType,
-                        operation.rhs.propagationType
-                    )
+                    arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
                 }
             "-",
             "*",
-            "/" ->
-                arithmeticOpTypePropagation(
-                    operation.lhs.propagationType,
-                    operation.rhs.propagationType
-                )
+            "/" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "&",
+            "|",
+            "^",
             "<<",
             ">>" ->
-                if (
-                    operation.lhs.propagationType.isPrimitive &&
-                        operation.rhs.propagationType.isPrimitive
-                ) {
+                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.propagationType
+                    operation.lhs.type
                 } else {
-                    newUnknownType()
+                    unknownType()
                 }
-            else -> newUnknownType() // We don't know what is this thing
+            else -> unknownType() // We don't know what is this thing
+        }
+    }
+
+    /**
+     * When propagating [HasType.assignedTypes] from one node to another, we might want to propagate
+     * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
+     * enough.
+     */
+    open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
+        val nodeType = hasType.type
+
+        // We only want to add certain types, in case we have a numeric type
+        if (nodeType is NumericType) {
+            // We do not allow to propagate non-numeric types into numeric types
+            return if (srcType !is NumericType) {
+                false
+            } else {
+                val srcWidth = srcType.bitWidth
+                val lhsWidth = nodeType.bitWidth
+                // Do not propagate anything if the new type is too big for the current type.
+                return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
+            }
+        }
+
+        return true
+    }
+
+    /**
+     * This function checks, if [type] is derived from [superType]. Optionally, the nodes that hold
+     * the respective type can be supplied as [hint] and [superHint].
+     */
+    open fun isDerivedFrom(
+        type: Type,
+        superType: Type,
+        hint: HasType?,
+        superHint: HasType?
+    ): Boolean {
+        // Retrieve all ancestor types of our type (more concretely of the root type)
+        val root = type.root
+        val superTypes = root.ancestors.map { it.type }
+
+        // Check, if super type (or its root) is in the list
+        return superType.root in superTypes
+    }
+
+    /**
+     * This function checks, if the two supplied signatures are equal. The usual use-case is
+     * comparing the signature arguments of a [CallExpression] (in [signature]) against the
+     * signature of a [FunctionDeclaration] (in [target]). Optionally, a list of [expressions]
+     * (e.g., the actual call arguments) can be supplied as a hint, these will be forwarded to other
+     * comparing functions, such as [isDerivedFrom].
+     */
+    open fun hasSignature(
+        target: FunctionDeclaration,
+        signature: List<Type>,
+        expressions: List<Expression>? = null,
+    ): Boolean {
+        val targetSignature = target.parameters
+        return if (
+            targetSignature.all { !it.isVariadic } && signature.size < targetSignature.size
+        ) {
+            // TODO: So we don't consider arguments with default values (among others) but then, the
+            //  SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
+            false
+        } else {
+            // signature is a collection of positional arguments, so the order must be preserved
+            for (i in targetSignature.indices) {
+                val declared = targetSignature[i]
+                if (declared.isVariadic) {
+                    // Everything that follows is collected by this param, so the signature is
+                    // fulfilled no matter what comes now
+                    // FIXME: in Java, we could have overloading with different vararg types, in
+                    //  C++ we can't, as vararg types are not defined here anyways)
+                    return true
+                }
+                val provided = signature[i]
+                val expression = expressions?.get(i)
+                if (!provided.isDerivedFrom(declared.type, expression, target)) {
+                    return false
+                }
+            }
+
+            // Longer target signatures are only allowed with varargs. If we reach this point, no
+            // vararg has been encountered
+            signature.size == targetSignature.size
         }
     }
 }
@@ -191,7 +273,7 @@ abstract class Language<T : LanguageFrontend> : Node() {
  * We need to bring our own serializer for [KClass] until
  * https://github.com/FasterXML/jackson-module-kotlin/issues/361 is resolved.
  */
-internal class KClassSerializer : StdSerializer<KClass<*>>(KClass::class.java) {
+internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
         gen.writeString(value.qualifiedName)

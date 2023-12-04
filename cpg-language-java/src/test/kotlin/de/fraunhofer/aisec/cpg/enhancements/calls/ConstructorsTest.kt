@@ -46,7 +46,7 @@ internal class ConstructorsTest : BaseTest() {
         val result =
             TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
         val constructors = result.allChildren<ConstructorDeclaration>()
-        val noArg = findByUniquePredicate(constructors) { it.parameters.size == 0 }
+        val noArg = findByUniquePredicate(constructors) { it.parameters.isEmpty() }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }
         val twoArgs = findByUniquePredicate(constructors) { it.parameters.size == 2 }
         val variables = result.variables

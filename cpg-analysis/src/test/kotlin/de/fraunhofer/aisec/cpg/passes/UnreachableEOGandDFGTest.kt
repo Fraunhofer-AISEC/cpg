@@ -25,13 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import java.nio.file.Path
+import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -46,16 +43,7 @@ class UnreachableEOGandDFGTest {
 
     @BeforeAll
     fun beforeAll() {
-        val topLevel = Path.of("src", "test", "resources", "passes", "unreachable")
-        TranslationManager.builder().build().analyze()
-        tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("Unreachability.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<JavaLanguage>().registerPass(UnreachableEOGPass())
-            }
+        tu = Passes.getUnreachability().components.first().translationUnits.first()
     }
 
     @Test

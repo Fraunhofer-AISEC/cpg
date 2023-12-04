@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
-import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -36,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,15 +50,21 @@ import org.slf4j.LoggerFactory
  * Since this class implements [IsInferredProvider], all nodes that are created using the node
  * builder functions, will automatically have [Node.isInferred] set to true.
  */
-class Inference(val start: Node, val scopeManager: ScopeManager) :
-    LanguageProvider, ScopeProvider, IsInferredProvider {
-    val log: Logger = LoggerFactory.getLogger(Inference::class.java)
+class Inference(val start: Node, override val ctx: TranslationContext) :
+    LanguageProvider,
+    ScopeProvider,
+    IsInferredProvider,
+    ContextProvider,
+    RawNodeTypeProvider<Nothing> {
 
-    override val language: Language<out LanguageFrontend>?
+    override val language: Language<*>?
         get() = start.language
 
     override val isInferred: Boolean
         get() = true
+
+    val scopeManager = ctx.scopeManager
+    val typeManager = ctx.typeManager
 
     override val scope: Scope?
         get() = scopeManager.currentScope
@@ -69,6 +75,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         isStatic: Boolean,
         signature: List<Type?>,
         returnType: Type?,
+        hint: CallExpression? = null
     ): FunctionDeclaration {
         // We assume that the start is either a record, a namespace or the translation unit
         val record = start as? RecordDeclaration
@@ -83,26 +90,22 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         }
 
         return inferInScopeOf(start) {
-            log.debug(
-                "Inferring a new function declaration $name with parameter types ${signature.map { it?.name }}"
-            )
-
-            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
-            // methods on it. But only if the language supports classes in the first place.
-            if (
-                record?.isInferred == true &&
-                    record.kind == "struct" &&
-                    record.language is HasClasses
-            ) {
-                record.kind = "class"
-            }
-
             val inferred: FunctionDeclaration =
                 if (record != null) {
-                    newMethodDeclaration(name ?: "", code, isStatic, record)
+                    newMethodDeclaration(name ?: "", isStatic, record)
                 } else {
-                    newFunctionDeclaration(name ?: "", code)
+                    newFunctionDeclaration(name ?: "")
                 }
+            inferred.code = code
+
+            debugWithFileLocation(
+                hint,
+                log,
+                "Inferred a new {} declaration {} with parameter types {}",
+                if (inferred is MethodDeclaration) "method" else "function",
+                inferred.name,
+                signature.map { it?.name }
+            )
 
             createInferredParameters(inferred, signature)
 
@@ -121,6 +124,16 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
                 }
             }
 
+            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
+            // methods on it. But only if the language supports classes in the first place.
+            if (
+                record?.isInferred == true &&
+                    record.kind == "struct" &&
+                    record.language is HasClasses
+            ) {
+                record.kind = "class"
+            }
+
             inferred
         }
     }
@@ -128,11 +141,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
         return inferInScopeOf(start) {
             val inferred =
-                newConstructorDeclaration(
-                    start.name.localName,
-                    "",
-                    start as? RecordDeclaration,
-                )
+                newConstructorDeclaration(start.name.localName, start as? RecordDeclaration)
             createInferredParameters(inferred, signature)
 
             scopeManager.addDeclaration(inferred)
@@ -158,9 +167,9 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
             scopeManager.enterScope(function)
 
             for (i in signature.indices) {
-                val targetType = signature[i]
-                val paramName = generateParamName(i, targetType!!)
-                val param = newParamVariableDeclaration(paramName, targetType, false, "")
+                val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
+                val paramName = generateParamName(i, targetType)
+                val param = newParameterDeclaration(paramName, targetType, false)
                 param.argumentIndex = i
 
                 scopeManager.addDeclaration(param)
@@ -196,7 +205,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
                 }
         }
         val paramName = StringBuilder()
-        while (!hierarchy.isEmpty()) {
+        while (hierarchy.isNotEmpty()) {
             val part = hierarchy.pop()
             if (part.isEmpty()) {
                 continue
@@ -214,7 +223,7 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         return paramName.toString()
     }
 
-    private fun inferNonTypeTemplateParameter(name: String): ParamVariableDeclaration {
+    private fun inferNonTypeTemplateParameter(name: String): ParameterDeclaration {
         val expr =
             start as? Expression
                 ?: throw UnsupportedOperationException(
@@ -222,17 +231,19 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
                 )
 
         // Non-Type Template Parameter
-        return newParamVariableDeclaration(name, expr.type, false, name)
+        val param = newParameterDeclaration(name, expr.type, false)
+        param.code = name
+        return param
     }
 
     private fun inferTemplateParameter(
         name: String,
-    ): TypeParamDeclaration {
+    ): TypeParameterDeclaration {
         val parameterizedType = ParameterizedType(name, language)
-        TypeManager.getInstance()
-            .addTypeParameter(start as? FunctionTemplateDeclaration, parameterizedType)
+        typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
-        val decl = newTypeParamDeclaration(name, name)
+        val decl = newTypeParameterDeclaration(name)
+        decl.code = name
         decl.type = parameterizedType
 
         return decl
@@ -259,19 +270,20 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
 
         val name = call.name.localName
         val code = call.code
-        val inferred = newFunctionTemplateDeclaration(name, code)
+        val inferred = newFunctionTemplateDeclaration(name)
+        inferred.code = code
         inferred.isInferred = true
 
-        val inferredRealization: FunctionDeclaration =
+        val inferredRealization =
             if (record != null) {
                 record.addDeclaration(inferred)
-                record.inferMethod(call, scopeManager = scopeManager)
+                record.inferMethod(call, ctx = ctx)
             } else {
-                tu!!.addDeclaration(inferred)
-                tu.inferFunction(call, scopeManager = scopeManager)
+                tu?.addDeclaration(inferred)
+                tu?.inferFunction(call, ctx = ctx)
             }
 
-        inferred.addRealization(inferredRealization)
+        inferredRealization?.let { inferred.addRealization(it) }
 
         var typeCounter = 0
         var nonTypeCounter = 0
@@ -280,19 +292,15 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
                 // Template Parameter
                 val inferredTypeIdentifier = "T$typeCounter"
                 val typeParamDeclaration =
-                    inferred
-                        .startInference(scopeManager)
-                        .inferTemplateParameter(inferredTypeIdentifier)
+                    inferred.startInference(ctx).inferTemplateParameter(inferredTypeIdentifier)
                 typeCounter++
                 inferred.addParameter(typeParamDeclaration)
             } else if (node is Expression) {
                 val inferredNonTypeIdentifier = "N$nonTypeCounter"
                 val paramVariableDeclaration =
                     node
-                        .startInference(scopeManager)
+                        .startInference(ctx)
                         .inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
-
-                paramVariableDeclaration.addPrevDFG(node)
                 node.addNextDFG(paramVariableDeclaration)
                 nonTypeCounter++
                 inferred.addParameter(paramVariableDeclaration)
@@ -311,18 +319,18 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         kind: String = "class"
     ): RecordDeclaration? {
         if (type !is ObjectType) {
-            log.error(
+            Companion.log.error(
                 "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
             )
             return null
         }
-        log.debug(
+        Companion.log.debug(
             "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
         )
 
         // This could be a class or a struct. We start with a class and may have to fine-tune this
         // later.
-        val declaration = currentTU.newRecordDeclaration(type.typeName, kind, "")
+        val declaration = newRecordDeclaration(type.typeName, kind)
         declaration.isInferred = true
 
         // update the type
@@ -339,13 +347,13 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
         // restore it.
         return inferInScopeOf(start) {
             log.debug(
-                "Inferring a new namespace declaration $name ${
-                    if (path != null) {
-                        "with path '$path'"
-                    } else {
-                        ""
-                    }
-                }"
+                "Inferring a new namespace declaration {} {}",
+                name,
+                if (path != null) {
+                    "with path '$path'"
+                } else {
+                    ""
+                }
             )
 
             val inferred = newNamespaceDeclaration(name)
@@ -359,6 +367,54 @@ class Inference(val start: Node, val scopeManager: ScopeManager) :
             inferred
         }
     }
+
+    /**
+     * This class implements a [HasType.TypeObserver] and uses the observed type to set the
+     * [ValueDeclaration.type] of a [ValueDeclaration], based on the types we see. It can be
+     * registered on objects that are used to "start" an inference, for example a
+     * [MemberExpression], which infers a [FieldDeclaration]. Once the type of the member expression
+     * becomes known, we can use this information to set the type of the field.
+     *
+     * For now, this implementation uses the first type that we "see" and once the type of our
+     * [declaration] is known, we ignore further updates. In a future implementation, we could try
+     * to fine-tune this, e.g. by finding a common type (such as an interface) that is more
+     * probable, if multiple types are assigned.
+     */
+    class TypeInferenceObserver(var declaration: ValueDeclaration) : HasType.TypeObserver {
+        override fun typeChanged(newType: Type, src: HasType) {
+            // Only set a new type, if it is unknown for now
+            if (declaration.type is UnknownType) {
+                declaration.type = newType
+            } else {
+                // TODO(oxisto): We could "refine" the type here based on further type
+                //  observations
+            }
+        }
+
+        override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+            // Only set a new type, if it is unknown for now
+            if (declaration.type is UnknownType) {
+                // For now, just set it if there is only one type
+                if (assignedTypes.size == 1) {
+                    val type = assignedTypes.single()
+                    log.debug(
+                        "Inferring type of declaration {} to be {}",
+                        declaration.name,
+                        type.name
+                    )
+
+                    declaration.type = type
+                }
+            } else {
+                // TODO(oxisto): We could "refine" the type here based on further type
+                //  observations
+            }
+        }
+    }
+
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(Inference::class.java)
+    }
 }
 
 /** Provides information about the inference status of a node. */
@@ -366,23 +422,29 @@ interface IsInferredProvider : MetadataProvider {
     val isInferred: Boolean
 }
 
+/** Provides information about the implicit status of a node. */
+interface IsImplicitProvider : MetadataProvider {
+    val isImplicit: Boolean
+}
+
 /** Returns a new [Inference] object starting from this node. */
-fun Node.startInference(scopeManager: ScopeManager) = Inference(this, scopeManager)
+fun Node.startInference(ctx: TranslationContext) = Inference(this, ctx)
 
 /** Tries to infer a [FunctionDeclaration] from a [CallExpression]. */
 fun TranslationUnitDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
-    scopeManager: ScopeManager,
+    ctx: TranslationContext
 ): FunctionDeclaration {
-    return Inference(this, scopeManager)
+    return Inference(this, ctx)
         .createInferredFunctionDeclaration(
             call.name.localName,
             call.code,
             isStatic,
             call.signature,
             // TODO: Is the call's type the return value's type?
-            call.type
+            call.type,
+            call
         )
 }
 
@@ -390,16 +452,17 @@ fun TranslationUnitDeclaration.inferFunction(
 fun NamespaceDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
-    scopeManager: ScopeManager,
+    ctx: TranslationContext
 ): FunctionDeclaration {
-    return Inference(this, scopeManager)
+    return Inference(this, ctx)
         .createInferredFunctionDeclaration(
             call.name,
             call.code,
             isStatic,
             call.signature,
             // TODO: Is the call's type the return value's type?
-            call.type
+            call.type,
+            call
         )
 }
 
@@ -407,15 +470,16 @@ fun NamespaceDeclaration.inferFunction(
 fun RecordDeclaration.inferMethod(
     call: CallExpression,
     isStatic: Boolean = false,
-    scopeManager: ScopeManager
+    ctx: TranslationContext
 ): MethodDeclaration {
-    return Inference(this, scopeManager)
+    return Inference(this, ctx)
         .createInferredFunctionDeclaration(
             call.name.localName,
             call.code,
             isStatic,
             call.signature,
             // TODO: Is the call's type the return value's type?
-            call.type
+            call.type,
+            call
         ) as MethodDeclaration
 }

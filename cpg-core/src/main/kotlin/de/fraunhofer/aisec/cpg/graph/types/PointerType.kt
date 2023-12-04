@@ -49,22 +49,24 @@ class PointerType : Type, SecondOrderType {
 
     constructor(elementType: Type, pointerOrigin: PointerOrigin?) : super() {
         language = elementType.language
-        if (pointerOrigin == PointerOrigin.ARRAY) {
-            name = elementType.name.append("[]")
-        } else {
-            name = elementType.name.append("*")
-        }
+        name =
+            if (pointerOrigin == PointerOrigin.ARRAY) {
+                elementType.name.append("[]")
+            } else {
+                elementType.name.append("*")
+            }
         this.pointerOrigin = pointerOrigin
         this.elementType = elementType
     }
 
-    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type!!) {
+    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type) {
         language = elementType.language
-        if (pointerOrigin == PointerOrigin.ARRAY) {
-            name = elementType.name.append("[]")
-        } else {
-            name = elementType.name.append("*")
-        }
+        name =
+            if (pointerOrigin == PointerOrigin.ARRAY) {
+                elementType.name.append("[]")
+            } else {
+                elementType.name.append("*")
+            }
         this.pointerOrigin = pointerOrigin
         this.elementType = elementType
     }
@@ -99,10 +101,6 @@ class PointerType : Type, SecondOrderType {
             }
         val fullTypeName = Name(localName, elementType.name.parent, elementType.name.delimiter)
         name = fullTypeName
-    }
-
-    override fun duplicate(): Type {
-        return PointerType(this, elementType.duplicate(), pointerOrigin)
     }
 
     val isArray: Boolean

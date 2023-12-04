@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edge
 
+import java.util.*
+
 /**
  * INDEX: (int) Indicates the position in a list of edges
  *
@@ -38,6 +40,9 @@ package de.fraunhofer.aisec.cpg.graph.edge
  *
  * [UNREACHABLE]:(boolean) True if the edge flows into unreachable code i.e. a branch condition
  * which is always false.
+ *
+ * [DEPENDENCE]: ([DependenceType] Specifies the type of dependence the property edge might
+ * represent
  */
 enum class Properties {
     INDEX,
@@ -45,5 +50,31 @@ enum class Properties {
     NAME,
     INSTANTIATION,
     UNREACHABLE,
-    ACCESS
+    ACCESS,
+    DEPENDENCE,
+    DYNAMIC_INVOKE,
+    SENSITIVITY,
+    CALLING_CONTEXT_IN,
+    CALLING_CONTEXT_OUT
 }
+
+/** The types of dependencies that might be represented in the CPG */
+enum class DependenceType {
+    CONTROL,
+    DATA
+}
+
+/** Sensitivity options (of DFG edges). */
+enum class SensitivitySpecifier {
+    FIELD,
+    CONTEXT;
+
+    infix fun and(other: SensitivitySpecifier) = Sensitivities.of(this, other)
+}
+
+typealias Sensitivities = EnumSet<SensitivitySpecifier>
+
+infix fun Sensitivities.allOf(other: Sensitivities) = this.containsAll(other)
+
+infix fun Sensitivities.and(other: SensitivitySpecifier) =
+    Sensitivities.of(other, *this.toTypedArray())

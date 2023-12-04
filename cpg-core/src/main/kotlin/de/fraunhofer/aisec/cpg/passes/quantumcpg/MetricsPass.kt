@@ -25,9 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes.quantumcpg
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.ComponentPass
 
 class Metrics {
     val width: Int? = null
@@ -44,9 +45,13 @@ class Metrics {
     val numGates: Int? = null
 }
 
-class MetricsPass : Pass() {
-    override fun accept(t: TranslationResult) {
-        val circuits = t.additionalNodes.filterIsInstance<QuantumCircuit>()
+class MetricsPass(ctx: TranslationContext) : ComponentPass(ctx) {
+    override fun accept(t: Component) {
+        val circuits =
+            t.translationUnits
+                .first()
+                .additionalNodes
+                .filterIsInstance<QuantumCircuit>() // TODO first
     }
 
     override fun cleanup() {

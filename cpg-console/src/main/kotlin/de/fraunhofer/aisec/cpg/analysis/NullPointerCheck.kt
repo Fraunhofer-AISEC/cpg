@@ -61,7 +61,7 @@ class NullPointerCheck {
                         handleHasBase(v)
                     }
 
-                    fun visit(v: ArraySubscriptionExpression) {
+                    fun visit(v: SubscriptExpression) {
                         handleHasBase(v)
                     }
                 }
@@ -131,7 +131,7 @@ class NullPointerCheck {
                 }
             }
         } catch (ex: Throwable) {
-            log.error("Exception while running check: {}", ex)
+            log.error("Exception while running check", ex)
         }
     }
 }

@@ -25,20 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
     internal val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
 
-    fun log(node: Node?) {
+    fun log(node: Node) {
         LOGGER.trace("Creating {}", node)
     }
 }
@@ -54,15 +57,15 @@ interface MetadataProvider
  * each [Node], but also transformation steps, such as [Handler].
  */
 interface LanguageProvider : MetadataProvider {
-    val language: Language<out LanguageFrontend>?
+    val language: Language<*>?
 }
 
 /**
  * This interface denotes that the class is able to provide source code and location information for
  * a specific node and set it using the [setCodeAndLocation] function.
  */
-interface CodeAndLocationProvider : MetadataProvider {
-    fun <N, S> setCodeAndLocation(cpgNode: N, astNode: S?)
+interface CodeAndLocationProvider<in AstNode> : MetadataProvider {
+    fun setCodeAndLocation(cpgNode: Node, astNode: AstNode)
 }
 
 /**
@@ -97,12 +100,11 @@ fun Node.applyMetadata(
     provider: MetadataProvider?,
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
-    codeOverride: String? = null,
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    if (provider is CodeAndLocationProvider) {
-        provider.setCodeAndLocation(this, rawNode)
+    if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+        (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 
     if (provider is LanguageProvider) {
@@ -113,8 +115,27 @@ fun Node.applyMetadata(
         this.isInferred = provider.isInferred
     }
 
+    if (provider is IsImplicitProvider) {
+        this.isImplicit = provider.isImplicit
+    }
+
     if (provider is ScopeProvider) {
         this.scope = provider.scope
+    } else {
+        LOGGER.warn(
+            "No scope provider was provided when creating the node {}. This might be an error",
+            name
+        )
+    }
+
+    if (provider is ContextProvider) {
+        this.ctx = provider.ctx
+    }
+
+    if (this.ctx == null) {
+        throw TranslationException(
+            "Trying to create a node without a ContextProvider. This will fail."
+        )
     }
 
     if (name != null) {
@@ -125,10 +146,6 @@ fun Node.applyMetadata(
                 defaultNamespace
             }
         this.name = this.newName(name, localNameOnly, namespace)
-    }
-
-    if (codeOverride != null) {
-        this.code = codeOverride
     }
 }
 
@@ -173,13 +190,9 @@ fun LanguageProvider.newName(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAnnotation(
-    name: CharSequence?,
-    code: String? = null,
-    rawNode: Any? = null
-): Annotation {
+fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
     val node = Annotation()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -195,11 +208,10 @@ fun MetadataProvider.newAnnotation(
 fun MetadataProvider.newAnnotationMember(
     name: CharSequence?,
     value: Expression?,
-    code: String? = null,
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     node.value = value
 
@@ -207,27 +219,49 @@ fun MetadataProvider.newAnnotationMember(
     return node
 }
 
-/**
- * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
- * includes a [LanguageProvider].
- */
-fun MetadataProvider?.newUnknownType(): UnknownType {
-    return if (this is LanguageProvider) {
-        UnknownType.getUnknownType(language)
-    } else {
-        UnknownType.getUnknownType(null)
-    }
-}
-
-/**
- * Provides a nice alias to [TypeParser.createFrom]. In the future, this should not be used anymore
- * since we are moving away from the [TypeParser] altogether.
- */
-@JvmOverloads
-fun LanguageProvider.parseType(name: CharSequence, resolveAlias: Boolean = false) =
-    TypeParser.createFrom(name, resolveAlias, language)
-
 /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
 fun NamespaceProvider.fqn(localName: String): Name {
     return this.namespace.fqn(localName)
+}
+
+interface ContextProvider : MetadataProvider {
+    val ctx: TranslationContext?
+}
+
+/**
+ * This [MetadataProvider] makes sure that we can type our node builder functions correctly. For
+ * language frontend and handlers, [T] should be set to the type of the raw node. For passes, [T]
+ * should be set to [Nothing], since we do not have raw nodes there.
+ *
+ * Note: This does not work yet to 100 % satisfaction and is therefore not yet activated in the
+ * builders.
+ */
+interface RawNodeTypeProvider<T> : MetadataProvider
+
+/**
+ * A small helper function that can be used in building a [Node] with [Node.isImplicit] set to true.
+ * In this case, no "rawNode" exists that can be used for the node builder. But, in order to
+ * optionally supply [Node.code] and/or [Node.location] this function can be used.
+ *
+ * This also sets [Node.isImplicit] to true.
+ */
+fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = null): T {
+    this.code = code
+    this.location = location
+    this.isImplicit = true
+
+    return this
+}
+
+fun <T : Node> T.codeAndLocationFrom(other: Node): T {
+    this.code = other.code
+    this.location = other.location
+
+    return this
+}
+
+fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
+    frontend.setCodeAndLocation(this, rawNode)
+
+    return this
 }

@@ -26,19 +26,18 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 
 /**
- * ParameterizedTypes describe types, that are passed as Paramters to Classes E.g. uninitialized
- * generics in the graph are represented as ParameterizedTypes
+ * ParameterizedTypes describe types, that are passed as parameters to classes, e.g. uninitialized
+ * generics in the graph are represented as [ParameterizedType] nodes.
  */
 class ParameterizedType : Type {
     constructor(type: Type) : super(type) {
         language = type.language
     }
 
-    constructor(typeName: String?, language: Language<out LanguageFrontend>?) : super(typeName) {
+    constructor(typeName: String?, language: Language<*>?) : super(typeName) {
         this.language = language
     }
 
@@ -48,9 +47,5 @@ class ParameterizedType : Type {
 
     override fun dereference(): Type {
         return this
-    }
-
-    override fun duplicate(): Type {
-        return ParameterizedType(this)
     }
 }

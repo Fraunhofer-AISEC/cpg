@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -38,7 +36,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 @DependsOn(TypeHierarchyResolver::class)
-open class ImportResolver : Pass() {
+open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 
@@ -47,8 +45,8 @@ open class ImportResolver : Pass() {
         importables.clear()
     }
 
-    override fun accept(result: TranslationResult) {
-        for (tu in result.translationUnits) {
+    override fun accept(component: Component) {
+        for (tu in component.translationUnits) {
             findImportables(tu)
         }
         for (recordDecl in records) {
@@ -59,9 +57,11 @@ open class ImportResolver : Pass() {
         }
     }
 
-    protected fun getStaticImports(recordDecl: RecordDeclaration): MutableSet<ValueDeclaration> {
+    protected fun getStaticImports(
+        recordDeclaration: RecordDeclaration
+    ): MutableSet<ValueDeclaration> {
         val partitioned =
-            recordDecl.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
+            recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
         val staticImports = mutableSetOf<ValueDeclaration>()
         val importPattern = Pattern.compile("(?<base>.*)\\.(?<member>.*)")
@@ -125,25 +125,27 @@ open class ImportResolver : Pass() {
 
         // now it gets weird: you can import a field and a number of methods that have the same
         // name, all with a *single* static import...
+        // TODO(oxisto): Move all of the following code to the [Inference] class
         val result = mutableSetOf<ValueDeclaration>()
         result.addAll(memberMethods)
         result.addAll(memberFields)
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                base.newFieldDeclaration(
+                newFieldDeclaration(
                     name,
                     UnknownType.getUnknownType(base.language),
                     ArrayList(),
-                    "",
-                    null,
                     null,
                     false,
-                    base.language
                 )
+            targetField.language = base.language
             targetField.isInferred = true
-            val targetMethod = base.newMethodDeclaration(name, "", true, base)
+
+            val targetMethod = newMethodDeclaration(name, true, base)
+            targetMethod.language = base.language
             targetMethod.isInferred = true
+
             base.addField(targetField)
             base.addMethod(targetMethod)
             result.add(targetField)

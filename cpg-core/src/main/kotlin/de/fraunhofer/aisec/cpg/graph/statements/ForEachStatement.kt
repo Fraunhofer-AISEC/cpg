@@ -25,21 +25,64 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 
-class ForEachStatement : Statement() {
+class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     /**
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    @AST var variable: Statement? = null
+    @AST
+    var variable: Statement? = null
+        set(value) {
+            if (value is Reference) {
+                value.access = AccessValues.WRITE
+            }
+            field = value
+        }
 
     /** This field contains the iteration subject of the loop. */
     @AST var iterable: Statement? = null
 
     /** This field contains the body of the loop. */
     @AST var statement: Statement? = null
+
+    override val branchedBy: Node?
+        get() = iterable
+
+    override var statementEdges: MutableList<PropertyEdge<Statement>>
+        get() {
+            val statements = mutableListOf<PropertyEdge<Statement>>()
+            variable?.let { statements.add(PropertyEdge(this, it)) }
+            iterable?.let { statements.add(PropertyEdge(this, it)) }
+            statement?.let { statements.add(PropertyEdge(this, it)) }
+            return statements
+        }
+        set(value) {
+            // Nothing to do here
+        }
+
+    override fun addStatement(s: Statement) {
+        if (variable == null) {
+            variable = s
+        } else if (iterable == null) {
+            iterable = s
+        } else if (statement == null) {
+            statement = s
+        } else if (statement !is Block) {
+            val block = Block()
+            block.language = this.language
+            statement?.let { block.addStatement(it) }
+            block.addStatement(s)
+            statement = block
+        } else {
+            (statement as? Block)?.addStatement(s)
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
