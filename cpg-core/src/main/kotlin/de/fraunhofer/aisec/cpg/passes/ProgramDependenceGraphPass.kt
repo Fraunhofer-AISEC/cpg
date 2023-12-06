@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -55,11 +56,11 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                     // if there's a flow from the prevDFGEdge's node through the condition to t.
                     val prevDFGToConsider = mutableListOf<PropertyEdge<Node>>()
                     t.prevDFGEdges.forEach { prevDfgEdge ->
-                        val prevDfgNode = prevDfgEdge.end
+                        val prevDfgNode = prevDfgEdge.start
                         // The prevDfgNode also flows into the condition. This is suspicious because
                         // if the condition is
                         // on each path between prevDfgNode and t, the condition is more relevant.
-                        if (prevDfgNode is Reference) {
+                        if (prevDfgNode is Reference || prevDfgNode is ValueDeclaration) {
                             val cdgConditionChildren =
                                 t.prevCDG.flatMap {
                                     (it as? BranchingNode)?.branchedBy?.allChildren<Reference> { c
