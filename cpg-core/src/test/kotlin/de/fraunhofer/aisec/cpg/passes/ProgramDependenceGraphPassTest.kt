@@ -62,9 +62,13 @@ class ProgramDependenceGraphPassTest {
                         t.prevCDGEdges.map {
                             it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
                         } +
-                            t.prevDFG.map {
-                                PropertyEdge(it, t).apply {
-                                    addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                            t.prevDFG.mapNotNull {
+                                if (it.comment == "remove next" && t.comment == "remove prev") {
+                                    null
+                                } else {
+                                    PropertyEdge(it, t).apply {
+                                        addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                                    }
                                 }
                             }
                     assertTrue(
@@ -79,9 +83,13 @@ class ProgramDependenceGraphPassTest {
                         t.nextCDGEdges.map {
                             it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
                         } +
-                            t.nextDFG.map {
-                                PropertyEdge(t, it).apply {
-                                    addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                            t.nextDFG.mapNotNull {
+                                if (t.comment == "remove next" && it.comment == "remove prev") {
+                                    null
+                                } else {
+                                    PropertyEdge(t, it).apply {
+                                        addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                                    }
                                 }
                             }
                     assertTrue(
@@ -136,11 +144,20 @@ class ProgramDependenceGraphPassTest {
                             // The main method
                             function("main", t("int")) {
                                 body {
-                                    declare { variable("i", t("int")) { call("rand") } }
+                                    declare {
+                                        variable("i", t("int")) {
+                                            comment = "remove next"
+                                            call("rand")
+                                        }
+                                    }
                                     ifStmt {
                                         condition { ref("i") lt literal(0, t("int")) }
                                         thenStmt {
-                                            ref("i") assign (ref("i") * literal(-1, t("int")))
+                                            ref("i") assign
+                                                {
+                                                    ref("i") { comment = "remove prev" } *
+                                                        literal(-1, t("int"))
+                                                }
                                         }
                                     }
                                     returnStmt { ref("i") }
@@ -165,12 +182,17 @@ class ProgramDependenceGraphPassTest {
                             // The main method
                             function("main", t("int")) {
                                 body {
-                                    declare { variable("i", t("int")) { call("rand") } }
+                                    declare {
+                                        variable("i", t("int")) {
+                                            comment = "remove next"
+                                            call("rand")
+                                        }
+                                    }
                                     whileStmt {
                                         whileCondition { ref("i") gt literal(0, t("int")) }
                                         loopBody {
                                             call("printf") { literal("#", t("string")) }
-                                            ref("i").dec()
+                                            ref("i") { comment = "remove prev" }.dec()
                                         }
                                     }
                                     call("printf") { literal("\n", t("string")) }
