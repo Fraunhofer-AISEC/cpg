@@ -58,7 +58,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
-                    frontend.codeOf(value)
+                    rawNode = value
                 )
             }
         }
@@ -74,8 +74,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         // the pointer type
         val type = frontend.typeOf(valueRef)
 
-        val variableDeclaration =
-            newVariableDeclaration(name, type, frontend.codeOf(valueRef), false)
+        val variableDeclaration = newVariableDeclaration(name, type, false, rawNode = valueRef)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -98,7 +97,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-        val functionDeclaration = newFunctionDeclaration(name.string, frontend.codeOf(func))
+        val functionDeclaration = newFunctionDeclaration(name.string, rawNode = func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
@@ -119,7 +118,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val type = frontend.typeOf(param)
 
             // TODO: support variardic
-            val decl = newParameterDeclaration(paramName, type, false, frontend.codeOf(param))
+            val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
             frontend.scopeManager.addDeclaration(decl)
             frontend.bindingsCache[paramSymbolName] = decl
@@ -207,7 +206,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct", "")
+        record = newRecordDeclaration(name, "struct")
 
         frontend.scopeManager.enterScope(record)
 
@@ -220,7 +219,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field = newFieldDeclaration(fieldName, fieldType, listOf(), "", null, null, false)
+            val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
 
             frontend.scopeManager.addDeclaration(field)
         }

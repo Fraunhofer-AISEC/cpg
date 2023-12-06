@@ -114,14 +114,14 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), context.toString())
+            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), rawNode = context)
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context?.packageDeclaration?.orElse(null)
             var namespaceDeclaration: NamespaceDeclaration? = null
             if (packDecl != null) {
                 namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), codeOf(packDecl))
+                    newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
                 setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
@@ -446,7 +446,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString, codeOf(expr))
+            val annotation = newAnnotation(expr.nameAsString, rawNode = expr)
             val members = ArrayList<AnnotationMember>()
 
             // annotations can be specified as member / value pairs
@@ -456,7 +456,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            codeOf(pair)
+                            rawNode = pair.value
                         )
                     members.add(member)
                 }
@@ -468,7 +468,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value.asLiteralExpr()) as Expression,
-                            codeOf(value)
+                            rawNode = value
                         )
                     members.add(member)
                 }

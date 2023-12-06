@@ -56,7 +56,7 @@ open class ValueEvaluator(
      * Contains a reference to a function that gets called if the value cannot be resolved by the
      * standard behaviour.
      */
-    val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
+    open val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
         // end of the line, lets just keep the expression name
         if (node != null) {
             "{${node.name}}"
@@ -148,7 +148,7 @@ open class ValueEvaluator(
      * Note: this is both used by a [BinaryOperator] with basic arithmetic operations as well as
      * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
      */
-    protected fun computeBinaryOpEffect(
+    protected open fun computeBinaryOpEffect(
         lhsValue: Any?,
         rhsValue: Any?,
         has: HasOperatorCode?,

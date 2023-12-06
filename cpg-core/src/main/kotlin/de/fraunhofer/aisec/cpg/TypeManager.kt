@@ -241,11 +241,10 @@ class TypeManager {
      */
     fun createTypeAlias(
         frontend: LanguageFrontend<*, *>,
-        rawCode: String?,
         target: Type,
         alias: Type,
     ): Declaration {
-        val typedef = frontend.newTypedefDeclaration(target, alias, rawCode)
+        val typedef = frontend.newTypedefDeclaration(target, alias)
         frontend.scopeManager.addTypedef(typedef)
         return typedef
     }

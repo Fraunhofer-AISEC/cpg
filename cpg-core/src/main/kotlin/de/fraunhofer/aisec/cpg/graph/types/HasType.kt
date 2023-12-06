@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * This interfaces denotes that the given [Node] has a "type". Currently, we only have two known
@@ -180,5 +181,26 @@ interface HasType : ContextProvider, LanguageProvider {
     /** Unregisters the given [typeObservers] from the list of observers. */
     fun unregisterTypeObserver(typeObserver: TypeObserver) {
         typeObservers -= typeObserver
+    }
+}
+
+/**
+ * A special [HasType.TypeObserver] that can be used in cases where we cannot directly use an
+ * initializer but still want to depend on the type of the variable in [decl]. Most cases include
+ * languages that have implicit declarations that are later computed in a pass, such sa Go or
+ * Python.
+ */
+class InitializerTypePropagation(private var decl: HasType, private var tupleIdx: Int = -1) :
+    HasType.TypeObserver {
+    override fun typeChanged(newType: Type, src: HasType) {
+        if (newType is TupleType && tupleIdx != -1) {
+            decl.type = newType.types.getOrElse(tupleIdx) { decl.unknownType() }
+        } else {
+            decl.type = newType
+        }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // TODO
     }
 }
