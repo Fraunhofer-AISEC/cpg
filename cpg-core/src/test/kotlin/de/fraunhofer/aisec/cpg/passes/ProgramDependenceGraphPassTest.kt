@@ -63,7 +63,10 @@ class ProgramDependenceGraphPassTest {
                             it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
                         } +
                             t.prevDFG.mapNotNull {
-                                if (it.comment == "remove next" && t.comment == "remove prev") {
+                                if (
+                                    "remove next" in it.comment ?: "" &&
+                                        "remove prev" in t.comment ?: ""
+                                ) {
                                     null
                                 } else {
                                     PropertyEdge(it, t).apply {
@@ -84,7 +87,10 @@ class ProgramDependenceGraphPassTest {
                             it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
                         } +
                             t.nextDFG.mapNotNull {
-                                if (t.comment == "remove next" && it.comment == "remove prev") {
+                                if (
+                                    "remove next" in t.comment ?: "" &&
+                                        "remove prev" in it.comment ?: ""
+                                ) {
                                     null
                                 } else {
                                     PropertyEdge(t, it).apply {
@@ -192,7 +198,7 @@ class ProgramDependenceGraphPassTest {
                                         whileCondition { ref("i") gt literal(0, t("int")) }
                                         loopBody {
                                             call("printf") { literal("#", t("string")) }
-                                            ref("i") { comment = "remove prev" }.dec()
+                                            ref("i") { comment = "remove prev, remove next" }.dec()
                                         }
                                     }
                                     call("printf") { literal("\n", t("string")) }

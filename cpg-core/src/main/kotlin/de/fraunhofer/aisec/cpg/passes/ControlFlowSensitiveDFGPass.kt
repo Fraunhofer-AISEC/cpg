@@ -132,6 +132,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
+        // TODO: We seem to have a ConcurrentModificationException in this function sometimes??
         for (varDecl in node.variables.filter { it !is FieldDeclaration && !it.isGlobal }) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()

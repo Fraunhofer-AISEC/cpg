@@ -72,7 +72,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                             if (
                                 cdgConditionChildren.isNotEmpty() &&
                                     cdgConditionChildren.all {
-                                        allEOGsFromToFlowThrough(prevDfgNode, t, it)
+                                        it != t && allEOGsFromToFlowThrough(prevDfgNode, t, it)
                                     }
                             ) {
                                 // All data flows from the prevDfgNode to t flow through all the

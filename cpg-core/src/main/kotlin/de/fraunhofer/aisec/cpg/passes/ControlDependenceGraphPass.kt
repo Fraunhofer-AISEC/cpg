@@ -83,15 +83,40 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
                     .map { (k, v) -> Pair(k, v.toMutableSet()) }
                     .toMutableList()
             val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
+            val conditionKeys =
+                dominatorPaths.elements.entries
+                    .filter { (k, _) ->
+                        (k as? BranchingNode)?.branchedBy == node ||
+                            node in
+                                ((k as? BranchingNode)?.branchedBy?.allChildren<Node>() ?: listOf())
+                    }
+                    .map { (k, _) -> k }
+            if (conditionKeys.isNotEmpty()) {
+                // The node is part of the condition. For loops, it happens that these nodes are
+                // somehow put in the CDG of the surrounding statement (e.g. the loop) but we don't
+                // want this. Move it one layer up.
+                for (k1 in conditionKeys) {
+                    dominatorsList.removeIf { k1 == it.first }
+                    finalState[k1]?.elements?.forEach { (newK, newV) ->
+                        val entry = dominatorsList.firstOrNull { it.first == newK }
+                        entry?.let {
+                            dominatorsList.remove(entry)
+                            val update = entry.second.addAll(newV)
+                            if (update) dominatorsList.add(entry) else finalDominators.add(entry)
+                        }
+                            ?: dominatorsList.add(Pair(newK, newV.toMutableSet()))
+                    }
+                }
+            }
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
                 if (
                     k != functionDeclaration &&
                         v.containsAll(branchingNodeConditionals[k] ?: setOf())
                 ) {
-                    // We are reachable from all the branches of branch. Add this parent to the
-                    // worklist or update an existing entry. Also consider already existing entries
-                    // in finalDominators list and update it (if necessary)
+                    // We are reachable from all the branches of a branching node. Add this parent
+                    // to the worklist or update an existing entry. Also consider already existing
+                    // entries in finalDominators list and update it (if necessary)
                     val newDominatorMap = finalState[k]?.elements
                     newDominatorMap?.forEach { (newK, newV) ->
                         if (dominatorsList.any { it.first == newK }) {
@@ -185,10 +210,11 @@ fun handleEdge(
         // We start in a branching node and end in one of the branches, so we have the
         // following state:
         // for the branching node "start", we have a path through "end".
-        currentState.push(
-            currentEdge.end,
-            PrevEOGLattice(mapOf(Pair(currentEdge.start, setOf(currentEdge.end))))
-        )
+        val prevPathLattice =
+            currentState[currentEdge.start]?.elements?.filter { (k, v) -> k == currentEdge.start }
+        var newPath = PrevEOGLattice(mapOf(Pair(currentEdge.start, setOf(currentEdge.end))))
+        prevPathLattice?.let { newPath = newPath.lub(PrevEOGLattice(it)) as PrevEOGLattice }
+        currentState.push(currentEdge.end, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
         // (last branching + first end node) as for the start node of this edge.
