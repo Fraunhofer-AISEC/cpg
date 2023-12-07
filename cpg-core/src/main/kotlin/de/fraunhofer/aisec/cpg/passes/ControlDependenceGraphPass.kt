@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpressio
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import java.util.EnumMap
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -142,7 +143,22 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             }
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
-            finalDominators.filter { (k, _) -> k != node }.forEach { (k, _) -> node.addPrevCDG(k) }
+            finalDominators
+                .filter { (k, _) -> k != node }
+                .forEach { (k, v) ->
+                    val branchesSet =
+                        k.nextEOGEdges
+                            .filter { edge -> edge.end in v }
+                            .mapNotNull { it.getProperty(Properties.BRANCH) }
+                            .toSet()
+                    val properties = EnumMap<Properties, Any?>(Properties::class.java)
+                    if (branchesSet.size == 1) {
+                        properties[Properties.BRANCH] = branchesSet.single()
+                    } else if (branchesSet.isNotEmpty()) {
+                        properties[Properties.BRANCH] = branchesSet
+                    }
+                    node.addPrevCDG(k, properties)
+                }
         }
     }
 
