@@ -68,7 +68,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
 
             // add an implicit return statement, if there is no return statement
             if (lastStatement !is ReturnStatement) {
-                val returnStatement = newReturnStatement("return")
+                val returnStatement = newReturnStatement()
                 returnStatement.isImplicit = true
                 body += returnStatement
 

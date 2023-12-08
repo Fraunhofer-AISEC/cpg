@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -109,10 +108,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(DFGPass::class)
-class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
-
-    override val scope: Scope?
-        get() = scopeManager.currentScope
+class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         // Add built-int functions, but only if one of the components contains a GoLanguage
@@ -350,6 +346,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
                 if (ref == null) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
+                    decl.language = expr.language
                     decl.location = expr.location
                     decl.isImplicit = true
 
@@ -444,7 +441,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
         call: CallExpression,
         pointer: Boolean,
     ) {
-        val cast = parent.newCastExpression(call.code)
+        val cast = newCastExpression()
+        cast.code = call.code
+        cast.language = call.language
         cast.location = call.location
         cast.castType =
             if (pointer) {
@@ -473,20 +472,5 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx), ScopeProvider {
 
     override fun cleanup() {
         // Nothing to do
-    }
-
-    class InitializerTypePropagation(private var decl: HasType, private var tupleIdx: Int = -1) :
-        HasType.TypeObserver {
-        override fun typeChanged(newType: Type, src: HasType) {
-            if (newType is TupleType && tupleIdx != -1) {
-                decl.type = newType.types.getOrElse(tupleIdx) { decl.unknownType() }
-            } else {
-                decl.type = newType
-            }
-        }
-
-        override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-            // TODO
-        }
     }
 }

@@ -34,10 +34,11 @@ In order to get familiar with the graph itself, you can use the subproject [cpg-
 ### As Library
 
 The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
+
 ```kotlin
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.0/cdt-11.0.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
         metadataSources {
             artifact()
         }
@@ -48,11 +49,11 @@ repositories {
 }
 
 dependencies {
-    var cpgVersion = "5.1.0" 
-    
+    val cpgVersion = "8.0.0"
+
     // if you want to include all published cpg modules
     implementation("de.fraunhofer.aisec", "cpg", cpgVersion)
-    
+
     // if you only want to use some of the cpg modules
     // use the 'cpg-core' module
     // and then add the needed extra modules, such as Go and Python
@@ -127,7 +128,7 @@ In the case of Golang, the necessary native code can be found in the `src/main/g
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
 
-Currently, only Python 3.{9,10,11,12} is supported.
+Currently, only Python 3.{9,10,11,12,13} is supported.
 
 ##### System Wide
 

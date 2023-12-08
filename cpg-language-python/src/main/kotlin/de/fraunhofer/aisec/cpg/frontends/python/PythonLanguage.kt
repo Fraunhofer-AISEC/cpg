@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
@@ -78,14 +79,14 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        val unknownType = UnknownType.getUnknownType(this)
+        val autoType = autoType()
         if (
             operation.operatorCode == "/" &&
                 operation.lhs.type is NumericType &&
                 operation.rhs.type is NumericType
         ) {
             // In Python, the / operation automatically casts the result to a float
-            return getSimpleTypeOf("float") ?: unknownType
+            return getSimpleTypeOf("float") ?: autoType
         } else if (
             operation.operatorCode == "//" &&
                 operation.lhs.type is NumericType &&
@@ -94,9 +95,9 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
             return if (operation.lhs.type is IntegerType && operation.rhs.type is IntegerType) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                getSimpleTypeOf("int") ?: unknownType
+                getSimpleTypeOf("int") ?: autoType
             } else {
-                getSimpleTypeOf("float") ?: unknownType
+                getSimpleTypeOf("float") ?: autoType
             }
         }
 

@@ -26,14 +26,23 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -45,12 +54,13 @@ import kotlin.contracts.contract
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
-         * a [FunctionDeclaration] must have in order to be considered.
+         * This specifies the maximum complexity (as calculated per
+         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
+         * considered.
          */
         var maxComplexity: Int? = null
     ) : PassConfiguration()
@@ -59,65 +69,60 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         // Nothing to do
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
-        tu.functions.forEach(::handle)
-    }
+    /** We perform the actions for each [FunctionDeclaration]. */
+    override fun accept(node: Node) {
+        // For now, we only execute this for function declarations, we will support all EOG starters
+        // in the future.
+        if (node !is FunctionDeclaration) {
+            return
+        }
 
-    /**
-     * We perform the actions for each [FunctionDeclaration].
-     *
-     * @param node every node in the TranslationResult
-     */
-    protected fun handle(node: Node) {
+        // Skip empty functions
+        if (node.body == null) {
+            return
+        }
+
+        // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
-
-        if (node is FunctionDeclaration) {
-            // Skip empty functions
-            if (node.body == null) {
-                return
-            }
-
-            // Calculate the complexity of the function and see, if it exceeds our threshold
-            if (max != null) {
-                val c = node.body?.cyclomaticComplexity ?: 0
-                if (c > max) {
-                    log.info(
-                        "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
-                    )
-                    return
-                }
-            }
-
-            clearFlowsOfVariableDeclarations(node)
-            val startState = DFGPassState<Set<Node>>()
-
-            startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
-            val finalState =
-                iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
-
-            removeUnreachableImplicitReturnStatement(
-                node,
-                finalState.returnStatements.values.flatMap {
-                    it.elements.filterIsInstance<ReturnStatement>()
-                }
+        val c = node.body?.cyclomaticComplexity ?: 0
+        if (max != null && c > max) {
+            log.info(
+                "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
             )
+            return
+        }
 
-            for ((key, value) in finalState.generalState) {
-                if (key is TupleDeclaration) {
-                    // We need a little hack for tuple statements to set the index. We have the
-                    // outer part (i.e., the tuple) here, but we generate the DFG edges to the
-                    // elements. We have the indices here, so it's amazing.
-                    key.elements.forEachIndexed { i, element ->
-                        element.addAllPrevDFG(
-                            value.elements.filterNot { it is VariableDeclaration && key == it },
-                            mutableMapOf(Properties.INDEX to i)
-                        )
-                    }
-                } else {
-                    key.addAllPrevDFG(
-                        value.elements.filterNot { it is VariableDeclaration && key == it }
+        log.debug("Handling {} (complexity: {})", node.name, c)
+
+        clearFlowsOfVariableDeclarations(node)
+        val startState = DFGPassState<Set<Node>>()
+
+        startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
+        val finalState =
+            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+
+        removeUnreachableImplicitReturnStatement(
+            node,
+            finalState.returnStatements.values.flatMap {
+                it.elements.filterIsInstance<ReturnStatement>()
+            }
+        )
+
+        for ((key, value) in finalState.generalState) {
+            if (key is TupleDeclaration) {
+                // We need a little hack for tuple statements to set the index. We have the
+                // outer part (i.e., the tuple) here, but we generate the DFG edges to the
+                // elements. We have the indices here, so it's amazing.
+                key.elements.forEachIndexed { i, element ->
+                    element.addAllPrevDFG(
+                        value.elements.filterNot { it is VariableDeclaration && key == it },
+                        mutableMapOf(Properties.INDEX to i)
                     )
                 }
+            } else {
+                key.addAllPrevDFG(
+                    value.elements.filterNot { it is VariableDeclaration && key == it }
+                )
             }
         }
     }
@@ -148,7 +153,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        var writtenDeclaration: Declaration?
+        val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState

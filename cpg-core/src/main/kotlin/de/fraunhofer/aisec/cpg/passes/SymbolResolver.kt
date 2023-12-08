@@ -99,8 +99,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         for (tu in component.translationUnits) {
             currentTU = tu
             // gather all resolution start holders and their start nodes
-            val nodes =
-                tu.allChildren<ResolutionStartHolder>().flatMap { it.resolutionStartNodes }.toSet()
+            val nodes = tu.allEOGStarters.toSet()
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -399,17 +398,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             target
         } else {
             val declaration =
-                record.newFieldDeclaration(
+                newFieldDeclaration(
                     name.localName,
                     // we will set the type later through the type inference observer
                     unknownType(),
                     listOf(),
-                    "",
-                    null,
                     null,
                     false,
                 )
             record.addField(declaration)
+            declaration.language = record.language
             declaration.isInferred = true
 
             // We might be able to resolve the type later (or better), if a type is
@@ -424,7 +422,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         when (node) {
             is MemberExpression -> handleMemberExpression(currClass, node)
             is Reference -> handleReference(currClass, node)
-            is ConstructorCallExpression -> handleConstructorCallExpression(node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(scopeManager.currentRecord, node)
         }
@@ -720,23 +717,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (recordDeclaration != null) {
             val constructor = getConstructorDeclaration(constructExpression, recordDeclaration)
             constructExpression.constructor = constructor
-        }
-    }
-
-    protected fun handleConstructorCallExpression(
-        constructorCallExpression: ConstructorCallExpression
-    ) {
-        constructorCallExpression.containingClass?.let { containingClass ->
-            val recordDeclaration =
-                constructorCallExpression.objectType(containingClass).recordDeclaration
-            val signature = constructorCallExpression.arguments.map { it.type }
-            if (recordDeclaration != null) {
-                val constructor =
-                    getConstructorDeclarationForExplicitInvocation(signature, recordDeclaration)
-                val invokes = mutableListOf<FunctionDeclaration>()
-                invokes.add(constructor)
-                constructorCallExpression.invokes = invokes
-            }
         }
     }
 

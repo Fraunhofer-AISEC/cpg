@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -64,9 +65,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             if (record != null) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
-                    val initializer = node.newConstructExpression(typeString, "$typeString()")
+                    val initializer =
+                        newConstructExpression(typeString).implicit(code = "$typeString()")
+                    initializer.language = node.language
                     initializer.type = node.type
-                    initializer.isImplicit = true
                     node.initializer = initializer
                     node.templateParameters?.let {
                         SymbolResolver.addImplicitTemplateParametersToCall(it, initializer)
@@ -80,10 +82,11 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     val arguments = currInitializer.arguments
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
-                        node.newConstructExpression(typeString, "$typeString($signature)")
+                        newConstructExpression(typeString)
+                            .implicit(code = "$typeString($signature)")
+                    initializer.language = node.language
                     initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
-                    initializer.isImplicit = true
                     node.initializer = initializer
                     currInitializer.disconnectFromGraph()
                 }

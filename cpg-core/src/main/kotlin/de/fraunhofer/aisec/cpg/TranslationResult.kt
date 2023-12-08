@@ -26,12 +26,14 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.Pass
-import de.fraunhofer.aisec.cpg.passes.PassTarget
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -48,7 +50,7 @@ class TranslationResult(
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
     var finalCtx: TranslationContext,
-) : Node(), StatisticsHolder, PassTarget {
+) : Node(), StatisticsHolder {
 
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"

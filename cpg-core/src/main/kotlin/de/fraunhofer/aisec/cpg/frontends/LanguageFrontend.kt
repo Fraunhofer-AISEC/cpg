@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory
  * More information can be found in the
  * [github wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
  */
-abstract class LanguageFrontend<in AstNode, TypeNode>(
+abstract class LanguageFrontend<AstNode, TypeNode>(
     /** The language this frontend works for. */
     override val language: Language<out LanguageFrontend<AstNode, TypeNode>>,
 
@@ -61,7 +61,8 @@ abstract class LanguageFrontend<in AstNode, TypeNode>(
     LanguageProvider,
     ScopeProvider,
     NamespaceProvider,
-    ContextProvider {
+    ContextProvider,
+    RawNodeTypeProvider<AstNode> {
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config

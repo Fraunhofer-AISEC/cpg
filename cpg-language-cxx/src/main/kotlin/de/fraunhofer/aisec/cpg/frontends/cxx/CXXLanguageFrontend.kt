@@ -364,7 +364,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation = newAnnotation(String(attribute.name), attribute.rawSignature)
+            val annotation = newAnnotation(String(attribute.name), rawNode = owner)
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -393,18 +393,18 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newReference(code, unknownType(), code)
+                newReference(code, unknownType(), rawNode = token)
                 2 -> // an integer
-                newLiteral(code.toInt(), primitiveType("int"), code)
+                newLiteral(code.toInt(), primitiveType("int"), rawNode = token)
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
                         primitiveType("char").pointer(),
-                        code
+                        rawNode = token
                     )
-                else -> newLiteral(code, primitiveType("char").pointer(), code)
+                else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
             }
-        return newAnnotationMember("", expression, code)
+        return newAnnotationMember("", expression, rawNode = token)
     }
 
     @Throws(NoSuchFieldException::class)

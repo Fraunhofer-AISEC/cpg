@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
@@ -45,11 +44,10 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 @JvmOverloads
 fun MetadataProvider.newTranslationUnitDeclaration(
     name: CharSequence?,
-    code: String? = null,
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -64,12 +62,11 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
-    code: String? = null,
+    localNameOnly: Boolean = false,
     rawNode: Any? = null,
-    localNameOnly: Boolean = false
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this, name, rawNode, code, localNameOnly)
+    node.applyMetadata(this@MetadataProvider, name, rawNode, localNameOnly)
 
     log(node)
     return node
@@ -84,13 +81,12 @@ fun MetadataProvider.newFunctionDeclaration(
 @JvmOverloads
 fun MetadataProvider.newMethodDeclaration(
     name: CharSequence?,
-    code: String? = null,
     isStatic: Boolean = false,
     recordDeclaration: RecordDeclaration? = null,
     rawNode: Any? = null
 ): MethodDeclaration {
     val node = MethodDeclaration()
-    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.name)
+    node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
@@ -108,13 +104,12 @@ fun MetadataProvider.newMethodDeclaration(
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
-    code: String? = null,
     recordDeclaration: RecordDeclaration?,
     rawNode: Any? = null
 ): ConstructorDeclaration {
     val node = ConstructorDeclaration()
 
-    node.applyMetadata(this, name, rawNode, code, defaultNamespace = recordDeclaration?.name)
+    node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
 
@@ -133,11 +128,10 @@ fun MetadataProvider.newParameterDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     variadic: Boolean = false,
-    code: String? = null,
     rawNode: Any? = null
 ): ParameterDeclaration {
     val node = ParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, code, localNameOnly = true)
+    node.applyMetadata(this, name, rawNode, localNameOnly = true)
 
     node.type = type
     node.isVariadic = variadic
@@ -156,12 +150,11 @@ fun MetadataProvider.newParameterDeclaration(
 fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
-    code: String? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
 ): VariableDeclaration {
     val node = VariableDeclaration()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
@@ -183,7 +176,7 @@ fun LanguageProvider.newTupleDeclaration(
     rawNode: Any? = null
 ): TupleDeclaration {
     val node = TupleDeclaration()
-    node.applyMetadata(this, null, rawNode, null, true)
+    node.applyMetadata(this, null, rawNode, true)
 
     // Tuples always have an auto-type
     node.type = autoType()
@@ -208,11 +201,10 @@ fun LanguageProvider.newTupleDeclaration(
 fun MetadataProvider.newTypedefDeclaration(
     targetType: Type,
     alias: Type,
-    code: String? = null,
     rawNode: Any? = null
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
-    node.applyMetadata(this, alias.typeName, rawNode, code, true)
+    node.applyMetadata(this, alias.typeName, rawNode, true)
 
     node.type = targetType
     node.alias = alias
@@ -230,11 +222,10 @@ fun MetadataProvider.newTypedefDeclaration(
 @JvmOverloads
 fun MetadataProvider.newTypeParameterDeclaration(
     name: CharSequence?,
-    code: String? = null,
     rawNode: Any? = null
 ): TypeParameterDeclaration {
     val node = TypeParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -250,11 +241,10 @@ fun MetadataProvider.newTypeParameterDeclaration(
 fun MetadataProvider.newRecordDeclaration(
     name: CharSequence,
     kind: String,
-    code: String? = null,
     rawNode: Any? = null
 ): RecordDeclaration {
     val node = RecordDeclaration()
-    node.applyMetadata(this, name, rawNode, code, false)
+    node.applyMetadata(this, name, rawNode, false)
 
     node.kind = kind
 
@@ -271,14 +261,10 @@ fun MetadataProvider.newRecordDeclaration(
 @JvmOverloads
 fun MetadataProvider.newEnumDeclaration(
     name: CharSequence?,
-    code: String? = null,
-    location: PhysicalLocation?,
     rawNode: Any? = null
 ): EnumDeclaration {
     val node = EnumDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
-
-    node.location = location
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -293,11 +279,10 @@ fun MetadataProvider.newEnumDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFunctionTemplateDeclaration(
     name: CharSequence?,
-    code: String? = null,
     rawNode: Any? = null
 ): FunctionTemplateDeclaration {
     val node = FunctionTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -312,11 +297,10 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
 @JvmOverloads
 fun MetadataProvider.newRecordTemplateDeclaration(
     name: CharSequence?,
-    code: String? = null,
     rawNode: Any? = null
 ): RecordTemplateDeclaration {
     val node = RecordTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, name, rawNode, true)
 
     log(node)
     return node
@@ -331,14 +315,10 @@ fun MetadataProvider.newRecordTemplateDeclaration(
 @JvmOverloads
 fun MetadataProvider.newEnumConstantDeclaration(
     name: CharSequence?,
-    code: String? = null,
-    location: PhysicalLocation?,
     rawNode: Any? = null
 ): EnumConstantDeclaration {
     val node = EnumConstantDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
-
-    node.location = location
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -355,18 +335,15 @@ fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     modifiers: List<String>? = listOf(),
-    code: String? = null,
-    location: PhysicalLocation? = null,
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null
 ): FieldDeclaration {
     val node = FieldDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode)
 
     node.type = type
     node.modifiers = modifiers ?: listOf()
-    node.location = location
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
         if (initializer is NewArrayExpression) {
@@ -389,11 +366,10 @@ fun MetadataProvider.newFieldDeclaration(
 fun MetadataProvider.newProblemDeclaration(
     problem: String = "",
     problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
-    code: String? = null,
     rawNode: Any? = null
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.problem = problem
     node.problemType = problemType
@@ -411,11 +387,10 @@ fun MetadataProvider.newProblemDeclaration(
 @JvmOverloads
 fun MetadataProvider.newIncludeDeclaration(
     includeFilename: CharSequence,
-    code: String? = null,
     rawNode: Any? = null
 ): IncludeDeclaration {
     val node = IncludeDeclaration()
-    node.applyMetadata(this, includeFilename, rawNode, code, true)
+    node.applyMetadata(this, includeFilename, rawNode, true)
     node.filename = includeFilename.toString()
 
     log(node)
@@ -431,11 +406,10 @@ fun MetadataProvider.newIncludeDeclaration(
 @JvmOverloads
 fun MetadataProvider.newNamespaceDeclaration(
     name: CharSequence,
-    code: String? = null,
     rawNode: Any? = null
 ): NamespaceDeclaration {
     val node = NamespaceDeclaration()
-    node.applyMetadata(this, name, rawNode, code)
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
@@ -449,12 +423,11 @@ fun MetadataProvider.newNamespaceDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newUsingDeclaration(
-    code: String? = null,
     qualifiedName: CharSequence?,
     rawNode: Any? = null
 ): UsingDeclaration {
     val node = UsingDeclaration()
-    node.applyMetadata(this, qualifiedName, rawNode, code)
+    node.applyMetadata(this, qualifiedName, rawNode)
 
     node.qualifiedName = qualifiedName.toString()
 

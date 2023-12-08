@@ -35,28 +35,28 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 class StatementHandler(frontend: GoLanguageFrontend) :
     GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(stmt: GoStandardLibrary.Ast.Stmt): Statement {
-        return when (stmt) {
-            is GoStandardLibrary.Ast.AssignStmt -> handleAssignStmt(stmt)
-            is GoStandardLibrary.Ast.BranchStmt -> handleBranchStmt(stmt)
-            is GoStandardLibrary.Ast.BlockStmt -> handleBlockStmt(stmt)
-            is GoStandardLibrary.Ast.CaseClause -> handleCaseClause(stmt)
-            is GoStandardLibrary.Ast.DeclStmt -> handleDeclStmt(stmt)
-            is GoStandardLibrary.Ast.DeferStmt -> handleDeferStmt(stmt)
+    override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Statement {
+        return when (node) {
+            is GoStandardLibrary.Ast.AssignStmt -> handleAssignStmt(node)
+            is GoStandardLibrary.Ast.BranchStmt -> handleBranchStmt(node)
+            is GoStandardLibrary.Ast.BlockStmt -> handleBlockStmt(node)
+            is GoStandardLibrary.Ast.CaseClause -> handleCaseClause(node)
+            is GoStandardLibrary.Ast.DeclStmt -> handleDeclStmt(node)
+            is GoStandardLibrary.Ast.DeferStmt -> handleDeferStmt(node)
             is GoStandardLibrary.Ast.ExprStmt -> {
-                return frontend.expressionHandler.handle(stmt.x)
+                return frontend.expressionHandler.handle(node.x)
             }
-            is GoStandardLibrary.Ast.ForStmt -> handleForStmt(stmt)
-            is GoStandardLibrary.Ast.GoStmt -> handleGoStmt(stmt)
-            is GoStandardLibrary.Ast.IncDecStmt -> handleIncDecStmt(stmt)
-            is GoStandardLibrary.Ast.IfStmt -> handleIfStmt(stmt)
-            is GoStandardLibrary.Ast.LabeledStmt -> handleLabeledStmt(stmt)
-            is GoStandardLibrary.Ast.RangeStmt -> handleRangeStmt(stmt)
-            is GoStandardLibrary.Ast.ReturnStmt -> handleReturnStmt(stmt)
-            is GoStandardLibrary.Ast.SendStmt -> handleSendStmt(stmt)
-            is GoStandardLibrary.Ast.SwitchStmt -> handleSwitchStmt(stmt)
-            is GoStandardLibrary.Ast.TypeSwitchStmt -> handleTypeSwitchStmt(stmt)
-            else -> handleNotSupported(stmt, stmt.goType)
+            is GoStandardLibrary.Ast.ForStmt -> handleForStmt(node)
+            is GoStandardLibrary.Ast.GoStmt -> handleGoStmt(node)
+            is GoStandardLibrary.Ast.IncDecStmt -> handleIncDecStmt(node)
+            is GoStandardLibrary.Ast.IfStmt -> handleIfStmt(node)
+            is GoStandardLibrary.Ast.LabeledStmt -> handleLabeledStmt(node)
+            is GoStandardLibrary.Ast.RangeStmt -> handleRangeStmt(node)
+            is GoStandardLibrary.Ast.ReturnStmt -> handleReturnStmt(node)
+            is GoStandardLibrary.Ast.SendStmt -> handleSendStmt(node)
+            is GoStandardLibrary.Ast.SwitchStmt -> handleSwitchStmt(node)
+            is GoStandardLibrary.Ast.TypeSwitchStmt -> handleTypeSwitchStmt(node)
+            else -> handleNotSupported(node, node.goType)
         }
     }
 
@@ -324,19 +324,23 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
             // TODO: not really the best way to deal with this
             // TODO: key type is always int. we could set this
-            var ref = rangeStmt.key?.let { frontend.expressionHandler.handle(it) }
-            if (ref is Reference) {
-                val key = newVariableDeclaration(ref.name, rawNode = rangeStmt.key)
-                frontend.scopeManager.addDeclaration(key)
-                stmt.addToPropertyEdgeDeclaration(key)
+            rangeStmt.key?.let {
+                val ref = frontend.expressionHandler.handle(it)
+                if (ref is Reference) {
+                    val key = newVariableDeclaration(ref.name).codeAndLocationFrom(frontend, it)
+                    frontend.scopeManager.addDeclaration(key)
+                    stmt.addToPropertyEdgeDeclaration(key)
+                }
             }
 
             // TODO: not really the best way to deal with this
-            ref = rangeStmt.value?.let { frontend.expressionHandler.handle(it) }
-            if (ref is Reference) {
-                val key = newVariableDeclaration(ref.name, rawNode = rangeStmt.key)
-                frontend.scopeManager.addDeclaration(key)
-                stmt.addToPropertyEdgeDeclaration(key)
+            rangeStmt.value?.let {
+                val ref = frontend.expressionHandler.handle(it)
+                if (ref is Reference) {
+                    val key = newVariableDeclaration(ref.name).codeAndLocationFrom(frontend, it)
+                    frontend.scopeManager.addDeclaration(key)
+                    stmt.addToPropertyEdgeDeclaration(key)
+                }
             }
 
             forEach.variable = stmt

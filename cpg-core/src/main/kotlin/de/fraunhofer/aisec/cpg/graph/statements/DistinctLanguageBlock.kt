@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.python
+package de.fraunhofer.aisec.cpg.graph.statements
 
-import java.nio.file.Files
-import java.nio.file.Path
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 
-class PyTempFileHolder {
-    // create temporary file and folder
-    private var pyZipOnDisk: Path = Files.createTempFile("cpg_python", ".zip")
-    var pyFolder: Path = Files.createTempDirectory("cpg_python")
-
-    protected fun finalize() {
-        // clean up once no longer used
-        pyZipOnDisk.toFile().delete()
-        // pyFolder.toFile().deleteRecursively() // TODO
-    }
-}
+/**
+ * A Block of code containing code in a different language that is not parsable with the same
+ * frontend as the enclosing language.
+ */
+class DistinctLanguageBlock : Block()
