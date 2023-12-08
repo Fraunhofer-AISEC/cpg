@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -112,8 +113,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker
 
+    override val scope: Scope?
+        get() = scopeManager.currentScope
+
     override fun accept(component: Component) {
-        // Add built-int functions, but only if one of the components contains a GoLanguage
+        // Add built-in functions, but only if one of the components contains a GoLanguage
         if (component.translationUnits.any { it.language is GoLanguage }) {
             component.translationUnits += addBuiltIn()
         }
