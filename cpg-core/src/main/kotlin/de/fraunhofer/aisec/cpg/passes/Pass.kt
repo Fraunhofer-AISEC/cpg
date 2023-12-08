@@ -232,7 +232,7 @@ fun executePass(
 private inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
-    targets: List<T>,
+    targets: Collection<T>,
     executedFrontends: Collection<LanguageFrontend<*, *>>
 ) {
     if (ctx.config.useParallelPasses) {
