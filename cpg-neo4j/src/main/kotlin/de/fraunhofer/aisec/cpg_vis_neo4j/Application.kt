@@ -490,13 +490,15 @@ class Application : Callable<Int> {
         } else if (!noDefaultPasses && customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
-                if (pass.contains(".")) {
+                if (pass == "DEFAULT") {
+                    translationConfiguration.defaultPasses()
+                } else if (pass.contains(".")) {
                     translationConfiguration.registerPass(
                         Class.forName(pass).kotlin as KClass<out Pass<*>>
                     )
                 } else {
                     if (pass !in passClassMap) {
-                        throw ConfigurationException("Asked to produce unknown pass")
+                        throw ConfigurationException("Asked to produce unknown pass: " + pass)
                     }
                     passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
                 }
