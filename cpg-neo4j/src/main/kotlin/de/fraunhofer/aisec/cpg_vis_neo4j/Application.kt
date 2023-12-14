@@ -500,7 +500,9 @@ class Application : Callable<Int> {
         if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
-                if (pass.contains(".")) {
+                if (pass == "DEFAULT") {
+                    translationConfiguration.defaultPasses()
+                } else if (pass.contains(".")) {
                     translationConfiguration.registerPass(
                         Class.forName(pass).kotlin as KClass<out Pass<*>>
                     )
