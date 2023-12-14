@@ -69,6 +69,8 @@ abstract class Node() :
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
 
+    var className: String = this::class.simpleName.toString()
+
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
