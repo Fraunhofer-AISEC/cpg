@@ -53,6 +53,8 @@ abstract class Scope(
     /** FQN Name currently valid */
     var scopedName: String? = null
 
+    var className: String = this::class.simpleName.toString()
+
     /** The real new name */
     @Convert(NameConverter::class) var name: Name? = null
 
