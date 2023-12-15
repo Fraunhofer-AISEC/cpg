@@ -93,11 +93,11 @@ jobs:
           if [ -d "/opt/hostedtoolcache/Python" ]; then
             find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
           fi
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: libcpgo-arm64.dylib
           path: cpg-language-go/src/main/resources/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/
