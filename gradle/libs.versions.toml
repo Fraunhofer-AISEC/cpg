@@ -28,7 +28,7 @@ icu4j = { module = "com.ibm.icu:icu4j", version = "74.2"}
 eclipse-cdt-core = { module = "org.eclipse.cdt:core", version = "8.3.1.202309150117"}
 picocli = { module = "info.picocli:picocli", version = "4.7.0"}
 picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
-jep = { module = "black.ninia:jep", version = "4.1.1" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
+jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 
 # test
