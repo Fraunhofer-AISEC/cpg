@@ -31,15 +31,17 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import java.util.EnumMap
+import java.util.*
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -64,14 +66,26 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
     private fun handle(functionDeclaration: FunctionDeclaration) {
+        val max = passConfig<ControlFlowSensitiveDFGPass.Configuration>()?.maxComplexity
+        val c = functionDeclaration.body?.cyclomaticComplexity ?: 0
+        if (
+            max != null && c > max ||
+                functionDeclaration.body.allChildren<GotoStatement>().isNotEmpty()
+        ) {
+            log.info(
+                "Ignoring function ${functionDeclaration.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+            )
+            return
+        }
+        log.info("Analyzing function ${functionDeclaration.name} with complexity $c")
+
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
         // the node, we use the dominator's state instead (i.e., we move the node one layer upwards)
         val startState = PrevEOGState()
-        startState.push(
-            functionDeclaration,
-            PrevEOGLattice(mapOf(Pair(functionDeclaration, setOf(functionDeclaration))))
-        )
+        val identityMap = IdentityHashMap<Node, IdentitySet<Node>>()
+        identityMap[functionDeclaration] = identitySetOf(functionDeclaration)
+        startState.push(functionDeclaration, PrevEOGLattice(identityMap))
         val finalState =
             iterateEOG(functionDeclaration.nextEOGEdges, startState, ::handleEdge) ?: return
 
@@ -146,12 +160,12 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             finalDominators
                 .filter { (k, _) -> k != node }
                 .forEach { (k, v) ->
+                    val properties = EnumMap<Properties, Any?>(Properties::class.java)
                     val branchesSet =
                         k.nextEOGEdges
                             .filter { edge -> edge.end in v }
                             .mapNotNull { it.getProperty(Properties.BRANCH) }
                             .toSet()
-                    val properties = EnumMap<Properties, Any?>(Properties::class.java)
                     if (branchesSet.size == 1) {
                         properties[Properties.BRANCH] = branchesSet.single()
                     } else if (branchesSet.isNotEmpty()) {
@@ -217,9 +231,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
  */
 fun handleEdge(
     currentEdge: PropertyEdge<Node>,
-    currentState: State<Node, Map<Node, Set<Node>>>,
-    currentWorklist: Worklist<PropertyEdge<Node>, Node, Map<Node, Set<Node>>>
-): State<Node, Map<Node, Set<Node>>> {
+    currentState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>,
+    currentWorklist: Worklist<PropertyEdge<Node>, Node, IdentityHashMap<Node, IdentitySet<Node>>>
+): State<Node, IdentityHashMap<Node, IdentitySet<Node>>> {
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
     if (currentEdge.start is BranchingNode) { // && currentEdge.isConditionalBranch()) {
@@ -227,9 +241,14 @@ fun handleEdge(
         // following state:
         // for the branching node "start", we have a path through "end".
         val prevPathLattice =
-            currentState[currentEdge.start]?.elements?.filter { (k, v) -> k == currentEdge.start }
-        var newPath = PrevEOGLattice(mapOf(Pair(currentEdge.start, setOf(currentEdge.end))))
-        prevPathLattice?.let { newPath = newPath.lub(PrevEOGLattice(it)) as PrevEOGLattice }
+            IdentityHashMap(
+                currentState[currentEdge.start]?.elements?.filter { (k, v) ->
+                    k == currentEdge.start
+                }
+            )
+        val map = IdentityHashMap<Node, IdentitySet<Node>>()
+        map[currentEdge.start] = identitySetOf(currentEdge.end)
+        val newPath = PrevEOGLattice(map).lub(PrevEOGLattice(prevPathLattice)) as PrevEOGLattice
         currentState.push(currentEdge.end, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
@@ -240,7 +259,9 @@ fun handleEdge(
         val state =
             PrevEOGLattice(
                 currentState[currentEdge.start]?.elements
-                    ?: mapOf(Pair(currentEdge.start, setOf(currentEdge.end)))
+                    ?: IdentityHashMap(
+                        mutableMapOf(Pair(currentEdge.start, identitySetOf(currentEdge.end)))
+                    )
             )
         currentState.push(currentEdge.end, state)
     }
@@ -273,29 +294,31 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
  * Implements the [LatticeElement] over a set of nodes and their set of "nextEOG" nodes which reach
  * this node.
  */
-class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
-    LatticeElement<Map<Node, Set<Node>>>(elements) {
+class PrevEOGLattice(override val elements: IdentityHashMap<Node, IdentitySet<Node>>) :
+    LatticeElement<IdentityHashMap<Node, IdentitySet<Node>>>(elements) {
 
     override fun lub(
-        other: LatticeElement<Map<Node, Set<Node>>>
-    ): LatticeElement<Map<Node, Set<Node>>> {
-        val newMap = (other.elements).mapValues { (_, v) -> v.toMutableSet() }.toMutableMap()
+        other: LatticeElement<IdentityHashMap<Node, IdentitySet<Node>>>
+    ): LatticeElement<IdentityHashMap<Node, IdentitySet<Node>>> {
+        val newMap = IdentityHashMap(other.elements.mapValues { (_, v) -> v.toIdentitySet() })
         for ((key, value) in this.elements) {
-            newMap.computeIfAbsent(key, ::mutableSetOf).addAll(value)
+            newMap.computeIfAbsent(key, ::identitySetOf).addAll(value)
         }
         return PrevEOGLattice(newMap)
     }
 
-    override fun duplicate() = PrevEOGLattice(this.elements.toMap())
+    override fun duplicate() = PrevEOGLattice(IdentityHashMap(this.elements))
 
-    override fun compareTo(other: LatticeElement<Map<Node, Set<Node>>>): Int {
+    override fun compareTo(other: LatticeElement<IdentityHashMap<Node, IdentitySet<Node>>>): Int {
         return if (
             this.elements.keys.containsAll(other.elements.keys) &&
-                this.elements.all { (k, v) -> v.containsAll(other.elements[k] ?: setOf()) }
+                this.elements.all { (k, v) -> v.containsAll(other.elements[k] ?: identitySetOf()) }
         ) {
             if (
                 this.elements.keys.size > (other.elements.keys.size) ||
-                    this.elements.any { (k, v) -> v.size > (other.elements[k] ?: setOf()).size }
+                    this.elements.any { (k, v) ->
+                        v.size > (other.elements[k] ?: identitySetOf()).size
+                    }
             )
                 1
             else 0
@@ -309,4 +332,4 @@ class PrevEOGLattice(override val elements: Map<Node, Set<Node>>) :
  * A state which actually holds a state for all [PropertyEdge]s. It maps the node to its
  * [BranchingNode]-parent and the path through which it is reached.
  */
-class PrevEOGState : State<Node, Map<Node, Set<Node>>>()
+class PrevEOGState : State<Node, IdentityHashMap<Node, IdentitySet<Node>>>()
