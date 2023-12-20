@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
@@ -68,17 +67,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
     private fun handle(functionDeclaration: FunctionDeclaration) {
         val max = passConfig<ControlFlowSensitiveDFGPass.Configuration>()?.maxComplexity
         val c = functionDeclaration.body?.cyclomaticComplexity ?: 0
-        // TODO There's an issue with functions containing GotoStatements somehow. Not sure why/when
-        // it occurs.
-        if (
-            max != null && c > max ||
-                functionDeclaration.body.allChildren<GotoStatement>().isNotEmpty()
-        ) {
+        if (max != null && c > max) {
             log.info(
                 "Ignoring function ${functionDeclaration.name} because its complexity (${c}) is greater than the configured maximum (${max})"
             )
             return
         }
+        log.info("Analyzing function ${functionDeclaration.name}")
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -147,9 +142,15 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
                             val entry = finalDominators.first { it.first == newK }
                             finalDominators.remove(entry)
                             val update = entry.second.addAll(newV)
-                            if (update && entry !in alreadySeen) dominatorsList.add(entry)
+                            if (
+                                update &&
+                                    alreadySeen.none {
+                                        it.first == entry.first && it.second == entry.second
+                                    }
+                            )
+                                dominatorsList.add(entry)
                             else finalDominators.add(entry)
-                        } else if (Pair(newK, newV) !in alreadySeen) {
+                        } else if (alreadySeen.none { it.first == newK && it.second == newV }) {
                             // We don't have an entry yet => add a new one
                             val newEntry = Pair(newK, newV.toMutableSet())
                             dominatorsList.add(newEntry)
@@ -165,6 +166,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
                     finalDominators.add(Pair(k, v))
                 }
             }
+
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
             finalDominators
