@@ -261,15 +261,16 @@ fun handleEdge(
         // following state:
         // for the branching node "start", we have a path through "end".
         val prevPathLattice =
-            IdentityHashMap(
-                currentState[currentEdge.start]?.elements?.filter { (k, v) ->
-                    k == currentEdge.start
-                }
+            PrevEOGLattice(
+                IdentityHashMap(
+                    currentState[currentEdge.start]?.elements?.filter { (k, v) ->
+                        k == currentEdge.start
+                    }
+                )
             )
         val map = IdentityHashMap<Node, IdentitySet<Node>>()
         map[currentEdge.start] = identitySetOf(currentEdge.end)
-        var newPath = PrevEOGLattice(map)
-        currentState[currentEdge.start]?.let { newPath = newPath.lub(it) as PrevEOGLattice }
+        val newPath = PrevEOGLattice(map).lub(prevPathLattice) as PrevEOGLattice
         currentState.push(currentEdge.end, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
