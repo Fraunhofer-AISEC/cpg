@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -73,7 +74,6 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             )
             return
         }
-        log.info("Analyzing function ${functionDeclaration.name}")
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -182,6 +182,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
                         properties[Properties.BRANCH] = branchesSet.single()
                     } else if (branchesSet.isNotEmpty()) {
                         properties[Properties.BRANCH] = branchesSet
+                    } else if (
+                        k is IfStatement &&
+                            branchesSet.isEmpty() &&
+                            (branchingNodeConditionals[k]?.size ?: 0) > 1
+                    ) {
+                        // The if statement has only a then branch but there's a way to "jump out"
+                        // of this branch. In this case, we want to set the false property here
+                        properties[Properties.BRANCH] = setOf(false)
                     }
                     node.addPrevCDG(k, properties)
                 }
@@ -300,7 +308,12 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
     } else
         (this.start is IfStatement ||
             this.start is ConditionalExpression ||
-            this.start is ShortCircuitOperator) && this.getProperty(Properties.BRANCH) == false
+            this.start is ShortCircuitOperator) && this.getProperty(Properties.BRANCH) == false ||
+            (this.start is IfStatement &&
+                (this.start as IfStatement)
+                    .thenStatement
+                    .allChildren<ReturnStatement>()
+                    .isNotEmpty())
 }
 
 /**
