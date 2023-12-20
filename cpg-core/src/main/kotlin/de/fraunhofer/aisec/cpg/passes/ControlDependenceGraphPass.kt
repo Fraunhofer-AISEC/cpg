@@ -311,10 +311,39 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
             this.start is ConditionalExpression ||
             this.start is ShortCircuitOperator) && this.getProperty(Properties.BRANCH) == false ||
             (this.start is IfStatement &&
-                (this.start as IfStatement)
-                    .thenStatement
-                    .allChildren<ReturnStatement>()
-                    .isNotEmpty())
+                !(this.start as IfStatement).allBranchesFromMyThenBranchGoThrough(
+                    (this.start as IfStatement).nextUnconditionalNode
+                ))
+}
+
+private val IfStatement.nextUnconditionalNode: Node?
+    get() = this.nextEOGEdges.firstOrNull { it.getProperty(Properties.BRANCH) == null }?.end
+
+private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
+    if (this.thenStatement.allChildren<ReturnStatement>().isNotEmpty()) return false
+
+    if (node == null) return true
+
+    val alreadySeen = mutableSetOf<Node>()
+    val nextNodes =
+        this.nextEOGEdges
+            .filter { it.getProperty(Properties.BRANCH) == true }
+            .map { it.end }
+            .toMutableList()
+
+    while (nextNodes.isNotEmpty()) {
+        val nextNode = nextNodes.removeFirst()
+        if (nextNode == node) {
+            continue
+        } else if (nextNode.nextEOG.isEmpty()) {
+            // We're at the end of the EOG but didn't see "node" on this path. Fail
+            return false
+        }
+        alreadySeen.add(nextNode)
+        nextNodes.addAll(nextNode.nextEOG.filter { it !in alreadySeen })
+    }
+
+    return true
 }
 
 /**
