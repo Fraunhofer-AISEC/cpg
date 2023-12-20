@@ -68,6 +68,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
     private fun handle(functionDeclaration: FunctionDeclaration) {
         val max = passConfig<ControlFlowSensitiveDFGPass.Configuration>()?.maxComplexity
         val c = functionDeclaration.body?.cyclomaticComplexity ?: 0
+        // TODO There's an issue with functions containing GotoStatements somehow. Not sure why/when
+        // it occurs.
         if (
             max != null && c > max ||
                 functionDeclaration.body.allChildren<GotoStatement>().isNotEmpty()
@@ -77,7 +79,6 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             )
             return
         }
-        log.info("Analyzing function ${functionDeclaration.name} with complexity $c")
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -123,8 +124,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
                     }
                 }
             }
+            val alreadySeen = mutableSetOf<Pair<Node, Set<Node>>>()
+
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
+                alreadySeen.add(Pair(k, v))
                 if (
                     k != functionDeclaration &&
                         v.containsAll(branchingNodeConditionals[k] ?: setOf())
@@ -143,10 +147,16 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
                             val entry = finalDominators.first { it.first == newK }
                             finalDominators.remove(entry)
                             val update = entry.second.addAll(newV)
-                            if (update) dominatorsList.add(entry) else finalDominators.add(entry)
-                        } else {
+                            if (update && entry !in alreadySeen) dominatorsList.add(entry)
+                            else finalDominators.add(entry)
+                        } else if (Pair(newK, newV) !in alreadySeen) {
                             // We don't have an entry yet => add a new one
-                            dominatorsList.add(Pair(newK, newV.toMutableSet()))
+                            val newEntry = Pair(newK, newV.toMutableSet())
+                            dominatorsList.add(newEntry)
+                        } else {
+                            // Not sure what to do, there seems to be a cycle but this entry is not
+                            // in finalDominators for some reason. Add to finalDominators now.
+                            finalDominators.add(Pair(newK, newV.toMutableSet()))
                         }
                     }
                 } else {
@@ -248,7 +258,8 @@ fun handleEdge(
             )
         val map = IdentityHashMap<Node, IdentitySet<Node>>()
         map[currentEdge.start] = identitySetOf(currentEdge.end)
-        val newPath = PrevEOGLattice(map).lub(PrevEOGLattice(prevPathLattice)) as PrevEOGLattice
+        var newPath = PrevEOGLattice(map)
+        currentState[currentEdge.start]?.let { newPath = newPath.lub(it) as PrevEOGLattice }
         currentState.push(currentEdge.end, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
@@ -316,9 +327,7 @@ class PrevEOGLattice(override val elements: IdentityHashMap<Node, IdentitySet<No
         ) {
             if (
                 this.elements.keys.size > (other.elements.keys.size) ||
-                    this.elements.any { (k, v) ->
-                        v.size > (other.elements[k] ?: identitySetOf()).size
-                    }
+                    this.elements.any { (k, v) -> v.size > (other.elements[k]?.size ?: 0) }
             )
                 1
             else 0
