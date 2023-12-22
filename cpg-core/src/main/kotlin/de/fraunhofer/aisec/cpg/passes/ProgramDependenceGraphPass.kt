@@ -97,8 +97,11 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
 
     private fun allEOGsFromToFlowThrough(from: Node, to: Node, through: Node): Boolean {
         val worklist = mutableListOf(from)
+        val alreadySeenNodes = mutableSetOf<Node>()
+
         while (worklist.isNotEmpty()) {
             val currentStatus = worklist.removeFirst()
+            alreadySeenNodes.add(currentStatus)
             val nextEOG = currentStatus.nextEOG.filter { it != through }
             if (nextEOG.isEmpty()) {
                 // This path always flows through "through" or has not seen "to", so we're good
@@ -108,13 +111,14 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                 // path.
                 return false
             } else {
-                if (nextEOG.size == 1) {
+                if (nextEOG.size == 1 && nextEOG.single() !in alreadySeenNodes) {
                     worklist.add(nextEOG.single())
-                } else if (nextEOG.isEmpty()) {
-                    // Nothing to do. This path doesn't lead us to "to".
-                    continue
                 } else {
-                    worklist.addAll(nextEOG)
+                    for (next in nextEOG) {
+                        if (next !in alreadySeenNodes) {
+                            worklist.add(next)
+                        }
+                    }
                 }
             }
         }
