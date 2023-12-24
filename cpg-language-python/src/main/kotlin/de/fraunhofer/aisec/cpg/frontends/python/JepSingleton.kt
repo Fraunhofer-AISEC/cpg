@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import java.io.File
-import java.lang.RuntimeException
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.FileSystems
 import jep.JepConfig
 import jep.MainInterpreter
 import jep.SharedInterpreter
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.div
 import kotlin.io.path.exists
 
 /**
@@ -39,82 +38,37 @@ import kotlin.io.path.exists
  */
 object JepSingleton {
     init {
-        // TODO logging
+        // TODO: add proper logging
         val config = JepConfig()
-
         config.redirectStdErr(System.err)
         config.redirectStdout(System.out)
 
-        System.getenv("CPG_JEP_LIBRARY")?.let {
-            val library = File(it)
-            if (library.exists()) {
-                MainInterpreter.setJepLibraryPath(library.path)
-                config.addIncludePaths(library.path)
-            } else {
-                throw RuntimeException(
-                    "CPG_JEP_LIBRARY environment variable defined as '${library}' but it does not exist."
-                )
-            }
-        }
+        // To understand how JEP is installed under the hood, check `installJep` task in
+        // build.gradle.kts. But the main idea is that it is always copied to `build/jep` directory.
+        val jepLocation = FileSystems.getDefault().getPath("build", "jep")
+        // Based on the host OS we will determine the extension for the JEP binary
+        val os = System.getProperty("os.name")
+        val jepBinaryPath =
+            jepLocation /
+                ("libjep." +
+                    when {
+                        os.contains("Mac") -> "jnilib"
+                        os.contains("Linux") -> "so"
+                        os.contains("Windows") -> "dll"
+                        else ->
+                            throw IllegalStateException(
+                                "Cannot setup JEP for this operating system: [$os]"
+                            )
+                    })
+        if (jepBinaryPath.exists()) {
+            // Jep's configuration must be set before the first instance is created. Later
+            // calls to setJepLibraryPath and co result in failures.
+            MainInterpreter.setJepLibraryPath(jepBinaryPath.absolutePathString())
 
-        val virtualEnvName = System.getenv("CPG_PYTHON_VIRTUALENV") ?: "cpg"
-        val virtualEnvPath =
-            Paths.get(System.getProperty("user.home"), ".virtualenvs", virtualEnvName)
-        val pythonVersions = listOf("3.9", "3.10", "3.11", "3.12", "3.13")
-        val wellKnownPaths = mutableListOf<Path>()
-        pythonVersions.forEach { version ->
-            // Linux
-            wellKnownPaths.add(
-                Paths.get(
-                    "$virtualEnvPath",
-                    "lib",
-                    "python${version}",
-                    "site-packages",
-                    "jep",
-                    "libjep.so"
-                )
-            )
-            // Mac OS
-            wellKnownPaths.add(
-                Paths.get(
-                    "$virtualEnvPath",
-                    "lib",
-                    "python${version}",
-                    "site-packages",
-                    "jep",
-                    "libjep.jnilib"
-                )
-            )
-            wellKnownPaths.add(
-                Paths.get(
-                    "$virtualEnvPath",
-                    "lib",
-                    "python${version}",
-                    "site-packages",
-                    "jep",
-                    "libjep.dll"
-                )
-            )
-        }
-        // try system-wide paths, too
-        // TODO: is this still needed?
-        wellKnownPaths.add(Paths.get("/", "usr", "lib", "libjep.so"))
-        wellKnownPaths.add(Paths.get("/", "Library", "Java", "Extensions", "libjep.jnilib"))
-
-        wellKnownPaths.forEach {
-            if (it.exists()) {
-                // Jep's configuration must be set before the first instance is created. Later
-                // calls to setJepLibraryPath and co result in failures.
-                MainInterpreter.setJepLibraryPath(it.toString())
-
-                // also add include path so that Python can find jep in case of virtual environment
-                // fixes: jep.JepException: <class 'ModuleNotFoundError'>: No module named 'jep'
-                if (
-                    it.parent.fileName.toString() == "jep" &&
-                        (Paths.get(it.parent.toString(), "__init__.py").exists())
-                ) {
-                    config.addIncludePaths(it.parent.parent.toString())
-                }
+            // also add include path so that Python can find jep in case of virtual environment
+            // fixes: jep.JepException: <class 'ModuleNotFoundError'>: No module named 'jep'
+            if ((jepLocation / "__init__.py").exists()) {
+                config.addIncludePaths(jepLocation.parent.absolutePathString())
             }
         }
 
