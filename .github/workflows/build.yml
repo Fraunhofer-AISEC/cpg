@@ -92,7 +92,9 @@ jobs:
         run: |
           pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
           if [ -d "/opt/hostedtoolcache/Python" ]; then
-            find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
+            export CPG_JEP_LIBRARY=$(dirname "$(find /opt/hostedtoolcache/Python/ -name libjep.so)")
+            echo "CPG_JEP_LIBRARY=$CPG_JEP_LIBRARY" >> $GITHUB_ENV
+            echo "JEP will be used from $CPG_JEP_LIBRARY"
           fi
       - uses: actions/download-artifact@v4
         with:
