@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -97,7 +98,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
 
     private fun allEOGsFromToFlowThrough(from: Node, to: Node, through: Node): Boolean {
         val worklist = mutableListOf(from)
-        val alreadySeenNodes = mutableSetOf<Node>()
+        val alreadySeenNodes = identitySetOf<Node>()
 
         while (worklist.isNotEmpty()) {
             val currentStatus = worklist.removeFirst()
