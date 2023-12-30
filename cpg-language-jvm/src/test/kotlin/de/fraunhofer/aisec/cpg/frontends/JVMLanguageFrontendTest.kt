@@ -31,6 +31,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class JVMLanguageFrontendTest {
     @Test
@@ -62,5 +63,16 @@ class JVMLanguageFrontendTest {
                 "${it.name} should not be resolved to an inferred node"
             )
         }
+
+        val main = helloWorld.methods["main"]
+        assertNotNull(main)
+        assertTrue(main.isStatic)
+
+        val param0 = main.refs["@parameter0"]
+        assertNotNull(param0)
+
+        val refersTo = param0.refersTo
+        assertNotNull(refersTo)
+        assertFalse(refersTo.isInferred)
     }
 }

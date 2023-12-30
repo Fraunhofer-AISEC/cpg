@@ -81,6 +81,12 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 .implicit("@this")
         frontend.scopeManager.addDeclaration(method.receiver)
 
+        // Add method parameters
+        for ((index, type) in sootMethod.parameterTypes.withIndex()) {
+            val param = newParameterDeclaration("@parameter${index}", frontend.typeOf(type))
+            frontend.scopeManager.addDeclaration(param)
+        }
+
         // Handle method body
         method.body = frontend.statementHandler.handle(sootMethod.body)
 

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.expr.JVirtualInvokeExpr
+import sootup.core.jimple.common.ref.JParameterRef
 import sootup.core.jimple.common.ref.JStaticFieldRef
 import sootup.core.jimple.common.ref.JThisRef
 
@@ -42,6 +43,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     init {
         map.put(Local::class.java) { handleLocal(it as Local) }
         map.put(JThisRef::class.java) { handleThisRef(it as JThisRef) }
+        map.put(JParameterRef::class.java) { handleParameterRef(it as JParameterRef) }
         map.put(JStaticFieldRef::class.java) { handleStaticFieldRef(it as JStaticFieldRef) }
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
@@ -64,6 +66,17 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleThisRef(thisRef: JThisRef): Reference {
         val ref = newReference("@this", frontend.typeOf(thisRef.type), rawNode = thisRef)
+
+        return ref
+    }
+
+    private fun handleParameterRef(parameterRef: JParameterRef): Reference {
+        val ref =
+            newReference(
+                "@parameter${parameterRef.index}",
+                frontend.typeOf(parameterRef.type),
+                rawNode = parameterRef
+            )
 
         return ref
     }
