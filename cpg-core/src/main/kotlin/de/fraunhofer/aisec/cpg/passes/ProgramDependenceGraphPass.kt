@@ -59,8 +59,8 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                     t.prevDFGEdges.forEach { prevDfgEdge ->
                         val prevDfgNode = prevDfgEdge.start
                         // The prevDfgNode also flows into the condition. This is suspicious because
-                        // if the condition is
-                        // on each path between prevDfgNode and t, the condition is more relevant.
+                        // if the condition is on each path between prevDfgNode and t, the condition
+                        // is more relevant.
                         if (prevDfgNode is Reference || prevDfgNode is ValueDeclaration) {
                             val cdgConditionChildren =
                                 t.prevCDG.flatMap {

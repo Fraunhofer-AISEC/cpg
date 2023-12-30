@@ -30,13 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -45,13 +44,19 @@ import java.util.*
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
-open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+
+    class Configuration(
+        /**
+         * This specifies the maximum complexity (as calculated per
+         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
+         * considered.
+         */
+        var maxComplexity: Int? = null
+    ) : PassConfiguration()
+
     override fun cleanup() {
         // Nothing to do
-    }
-
-    override fun accept(tu: TranslationUnitDeclaration) {
-        tu.functions.forEach(::handle)
     }
 
     /**
@@ -65,12 +70,17 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
      *    parent node and the path(s) through which the [BranchingNode] node is reachable. 3.c)
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
-    private fun handle(functionDeclaration: FunctionDeclaration) {
-        val max = passConfig<ControlFlowSensitiveDFGPass.Configuration>()?.maxComplexity
-        val c = functionDeclaration.body?.cyclomaticComplexity ?: 0
+    override fun accept(startNode: Node) {
+        // For now, we only execute this for function declarations, we will support all EOG starters
+        // in the future.
+        if (startNode !is FunctionDeclaration) {
+            return
+        }
+        val max = passConfig<Configuration>()?.maxComplexity
+        val c = startNode.body?.cyclomaticComplexity ?: 0
         if (max != null && c > max) {
             log.info(
-                "Ignoring function ${functionDeclaration.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                "Ignoring function ${startNode.name} because its complexity (${c}) is greater than the configured maximum (${max})"
             )
             return
         }
@@ -80,12 +90,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
         // the node, we use the dominator's state instead (i.e., we move the node one layer upwards)
         val startState = PrevEOGState()
         val identityMap = IdentityHashMap<Node, IdentitySet<Node>>()
-        identityMap[functionDeclaration] = identitySetOf(functionDeclaration)
-        startState.push(functionDeclaration, PrevEOGLattice(identityMap))
-        val finalState =
-            iterateEOG(functionDeclaration.nextEOGEdges, startState, ::handleEdge) ?: return
+        identityMap[startNode] = identitySetOf(startNode)
+        startState.push(startNode, PrevEOGLattice(identityMap))
+        val finalState = iterateEOG(startNode.nextEOGEdges, startState, ::handleEdge) ?: return
 
-        val branchingNodeConditionals = getBranchingNodeConditions(functionDeclaration)
+        val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
@@ -124,10 +133,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : TranslationUnit
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
                 alreadySeen.add(Pair(k, v))
-                if (
-                    k != functionDeclaration &&
-                        v.containsAll(branchingNodeConditionals[k] ?: setOf())
-                ) {
+                if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
                     // We are reachable from all the branches of a branching node. Add this parent
                     // to the worklist or update an existing entry. Also consider already existing
                     // entries in finalDominators list and update it (if necessary)
