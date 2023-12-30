@@ -25,26 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.graph.newAssignExpression
-import de.fraunhofer.aisec.cpg.graph.newBlock
-import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import sootup.core.jimple.basic.Local
-import sootup.core.jimple.common.stmt.JAssignStmt
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import sootup.core.jimple.common.expr.JVirtualInvokeExpr
+import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
     Handler<Statement, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
     init {
         map.put(Body::class.java) { handleBody(it as Body) }
-        map.put(Local::class.java) {handleLocal(it as Local)}
-        map.put(JAssignStmt::class.java) { handleAssignStmt(it as JAssignStmt<*, *>) }
-
+        map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt<*, *>) }
+        map.put(JIdentityStmt::class.java) { handleAbstractDefinitionStmt(it as JIdentityStmt<*>) }
+        map.put(JInvokeStmt::class.java) { handleInvokeStmt(it as JInvokeStmt) }
+        map.put(JReturnVoidStmt::class.java) { handleReturnVoidStmt(it as JReturnVoidStmt) }
     }
 
     private fun handleBody(body: Body): Block {
@@ -58,6 +54,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 // We need to wrap them into a declaration statement
                 val stmt = newDeclarationStatement(rawNode = local)
                 stmt.addToPropertyEdgeDeclaration(decl)
+                frontend.scopeManager.addDeclaration(decl)
+                block += stmt
             }
         }
 
@@ -69,16 +67,28 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return block
     }
 
-    private fun handleAssignStmt(assignStmt: JAssignStmt<*, *>): AssignExpression {
-        val assign = newAssignExpression("=", rawNode = assignStmt)
-        assign.lhs = listOf(handle(assignStmt.leftOp))
+    private fun handleAbstractDefinitionStmt(
+        defStmt: AbstractDefinitionStmt<*, *>
+    ): AssignExpression {
+        val assign = newAssignExpression("=", rawNode = defStmt)
+        assign.lhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp))
+        assign.rhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp))
 
         return assign
     }
 
-    private fun handleLocal(local: Local): Reference {
-        val ref = newReference(local.name, rawNode = local)
+    private fun handleInvokeStmt(invokeStmt: JInvokeStmt): Expression? {
+        // For now, we only parse virtualinvoke (more or less) correctly
+        if (invokeStmt.invokeExpr is JVirtualInvokeExpr) {
+            return frontend.expressionHandler.handle(invokeStmt.invokeExpr)
+        }
 
-        return ref
+        return newProblemExpression("cannot parse invoke stmt yet")
+    }
+
+    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt): ReturnStatement {
+        val stmt = newReturnStatement(rawNode = returnStmt)
+
+        return stmt
     }
 }

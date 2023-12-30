@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.*
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class JVMLanguageFrontendTest {
@@ -43,5 +45,22 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
+
+        val helloWorld = tu.records["HelloWorld"]
+        assertNotNull(helloWorld)
+
+        val constructor = helloWorld.constructors.firstOrNull()
+        assertNotNull(constructor)
+
+        // All references should be resolved
+        val refs = constructor.refs
+        refs.forEach {
+            val refersTo = it.refersTo
+            assertNotNull(refersTo, "${it.name} could not be resolved")
+            assertFalse(
+                refersTo.isInferred,
+                "${it.name} should not be resolved to an inferred node"
+            )
+        }
     }
 }

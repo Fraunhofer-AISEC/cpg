@@ -25,10 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import sootup.core.jimple.basic.Local
 import sootup.core.model.SootClass
 import sootup.core.model.SootMethod
@@ -60,16 +58,28 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleMethod(sootMethod: SootMethod): MethodDeclaration {
+        val record = frontend.scopeManager.currentRecord
+
         val method =
-            newMethodDeclaration(
-                sootMethod.name,
-                sootMethod.isStatic,
-                frontend.scopeManager.currentRecord,
-                rawNode = sootMethod,
-            )
+            if (sootMethod.name == "<init>") {
+                newConstructorDeclaration(record?.name ?: "", record, rawNode = sootMethod)
+            } else {
+                newMethodDeclaration(
+                    sootMethod.name,
+                    sootMethod.isStatic,
+                    frontend.scopeManager.currentRecord,
+                    rawNode = sootMethod,
+                )
+            }
 
         // Enter method scope
         frontend.scopeManager.enterScope(method)
+
+        // Add "@this" as the receiver
+        method.receiver =
+            newVariableDeclaration("@this", method.recordDeclaration?.toType() ?: unknownType())
+                .implicit("@this")
+        frontend.scopeManager.addDeclaration(method.receiver)
 
         // Handle method body
         method.body = frontend.statementHandler.handle(sootMethod.body)

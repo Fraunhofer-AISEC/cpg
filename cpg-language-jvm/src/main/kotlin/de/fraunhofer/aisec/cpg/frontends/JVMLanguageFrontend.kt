@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.core.inputlocation.AnalysisInputLocation
+import sootup.core.types.ArrayType
 import sootup.java.core.JavaSootClass
 import sootup.jimple.parser.JimpleAnalysisInputLocation
 import sootup.jimple.parser.JimpleProject
@@ -47,6 +49,7 @@ class JVMLanguageFrontend(
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
+    val expressionHandler = ExpressionHandler(this)
 
     override fun parse(file: File): TranslationUnitDeclaration {
         val inputLocation: AnalysisInputLocation<JavaSootClass> =
@@ -78,9 +81,16 @@ class JVMLanguageFrontend(
     }
 
     override fun typeOf(type: SootType): Type {
-        // TODO(oxisto): primitive types
-        val out = objectType(type.toString())
+        return when (type) {
+            is ArrayType -> {
+                typeOf(type.baseType).array()
+            }
+            else -> {
+                // TODO(oxisto): primitive types
+                val out = objectType(type.toString())
 
-        return out
+                out
+            }
+        }
     }
 }
