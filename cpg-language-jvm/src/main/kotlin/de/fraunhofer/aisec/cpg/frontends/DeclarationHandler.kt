@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.frontends
+
+import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import sootup.core.jimple.basic.Local
+import sootup.core.model.SootClass
+import sootup.core.model.SootMethod
+
+class DeclarationHandler(frontend: JVMLanguageFrontend) :
+    Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
+    init {
+        map.put(SootClass::class.java) { handleClass(it as SootClass<*>) }
+        map.put(SootMethod::class.java) { handleMethod(it as SootMethod) }
+        map.put(Local::class.java) { handleLocal(it as Local) }
+    }
+
+    private fun handleClass(sootClass: SootClass<*>): RecordDeclaration {
+        val record = newRecordDeclaration(sootClass.getName(), "class", rawNode = sootClass)
+
+        // Enter the class scope
+        frontend.scopeManager.enterScope(record)
+
+        // Loop through all methods
+        for (sootMethod in sootClass.getMethods()) {
+            val method = handle(sootMethod)
+            frontend.scopeManager.addDeclaration(method)
+        }
+
+        // Leave the class scope
+        frontend.scopeManager.leaveScope(record)
+
+        return record
+    }
+
+    private fun handleMethod(sootMethod: SootMethod): MethodDeclaration {
+        val method =
+            newMethodDeclaration(
+                sootMethod.name,
+                sootMethod.isStatic,
+                frontend.scopeManager.currentRecord,
+                rawNode = sootMethod,
+            )
+
+        // Enter method scope
+        frontend.scopeManager.enterScope(method)
+
+        // Handle method body
+        method.body = frontend.statementHandler.handle(sootMethod.body)
+
+        // Leave method scope
+        frontend.scopeManager.leaveScope(method)
+
+        return method
+    }
+
+    private fun handleLocal(local: Local): VariableDeclaration {
+        return newVariableDeclaration(local.name, frontend.typeOf(local.type), rawNode = local)
+    }
+}

@@ -150,3 +150,9 @@ val enableRubyFrontend: Boolean by extra {
     enableRubyFrontend.toBoolean()
 }
 project.logger.lifecycle("Ruby frontend is ${if (enableRubyFrontend) "enabled" else "disabled"}")
+
+val enableJVMFrontend: Boolean by extra {
+    val enableJVMFrontend: String? by project
+    enableJVMFrontend.toBoolean()
+}
+project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")

@@ -31,6 +31,9 @@ repositories {
             artifact("/[organisation].[module]_[revision].[ext]")
         }
     }
+
+    // Needed until new release of soot-up is released
+    maven("https://maven.scijava.org/content/repositories/public/")
 }
 
 //
