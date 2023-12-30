@@ -62,7 +62,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         val method =
             if (sootMethod.name == "<init>") {
-                newConstructorDeclaration(record?.name ?: "", record, rawNode = sootMethod)
+                newConstructorDeclaration(sootMethod.name, record, rawNode = sootMethod)
             } else {
                 newMethodDeclaration(
                     sootMethod.name,

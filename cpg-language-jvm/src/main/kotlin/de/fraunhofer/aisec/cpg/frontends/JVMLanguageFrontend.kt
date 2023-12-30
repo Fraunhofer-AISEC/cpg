@@ -34,9 +34,15 @@ import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import kotlin.io.path.name
 import sootup.core.inputlocation.AnalysisInputLocation
 import sootup.core.types.ArrayType
+import sootup.core.util.printer.JimplePrinter
+import sootup.core.views.AbstractView
+import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
+import sootup.java.core.JavaProject
 import sootup.java.core.JavaSootClass
+import sootup.java.core.language.JavaLanguage
 import sootup.jimple.parser.JimpleAnalysisInputLocation
 import sootup.jimple.parser.JimpleProject
 
@@ -52,10 +58,19 @@ class JVMLanguageFrontend(
     val expressionHandler = ExpressionHandler(this)
 
     override fun parse(file: File): TranslationUnitDeclaration {
-        val inputLocation: AnalysisInputLocation<JavaSootClass> =
-            JimpleAnalysisInputLocation(file.toPath().parent)
-        val project = JimpleProject(inputLocation)
-        val view = project.createView()
+        val view: AbstractView<*> =
+            if (file.extension == "jimple") {
+                val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                    JimpleAnalysisInputLocation(file.toPath().parent)
+                val project = JimpleProject(inputLocation)
+                project.createView()
+            } else {
+                val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                    JavaClassPathAnalysisInputLocation(file.toPath().parent.toString())
+                val language = JavaLanguage(8)
+                val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
+                project.createView()
+            }
 
         val tu = newTranslationUnitDeclaration(file.name)
         scopeManager.resetToGlobal(tu)

@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
 
 class JVMLanguageFrontendTest {
     @Test
-    fun testHello() {
+    fun testHelloJimple() {
         val topLevel = Path.of("src", "test", "resources", "jimple", "helloworld")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -74,5 +74,25 @@ class JVMLanguageFrontendTest {
         val refersTo = param0.refersTo
         assertNotNull(refersTo)
         assertFalse(refersTo.isInferred)
+    }
+
+    @Test
+    fun testMethodsClass() {
+        val topLevel = Path.of("src", "test", "resources", "class", "methods")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Methods.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+
+        val methods = tu.records["Methods"]
+        assertNotNull(methods)
+
+        val add = methods.methods["add"]
+        assertNotNull(add)
     }
 }

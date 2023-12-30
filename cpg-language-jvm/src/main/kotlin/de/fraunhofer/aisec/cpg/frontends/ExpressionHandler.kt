@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
+import sootup.core.jimple.common.expr.JAddExpr
 import sootup.core.jimple.common.expr.JVirtualInvokeExpr
 import sootup.core.jimple.common.ref.JParameterRef
 import sootup.core.jimple.common.ref.JStaticFieldRef
@@ -48,6 +49,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
         }
+        map.put(JAddExpr::class.java) { handleAddExpr(it as JAddExpr) }
     }
 
     private fun handleLocal(local: Local): Expression {
@@ -117,5 +119,13 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         }
 
         return call
+    }
+
+    fun handleAddExpr(addExpr: JAddExpr): BinaryOperator {
+        val op = newBinaryOperator("+", rawNode = addExpr)
+        handle(addExpr.op1)?.let { op.lhs = it }
+        handle(addExpr.op2)?.let { op.rhs = it }
+
+        return op
     }
 }
