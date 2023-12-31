@@ -30,10 +30,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.expr.JAddExpr
+import sootup.core.jimple.common.expr.JNewExpr
+import sootup.core.jimple.common.expr.JSpecialInvokeExpr
 import sootup.core.jimple.common.expr.JVirtualInvokeExpr
 import sootup.core.jimple.common.ref.JParameterRef
 import sootup.core.jimple.common.ref.JStaticFieldRef
 import sootup.core.jimple.common.ref.JThisRef
+import sootup.java.core.jimple.basic.JavaLocal
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
     Handler<Expression, Value, JVMLanguageFrontend>(
@@ -43,13 +46,16 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     init {
         map.put(Local::class.java) { handleLocal(it as Local) }
+        map.put(JavaLocal::class.java) { handleLocal(it as Local) }
         map.put(JThisRef::class.java) { handleThisRef(it as JThisRef) }
         map.put(JParameterRef::class.java) { handleParameterRef(it as JParameterRef) }
         map.put(JStaticFieldRef::class.java) { handleStaticFieldRef(it as JStaticFieldRef) }
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
         }
+        map.put(JSpecialInvokeExpr::class.java) { handleSpecialInvoke(it as JSpecialInvokeExpr) }
         map.put(JAddExpr::class.java) { handleAddExpr(it as JAddExpr) }
+        map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
     }
 
     private fun handleLocal(local: Local): Expression {
@@ -121,11 +127,36 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return call
     }
 
+    fun handleSpecialInvoke(specialInvokeExpr: JSpecialInvokeExpr): Expression {
+        // This is probably a constructor call or another corner case
+        return if (specialInvokeExpr.methodSignature.name == "<init>") {
+            val type = frontend.typeOf(specialInvokeExpr.methodSignature.declClassType)
+            val construct = newConstructExpression(rawNode = specialInvokeExpr)
+            construct.callee = newReference(Name("<init>", type.name))
+            construct.type = type
+
+            construct
+        } else {
+            newProblemExpression("specialinvoke with something unknown")
+        }
+    }
+
     fun handleAddExpr(addExpr: JAddExpr): BinaryOperator {
         val op = newBinaryOperator("+", rawNode = addExpr)
         handle(addExpr.op1)?.let { op.lhs = it }
         handle(addExpr.op2)?.let { op.rhs = it }
 
         return op
+    }
+
+    fun handleNewExpr(newExpr: JNewExpr): NewExpression {
+        val type = frontend.typeOf(newExpr.type)
+        val new = newNewExpression(type, rawNode = newExpr)
+
+        // In the jimple IR, the "new" and the constructor calls are split into two expressions.
+        // This will only handle the "new" expression, a later call to "invokespecial" will handle
+        // the constructor call.
+
+        return new
     }
 }

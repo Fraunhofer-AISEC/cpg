@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import sootup.core.jimple.common.expr.JVirtualInvokeExpr
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 
@@ -78,12 +77,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleInvokeStmt(invokeStmt: JInvokeStmt): Expression? {
-        // For now, we only parse virtualinvoke (more or less) correctly
-        if (invokeStmt.invokeExpr is JVirtualInvokeExpr) {
-            return frontend.expressionHandler.handle(invokeStmt.invokeExpr)
-        }
-
-        return newProblemExpression("cannot parse invoke stmt yet")
+        return frontend.expressionHandler.handle(invokeStmt.invokeExpr)
     }
 
     private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt): ReturnStatement {

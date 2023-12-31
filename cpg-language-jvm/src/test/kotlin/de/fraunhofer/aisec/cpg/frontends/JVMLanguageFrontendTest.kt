@@ -78,10 +78,12 @@ class JVMLanguageFrontendTest {
 
     @Test
     fun testMethodsClass() {
+        // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "class", "methods")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("mypackage/Methods.class").toFile()),
+                // We just need to specify one file to trigger the class byte loader
+                listOf(topLevel.resolve("mypackage/Adder.class").toFile()),
                 topLevel,
                 true
             ) {
@@ -92,10 +94,17 @@ class JVMLanguageFrontendTest {
         val pkg = tu.namespaces["mypackage"]
         assertNotNull(pkg)
 
-        val methods = pkg.records["Methods"]
-        assertNotNull(methods)
+        val main = pkg.methods["Main.main"]
+        assertNotNull(main)
 
-        val add = methods.methods["add"]
+        // $stack3 contains our adder
+        val stack3 = main.variables["\$stack3"]
+        assertNotNull(stack3)
+
+        val adder = pkg.records["Adder"]
+        assertNotNull(adder)
+
+        val add = adder.methods["add"]
         assertNotNull(add)
     }
 }

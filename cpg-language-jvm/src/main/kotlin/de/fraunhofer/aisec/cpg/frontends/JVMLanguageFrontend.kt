@@ -34,7 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.core.inputlocation.AnalysisInputLocation
+import sootup.core.model.SootMethod
 import sootup.core.types.ArrayType
+import sootup.core.types.UnknownType
 import sootup.core.views.AbstractView
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.JavaProject
@@ -112,12 +114,18 @@ class JVMLanguageFrontend(
     }
 
     override fun codeOf(astNode: Any): String? {
+        if (astNode is SootMethod) {
+            return astNode.body.toString()
+        }
         // We do not really have a source anyway. maybe in jimple?
         return ""
     }
 
     override fun typeOf(type: SootType): Type {
         return when (type) {
+            is UnknownType -> {
+                unknownType()
+            }
             is ArrayType -> {
                 typeOf(type.baseType).array()
             }
