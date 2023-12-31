@@ -81,7 +81,7 @@ class JVMLanguageFrontendTest {
         val topLevel = Path.of("src", "test", "resources", "class", "methods")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("Methods.class").toFile()),
+                listOf(topLevel.resolve("mypackage/Methods.class").toFile()),
                 topLevel,
                 true
             ) {
@@ -89,7 +89,10 @@ class JVMLanguageFrontendTest {
             }
         assertNotNull(tu)
 
-        val methods = tu.records["Methods"]
+        val pkg = tu.namespaces["mypackage"]
+        assertNotNull(pkg)
+
+        val methods = pkg.records["Methods"]
         assertNotNull(methods)
 
         val add = methods.methods["add"]

@@ -25,19 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.array
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import kotlin.io.path.name
 import sootup.core.inputlocation.AnalysisInputLocation
 import sootup.core.types.ArrayType
-import sootup.core.util.printer.JimplePrinter
 import sootup.core.views.AbstractView
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.JavaProject
@@ -57,27 +54,51 @@ class JVMLanguageFrontend(
     val statementHandler = StatementHandler(this)
     val expressionHandler = ExpressionHandler(this)
 
+    /**
+     * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
+     * But in the CPG we need to specify one file. In this case, we take the
+     * [TranslationConfiguration.topLevel] and hand it over to soot, which parses all appropriate
+     * files within this folder/classpath. This means that the returned [TranslationUnitDeclaration]
+     * will contain not just the content of one file but the whole directory.
+     */
     override fun parse(file: File): TranslationUnitDeclaration {
         val view: AbstractView<*> =
             if (file.extension == "jimple") {
                 val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JimpleAnalysisInputLocation(file.toPath().parent)
+                    JimpleAnalysisInputLocation(ctx.config.topLevel!!.toPath())
                 val project = JimpleProject(inputLocation)
                 project.createView()
             } else {
                 val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JavaClassPathAnalysisInputLocation(file.toPath().parent.toString())
+                    JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
                 val language = JavaLanguage(8)
                 val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
                 project.createView()
             }
 
-        val tu = newTranslationUnitDeclaration(file.name)
+        // This contains the whole directory
+        val tu = newTranslationUnitDeclaration(file.parent)
         scopeManager.resetToGlobal(tu)
 
+        val packages = mutableMapOf<String, NamespaceDeclaration>()
+
         for (sootClass in view.classes) {
+            // Create an appropriate namespace, if it does not already exist
+            val pkg =
+                packages.computeIfAbsent(sootClass.getType().packageName.packageName) {
+                    val pkg = newNamespaceDeclaration(it)
+                    scopeManager.addDeclaration(pkg)
+                    pkg
+                }
+
+            // Enter namespace scope
+            scopeManager.enterScope(pkg)
+
             val decl = declarationHandler.handle(sootClass)
             scopeManager.addDeclaration(decl)
+
+            // Leave namespace scope
+            scopeManager.leaveScope(pkg)
         }
 
         return tu
