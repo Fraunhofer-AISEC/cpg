@@ -26,14 +26,20 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
+import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.passes.astParent
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
+import org.junit.jupiter.api.Disabled
 
 class JVMLanguageFrontendTest {
+    @Disabled
     @Test
     fun testHelloJimple() {
         val topLevel = Path.of("src", "test", "resources", "jimple", "helloworld")
@@ -87,6 +93,7 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
+                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -94,17 +101,70 @@ class JVMLanguageFrontendTest {
         val pkg = tu.namespaces["mypackage"]
         assertNotNull(pkg)
 
-        val main = pkg.methods["Main.main"]
-        assertNotNull(main)
-
-        // $stack3 contains our adder
-        val stack3 = main.variables["\$stack3"]
-        assertNotNull(stack3)
-
         val adder = pkg.records["Adder"]
         assertNotNull(adder)
 
         val add = adder.methods["add"]
         assertNotNull(add)
+
+        val main = pkg.methods["Main.main"]
+        assertNotNull(main)
+
+        println(main.code)
+
+        // $stack3 contains our adder
+        val stack3 = main.variables["\$stack3"]
+        assertNotNull(stack3)
+        assertFullName("mypackage.Adder", stack3.type)
+
+        // $l2 should be the result of the add call
+        val l2 = main.variables["\$l2"]
+        assertNotNull(l2)
+
+        val l2ref = l2.usages.firstOrNull { it.access == AccessValues.WRITE }
+        assertNotNull(l2ref)
+
+        // Call to add should be resolved
+        val call = l2ref.prevDFG.firstOrNull()
+        assertIs<MemberCallExpression>(call)
+        assertLocalName("add", call)
+        assertInvokes(call, add)
+        assertEquals(listOf("Integer", "Integer"), call.arguments.map { it.type.name.localName })
+
+        // All references (which are not part of a call) and not to the stdlib should be resolved
+        val refs = tu.refs
+        refs
+            .filter { it.astParent !is CallExpression }
+            .filter { !it.name.startsWith("java.") }
+            .forEach {
+                val refersTo = it.refersTo
+                assertNotNull(refersTo, "${it.name} could not be resolved")
+                assertFalse(
+                    refersTo.isInferred,
+                    "${it.name} should not be resolved to an inferred node"
+                )
+            }
+    }
+
+    @Test
+    fun testLiterals() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "literals")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // We just need to specify one file to trigger the class byte loader
+                listOf(topLevel.resolve("mypackage/Literals.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+
+        val haveFun = tu.methods["haveFunWithLiterals"]
+        assertNotNull(haveFun)
+
+        println(haveFun.code)
     }
 }

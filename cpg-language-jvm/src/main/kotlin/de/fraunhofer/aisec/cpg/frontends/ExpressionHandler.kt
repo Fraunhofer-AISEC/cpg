@@ -27,15 +27,23 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
+import sootup.core.jimple.common.constant.DoubleConstant
+import sootup.core.jimple.common.constant.FloatConstant
+import sootup.core.jimple.common.constant.IntConstant
+import sootup.core.jimple.common.constant.LongConstant
+import sootup.core.jimple.common.constant.StringConstant
 import sootup.core.jimple.common.expr.JAddExpr
 import sootup.core.jimple.common.expr.JNewExpr
 import sootup.core.jimple.common.expr.JSpecialInvokeExpr
+import sootup.core.jimple.common.expr.JStaticInvokeExpr
 import sootup.core.jimple.common.expr.JVirtualInvokeExpr
 import sootup.core.jimple.common.ref.JParameterRef
 import sootup.core.jimple.common.ref.JStaticFieldRef
 import sootup.core.jimple.common.ref.JThisRef
+import sootup.core.signatures.MethodSignature
 import sootup.java.core.jimple.basic.JavaLocal
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
@@ -54,8 +62,14 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
         }
         map.put(JSpecialInvokeExpr::class.java) { handleSpecialInvoke(it as JSpecialInvokeExpr) }
+        map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
         map.put(JAddExpr::class.java) { handleAddExpr(it as JAddExpr) }
         map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
+        map.put(FloatConstant::class.java) { handleFloatConstant(it as FloatConstant) }
+        map.put(DoubleConstant::class.java) { handleDoubleConstant(it as DoubleConstant) }
+        map.put(IntConstant::class.java) { handleIntConstant(it as IntConstant) }
+        map.put(LongConstant::class.java) { handleLongConstant(it as LongConstant) }
+        map.put(StringConstant::class.java) { handleStringConstant(it as StringConstant) }
     }
 
     private fun handleLocal(local: Local): Expression {
@@ -119,10 +133,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val callee = newMemberExpression(virtualInvokeExpr.methodSignature.name, base)
 
         val call = newMemberCallExpression(callee, rawNode = virtualInvokeExpr)
-        // Handle call arguments
-        for (args in virtualInvokeExpr.args) {
-            handle(args)?.let { call.arguments += it }
-        }
+        call.arguments = virtualInvokeExpr.args.mapNotNull { handle(it) }
 
         return call
     }
@@ -135,10 +146,22 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
             construct.callee = newReference(Name("<init>", type.name))
             construct.type = type
 
+            construct.arguments = specialInvokeExpr.args.mapNotNull { handle(it) }
+
             construct
         } else {
             newProblemExpression("specialinvoke with something unknown")
         }
+    }
+
+    fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): CallExpression {
+        val ref = staticInvokeExpr.methodSignature.toStaticRef()
+
+        val call = newCallExpression(ref, rawNode = staticInvokeExpr)
+        call.arguments = staticInvokeExpr.args.mapNotNull { handle(it) }
+        call.type = frontend.typeOf(staticInvokeExpr.type)
+
+        return call
     }
 
     fun handleAddExpr(addExpr: JAddExpr): BinaryOperator {
@@ -158,5 +181,45 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // the constructor call.
 
         return new
+    }
+
+    fun handleFloatConstant(constant: FloatConstant): Literal<Float> {
+        return newLiteral(constant.value, primitiveType("float"), rawNode = constant)
+    }
+
+    fun handleDoubleConstant(constant: DoubleConstant): Literal<Double> {
+        return newLiteral(constant.value, primitiveType("double"), rawNode = constant)
+    }
+
+    fun handleIntConstant(constant: IntConstant): Literal<Int> {
+        return newLiteral(constant.value, primitiveType("int"), rawNode = constant)
+    }
+
+    fun handleLongConstant(constant: LongConstant): Literal<Long> {
+        return newLiteral(constant.value, primitiveType("long"), rawNode = constant)
+    }
+
+    fun handleStringConstant(constant: StringConstant): Literal<String> {
+        return newLiteral(constant.value, primitiveType("java.lang.String"), rawNode = constant)
+    }
+
+    private fun MethodSignature.toStaticRef(): Reference {
+        // First, construct the name using <parent-type>.<fun>
+        val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
+
+        // We can also provide a function type, since these are all statically known. This might
+        // help in inferring some (unknown) functions later
+        ref.type =
+            FunctionType(
+                this.name,
+                this.parameterTypes.map { frontend.typeOf(it) },
+                listOf(frontend.typeOf(this.type)),
+                frontend.language
+            )
+
+        // Make it static
+        ref.isStaticAccess = true
+
+        return ref
     }
 }

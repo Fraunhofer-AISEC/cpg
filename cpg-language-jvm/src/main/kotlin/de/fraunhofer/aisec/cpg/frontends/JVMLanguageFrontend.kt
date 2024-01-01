@@ -37,13 +37,9 @@ import sootup.core.inputlocation.AnalysisInputLocation
 import sootup.core.model.SootMethod
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
-import sootup.core.views.AbstractView
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
-import sootup.java.core.JavaProject
 import sootup.java.core.JavaSootClass
-import sootup.java.core.language.JavaLanguage
-import sootup.jimple.parser.JimpleAnalysisInputLocation
-import sootup.jimple.parser.JimpleProject
+import sootup.java.core.views.JavaView
 
 typealias SootType = sootup.core.types.Type
 
@@ -64,19 +60,22 @@ class JVMLanguageFrontend(
      * will contain not just the content of one file but the whole directory.
      */
     override fun parse(file: File): TranslationUnitDeclaration {
-        val view: AbstractView<*> =
-            if (file.extension == "jimple") {
-                val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JimpleAnalysisInputLocation(ctx.config.topLevel!!.toPath())
-                val project = JimpleProject(inputLocation)
-                project.createView()
-            } else {
-                val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
-                val language = JavaLanguage(8)
-                val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
-                project.createView()
-            }
+        /*val view: AbstractView<*> =
+        if (file.extension == "jimple") {
+            val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                JimpleAnalysisInputLocation(ctx.config.topLevel!!.toPath())
+            val project = JimpleProject(inputLocation)
+            project.createView()
+        } else {
+            val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
+            val language = JavaLanguage(8)
+            val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
+            project.createView()
+        }*/
+        val inputLocation: AnalysisInputLocation<JavaSootClass> =
+            JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
+        val view = JavaView(inputLocation)
 
         // This contains the whole directory
         val tu = newTranslationUnitDeclaration(file.parent)

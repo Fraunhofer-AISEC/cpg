@@ -1,0 +1,18 @@
+package mypackage;
+
+public class Literals {
+
+    void haveFunWithLiterals() {
+        float f = 2;
+        double d = 4d;
+        String str = "mystring";
+        short s = 10;
+        int i = 2000;
+        long l = 2000L;
+        boolean b = false;
+
+        Integer i2 = 1000;
+        Long l2 = 1000L;
+    }
+
+}

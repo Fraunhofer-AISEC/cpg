@@ -36,8 +36,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     Handler<Statement, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
     init {
         map.put(Body::class.java) { handleBody(it as Body) }
-        map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt<*, *>) }
-        map.put(JIdentityStmt::class.java) { handleAbstractDefinitionStmt(it as JIdentityStmt<*>) }
+        map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt) }
+        map.put(JIdentityStmt::class.java) { handleAbstractDefinitionStmt(it as JIdentityStmt) }
         map.put(JInvokeStmt::class.java) { handleInvokeStmt(it as JInvokeStmt) }
         map.put(JReturnVoidStmt::class.java) { handleReturnVoidStmt(it as JReturnVoidStmt) }
     }
@@ -66,9 +66,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return block
     }
 
-    private fun handleAbstractDefinitionStmt(
-        defStmt: AbstractDefinitionStmt<*, *>
-    ): AssignExpression {
+    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): AssignExpression {
         val assign = newAssignExpression("=", rawNode = defStmt)
         assign.lhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp))
         assign.rhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp))
