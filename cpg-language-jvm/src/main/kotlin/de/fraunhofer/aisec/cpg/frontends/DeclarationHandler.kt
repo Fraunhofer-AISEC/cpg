@@ -29,8 +29,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import sootup.core.jimple.basic.Local
 import sootup.core.model.SootClass
+import sootup.core.model.SootField
 import sootup.core.model.SootMethod
 import sootup.java.core.JavaSootClass
+import sootup.java.core.JavaSootField
 import sootup.java.core.JavaSootMethod
 import sootup.java.core.jimple.basic.JavaLocal
 
@@ -41,6 +43,8 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         map.put(JavaSootClass::class.java) { handleClass(it as SootClass<*>) }
         map.put(SootMethod::class.java) { handleMethod(it as SootMethod) }
         map.put(JavaSootMethod::class.java) { handleMethod(it as SootMethod) }
+        map.put(SootField::class.java) { handleField(it as SootField) }
+        map.put(JavaSootField::class.java) { handleField(it as SootField) }
         map.put(Local::class.java) { handleLocal(it as Local) }
         map.put(JavaLocal::class.java) { handleLocal(it as Local) }
     }
@@ -50,6 +54,12 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Enter the class scope
         frontend.scopeManager.enterScope(record)
+
+        // Loop through all fields
+        for (sootField in sootClass.getFields()) {
+            val field = handle(sootField)
+            frontend.scopeManager.addDeclaration(field)
+        }
 
         // Loop through all methods
         for (sootMethod in sootClass.getMethods()) {
@@ -100,6 +110,15 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         frontend.scopeManager.leaveScope(method)
 
         return method
+    }
+
+    fun handleField(field: SootField): FieldDeclaration {
+        return newFieldDeclaration(
+            field.name,
+            frontend.typeOf(field.type),
+            field.modifiers.map { it.name.lowercase() },
+            rawNode = field
+        )
     }
 
     private fun handleLocal(local: Local): VariableDeclaration {

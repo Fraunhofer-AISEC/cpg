@@ -40,10 +40,12 @@ import sootup.core.jimple.common.expr.JNewExpr
 import sootup.core.jimple.common.expr.JSpecialInvokeExpr
 import sootup.core.jimple.common.expr.JStaticInvokeExpr
 import sootup.core.jimple.common.expr.JVirtualInvokeExpr
+import sootup.core.jimple.common.ref.JInstanceFieldRef
 import sootup.core.jimple.common.ref.JParameterRef
 import sootup.core.jimple.common.ref.JStaticFieldRef
 import sootup.core.jimple.common.ref.JThisRef
 import sootup.core.signatures.MethodSignature
+import sootup.core.signatures.SootClassMemberSignature
 import sootup.java.core.jimple.basic.JavaLocal
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
@@ -57,6 +59,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JavaLocal::class.java) { handleLocal(it as Local) }
         map.put(JThisRef::class.java) { handleThisRef(it as JThisRef) }
         map.put(JParameterRef::class.java) { handleParameterRef(it as JParameterRef) }
+        map.put(JInstanceFieldRef::class.java) { handleInstanceFieldRef(it as JInstanceFieldRef) }
         map.put(JStaticFieldRef::class.java) { handleStaticFieldRef(it as JStaticFieldRef) }
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
@@ -80,7 +83,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
             lit
         } else {
-            val ref = newReference(local.name, rawNode = local)
+            val ref = newReference(local.name, frontend.typeOf(local.type), rawNode = local)
 
             ref
         }
@@ -103,24 +106,24 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return ref
     }
 
-    private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef): Reference {
-        // TODO(oxisto): not sure if this shouldn't be a regular reference instead
-        val base =
-            newReference(
-                staticFieldRef.fieldSignature.declClassType.fullyQualifiedName,
-                frontend.typeOf(staticFieldRef.fieldSignature.declClassType)
-            )
+    private fun handleInstanceFieldRef(instanceFieldRef: JInstanceFieldRef): Reference {
+        val base = handle(instanceFieldRef.base) ?: newProblemExpression("missing base")
 
-        val expr =
+        val ref =
             newMemberExpression(
-                staticFieldRef.fieldSignature.name,
+                instanceFieldRef.fieldSignature.name,
                 base,
-                frontend.typeOf(staticFieldRef.type),
-                rawNode = staticFieldRef
+                frontend.typeOf(instanceFieldRef.fieldSignature.type),
+                rawNode = instanceFieldRef
             )
-        expr.isStaticAccess = true
 
-        return expr
+        return ref
+    }
+
+    private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef): Reference {
+        val ref = staticFieldRef.fieldSignature.toStaticRef()
+
+        return ref
     }
 
     private fun handleVirtualInvokeExpr(
@@ -205,7 +208,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun MethodSignature.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>
-        val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
+        val ref = (this as SootClassMemberSignature<*>).toStaticRef()
 
         // We can also provide a function type, since these are all statically known. This might
         // help in inferring some (unknown) functions later
@@ -216,6 +219,13 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
                 listOf(frontend.typeOf(this.type)),
                 frontend.language
             )
+
+        return ref
+    }
+
+    private fun SootClassMemberSignature<*>.toStaticRef(): Reference {
+        // First, construct the name using <parent-type>.<fun>
+        val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
 
         // Make it static
         ref.isStaticAccess = true

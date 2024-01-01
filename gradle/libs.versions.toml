@@ -46,13 +46,14 @@ nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", versi
 
 sootup-core = { module = "com.github.oxisto.SootUp:sootup.core", version.ref = "sootup" }
 sootup-java-core = { module = "com.github.oxisto.SootUp:sootup.java.core", version.ref = "sootup" }
+sootup-java-sourcecode = { module = "com.github.oxisto.SootUp:sootup.java.sourcecode", version.ref = "sootup" }
 sootup-java-bytecode = { module = "com.github.oxisto.SootUp:sootup.java.bytecode", version.ref = "sootup" }
 sootup-jimple-parser = { module = "com.github.oxisto.SootUp:sootup.jimple.parser", version.ref = "sootup" }
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
-sootup = ["sootup-core", "sootup-java-core", "sootup-java-bytecode", "sootup-jimple-parser"]
+sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple-parser"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}

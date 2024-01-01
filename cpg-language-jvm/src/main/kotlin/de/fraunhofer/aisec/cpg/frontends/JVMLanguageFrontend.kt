@@ -40,6 +40,7 @@ import sootup.core.types.UnknownType
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.JavaSootClass
 import sootup.java.core.views.JavaView
+import sootup.java.sourcecode.inputlocation.JavaSourcePathAnalysisInputLocation
 
 typealias SootType = sootup.core.types.Type
 
@@ -73,9 +74,18 @@ class JVMLanguageFrontend(
             val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
             project.createView()
         }*/
-        val inputLocation: AnalysisInputLocation<JavaSootClass> =
-            JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
-        val view = JavaView(inputLocation)
+        val view =
+            if (file.extension == "class") {
+                val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                    JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
+                JavaView(inputLocation)
+            } else if (file.extension == "java") {
+                val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                    JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path)
+                JavaView(inputLocation)
+            } else {
+                throw TranslationException("unsupported file")
+            }
 
         // This contains the whole directory
         val tu = newTranslationUnitDeclaration(file.parent)

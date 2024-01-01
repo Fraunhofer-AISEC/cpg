@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.astParent
 import java.nio.file.Path
@@ -147,13 +148,65 @@ class JVMLanguageFrontendTest {
     }
 
     @Test
-    fun testLiterals() {
+    fun testLiteralsClass() {
         // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "class", "literals")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
-                // We just need to specify one file to trigger the class byte loader
+                // We just need to specify one file to trigger the byte code loader
                 listOf(topLevel.resolve("mypackage/Literals.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+
+        val haveFun = tu.methods["haveFunWithLiterals"]
+        assertNotNull(haveFun)
+
+        println(haveFun.code)
+    }
+
+    @Test
+    fun testFieldsClass() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "fields")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // We just need to specify one file to trigger the byte code loader
+                listOf(topLevel.resolve("mypackage/Fields.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+
+        tu.methods.forEach { println(it.code) }
+
+        val refs = tu.refs.filterIsInstance<MemberExpression>()
+        refs.forEach {
+            val refersTo = it.refersTo
+            assertNotNull(refersTo, "${it.name} could not be resolved")
+            assertFalse(
+                refersTo.isInferred,
+                "${it.name} should not be resolved to an inferred node"
+            )
+        }
+    }
+
+    @Disabled
+    @Test
+    fun testLiteralsSource() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "literals")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // We just need to specify one file to trigger the source code loader
+                listOf(topLevel.resolve("mypackage/Literals.java").toFile()),
                 topLevel,
                 true
             ) {
