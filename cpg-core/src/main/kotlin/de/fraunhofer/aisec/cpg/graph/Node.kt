@@ -279,8 +279,11 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextDFGEdges.add(edge)
     }
 
-    fun addPrevCDG(prev: Node) {
-        val edge = PropertyEdge(prev, this)
+    fun addPrevCDG(
+        prev: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge = PropertyEdge(prev, this, properties)
         prevCDGEdges.add(edge)
         prev.nextCDGEdges.add(edge)
     }

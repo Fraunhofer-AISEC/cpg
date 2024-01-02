@@ -21,22 +21,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version-file: cpg-language-go/src/main/golang/go.mod
+          cache-dependency-path: cpg-language-go/src/main/golang/go.sum
       - name: Build
         run: |
           cd cpg-language-go/src/main/golang
           ./build.sh
       - name: Archive cpgo library (amd64)
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/libcpgo-amd64.dylib
       - name: Archive cpgo library (arm64)
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libcpgo-arm64.dylib
           path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
@@ -64,7 +65,7 @@ jobs:
         run: |
           docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j || true
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21
       - name: Cache SonarCloud packages
@@ -93,11 +94,11 @@ jobs:
           if [ -d "/opt/hostedtoolcache/Python" ]; then
             find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
           fi
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: libcpgo-arm64.dylib
           path: cpg-language-go/src/main/resources/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/
@@ -124,7 +125,7 @@ jobs:
           zip -r reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reports
           path: reports.zip
