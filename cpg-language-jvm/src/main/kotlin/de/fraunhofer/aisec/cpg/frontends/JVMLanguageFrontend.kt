@@ -34,10 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.core.inputlocation.AnalysisInputLocation
+import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
+import sootup.core.util.printer.NormalStmtPrinter
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.bytecode.interceptors.*
 import sootup.java.core.JavaSootClass
@@ -54,6 +56,12 @@ class JVMLanguageFrontend(
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
     val expressionHandler = ExpressionHandler(this)
+
+    lateinit var view: JavaView
+
+    var body: Body? = null
+
+    var printer: NormalStmtPrinter? = null
 
     /**
      * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
@@ -76,31 +84,35 @@ class JVMLanguageFrontend(
             val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
             project.createView()
         }*/
-        val view =
-            if (file.extension == "class") {
-                val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JavaClassPathAnalysisInputLocation(
-                        ctx.config.topLevel!!.path,
-                        SourceType.Library,
-                        listOf(
-                            NopEliminator(),
-                            CastAndReturnInliner(),
-                            UnreachableCodeEliminator(),
-                            Aggregator(),
-                            CopyPropagator(),
-                            // ConditionalBranchFolder(),
-                            EmptySwitchEliminator(),
-                            TypeAssigner(),
-                            LocalNameStandardizer()
+        view =
+            when (file.extension) {
+                "class" -> {
+                    val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                        JavaClassPathAnalysisInputLocation(
+                            ctx.config.topLevel!!.path,
+                            SourceType.Library,
+                            listOf(
+                                NopEliminator(),
+                                CastAndReturnInliner(),
+                                UnreachableCodeEliminator(),
+                                Aggregator(),
+                                CopyPropagator(),
+                                // ConditionalBranchFolder(),
+                                EmptySwitchEliminator(),
+                                TypeAssigner(),
+                                LocalNameStandardizer()
+                            )
                         )
-                    )
-                JavaView(inputLocation)
-            } else if (file.extension == "java") {
-                val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path)
-                JavaView(inputLocation)
-            } else {
-                throw TranslationException("unsupported file")
+                    JavaView(inputLocation)
+                }
+                "java" -> {
+                    val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                        JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path)
+                    JavaView(inputLocation)
+                }
+                else -> {
+                    throw TranslationException("unsupported file")
+                }
             }
 
         // This contains the whole directory

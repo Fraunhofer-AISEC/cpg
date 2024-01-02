@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.builder.label
 import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
+import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
     Handler<Statement, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
@@ -50,6 +52,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     private fun handleBody(body: Body): Block {
         val block = newBlock(rawNode = body)
 
+        val printer = NormalStmtPrinter()
+        printer.initializeSootMethod(body.stmtGraph)
+
+        frontend.printer = printer
+        frontend.body = body
+
         // Parse locals, these are always at the beginning of the function
         for (local in body.locals) {
             val decl = frontend.declarationHandler.handle(local)
@@ -65,6 +73,13 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
         // Parse statements
         for (sootStmt in body.stmts) {
+            val label = printer.labels[sootStmt]
+            if (label != null) {
+                val stmt = newLabelStatement()
+                stmt.label = label
+                block += stmt
+            }
+
             handle(sootStmt)?.let { block += it }
         }
 
@@ -85,7 +100,16 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             frontend.expressionHandler.handle(ifStmt.condition)
                 ?: newProblemExpression("missing condition")
 
-        // TODO: parse statements
+        // TODO: insert basic block instead?
+        frontend.body?.let {
+            val target = ifStmt.getTargetStmts(it).firstOrNull()
+            val label = frontend.printer?.labels?.get(target)
+            if (label != null) {
+                val goto = newGotoStatement()
+                goto.labelName = label
+                stmt.thenStatement = goto
+            }
+        }
 
         return stmt
     }
@@ -93,7 +117,13 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     private fun handleGotoStmt(gotoStmt: JGotoStmt): GotoStatement {
         val stmt = newGotoStatement(rawNode = gotoStmt)
 
-        // TODO: parse statements
+        frontend.body?.let {
+            val target = gotoStmt.getTargetStmts(it).firstOrNull()
+            val label = frontend.printer?.labels?.get(target)
+            if (label != null) {
+                stmt.labelName = label
+            }
+        }
 
         return stmt
     }
