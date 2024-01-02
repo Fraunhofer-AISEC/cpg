@@ -30,22 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
-import sootup.core.jimple.common.constant.DoubleConstant
-import sootup.core.jimple.common.constant.FloatConstant
-import sootup.core.jimple.common.constant.IntConstant
-import sootup.core.jimple.common.constant.LongConstant
-import sootup.core.jimple.common.constant.StringConstant
-import sootup.core.jimple.common.expr.JAddExpr
-import sootup.core.jimple.common.expr.JNewArrayExpr
-import sootup.core.jimple.common.expr.JNewExpr
-import sootup.core.jimple.common.expr.JSpecialInvokeExpr
-import sootup.core.jimple.common.expr.JStaticInvokeExpr
-import sootup.core.jimple.common.expr.JVirtualInvokeExpr
-import sootup.core.jimple.common.ref.JArrayRef
-import sootup.core.jimple.common.ref.JInstanceFieldRef
-import sootup.core.jimple.common.ref.JParameterRef
-import sootup.core.jimple.common.ref.JStaticFieldRef
-import sootup.core.jimple.common.ref.JThisRef
+import sootup.core.jimple.common.constant.*
+import sootup.core.jimple.common.expr.*
+import sootup.core.jimple.common.ref.*
 import sootup.core.signatures.MethodSignature
 import sootup.core.signatures.SootClassMemberSignature
 import sootup.java.core.jimple.basic.JavaLocal
@@ -69,14 +56,56 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         }
         map.put(JSpecialInvokeExpr::class.java) { handleSpecialInvoke(it as JSpecialInvokeExpr) }
         map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
-        map.put(JAddExpr::class.java) { handleAddExpr(it as JAddExpr) }
         map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
         map.put(JNewArrayExpr::class.java) { handleNewArrayExpr(it as JNewArrayExpr) }
+
+        // Binary operators
+        // - Equality checks
+        map.put(JEqExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JNeExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JGeExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JGtExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JLeExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JLtExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+
+        // - Numeric comparisons
+        map.put(JCmpExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JCmplExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JCmpgExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+
+        // - Simple arithmetics
+        map.put(JAddExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JDivExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JMulExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JRemExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JSubExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+
+        // - Binary arithmetics
+        map.put(JAndExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JOrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JShlExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JShrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JUshrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+        map.put(JXorExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
+
+        // Unary operator
+        map.put(JNegExpr::class.java) {
+            handleAbstractUnopExpr(
+                it as AbstractUnopExpr,
+                postfix = false,
+                prefix = true,
+                opCode = "-"
+            )
+        }
+
+        // Constants
+        map.put(BooleanConstant::class.java) { handleBooleanConstant(it as BooleanConstant) }
         map.put(FloatConstant::class.java) { handleFloatConstant(it as FloatConstant) }
         map.put(DoubleConstant::class.java) { handleDoubleConstant(it as DoubleConstant) }
         map.put(IntConstant::class.java) { handleIntConstant(it as IntConstant) }
         map.put(LongConstant::class.java) { handleLongConstant(it as LongConstant) }
         map.put(StringConstant::class.java) { handleStringConstant(it as StringConstant) }
+        map.put(NullConstant::class.java) { handleNullConstant(it as NullConstant) }
     }
 
     private fun handleLocal(local: Local): Expression {
@@ -200,6 +229,35 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return new
     }
 
+    private fun handleAbstractBinopExpr(expr: AbstractBinopExpr): BinaryOperator {
+        val op = newBinaryOperator(expr.symbol.trim(), rawNode = expr)
+        op.lhs = handle(expr.op1) ?: newProblemExpression("missing lhs")
+        op.rhs = handle(expr.op2) ?: newProblemExpression("missing rhs")
+        op.type = frontend.typeOf(expr.type)
+
+        return op
+    }
+
+    private fun handleAbstractUnopExpr(
+        expr: AbstractUnopExpr,
+        postfix: Boolean,
+        prefix: Boolean,
+        opCode: String
+    ): UnaryOperator {
+        val op = newUnaryOperator(opCode, postfix = postfix, prefix = prefix, rawNode = expr)
+        op.input = handle(expr.op) ?: newProblemExpression("missing input")
+        op.type = frontend.typeOf(expr.type)
+
+        return op
+    }
+
+    private fun handleBooleanConstant(constant: BooleanConstant) =
+        newLiteral(
+            constant.equalEqual(BooleanConstant.getTrue()),
+            primitiveType("boolean"),
+            rawNode = constant
+        )
+
     private fun handleFloatConstant(constant: FloatConstant) =
         newLiteral(constant.value, primitiveType("float"), rawNode = constant)
 
@@ -214,6 +272,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleStringConstant(constant: StringConstant) =
         newLiteral(constant.value, primitiveType("java.lang.String"), rawNode = constant)
+
+    private fun handleNullConstant(constant: NullConstant) =
+        newLiteral(null, unknownType(), rawNode = constant)
 
     private fun MethodSignature.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>

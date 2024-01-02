@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -38,6 +40,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         map.put(Body::class.java) { handleBody(it as Body) }
         map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt) }
         map.put(JIdentityStmt::class.java) { handleAbstractDefinitionStmt(it as JIdentityStmt) }
+        map.put(JIfStmt::class.java) { handleIfStmt(it as JIfStmt) }
+        map.put(JGotoStmt::class.java) { handleGotoStmt(it as JGotoStmt) }
         map.put(JInvokeStmt::class.java) { handleInvokeStmt(it as JInvokeStmt) }
         map.put(JReturnStmt::class.java) { handleReturnStmt(it as JReturnStmt) }
         map.put(JReturnVoidStmt::class.java) { handleReturnVoidStmt(it as JReturnVoidStmt) }
@@ -73,6 +77,25 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         assign.rhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp))
 
         return assign
+    }
+
+    private fun handleIfStmt(ifStmt: JIfStmt): IfStatement {
+        val stmt = newIfStatement(rawNode = ifStmt)
+        stmt.condition =
+            frontend.expressionHandler.handle(ifStmt.condition)
+                ?: newProblemExpression("missing condition")
+
+        // TODO: parse statements
+
+        return stmt
+    }
+
+    private fun handleGotoStmt(gotoStmt: JGotoStmt): GotoStatement {
+        val stmt = newGotoStatement(rawNode = gotoStmt)
+
+        // TODO: parse statements
+
+        return stmt
     }
 
     private fun handleInvokeStmt(invokeStmt: JInvokeStmt) =

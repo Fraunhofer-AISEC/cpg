@@ -38,8 +38,8 @@ import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
-import sootup.java.bytecode.inputlocation.BytecodeClassLoadingOptions
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
+import sootup.java.bytecode.interceptors.*
 import sootup.java.core.JavaSootClass
 import sootup.java.core.views.JavaView
 import sootup.java.sourcecode.inputlocation.JavaSourcePathAnalysisInputLocation
@@ -82,7 +82,17 @@ class JVMLanguageFrontend(
                     JavaClassPathAnalysisInputLocation(
                         ctx.config.topLevel!!.path,
                         SourceType.Library,
-                        BytecodeClassLoadingOptions.Default.bodyInterceptors
+                        listOf(
+                            NopEliminator(),
+                            CastAndReturnInliner(),
+                            UnreachableCodeEliminator(),
+                            Aggregator(),
+                            CopyPropagator(),
+                            // ConditionalBranchFolder(),
+                            EmptySwitchEliminator(),
+                            TypeAssigner(),
+                            LocalNameStandardizer()
+                        )
                     )
                 JavaView(inputLocation)
             } else if (file.extension == "java") {

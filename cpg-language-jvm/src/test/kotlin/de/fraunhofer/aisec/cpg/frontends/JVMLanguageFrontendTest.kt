@@ -100,6 +100,7 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
 
         val pkg = tu.namespaces["mypackage"]
         assertNotNull(pkg)
@@ -164,6 +165,7 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
 
         val haveFun = tu.methods["haveFunWithLiterals"]
         assertNotNull(haveFun)
@@ -186,6 +188,7 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
 
         tu.methods.forEach { println(it.code) }
 

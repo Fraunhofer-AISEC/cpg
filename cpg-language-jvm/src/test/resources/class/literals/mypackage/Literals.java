@@ -10,6 +10,12 @@ public class Literals {
         int i = 2000;
         long l = 2000L;
         boolean b = false;
+        Literals obj;
+        if(Math.random() == 10) {
+            obj = null;
+        } else {
+            obj = this;
+        }
 
         Integer i2 = 1000;
         Long l2 = 1000L;
