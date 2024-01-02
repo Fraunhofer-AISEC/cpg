@@ -5,7 +5,8 @@ log4j = "2.22.0"
 sonarqube = "4.4.1.3373"
 spotless = "6.23.2"
 nexus-publish = "1.3.0"
-sootup = "5f72ac96f3cb230c438d038975c88ba2acc86d23"
+#sootup = "5f72ac96f3cb230c438d038975c88ba2acc86d23"
+sootup = "3dd6d09989fcf7acd68fcd3c224c27429df44265"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}

@@ -116,20 +116,20 @@ class JVMLanguageFrontendTest {
 
         println(main.code)
 
-        // $stack3 contains our adder
-        val stack3 = main.variables["\$stack3"]
-        assertNotNull(stack3)
-        assertFullName("mypackage.Adder", stack3.type)
+        // $r5 contains our adder
+        val r5 = main.variables["\$r5"]
+        assertNotNull(r5)
+        assertFullName("mypackage.Adder", r5.type)
 
-        // $l2 should be the result of the add call
-        val l2 = main.variables["\$l2"]
-        assertNotNull(l2)
+        // $r3 should be the result of the add call
+        val r3 = main.variables["\$r3"]
+        assertNotNull(r3)
 
-        val l2ref = l2.usages.firstOrNull { it.access == AccessValues.WRITE }
-        assertNotNull(l2ref)
+        val r3ref = r3.usages.firstOrNull { it.access == AccessValues.WRITE }
+        assertNotNull(r3ref)
 
         // Call to add should be resolved
-        val call = l2ref.prevDFG.firstOrNull()
+        val call = r3ref.prevDFG.firstOrNull()
         assertIs<MemberCallExpression>(call)
         assertLocalName("add", call)
         assertInvokes(call, add)

@@ -35,8 +35,10 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.core.inputlocation.AnalysisInputLocation
 import sootup.core.model.SootMethod
+import sootup.core.model.SourceType
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
+import sootup.java.bytecode.inputlocation.BytecodeClassLoadingOptions
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.JavaSootClass
 import sootup.java.core.views.JavaView
@@ -77,7 +79,11 @@ class JVMLanguageFrontend(
         val view =
             if (file.extension == "class") {
                 val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                    JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
+                    JavaClassPathAnalysisInputLocation(
+                        ctx.config.topLevel!!.path,
+                        SourceType.Library,
+                        BytecodeClassLoadingOptions.Default.bodyInterceptors
+                    )
                 JavaView(inputLocation)
             } else if (file.extension == "java") {
                 val inputLocation: AnalysisInputLocation<JavaSootClass> =
@@ -96,7 +102,7 @@ class JVMLanguageFrontend(
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
             val pkg =
-                packages.computeIfAbsent(sootClass.getType().packageName.packageName) {
+                packages.computeIfAbsent(sootClass.type.packageName.packageName) {
                     val pkg = newNamespaceDeclaration(it)
                     scopeManager.addDeclaration(pkg)
                     pkg
