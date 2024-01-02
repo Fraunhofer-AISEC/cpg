@@ -39,6 +39,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt) }
         map.put(JIdentityStmt::class.java) { handleAbstractDefinitionStmt(it as JIdentityStmt) }
         map.put(JInvokeStmt::class.java) { handleInvokeStmt(it as JInvokeStmt) }
+        map.put(JReturnStmt::class.java) { handleReturnStmt(it as JReturnStmt) }
         map.put(JReturnVoidStmt::class.java) { handleReturnVoidStmt(it as JReturnVoidStmt) }
     }
 
@@ -74,13 +75,18 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return assign
     }
 
-    private fun handleInvokeStmt(invokeStmt: JInvokeStmt): Expression? {
-        return frontend.expressionHandler.handle(invokeStmt.invokeExpr)
-    }
+    private fun handleInvokeStmt(invokeStmt: JInvokeStmt) =
+        frontend.expressionHandler.handle(invokeStmt.invokeExpr)
 
-    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt): ReturnStatement {
+    private fun handleReturnStmt(returnStmt: JReturnStmt): ReturnStatement {
         val stmt = newReturnStatement(rawNode = returnStmt)
+        stmt.returnValue =
+            frontend.expressionHandler.handle(returnStmt.op)
+                ?: newProblemExpression("missing return value")
 
         return stmt
     }
+
+    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) =
+        newReturnStatement(rawNode = returnStmt)
 }

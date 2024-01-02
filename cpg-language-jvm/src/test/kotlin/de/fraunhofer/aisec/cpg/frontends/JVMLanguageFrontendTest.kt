@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
+import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.astParent
 import java.nio.file.Path
@@ -235,5 +234,48 @@ class JVMLanguageFrontendTest {
         assertNotNull(haveFun)
 
         println(haveFun.code)
+    }
+
+    @Test
+    fun testArraysClass() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "arrays")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // We just need to specify one file to trigger the class byte loader
+                listOf(topLevel.resolve("mypackage/Arrays.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
+
+        tu.methods.forEach { println(it.code) }
+
+        val r3 = tu.variables["\$r3"]
+        assertNotNull(r3)
+
+        val arrayType = r3.type
+        assertIs<PointerType>(arrayType)
+        assertTrue(arrayType.isArray)
+        assertFullName("mypackage.Element", arrayType.elementType)
+
+        val r1 = tu.variables["\$r1"]
+        assertNotNull(r1)
+        assertEquals(arrayType.elementType, r1.type)
+
+        val r2 = tu.variables["\$r2"]
+        assertNotNull(r2)
+        assertEquals(arrayType.elementType, r2.type)
+
+        val r2write = r2.usages.firstOrNull { it.access == AccessValues.WRITE }
+        assertNotNull(r2write)
+
+        val prevDFG = r2write.prevDFG.singleOrNull()
+        assertIs<SubscriptExpression>(prevDFG)
+        assertRefersTo(prevDFG.arrayExpression, r3)
     }
 }

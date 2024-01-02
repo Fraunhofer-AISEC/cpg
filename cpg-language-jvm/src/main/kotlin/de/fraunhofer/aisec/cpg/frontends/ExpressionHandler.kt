@@ -36,10 +36,12 @@ import sootup.core.jimple.common.constant.IntConstant
 import sootup.core.jimple.common.constant.LongConstant
 import sootup.core.jimple.common.constant.StringConstant
 import sootup.core.jimple.common.expr.JAddExpr
+import sootup.core.jimple.common.expr.JNewArrayExpr
 import sootup.core.jimple.common.expr.JNewExpr
 import sootup.core.jimple.common.expr.JSpecialInvokeExpr
 import sootup.core.jimple.common.expr.JStaticInvokeExpr
 import sootup.core.jimple.common.expr.JVirtualInvokeExpr
+import sootup.core.jimple.common.ref.JArrayRef
 import sootup.core.jimple.common.ref.JInstanceFieldRef
 import sootup.core.jimple.common.ref.JParameterRef
 import sootup.core.jimple.common.ref.JStaticFieldRef
@@ -61,6 +63,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JParameterRef::class.java) { handleParameterRef(it as JParameterRef) }
         map.put(JInstanceFieldRef::class.java) { handleInstanceFieldRef(it as JInstanceFieldRef) }
         map.put(JStaticFieldRef::class.java) { handleStaticFieldRef(it as JStaticFieldRef) }
+        map.put(JArrayRef::class.java) { handleArrayRef(it as JArrayRef) }
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
         }
@@ -68,6 +71,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
         map.put(JAddExpr::class.java) { handleAddExpr(it as JAddExpr) }
         map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
+        map.put(JNewArrayExpr::class.java) { handleNewArrayExpr(it as JNewArrayExpr) }
         map.put(FloatConstant::class.java) { handleFloatConstant(it as FloatConstant) }
         map.put(DoubleConstant::class.java) { handleDoubleConstant(it as DoubleConstant) }
         map.put(IntConstant::class.java) { handleIntConstant(it as IntConstant) }
@@ -120,10 +124,15 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return ref
     }
 
-    private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef): Reference {
-        val ref = staticFieldRef.fieldSignature.toStaticRef()
+    private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef) =
+        staticFieldRef.fieldSignature.toStaticRef()
 
-        return ref
+    private fun handleArrayRef(arrayRef: JArrayRef): SubscriptExpression {
+        val sub = newSubscriptExpression(rawNode = arrayRef)
+        sub.arrayExpression = handle(arrayRef.base) ?: newProblemExpression("missing base")
+        sub.subscriptExpression = handle(arrayRef.index) ?: newProblemExpression("missing index")
+
+        return sub
     }
 
     private fun handleVirtualInvokeExpr(
@@ -141,7 +150,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return call
     }
 
-    fun handleSpecialInvoke(specialInvokeExpr: JSpecialInvokeExpr): Expression {
+    private fun handleSpecialInvoke(specialInvokeExpr: JSpecialInvokeExpr): Expression {
         // This is probably a constructor call or another corner case
         return if (specialInvokeExpr.methodSignature.name == "<init>") {
             val type = frontend.typeOf(specialInvokeExpr.methodSignature.declClassType)
@@ -157,7 +166,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         }
     }
 
-    fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): CallExpression {
+    private fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): CallExpression {
         val ref = staticInvokeExpr.methodSignature.toStaticRef()
 
         val call = newCallExpression(ref, rawNode = staticInvokeExpr)
@@ -167,7 +176,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return call
     }
 
-    fun handleAddExpr(addExpr: JAddExpr): BinaryOperator {
+    private fun handleAddExpr(addExpr: JAddExpr): BinaryOperator {
         val op = newBinaryOperator("+", rawNode = addExpr)
         handle(addExpr.op1)?.let { op.lhs = it }
         handle(addExpr.op2)?.let { op.rhs = it }
@@ -175,36 +184,36 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return op
     }
 
-    fun handleNewExpr(newExpr: JNewExpr): NewExpression {
-        val type = frontend.typeOf(newExpr.type)
-        val new = newNewExpression(type, rawNode = newExpr)
+    /**
+     * In the jimple IR, the "new" and the constructor calls are split into two expressions. This
+     * will only handle the "new" expression, a later call to "invokespecial" will handle the
+     * constructor call.
+     */
+    private fun handleNewExpr(newExpr: JNewExpr) =
+        newNewExpression(frontend.typeOf(newExpr.type), rawNode = newExpr)
 
-        // In the jimple IR, the "new" and the constructor calls are split into two expressions.
-        // This will only handle the "new" expression, a later call to "invokespecial" will handle
-        // the constructor call.
+    private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): NewArrayExpression {
+        val new = newNewArrayExpression(rawNode = newArrayExpr)
+        new.type = frontend.typeOf(newArrayExpr.type)
+        new.dimensions = listOfNotNull(handle(newArrayExpr.size))
 
         return new
     }
 
-    fun handleFloatConstant(constant: FloatConstant): Literal<Float> {
-        return newLiteral(constant.value, primitiveType("float"), rawNode = constant)
-    }
+    private fun handleFloatConstant(constant: FloatConstant) =
+        newLiteral(constant.value, primitiveType("float"), rawNode = constant)
 
-    fun handleDoubleConstant(constant: DoubleConstant): Literal<Double> {
-        return newLiteral(constant.value, primitiveType("double"), rawNode = constant)
-    }
+    private fun handleDoubleConstant(constant: DoubleConstant) =
+        newLiteral(constant.value, primitiveType("double"), rawNode = constant)
 
-    fun handleIntConstant(constant: IntConstant): Literal<Int> {
-        return newLiteral(constant.value, primitiveType("int"), rawNode = constant)
-    }
+    private fun handleIntConstant(constant: IntConstant) =
+        newLiteral(constant.value, primitiveType("int"), rawNode = constant)
 
-    fun handleLongConstant(constant: LongConstant): Literal<Long> {
-        return newLiteral(constant.value, primitiveType("long"), rawNode = constant)
-    }
+    private fun handleLongConstant(constant: LongConstant) =
+        newLiteral(constant.value, primitiveType("long"), rawNode = constant)
 
-    fun handleStringConstant(constant: StringConstant): Literal<String> {
-        return newLiteral(constant.value, primitiveType("java.lang.String"), rawNode = constant)
-    }
+    private fun handleStringConstant(constant: StringConstant) =
+        newLiteral(constant.value, primitiveType("java.lang.String"), rawNode = constant)
 
     private fun MethodSignature.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>
