@@ -13,6 +13,6 @@ public class Fields {
     }
 
     private void resetA() {
-        this.a = 10;
+        setA(10);
     }
 }

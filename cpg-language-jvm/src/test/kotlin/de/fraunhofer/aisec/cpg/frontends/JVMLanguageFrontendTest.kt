@@ -28,9 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.assertFullName
+import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
@@ -196,6 +199,19 @@ class JVMLanguageFrontendTest {
                 "${it.name} should not be resolved to an inferred node"
             )
         }
+
+        val setACall = tu.calls["setA"]
+        assertNotNull(setACall)
+
+        val lit10 = setACall.arguments.firstOrNull()
+        assertIs<Literal<Int>>(lit10)
+        assertLiteralValue(10, lit10)
+
+        // We should be able to follow the literal back to it's write to the field
+        val result =
+            lit10.followNextDFGEdgesUntilHit { it is FieldDeclaration && it.name.localName == "a" }
+        assertNotNull(result)
+        assertEquals(1, result.fulfilled.size)
     }
 
     @Disabled
