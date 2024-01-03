@@ -62,6 +62,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
         map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
         map.put(JNewArrayExpr::class.java) { handleNewArrayExpr(it as JNewArrayExpr) }
+        map.put(JCastExpr::class.java) { handleCastExpr(it as JCastExpr)}
 
         // Binary operators
         // - Equality checks
@@ -223,14 +224,6 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return call
     }
 
-    private fun handleAddExpr(addExpr: JAddExpr): BinaryOperator {
-        val op = newBinaryOperator("+", rawNode = addExpr)
-        handle(addExpr.op1)?.let { op.lhs = it }
-        handle(addExpr.op2)?.let { op.rhs = it }
-
-        return op
-    }
-
     /**
      * In the jimple IR, the "new" and the constructor calls are split into two expressions. This
      * will only handle the "new" expression, a later call to "invokespecial" will handle the
@@ -245,6 +238,14 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         new.dimensions = listOfNotNull(handle(newArrayExpr.size))
 
         return new
+    }
+
+    private fun handleCastExpr(castExpr: JCastExpr): CastExpression {
+        val cast = newCastExpression(rawNode = castExpr)
+        cast.expression = handle(castExpr.op) ?: newProblemExpression("missing expression")
+        cast.castType = frontend.typeOf(castExpr.type)
+
+        return cast
     }
 
     private fun handleAbstractBinopExpr(expr: AbstractBinopExpr): BinaryOperator {
