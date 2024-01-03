@@ -105,6 +105,25 @@ class JVMLanguageFrontend(
                         )
                     JavaView(inputLocation)
                 }
+                "jar" -> {
+                    val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                        JavaClassPathAnalysisInputLocation(
+                            file.path,
+                            SourceType.Library,
+                            listOf(
+                                NopEliminator(),
+                                CastAndReturnInliner(),
+                                UnreachableCodeEliminator(),
+                                Aggregator(),
+                                CopyPropagator(),
+                                // ConditionalBranchFolder(),
+                                EmptySwitchEliminator(),
+                                TypeAssigner(),
+                                LocalNameStandardizer()
+                            )
+                        )
+                    JavaView(inputLocation)
+                }
                 "java" -> {
                     val inputLocation: AnalysisInputLocation<JavaSootClass> =
                         JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path)

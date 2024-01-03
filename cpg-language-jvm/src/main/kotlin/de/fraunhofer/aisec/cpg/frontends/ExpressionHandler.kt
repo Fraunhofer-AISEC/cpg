@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.constant.*
@@ -53,6 +54,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JArrayRef::class.java) { handleArrayRef(it as JArrayRef) }
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
+        }
+        map.put(JDynamicInvokeExpr::class.java) {
+            handleAbstractInvokeExpr(it as JDynamicInvokeExpr)
         }
         map.put(JSpecialInvokeExpr::class.java) { handleSpecialInvoke(it as JSpecialInvokeExpr) }
         map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
@@ -89,14 +93,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JXorExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
 
         // Unary operator
-        map.put(JNegExpr::class.java) {
-            handleAbstractUnopExpr(
-                it as AbstractUnopExpr,
-                postfix = false,
-                prefix = true,
-                opCode = "-"
-            )
-        }
+        map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
 
         // Constants
         map.put(BooleanConstant::class.java) { handleBooleanConstant(it as BooleanConstant) }
@@ -179,8 +176,17 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return call
     }
 
+    /**
+     * The difference between [JSpecialInvokeExpr] and a regular [JVirtualInvokeExpr] is that the
+     * invoked function is not part of the declared class, but rather it is a function of its base
+     * class(es).
+     *
+     * We currently can only model this as a regular call and hope that the [SymbolResolver] will
+     * pick the correct function. Maybe we can supply some kind of hint to the resolver to make this
+     * better.
+     */
     private fun handleSpecialInvoke(specialInvokeExpr: JSpecialInvokeExpr): Expression {
-        // This is probably a constructor call or another corner case
+        // This is probably a constructor call
         return if (specialInvokeExpr.methodSignature.name == "<init>") {
             val type = frontend.typeOf(specialInvokeExpr.methodSignature.declClassType)
             val construct = newConstructExpression(rawNode = specialInvokeExpr)
@@ -191,8 +197,20 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
             construct
         } else {
-            newProblemExpression("specialinvoke with something unknown")
+            // Just a normal call
+            return handleAbstractInvokeExpr(specialInvokeExpr)
         }
+    }
+
+    private fun handleAbstractInvokeExpr(dynamicInvokeExpr: AbstractInvokeExpr): CallExpression {
+        // Model this as a static call to the method. Not sure if this is really that good or if we
+        // want to somehow "call" the underlying bootstrap method
+        val callee = dynamicInvokeExpr.methodSignature.toStaticRef()
+        val call = newCallExpression(callee, rawNode = dynamicInvokeExpr)
+        call.arguments = dynamicInvokeExpr.args.mapNotNull { handle(it) }
+        call.type = frontend.typeOf(dynamicInvokeExpr.methodSignature.type)
+
+        return call
     }
 
     private fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): CallExpression {
@@ -238,13 +256,8 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return op
     }
 
-    private fun handleAbstractUnopExpr(
-        expr: AbstractUnopExpr,
-        postfix: Boolean,
-        prefix: Boolean,
-        opCode: String
-    ): UnaryOperator {
-        val op = newUnaryOperator(opCode, postfix = postfix, prefix = prefix, rawNode = expr)
+    private fun handleNegExpr(expr: AbstractUnopExpr): UnaryOperator {
+        val op = newUnaryOperator("-", postfix = false, prefix = true, rawNode = expr)
         op.input = handle(expr.op) ?: newProblemExpression("missing input")
         op.type = frontend.typeOf(expr.type)
 

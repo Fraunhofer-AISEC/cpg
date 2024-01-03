@@ -174,6 +174,44 @@ class JVMLanguageFrontendTest {
     }
 
     @Test
+    fun testLiteralsJar() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "jar", "literals")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // In case of a jar, the jar is directly used as a class path
+                listOf(topLevel.resolve("literals.jar").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
+        tu.methods.forEach { println(it.code) }
+    }
+
+    @Test
+    fun testInheritenceClass() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "inheritence")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // In case of a jar, the jar is directly used as a class path
+                listOf(topLevel.resolve("mypackage/Application.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+        tu.methods.forEach { println(it.code) }
+        assertEquals(0, tu.problems.size)
+    }
+
+    @Test
     fun testFieldsClass() {
         // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "class", "fields")
@@ -189,7 +227,6 @@ class JVMLanguageFrontendTest {
             }
         assertNotNull(tu)
         assertEquals(0, tu.problems.size)
-
         tu.methods.forEach { println(it.code) }
 
         val refs = tu.refs.filterIsInstance<MemberExpression>()
