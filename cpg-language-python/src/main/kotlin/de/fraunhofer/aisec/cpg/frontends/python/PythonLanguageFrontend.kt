@@ -95,7 +95,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             if (token !is List<*> || token.size != 5) {
                 TODO()
             } else {
-                if (token[0] as Long != 61.toLong()) {
+                if (token[0] as Long != 60.toLong() && !(token[1].toString()).startsWith("#")) {
                     continue
                 } else {
                     val start = token[2] as List<*>
