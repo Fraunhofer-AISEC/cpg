@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.astParent
 
@@ -65,9 +66,9 @@ inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? =
  * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
  * [TranslationResult].
  */
-val Node.allEOGStarters: List<Node>
+val Node.allEOGStarters: Set<Node>
     get() {
-        return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }
+        return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }.toIdentitySet()
     }
 
 @JvmName("astNodes")
@@ -533,6 +534,10 @@ val Node?.calls: List<CallExpression>
 
 /** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
 val Node?.mcalls: List<MemberCallExpression>
+    get() = this.allChildren()
+
+/** Returns all [CastExpression] children in this graph, starting with this [Node]. */
+val Node?.casts: List<CastExpression>
     get() = this.allChildren()
 
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
