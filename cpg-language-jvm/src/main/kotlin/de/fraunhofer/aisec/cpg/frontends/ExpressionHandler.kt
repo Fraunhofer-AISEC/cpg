@@ -52,17 +52,20 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JInstanceFieldRef::class.java) { handleInstanceFieldRef(it as JInstanceFieldRef) }
         map.put(JStaticFieldRef::class.java) { handleStaticFieldRef(it as JStaticFieldRef) }
         map.put(JArrayRef::class.java) { handleArrayRef(it as JArrayRef) }
+        map.put(JInterfaceInvokeExpr::class.java) {
+            handleInterfaceInvokeExpr(it as JInterfaceInvokeExpr)
+        }
         map.put(JVirtualInvokeExpr::class.java) {
             handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
         }
         map.put(JDynamicInvokeExpr::class.java) {
-            handleAbstractInvokeExpr(it as JDynamicInvokeExpr)
+            handleDynamicInvokeExpr(it as JDynamicInvokeExpr)
         }
         map.put(JSpecialInvokeExpr::class.java) { handleSpecialInvoke(it as JSpecialInvokeExpr) }
         map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
         map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
         map.put(JNewArrayExpr::class.java) { handleNewArrayExpr(it as JNewArrayExpr) }
-        map.put(JCastExpr::class.java) { handleCastExpr(it as JCastExpr)}
+        map.put(JCastExpr::class.java) { handleCastExpr(it as JCastExpr) }
 
         // Binary operators
         // - Equality checks
@@ -162,19 +165,27 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         return sub
     }
 
-    private fun handleVirtualInvokeExpr(
-        virtualInvokeExpr: JVirtualInvokeExpr
+    private fun handleAbstractInstanceInvokeExpr(
+        invokeExpr: AbstractInstanceInvokeExpr
     ): MemberCallExpression {
-        val base = handle(virtualInvokeExpr.base) ?: newProblemExpression("could not parse base")
+        val base = handle(invokeExpr.base) ?: newProblemExpression("could not parse base")
         // Not really necessary, but since we already have the type information, we can use it
-        base.type = frontend.typeOf(virtualInvokeExpr.methodSignature.declClassType)
+        base.type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
 
-        val callee = newMemberExpression(virtualInvokeExpr.methodSignature.name, base)
+        val callee = newMemberExpression(invokeExpr.methodSignature.name, base)
 
-        val call = newMemberCallExpression(callee, rawNode = virtualInvokeExpr)
-        call.arguments = virtualInvokeExpr.args.mapNotNull { handle(it) }
+        val call = newMemberCallExpression(callee, rawNode = invokeExpr)
+        call.arguments = invokeExpr.args.mapNotNull { handle(it) }
 
         return call
+    }
+
+    private fun handleVirtualInvokeExpr(invokeExpr: JVirtualInvokeExpr): MemberCallExpression {
+        return handleAbstractInstanceInvokeExpr(invokeExpr)
+    }
+
+    private fun handleInterfaceInvokeExpr(invokeExpr: JInterfaceInvokeExpr): MemberCallExpression {
+        return handleAbstractInstanceInvokeExpr(invokeExpr)
     }
 
     /**
@@ -186,24 +197,24 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
      * pick the correct function. Maybe we can supply some kind of hint to the resolver to make this
      * better.
      */
-    private fun handleSpecialInvoke(specialInvokeExpr: JSpecialInvokeExpr): Expression {
+    private fun handleSpecialInvoke(invokeExpr: JSpecialInvokeExpr): Expression {
         // This is probably a constructor call
-        return if (specialInvokeExpr.methodSignature.name == "<init>") {
-            val type = frontend.typeOf(specialInvokeExpr.methodSignature.declClassType)
-            val construct = newConstructExpression(rawNode = specialInvokeExpr)
+        return if (invokeExpr.methodSignature.name == "<init>") {
+            val type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
+            val construct = newConstructExpression(rawNode = invokeExpr)
             construct.callee = newReference(Name("<init>", type.name))
             construct.type = type
 
-            construct.arguments = specialInvokeExpr.args.mapNotNull { handle(it) }
+            construct.arguments = invokeExpr.args.mapNotNull { handle(it) }
 
             construct
         } else {
             // Just a normal call
-            return handleAbstractInvokeExpr(specialInvokeExpr)
+            return handleAbstractInstanceInvokeExpr(invokeExpr)
         }
     }
 
-    private fun handleAbstractInvokeExpr(dynamicInvokeExpr: AbstractInvokeExpr): CallExpression {
+    private fun handleDynamicInvokeExpr(dynamicInvokeExpr: AbstractInvokeExpr): CallExpression {
         // Model this as a static call to the method. Not sure if this is really that good or if we
         // want to somehow "call" the underlying bootstrap method
         val callee = dynamicInvokeExpr.methodSignature.toStaticRef()

@@ -50,7 +50,27 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleClass(sootClass: SootClass<*>): RecordDeclaration {
-        val record = newRecordDeclaration(sootClass.getName(), "class", rawNode = sootClass)
+        val record =
+            newRecordDeclaration(
+                sootClass.getName(),
+                if (sootClass.isInterface()) {
+                    "interface"
+                } else {
+                    "class"
+                },
+                rawNode = sootClass
+            )
+
+        // Collect super class
+        val o = sootClass.getSuperclass()
+        if (o.isPresent) {
+            record.addSuperClass(frontend.typeOf(o.get()))
+        }
+
+        // Collect implemented interfaces
+        for (i in sootClass.getInterfaces()) {
+            record.implementedInterfaces += frontend.typeOf(i)
+        }
 
         // Enter the class scope
         frontend.scopeManager.enterScope(record)
@@ -103,8 +123,10 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
         }
 
-        // Handle method body
-        method.body = frontend.statementHandler.handle(sootMethod.body)
+        if (sootMethod.isConcrete) {
+            // Handle method body
+            method.body = frontend.statementHandler.handle(sootMethod.body)
+        }
 
         // Leave method scope
         frontend.scopeManager.leaveScope(method)

@@ -170,7 +170,7 @@ class JVMLanguageFrontend(
     }
 
     override fun codeOf(astNode: Any): String? {
-        if (astNode is SootMethod) {
+        if (astNode is SootMethod && astNode.isConcrete) {
             return astNode.body.toString()
         }
         // We do not really have a source anyway. maybe in jimple?

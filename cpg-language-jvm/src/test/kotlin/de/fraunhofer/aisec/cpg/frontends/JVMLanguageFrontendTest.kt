@@ -25,12 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -193,9 +190,9 @@ class JVMLanguageFrontendTest {
     }
 
     @Test
-    fun testInheritenceClass() {
+    fun testInheritanceClass() {
         // This will be our classpath
-        val topLevel = Path.of("src", "test", "resources", "class", "inheritence")
+        val topLevel = Path.of("src", "test", "resources", "class", "inheritance")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
                 // In case of a jar, the jar is directly used as a class path
@@ -209,6 +206,63 @@ class JVMLanguageFrontendTest {
         assertNotNull(tu)
         tu.methods.forEach { println(it.code) }
         assertEquals(0, tu.problems.size)
+
+        val myInterface = tu.records["mypackage.MyInterface"]
+        assertNotNull(myInterface)
+        assertEquals("interface", myInterface.kind)
+
+        val baseClass = tu.records["mypackage.BaseClass"]
+        assertNotNull(baseClass)
+
+        val extendedClass = tu.records["mypackage.ExtendedClass"]
+        assertNotNull(extendedClass)
+        assertContains(extendedClass.implementedInterfaces, myInterface.toType())
+        assertContains(extendedClass.superTypeDeclarations, baseClass)
+        assertContains(extendedClass.superTypeDeclarations, myInterface)
+
+        val anotherExtendedClass = tu.records["mypackage.AnotherExtendedClass"]
+        assertNotNull(anotherExtendedClass)
+        assertContains(anotherExtendedClass.superTypeDeclarations, baseClass)
+
+        assertEquals(
+            baseClass.toType(),
+            listOf(extendedClass.toType(), anotherExtendedClass.toType()).commonType
+        )
+
+        val appInit = tu.methods["mypackage.Application.<init>"]
+        assertNotNull(appInit)
+
+        val appDoSomething = tu.methods["mypackage.Application.doSomething"]
+        assertNotNull(appDoSomething)
+        assertLocalName("MyInterface", appDoSomething.parameters.firstOrNull()?.type)
+
+        // Call doSomething in Application.<init> with an object of ExtendedClass, which should
+        // fulfill the MyInterface of the needed parameter
+        val doSomethingCall1 = appInit.calls["doSomething"]
+        assertNotNull(doSomethingCall1)
+        assertLocalName("ExtendedClass", doSomethingCall1.arguments.firstOrNull()?.type)
+        assertInvokes(doSomethingCall1, appDoSomething)
+
+        val extended = appInit.variables["\$r3"]
+        assertNotNull(extended)
+
+        val getMyProperty =
+            appInit.calls[
+                    {
+                        it.name.localName == "getMyProperty" &&
+                            it is MemberCallExpression &&
+                            it.base in extended.usages
+                    }]
+        assertNotNull(getMyProperty)
+
+        val setMyProperty =
+            appInit.calls[
+                    {
+                        it.name.localName == "setMyProperty" &&
+                            it is MemberCallExpression &&
+                            it.base in extended.usages
+                    }]
+        assertNotNull(setMyProperty)
     }
 
     @Test
