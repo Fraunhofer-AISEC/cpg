@@ -1,5 +1,7 @@
 package mypackage;
 
+import java.util.function.Supplier;
+
 public class Literals {
 
     void haveFunWithLiterals() {
@@ -19,6 +21,17 @@ public class Literals {
 
         Integer i2 = 1000;
         Long l2 = 1000L;
+
+        Class<?> clazz = Literals.class;
+        test(this::mySupplier);
+    }
+
+    void test(Supplier<Integer> s) {
+        s.get();
+    }
+
+    Integer mySupplier() {
+        return 1;
     }
 
 }

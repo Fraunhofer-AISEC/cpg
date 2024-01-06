@@ -111,6 +111,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(LongConstant::class.java) { handleLongConstant(it as LongConstant) }
         map.put(StringConstant::class.java) { handleStringConstant(it as StringConstant) }
         map.put(NullConstant::class.java) { handleNullConstant(it as NullConstant) }
+        map.put(ClassConstant::class.java) { handleClassConstant(it as ClassConstant) }
     }
 
     private fun handleLocal(local: Local): Expression {
@@ -220,7 +221,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleDynamicInvokeExpr(dynamicInvokeExpr: AbstractInvokeExpr): CallExpression {
         // Model this as a static call to the method. Not sure if this is really that good or if we
-        // want to somehow "call" the underlying bootstrap method
+        // want to somehow "call" the underlying bootstrap method.
+        // TODO(oxisto): This is actually somewhat related to a LambdaExpression, but not really
+        // sure ow to model this
         val callee = dynamicInvokeExpr.methodSignature.toStaticRef()
         val call = newCallExpression(callee, rawNode = dynamicInvokeExpr)
         call.arguments = dynamicInvokeExpr.args.mapNotNull { handle(it) }
@@ -324,6 +327,13 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleNullConstant(constant: NullConstant) =
         newLiteral(null, unknownType(), rawNode = constant)
+
+    /**
+     * We need to keep the class name as a string, rather than a [Class], because otherwise we would
+     * try to find the specified class on the classpath, which can lead to unwanted results.
+     */
+    private fun handleClassConstant(constant: ClassConstant) =
+        newLiteral(constant.value, primitiveType("java.lang.Class"), rawNode = constant)
 
     private fun MethodSignature.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>

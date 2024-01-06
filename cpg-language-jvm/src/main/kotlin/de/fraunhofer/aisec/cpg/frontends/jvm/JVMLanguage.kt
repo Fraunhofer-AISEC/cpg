@@ -51,6 +51,7 @@ class JVMLanguage : Language<JVMLanguageFrontend>() {
                 "int" to IntegerType("int", 32, this),
                 "long" to IntegerType("long", 64, this),
                 "java.lang.String" to StringType("java.lang.String", this),
+                "java.lang.Class" to ObjectType("java.lang.Class", listOf(), true, this)
             )
 
     override val compoundAssignmentOperators: Set<String>

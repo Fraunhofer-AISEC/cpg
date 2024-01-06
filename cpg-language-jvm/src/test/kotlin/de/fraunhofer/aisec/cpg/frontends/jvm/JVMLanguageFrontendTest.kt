@@ -151,8 +151,8 @@ class JVMLanguageFrontendTest {
     fun testLiteralsClass() {
         // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "class", "literals")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
+        val result =
+            TestUtils.analyze(
                 // We just need to specify one file to trigger the byte code loader
                 listOf(topLevel.resolve("mypackage/Literals.class").toFile()),
                 topLevel,
@@ -161,13 +161,14 @@ class JVMLanguageFrontendTest {
                 it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
-        assertNotNull(tu)
-        assertEquals(0, tu.problems.size)
+        assertNotNull(result)
 
-        val haveFun = tu.methods["haveFunWithLiterals"]
-        assertNotNull(haveFun)
+        result.methods.forEach {
+            println(it.name)
+            println(it.code)
+        }
 
-        println(haveFun.code)
+        assertEquals(0, result.problems.size)
     }
 
     @Test
