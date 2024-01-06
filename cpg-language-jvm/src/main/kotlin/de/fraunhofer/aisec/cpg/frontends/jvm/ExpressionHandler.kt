@@ -99,8 +99,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // Unary operator
         map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
 
-        // Special operators, which we need to model as binary operators
+        // Special operators, which we need to model as binary/unary operators
         map.put(JInstanceOfExpr::class.java) { handleInstanceOfExpr(it as JInstanceOfExpr) }
+        map.put(JLengthExpr::class.java) { handleLengthExpr(it as JLengthExpr) }
 
         // Constants
         map.put(BooleanConstant::class.java) { handleBooleanConstant(it as BooleanConstant) }
@@ -283,8 +284,18 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val op = newBinaryOperator("instanceof", rawNode = instanceOfExpr)
         op.lhs = handle(instanceOfExpr.op) ?: newProblemExpression("missing lhs")
 
-        val type = frontend.typeOf(instanceOfExpr.type)
-        op.rhs = newTypeExpression(type.name, type, rawNode = type)
+        val type = frontend.typeOf(instanceOfExpr.checkType)
+        op.rhs = newTypeExpression("", type, rawNode = type)
+        op.rhs.name = type.name
+        op.type = frontend.typeOf(instanceOfExpr.type)
+
+        return op
+    }
+
+    private fun handleLengthExpr(lengthExpr: JLengthExpr): UnaryOperator {
+        val op = newUnaryOperator("lengthof", prefix = true, postfix = false, rawNode = lengthExpr)
+        op.input = handle(lengthExpr.op) ?: newProblemExpression("missing input")
+        op.type = frontend.typeOf(lengthExpr.type)
 
         return op
     }

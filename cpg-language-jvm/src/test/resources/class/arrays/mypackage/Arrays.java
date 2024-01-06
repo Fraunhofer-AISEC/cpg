@@ -7,6 +7,8 @@ public class Arrays {
         arrays[0] = new Element();
         arrays[1] = arrays[0];
 
+        int len = arrays.length;
+
         return arrays;
     }
 

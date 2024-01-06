@@ -347,9 +347,8 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        assertEquals(0, tu.problems.size)
-
         tu.methods.forEach { println(it.code) }
+        assertEquals(0, tu.problems.size)
 
         val r3 = tu.variables["\$r3"]
         assertNotNull(r3)
