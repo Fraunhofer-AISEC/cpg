@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends
+package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.constant.*
@@ -98,6 +98,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
         // Unary operator
         map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
+
+        // Special operators, which we need to model as binary operators
+        map.put(JInstanceOfExpr::class.java) { handleInstanceOfExpr(it as JInstanceOfExpr) }
 
         // Constants
         map.put(BooleanConstant::class.java) { handleBooleanConstant(it as BooleanConstant) }
@@ -272,6 +275,16 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val op = newUnaryOperator("-", postfix = false, prefix = true, rawNode = expr)
         op.input = handle(expr.op) ?: newProblemExpression("missing input")
         op.type = frontend.typeOf(expr.type)
+
+        return op
+    }
+
+    private fun handleInstanceOfExpr(instanceOfExpr: JInstanceOfExpr): BinaryOperator {
+        val op = newBinaryOperator("instanceof", rawNode = instanceOfExpr)
+        op.lhs = handle(instanceOfExpr.op) ?: newProblemExpression("missing lhs")
+
+        val type = frontend.typeOf(instanceOfExpr.type)
+        op.rhs = newTypeExpression(type.name, type, rawNode = type)
 
         return op
     }

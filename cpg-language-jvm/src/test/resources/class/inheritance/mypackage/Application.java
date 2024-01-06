@@ -14,6 +14,10 @@ public class Application {
             base = new AnotherExtendedClass();
         }
         base.setMyProperty(10);
+
+        if(base instanceof ExtendedClass) {
+            System.out.println("Is extended!");
+        }
     }
 
     public void doSomething(MyInterface i) {

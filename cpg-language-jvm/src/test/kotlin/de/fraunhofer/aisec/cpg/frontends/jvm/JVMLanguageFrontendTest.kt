@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends
+package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
@@ -243,7 +243,7 @@ class JVMLanguageFrontendTest {
         assertLocalName("ExtendedClass", doSomethingCall1.arguments.firstOrNull()?.type)
         assertInvokes(doSomethingCall1, appDoSomething)
 
-        val extended = appInit.variables["\$r3"]
+        val extended = appInit.variables["\$r4"]
         assertNotNull(extended)
 
         val getMyProperty =
@@ -254,6 +254,7 @@ class JVMLanguageFrontendTest {
                             it.base in extended.usages
                     }]
         assertNotNull(getMyProperty)
+        assertInvokes(getMyProperty, baseClass.methods["getMyProperty"])
 
         val setMyProperty =
             appInit.calls[
@@ -263,6 +264,7 @@ class JVMLanguageFrontendTest {
                             it.base in extended.usages
                     }]
         assertNotNull(setMyProperty)
+        assertInvokes(setMyProperty, extendedClass.methods["setMyProperty"])
     }
 
     @Test
