@@ -27,10 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -52,7 +49,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleBody(body: Body): Block {
-        val block = newBlock(rawNode = body)
+        // The first block contains all our other blocks and this will be the one we return
+        val outerBlock = newBlock(rawNode = body)
 
         val printer = NormalStmtPrinter()
         printer.initializeSootMethod(body.stmtGraph)
@@ -65,27 +63,44 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             val decl = frontend.declarationHandler.handle(local)
 
             if (decl != null) {
-                // We need to wrap them into a declaration statement
+                // We need to wrap them into a declaration statement and put them into the outer
+                // block
                 val stmt = newDeclarationStatement(rawNode = local)
                 stmt.addToPropertyEdgeDeclaration(decl)
                 frontend.scopeManager.addDeclaration(decl)
-                block += stmt
+                outerBlock += stmt
             }
         }
 
-        // Parse statements
+        // Parse statements and segment them into (sub)-blocks.
+        var block = outerBlock
         for (sootStmt in body.stmts) {
             val label = printer.labels[sootStmt]
             if (label != null) {
+                // If we have a label, we need to create a new label statement, that starts a new
+                // block
                 val stmt = newLabelStatement()
+                block = newBlock()
                 stmt.label = label
-                block += stmt
+                stmt.subStatement = block
+
+                // We need to inform our processing system, since we do it outside of a handler, so
+                // the created goto statements will be informed about our new label
+                frontend.process(Any(), stmt)
+
+                // Always add it to the outer block
+                outerBlock += stmt
             }
 
-            handle(sootStmt)?.let { block += it }
+            // Parse the statement
+            val stmt = handle(sootStmt)
+            if (stmt != null) {
+                block += stmt
+            }
         }
 
-        return block
+        // Always return the outer block, since it comprises all the other sub-blocks.
+        return outerBlock
     }
 
     private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): AssignExpression {
@@ -101,29 +116,31 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         stmt.condition =
             frontend.expressionHandler.handle(ifStmt.condition)
                 ?: newProblemExpression("missing condition")
-
-        // TODO: insert basic block instead?
-        frontend.body?.let {
-            val target = ifStmt.getTargetStmts(it).firstOrNull()
-            val label = frontend.printer?.labels?.get(target)
-            if (label != null) {
-                val goto = newGotoStatement()
-                goto.labelName = label
-                stmt.thenStatement = goto
-            }
-        }
+        stmt.thenStatement = handleBranchingStmt(ifStmt)
 
         return stmt
     }
 
     private fun handleGotoStmt(gotoStmt: JGotoStmt): GotoStatement {
-        val stmt = newGotoStatement(rawNode = gotoStmt)
+        return handleBranchingStmt(gotoStmt)
+    }
+
+    private fun handleBranchingStmt(branchingStmt: BranchingStmt): GotoStatement {
+        val stmt = newGotoStatement(rawNode = branchingStmt)
 
         frontend.body?.let {
-            val target = gotoStmt.getTargetStmts(it).firstOrNull()
+            val target = branchingStmt.getTargetStmts(it).firstOrNull()
             val label = frontend.printer?.labels?.get(target)
             if (label != null) {
                 stmt.labelName = label
+            }
+
+            // Register a predicate listener that informs us as soon as new label statement that
+            // matches our label name is created.
+            frontend.registerPredicateListener({ _, to ->
+                (to is LabelStatement && to.label == stmt.labelName)
+            }) { _, to ->
+                stmt.targetLabel = to as LabelStatement
             }
         }
 

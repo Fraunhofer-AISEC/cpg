@@ -159,6 +159,10 @@ class JVMLanguageFrontend(
 
             // Leave namespace scope
             scopeManager.leaveScope(pkg)
+
+            // We need to clear the processed because they need to be per-file and we only have one
+            // frontend for all files
+            clearProcessed()
         }
 
         return tu
