@@ -948,7 +948,7 @@ class PythonFrontendTest : BaseTest() {
 
         val commentedNodes = SubgraphWalker.flattenAST(tu).filter { it.comment != null }
 
-        assertEquals(7, commentedNodes.size)
+        assertEquals(8, commentedNodes.size)
 
         val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
         assertEquals(1, functions.size)
