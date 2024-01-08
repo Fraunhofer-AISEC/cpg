@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.constant.*
@@ -65,6 +66,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
         map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
         map.put(JNewArrayExpr::class.java) { handleNewArrayExpr(it as JNewArrayExpr) }
+        map.put(JNewMultiArrayExpr::class.java) {
+            handleNewMultiArrayExpr(it as JNewMultiArrayExpr)
+        }
         map.put(JCastExpr::class.java) { handleCastExpr(it as JCastExpr) }
 
         // Binary operators
@@ -254,6 +258,14 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val new = newNewArrayExpression(rawNode = newArrayExpr)
         new.type = frontend.typeOf(newArrayExpr.type)
         new.dimensions = listOfNotNull(handle(newArrayExpr.size))
+
+        return new
+    }
+
+    private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): NewArrayExpression {
+        val new = newNewArrayExpression(rawNode = newMultiArrayExpr)
+        new.type = frontend.typeOf(newMultiArrayExpr.type)
+        new.dimensions = newMultiArrayExpr.sizes.mapNotNull { handle(it) }
 
         return new
     }

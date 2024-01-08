@@ -12,4 +12,10 @@ public class Arrays {
         return arrays;
     }
 
+    public Element[][] createMulti() {
+        var multi = new Element[2][10];
+
+        return multi;
+    }
+
 }

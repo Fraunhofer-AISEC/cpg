@@ -351,19 +351,29 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
         assertEquals(0, tu.problems.size)
 
-        val r3 = tu.variables["\$r3"]
+        val create = tu.methods["create"]
+        assertNotNull(create)
+
+        val r3 = create.variables["\$r3"]
         assertNotNull(r3)
 
-        val arrayType = r3.type
+        var arrayType = r3.type
         assertIs<PointerType>(arrayType)
         assertTrue(arrayType.isArray)
         assertFullName("mypackage.Element", arrayType.elementType)
 
-        val r1 = tu.variables["\$r1"]
+        val r3write = r3.usages.firstOrNull { it.access == AccessValues.WRITE }
+        assertNotNull(r3write)
+
+        var expr = r3write.prevDFG.singleOrNull()
+        assertIs<NewArrayExpression>(expr)
+        assertLiteralValue(2, expr.dimensions.singleOrNull())
+
+        var r1 = create.variables["\$r1"]
         assertNotNull(r1)
         assertEquals(arrayType.elementType, r1.type)
 
-        val r2 = tu.variables["\$r2"]
+        val r2 = create.variables["\$r2"]
         assertNotNull(r2)
         assertEquals(arrayType.elementType, r2.type)
 
@@ -373,5 +383,23 @@ class JVMLanguageFrontendTest {
         val prevDFG = r2write.prevDFG.singleOrNull()
         assertIs<SubscriptExpression>(prevDFG)
         assertRefersTo(prevDFG.arrayExpression, r3)
+
+        val createMulti = tu.methods["createMulti"]
+        assertNotNull(createMulti)
+
+        r1 = createMulti.variables["\$r1"]
+        assertNotNull(r1)
+
+        arrayType = r1.type
+        assertIs<PointerType>(arrayType)
+        assertTrue(arrayType.isArray)
+        assertFullName("mypackage.Element", arrayType.elementType)
+
+        val r1write = r1.usages.firstOrNull { it.access == AccessValues.WRITE }
+        assertNotNull(r1write)
+
+        expr = r1write.prevDFG.singleOrNull()
+        assertIs<NewArrayExpression>(expr)
+        listOf(2, 10).forEachIndexed { index, i -> assertLiteralValue(i, expr.dimensions[index]) }
     }
 }
