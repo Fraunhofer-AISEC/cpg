@@ -74,7 +74,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         when (opcode) {
             LLVMRet -> {
-                val ret = newReturnStatement()
+                val ret = newReturnStatement(rawNode = instr)
 
                 val numOps = LLVMGetNumOperands(instr)
                 if (numOps != 0) {
@@ -98,7 +98,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMUnreachable -> {
                 // Does nothing
-                return newEmptyStatement()
+                return newEmptyStatement(rawNode = instr)
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
@@ -133,7 +133,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMPHI -> {
                 frontend.phiList.add(instr)
-                return newEmptyStatement()
+                return newEmptyStatement(rawNode = instr)
             }
             LLVMSelect -> {
                 return declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
@@ -143,7 +143,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 log.info(
                     "userop instruction is not a real instruction. Replacing it with empty statement"
                 )
-                return newEmptyStatement()
+                return newEmptyStatement(rawNode = instr)
             }
             LLVMVAArg -> {
                 return handleVaArg(instr)
@@ -244,7 +244,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             gotoStatement.name = name
             gotoStatement
         } else {
-            val emptyStatement = newEmptyStatement()
+            val emptyStatement = newEmptyStatement(rawNode = instr)
             emptyStatement.name = name
             emptyStatement
         }
@@ -1034,7 +1034,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {goto label1} else {goto label2}
-            val ifStatement = newIfStatement()
+            val ifStatement = newIfStatement(rawNode = instr)
             val condition = frontend.getOperandValueAtIndex(instr, 0)
             ifStatement.condition = condition
 
@@ -1466,7 +1466,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // add it to our bindings cache
             frontend.bindingsCache[symbolName] = decl
 
-            val declStatement = DeclarationStatement()
+            // Since the declaration statement only contains the single declaration, we can use the
+            // same raw node, so we end up with the same code and location
+            val declStatement = newDeclarationStatement(rawNode = valueRef)
             declStatement.singleDeclaration = decl
             declStatement
         } else {
