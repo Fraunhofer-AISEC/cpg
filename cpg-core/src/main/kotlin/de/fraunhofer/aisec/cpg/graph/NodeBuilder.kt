@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -267,6 +268,43 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
 
 fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
     frontend.setCodeAndLocation(this, rawNode)
+
+    return this
+}
+
+fun <T : Node> T.codeAndLocationFromChildren(): T {
+    var nodesWithLocation =
+        this.astChildren
+            .filter { it.location?.region != null && it.location?.region != Region() }
+            .toMutableList()
+    var worklist: MutableList<Node> =
+        this.astChildren
+            .filter { !nodesWithLocation.contains(it) }
+            .flatMap { it.astChildren }
+            .toMutableList()
+    while (worklist.isNotEmpty()) {
+        var current = worklist.removeFirst()
+        if (current.location?.region == null || current.location?.region == Region()) {
+            worklist.addAll(current.astChildren)
+        } else {
+            nodesWithLocation.add(current)
+        }
+    }
+
+    val sortedNodes =
+        nodesWithLocation.sortedWith(
+            compareBy({ it.location?.region?.startLine }, { it.location?.region?.startColumn })
+        )
+
+    if (sortedNodes.isNotEmpty()) {
+        this.location?.region =
+            Region(
+                startLine = sortedNodes.first().location?.region?.startLine ?: -1,
+                startColumn = sortedNodes.first().location?.region?.startColumn ?: -1,
+                endLine = sortedNodes.last().location?.region?.endLine ?: -1,
+                endColumn = sortedNodes.last().location?.region?.endColumn ?: -1,
+            )
+    }
 
     return this
 }
