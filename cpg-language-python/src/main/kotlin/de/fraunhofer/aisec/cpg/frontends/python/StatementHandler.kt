@@ -330,7 +330,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // END HANDLE ARGUMENTS
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body, s)
+            result.body = makeBlock(s.body)
         }
 
         frontend.scopeManager.leaveScope(result)
