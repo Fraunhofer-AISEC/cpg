@@ -268,8 +268,10 @@ object SubgraphWalker {
          * place where usual graph manipulation will happen. The current node is the single argument
          * passed to the function
          */
-        private val onNodeVisit: MutableList<Consumer<Node>> = ArrayList()
-        private val onNodeVisit2: MutableList<BiConsumer<Node, Node?>> = ArrayList()
+        private val onNodeVisit: MutableList<Consumer<Node>> = mutableListOf()
+        private val onNodeVisit2: MutableList<BiConsumer<Node, Node?>> = mutableListOf()
+
+        private val replacements = mutableMapOf<Node, Node>()
 
         /**
          * The callback that is designed to tell the user when we leave the current scope. The
@@ -305,7 +307,7 @@ object SubgraphWalker {
             val seen: MutableSet<Node> = LinkedHashSet()
             todo?.push(Pair<Node, Node?>(root, null))
             while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
-                val (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
+                var (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
                 if (
                     (backlog as ArrayDeque<Node>).isNotEmpty() &&
                         (backlog as ArrayDeque<Node>).peek() == current
@@ -313,15 +315,24 @@ object SubgraphWalker {
                     val exiting = (backlog as ArrayDeque<Node>).pop()
                     onNodeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
                 } else {
-                    // re-place the current node as a marker for the above check to find out when we
-                    // need to exit a scope
-                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
                     onNodeVisit.forEach(Consumer { c: Consumer<Node> -> c.accept(current) })
                     onNodeVisit2.forEach(
                         Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
                     )
+
+                    // Check if we have a replacement node
+                    val toReplace = replacements[current]
+                    if (toReplace != null) {
+                        current = toReplace
+                        replacements.remove(toReplace)
+                    }
+
                     val unseenChildren =
                         strategy(current).asSequence().filter { it !in seen }.toMutableList()
+
+                    // re-place the current node as a marker for the above check to find out when we
+                    // need to exit a scope
+                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
 
                     seen.addAll(unseenChildren)
                     unseenChildren.asReversed().forEach { child: Node ->
@@ -330,6 +341,15 @@ object SubgraphWalker {
                     (backlog as ArrayDeque<Node>).push(current)
                 }
             }
+        }
+
+        /**
+         * Sometimes during walking the graph, we are replacing the current node. This causes
+         * problems, that the walker still assumes the old node. Calling this function will ensure
+         * that the walker knows about the new node.
+         */
+        fun registerReplacement(from: Node, to: Node) {
+            replacements[from] = to
         }
 
         fun registerOnNodeVisit(callback: Consumer<Node>) {
@@ -406,6 +426,10 @@ object SubgraphWalker {
                     handler.accept(currNode)
                 }
             )
+        }
+
+        fun registerReplacement(from: Node, to: Node) {
+            walker?.registerReplacement(from, to)
         }
 
         /**
