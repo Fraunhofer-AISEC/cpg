@@ -255,7 +255,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     // Not sure how to handle this exactly yet
     private fun handleVariableDeclarationExpr(expr: Expression): DeclarationStatement {
         val variableDeclarationExpr = expr.asVariableDeclarationExpr()
-        val declarationStatement = newDeclarationStatement()
+        val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
             frontend.setCodeAndLocation(declaration, variable)
@@ -401,7 +401,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     fieldAccessExpr.name.identifier,
                     base,
                     fieldType,
-                    "." // there is only "." in java
+                    ".", // there is only "." in java
+                    rawNode = expr
                 )
             memberExpression.isStaticAccess = true
             return memberExpression
@@ -417,14 +418,26 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     unknownType()
                 }
             val memberExpression =
-                newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
+                newMemberExpression(
+                    fieldAccessExpr.name.identifier,
+                    base,
+                    fieldType,
+                    ".",
+                    rawNode = expr
+                )
             memberExpression.isStaticAccess = true
             return memberExpression
         }
         if (base.location == null) {
             base.location = frontend.locationOf(fieldAccessExpr)
         }
-        return newMemberExpression(fieldAccessExpr.name.identifier, base, fieldType, ".")
+        return newMemberExpression(
+            fieldAccessExpr.name.identifier,
+            base,
+            fieldType,
+            ".",
+            rawNode = expr
+        )
     }
 
     private fun handleLiteralExpression(expr: Expression): Literal<*>? {

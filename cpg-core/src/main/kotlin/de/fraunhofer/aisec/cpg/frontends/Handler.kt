@@ -106,12 +106,6 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
         if (handler != null) {
             val s = handler.handle(ctx)
             if (s != null) {
-                // The language frontend might set a location, which we should respect. Otherwise,
-                // we will
-                // set the location here.
-                if (s.location == null) {
-                    frontend.setCodeAndLocation(s, ctx)
-                }
                 frontend.setComment(s, ctx)
             }
             ret = s

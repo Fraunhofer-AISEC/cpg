@@ -92,9 +92,7 @@ interface NamespaceProvider : MetadataProvider {
  * - Setting [Node.scope]. if a [ScopeProvider] is given
  * - Setting [Node.isInferred], if an [IsInferredProvider] is given
  *
- * Note, that one provider can implement multiple provider interfaces. Additionally, if
- * [codeOverride] is specified, the supplied source code is used to override anything from the
- * provider.
+ * Note, that one provider can implement multiple provider interfaces.
  */
 fun Node.applyMetadata(
     provider: MetadataProvider?,
@@ -103,6 +101,12 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
+    // We try to set the code and especially the location as soon as possible because the hashCode
+    // implementation of the Node class relies on it. Otherwise, we could have a problem that the
+    // location is not yet set, but the node is put into a hashmap. In this case the hashCode is
+    // calculated based on an empty location and if we would later set the location, we would have a
+    // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
+    // calling a node builder from these should already set the location.
     if (provider is CodeAndLocationProvider<*> && rawNode != null) {
         (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
