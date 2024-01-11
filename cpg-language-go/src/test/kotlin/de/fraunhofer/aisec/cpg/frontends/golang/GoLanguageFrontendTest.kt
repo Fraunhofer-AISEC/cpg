@@ -1090,6 +1090,28 @@ class GoLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testChainedCast() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyze(
+                listOf(
+                    topLevel.resolve("cast.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        assertEquals(0, tu.calls.size)
+        assertEquals(
+            listOf("string", "error", "p.myError"),
+            tu.casts.map { it.castType.name.toString() }
+        )
+    }
+
+    @Test
     fun testComplexResolution() {
         val topLevel = Path.of("src", "test", "resources", "golang", "complex_resolution")
         val result =

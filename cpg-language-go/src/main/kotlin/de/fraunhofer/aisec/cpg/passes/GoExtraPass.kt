@@ -110,13 +110,15 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 @ExecuteBefore(DFGPass::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
+    private lateinit var walker: SubgraphWalker.ScopedWalker
+
     override fun accept(component: Component) {
         // Add built-int functions, but only if one of the components contains a GoLanguage
         if (component.translationUnits.any { it.language is GoLanguage }) {
             component.translationUnits += addBuiltIn()
         }
 
-        val walker = SubgraphWalker.ScopedWalker(scopeManager)
+        walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
             when (node) {
                 is CallExpression -> handleCall(node, parent)
@@ -467,6 +469,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             )
         } else {
             call.disconnectFromGraph()
+
+            // Make sure to inform the walker about our change
+            walker.registerReplacement(call, cast)
         }
     }
 
