@@ -341,7 +341,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
         frontend.setCodeAndLocation(compoundStatement, stmt)
         frontend.scopeManager.leaveScope(compoundStatement)
-        return compoundStatement
+        return compoundStatement.codeAndLocationFromChildren(frontend, stmt)
     }
 
     fun handleCaseDefaultStatement(

@@ -272,7 +272,10 @@ fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNod
     return this
 }
 
-fun <T : Node> T.codeAndLocationFromChildren(): T {
+fun <T : Node, S> T.codeAndLocationFromChildren(
+    frontend: LanguageFrontend<S, *>,
+    parentNode: S
+): T {
     var nodesWithLocation =
         this.astChildren
             .filter { it.location?.region != null && it.location?.region != Region() }
@@ -297,14 +300,25 @@ fun <T : Node> T.codeAndLocationFromChildren(): T {
         )
 
     if (sortedNodes.isNotEmpty()) {
-        this.location?.region =
-            Region(
-                startLine = sortedNodes.first().location?.region?.startLine ?: -1,
+        // All regions are present and not default at this point
+        val startLine = sortedNodes.first().location?.region?.startLine ?: -1
+        val endLine = sortedNodes.last().location?.region?.endLine ?: -1
+        val newRegion = Region(
+                startLine = startLine,
                 startColumn = sortedNodes.first().location?.region?.startColumn ?: -1,
-                endLine = sortedNodes.last().location?.region?.endLine ?: -1,
+                endLine = endLine,
                 endColumn = sortedNodes.last().location?.region?.endColumn ?: -1,
             )
+        this.location?.region = newRegion
+
+        val parentCode = frontend.codeOf(parentNode)
+        val parentRegion = frontend.locationOf(parentNode)?.region
+        if(parentCode != null && parentRegion != null){
+            this.code = frontend.getCodeOfSubregion(parentCode, parentRegion, newRegion)
+        }
+
     }
+
 
     return this
 }
