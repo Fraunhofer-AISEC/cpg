@@ -55,6 +55,8 @@ open class CLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
+    val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
+
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See
      * https://en.cppreference.com/w/c/language/operator_assignment
