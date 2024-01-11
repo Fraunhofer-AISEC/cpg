@@ -236,6 +236,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 refersTo = field
             }
         }
+
+        if (refersTo == null) {
+            // We can try to infer a possible global variable, if the language supports this
+            if (language is HasGlobalVariables) {
+                refersTo = tryGlobalVariableInference(current)
+            }
+        }
+
         if (refersTo != null) {
             current.refersTo = refersTo
         } else {
@@ -245,6 +253,22 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Did not find a declaration for ${current.name}"
             )
         }
+    }
+
+    private fun tryGlobalVariableInference(ref: Reference): Declaration? {
+        // For now, we only infer globals at the top-most global level, i.e., no globals in
+        // namespaces
+        if (ref.name.isQualified()) {
+            return null
+        }
+
+        val declaration =
+            scopeManager.globalScope?.astNode?.startInference(ctx)?.inferVariableDeclaration(ref)
+        if (declaration != null) {
+            ref.refersTo = declaration
+        }
+
+        return declaration
     }
 
     /**

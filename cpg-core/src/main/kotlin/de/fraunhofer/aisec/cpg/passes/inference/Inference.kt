@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
@@ -337,6 +338,32 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         // add this record declaration to the current TU (this bypasses the scope manager)
         currentTU.addDeclaration(declaration)
         return declaration
+    }
+
+    fun inferVariableDeclaration(ref: Reference): VariableDeclaration {
+        return inferInScopeOf(start) {
+            // Build a new variable declaration from the reference. Maybe we are even lucky and the
+            // reference has a type -- some language frontends provide us one -- but most likely
+            // this type will be unknown.
+            val inferred = newVariableDeclaration(ref.name, ref.type)
+
+            debugWithFileLocation(
+                ref,
+                log,
+                "Inferred a new variable declaration {} with type {}",
+                inferred.name,
+                inferred.type
+            )
+
+            // In any case, we will observe the type of our reference and update our new variable
+            // declaration accordingly.
+            ref.typeObservers += TypeInferenceObserver(inferred)
+
+            // Add it the scope
+            scopeManager.addDeclaration(inferred)
+
+            inferred
+        }
     }
 
     fun createInferredNamespaceDeclaration(name: Name, path: String?): NamespaceDeclaration {
