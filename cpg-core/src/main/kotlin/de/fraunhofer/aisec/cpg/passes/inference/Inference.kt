@@ -265,7 +265,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
      * @return inferred FunctionTemplateDeclaration which can be invoked by the call
      */
     fun createInferredFunctionTemplate(call: CallExpression): FunctionTemplateDeclaration? {
-        if (ctx.config.inferenceConfiguration.enabled) {
+        if (!ctx.config.inferenceConfiguration.enabled) {
             return null
         }
 
@@ -404,7 +404,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     }
 
     fun inferNamespaceDeclaration(name: Name, path: String?): NamespaceDeclaration? {
-        if (ctx.config.inferenceConfiguration.enabled) {
+        if (!ctx.config.inferenceConfiguration.enabled) {
             return null
         }
 
