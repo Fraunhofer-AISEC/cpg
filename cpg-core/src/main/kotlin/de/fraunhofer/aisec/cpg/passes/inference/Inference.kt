@@ -396,7 +396,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
             // declaration accordingly.
             hint.typeObservers += TypeInferenceObserver(inferred)
 
-            // Add it the scope
+            // Add it to the scope
             scopeManager.addDeclaration(inferred)
 
             inferred
