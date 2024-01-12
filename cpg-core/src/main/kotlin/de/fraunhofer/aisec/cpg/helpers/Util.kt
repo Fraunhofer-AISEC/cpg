@@ -228,26 +228,28 @@ object Util {
         var openParentheses = 0
         var currPart = StringBuilder()
         for (c in toSplit.toCharArray()) {
-            if (c == '(') {
-                openParentheses++
-                currPart.append(c)
-            } else if (c == ')') {
-                if (openParentheses > 0) {
-                    openParentheses--
-                }
-                currPart.append(c)
-            } else if (delimiters.contains("" + c)) {
-                if (openParentheses == 0) {
-                    val toAdd = currPart.toString().trim()
-                    if (toAdd.isNotEmpty()) {
-                        result.add(currPart.toString().trim())
-                    }
-                    currPart = StringBuilder()
-                } else {
+            when {
+                c == '(' -> {
+                    openParentheses++
                     currPart.append(c)
                 }
-            } else {
-                currPart.append(c)
+                c == ')' -> {
+                    if (openParentheses > 0) {
+                        openParentheses--
+                    }
+                    currPart.append(c)
+                }
+                delimiters.contains("" + c) -> {
+                    if (openParentheses == 0) {
+                        val toAdd = currPart.toString().trim()
+                        if (toAdd.isNotEmpty()) {
+                            result.add(currPart.toString().trim())
+                        }
+                        currPart = StringBuilder()
+                    } else {
+                        currPart.append(c)
+                    }
+                }
             }
         }
         if (currPart.isNotEmpty()) {
@@ -292,16 +294,24 @@ object Util {
         var openParentheses = 0
         var openTemplate = 0
         for (c in input.toCharArray()) {
-            if (c == '(') {
-                openParentheses++
-            } else if (c == ')') {
-                openParentheses--
-            } else if (c == '<') {
-                openTemplate++
-            } else if (c == '>') {
-                openTemplate--
-            } else if (c == marker && openParentheses == 0 && openTemplate == 0) {
-                return true
+            when (c) {
+                '(' -> {
+                    openParentheses++
+                }
+                ')' -> {
+                    openParentheses--
+                }
+                '<' -> {
+                    openTemplate++
+                }
+                '>' -> {
+                    openTemplate--
+                }
+                marker -> {
+                    if (openParentheses == 0 && openTemplate == 0) {
+                        return true
+                    }
+                }
             }
         }
         return false

@@ -139,31 +139,37 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     // entries in finalDominators list and update it (if necessary)
                     val newDominatorMap = finalState[k]?.elements
                     newDominatorMap?.forEach { (newK, newV) ->
-                        if (dominatorsList.any { it.first == newK }) {
-                            // Entry exists => update it
-                            dominatorsList.first { it.first == newK }.second.addAll(newV)
-                        } else if (finalDominators.any { it.first == newK }) {
-                            // Entry in final dominators => Delete it and add it to the worklist
-                            // (but only if something changed)
-                            val entry = finalDominators.first { it.first == newK }
-                            finalDominators.remove(entry)
-                            val update = entry.second.addAll(newV)
-                            if (
-                                update &&
-                                    alreadySeen.none {
-                                        it.first == entry.first && it.second == entry.second
-                                    }
-                            )
-                                dominatorsList.add(entry)
-                            else finalDominators.add(entry)
-                        } else if (alreadySeen.none { it.first == newK && it.second == newV }) {
-                            // We don't have an entry yet => add a new one
-                            val newEntry = Pair(newK, newV.toMutableSet())
-                            dominatorsList.add(newEntry)
-                        } else {
-                            // Not sure what to do, there seems to be a cycle but this entry is not
-                            // in finalDominators for some reason. Add to finalDominators now.
-                            finalDominators.add(Pair(newK, newV.toMutableSet()))
+                        when {
+                            dominatorsList.any { it.first == newK } -> {
+                                // Entry exists => update it
+                                dominatorsList.first { it.first == newK }.second.addAll(newV)
+                            }
+                            finalDominators.any { it.first == newK } -> {
+                                // Entry in final dominators => Delete it and add it to the worklist
+                                // (but only if something changed)
+                                val entry = finalDominators.first { it.first == newK }
+                                finalDominators.remove(entry)
+                                val update = entry.second.addAll(newV)
+                                if (
+                                    update &&
+                                        alreadySeen.none {
+                                            it.first == entry.first && it.second == entry.second
+                                        }
+                                )
+                                    dominatorsList.add(entry)
+                                else finalDominators.add(entry)
+                            }
+                            alreadySeen.none { it.first == newK && it.second == newV } -> {
+                                // We don't have an entry yet => add a new one
+                                val newEntry = Pair(newK, newV.toMutableSet())
+                                dominatorsList.add(newEntry)
+                            }
+                            else -> {
+                                // Not sure what to do, there seems to be a cycle but this entry is
+                                // not
+                                // in finalDominators for some reason. Add to finalDominators now.
+                                finalDominators.add(Pair(newK, newV.toMutableSet()))
+                            }
                         }
                     }
                 } else {
@@ -185,18 +191,21 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             .mapNotNull { it.getProperty(Properties.BRANCH) }
                             .toSet()
 
-                    if (branchesSet.size == 1) {
-                        properties[Properties.BRANCH] = branchesSet.single()
-                    } else if (branchesSet.isNotEmpty()) {
-                        properties[Properties.BRANCH] = branchesSet
-                    } else if (
+                    when {
+                        branchesSet.size == 1 -> {
+                            properties[Properties.BRANCH] = branchesSet.single()
+                        }
+                        branchesSet.isNotEmpty() -> {
+                            properties[Properties.BRANCH] = branchesSet
+                        }
                         k is IfStatement &&
-                            branchesSet.isEmpty() &&
-                            (branchingNodeConditionals[k]?.size ?: 0) > 1
-                    ) {
-                        // The if statement has only a then branch but there's a way to "jump out"
-                        // of this branch. In this case, we want to set the false property here
-                        properties[Properties.BRANCH] = setOf(false)
+                            (branchingNodeConditionals[k]?.size
+                                ?: 0) > 1 -> { // Note: branchesSet must be empty here
+                            // The if statement has only a then branch but there's a way to "jump
+                            // out" of this branch. In this case, we want to set the false property
+                            // here.
+                            properties[Properties.BRANCH] = setOf(false)
+                        }
                     }
                     node.addPrevCDG(k, properties)
                 }
