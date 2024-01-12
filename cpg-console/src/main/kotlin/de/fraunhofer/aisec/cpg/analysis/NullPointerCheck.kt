@@ -49,7 +49,7 @@ class NullPointerCheck {
         get() = LoggerFactory.getLogger(OutOfBoundsCheck::class.java)
 
     fun run(result: TranslationResult) {
-        for (tu in result.translationUnits) {
+        for (tu in result.components.flatMap { it.translationUnits }) {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {

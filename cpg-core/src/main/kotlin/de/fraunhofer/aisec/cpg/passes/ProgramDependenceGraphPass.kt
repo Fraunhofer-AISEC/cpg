@@ -112,15 +112,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                 // path.
                 return false
             } else {
-                if (nextEOG.size == 1 && nextEOG.single() !in alreadySeenNodes) {
-                    worklist.add(nextEOG.single())
-                } else {
-                    for (next in nextEOG) {
-                        if (next !in alreadySeenNodes) {
-                            worklist.add(next)
-                        }
-                    }
-                }
+                worklist.addAll(nextEOG.filter { it !in alreadySeenNodes })
             }
         }
         return true

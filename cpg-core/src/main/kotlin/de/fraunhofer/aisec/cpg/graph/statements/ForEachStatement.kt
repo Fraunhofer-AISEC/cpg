@@ -67,20 +67,18 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         }
 
     override fun addStatement(s: Statement) {
-        if (variable == null) {
-            variable = s
-        } else if (iterable == null) {
-            iterable = s
-        } else if (statement == null) {
-            statement = s
-        } else if (statement !is Block) {
-            val block = Block()
-            block.language = this.language
-            statement?.let { block.addStatement(it) }
-            block.addStatement(s)
-            statement = block
-        } else {
-            (statement as? Block)?.addStatement(s)
+        when {
+            variable == null -> variable = s
+            iterable == null -> iterable = s
+            statement == null -> statement = s
+            statement !is Block -> {
+                val block = Block()
+                block.language = this.language
+                statement?.let { block.addStatement(it) }
+                block.addStatement(s)
+                statement = block
+            }
+            else -> (statement as? Block)?.addStatement(s)
         }
     }
 

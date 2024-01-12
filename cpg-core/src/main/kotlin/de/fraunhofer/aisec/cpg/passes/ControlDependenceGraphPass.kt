@@ -184,6 +184,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             .filter { edge -> edge.end in v }
                             .mapNotNull { it.getProperty(Properties.BRANCH) }
                             .toSet()
+
                     if (branchesSet.size == 1) {
                         properties[Properties.BRANCH] = branchesSet.single()
                     } else if (branchesSet.isNotEmpty()) {
@@ -269,7 +270,7 @@ fun handleEdge(
         val prevPathLattice =
             PrevEOGLattice(
                 IdentityHashMap(
-                    currentState[currentEdge.start]?.elements?.filter { (k, v) ->
+                    currentState[currentEdge.start]?.elements?.filter { (k, _) ->
                         k == currentEdge.start
                     }
                 )
