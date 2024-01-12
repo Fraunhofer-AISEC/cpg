@@ -395,8 +395,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return caseStatement
     }
 
-    fun getPreviousTokenWith(text: String, token: JavaToken): JavaToken {
-        var token = token
+    fun getPreviousTokenWith(text: String, startToken: JavaToken): JavaToken {
+        var token = startToken
         var optional = token.previousToken
         while (token.text != text && optional.isPresent) {
             token = optional.get()
@@ -405,8 +405,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return token
     }
 
-    fun getNextTokenWith(text: String, token: JavaToken): JavaToken {
-        var token = token
+    fun getNextTokenWith(text: String, startToken: JavaToken): JavaToken {
+        var token = startToken
         var optional = token.nextToken
         while (token.text != text && optional.isPresent) {
             token = optional.get()
@@ -551,8 +551,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 .stream()
                 .map { catchCls: CatchClause -> handleCatchClause(catchCls) }
                 .collect(Collectors.toList())
-        val finallyBlock =
-            tryStmt.finallyBlock.map { stmt: BlockStmt -> handleBlockStatement(stmt) }.orElse(null)
+        val finallyBlock = tryStmt.finallyBlock.map(::handleBlockStatement).orElse(null)
         frontend.scopeManager.leaveScope(tryStatement)
         tryStatement.resources = resources
         tryStatement.tryBlock = tryBlock

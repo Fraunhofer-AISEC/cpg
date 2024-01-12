@@ -142,6 +142,11 @@ object Util {
         else refNodes.containsAll(nodeSide)
     }
 
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun <AstNode> warnWithFileLocation(
         lang: LanguageFrontend<AstNode, *>,
         astNode: AstNode,
@@ -159,6 +164,11 @@ object Util {
         )
     }
 
+    /**
+     * Logs an error with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun <AstNode> errorWithFileLocation(
         lang: LanguageFrontend<AstNode, *>,
         astNode: AstNode,
@@ -176,6 +186,11 @@ object Util {
         )
     }
 
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun warnWithFileLocation(
         node: Node,
         log: Logger,
@@ -188,6 +203,11 @@ object Util {
         )
     }
 
+    /**
+     * Logs an error with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun errorWithFileLocation(
         node: Node,
         log: Logger,
@@ -200,6 +220,12 @@ object Util {
         )
     }
 
+    /**
+     * Logs a debug message with the specified file location. This is intentionally inlined, so that
+     * the [Logger] will use the location of the callee of this function, rather than the [Util]
+     * class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun debugWithFileLocation(
         node: Node?,
         log: Logger,
