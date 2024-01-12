@@ -442,7 +442,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleLiteralExpression(expr: Expression): Literal<*>? {
         val literalExpr = expr.asLiteralExpr()
-        val value = literalExpr.toString()
         return when (literalExpr) {
             is IntegerLiteralExpr ->
                 newLiteral(

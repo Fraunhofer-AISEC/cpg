@@ -43,6 +43,10 @@ abstract class IVisitor<V : IVisitable<V>> {
             mostSpecificVisit.invoke(this, t)
         } catch (e: NoSuchMethodException) {
             // Nothing to do here
-        } catch (e: InvocationTargetException) {} catch (e: IllegalAccessException) {}
+        } catch (e: InvocationTargetException) {
+            // Nothing to do here
+        } catch (e: IllegalAccessException) {
+            // Nothing to do here
+        }
     }
 }
