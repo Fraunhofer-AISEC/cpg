@@ -327,6 +327,10 @@ open class CPPLanguage :
                 )
             }
 
+            if (functionTemplateDeclaration == null) {
+                return Pair(false, listOf())
+            }
+
             return Pair(true, functionTemplateDeclaration.realization)
         }
 

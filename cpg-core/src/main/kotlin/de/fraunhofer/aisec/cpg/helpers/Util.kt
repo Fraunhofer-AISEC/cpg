@@ -209,13 +209,13 @@ object Util {
      */
     @Suppress("NOTHING_TO_INLINE")
     inline fun errorWithFileLocation(
-        node: Node,
+        node: Node?,
         log: Logger,
         format: String?,
         vararg arguments: Any?
     ) {
         log.error(
-            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
             *arguments
         )
     }

@@ -394,7 +394,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             scopeManager.globalScope
                 ?.astNode
                 ?.startInference(ctx)
-                ?.createInferredNamespaceDeclaration(include.name, include.filename)
+                ?.inferNamespaceDeclaration(include.name, include.filename)
         }
     }
 

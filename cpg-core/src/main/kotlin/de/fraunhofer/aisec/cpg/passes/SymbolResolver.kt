@@ -130,7 +130,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun resolveMethodFunctionPointer(
         reference: Reference,
         type: FunctionPointerType
-    ): ValueDeclaration {
+    ): ValueDeclaration? {
         var target = scopeManager.resolveReference(reference)
 
         // If we didn't find anything, we create a new function or method declaration
@@ -145,7 +145,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             target =
                 (scope?.astNode ?: currentTU)
                     .startInference(ctx)
-                    .createInferredFunctionDeclaration(
+                    .inferFunctionDeclaration(
                         reference.name,
                         null,
                         false,
@@ -239,9 +239,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         if (refersTo == null) {
             // We can try to infer a possible global variable, if the language supports this
-            if (language is HasGlobalVariables) {
-                refersTo = tryGlobalVariableInference(current)
-            }
+            refersTo = tryGlobalVariableInference(current)
         }
 
         if (refersTo != null) {
@@ -255,20 +253,47 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * Tries to infer a global variable from an unresolved [Reference]. This will return `null`, if
+     * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+     */
     private fun tryGlobalVariableInference(ref: Reference): Declaration? {
+        if (ref.language !is HasGlobalVariables) {
+            return null
+        }
+
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
         if (ref.name.isQualified()) {
             return null
         }
 
-        val declaration =
-            scopeManager.globalScope?.astNode?.startInference(ctx)?.inferVariableDeclaration(ref)
-        if (declaration != null) {
-            ref.refersTo = declaration
+        // Forward this to our inference system. This will also check whether and how inference is
+        // configured.
+        return scopeManager.globalScope?.astNode?.startInference(ctx)?.inferVariableDeclaration(ref)
+    }
+
+    /**
+     * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
+     * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+     */
+    private fun tryRecordInference(
+        type: Type,
+    ): RecordDeclaration? {
+        val kind =
+            if (type.language is HasStructs) {
+                "struct"
+            } else {
+                "class"
+            }
+        val record = type.startInference(ctx).inferRecordDeclaration(type, currentTU, kind)
+
+        // update the type's record
+        if (record != null) {
+            type.recordDeclaration = record
         }
 
-        return declaration
+        return record
     }
 
     /**
@@ -392,21 +417,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         var record = base.recordDeclaration
         if (record == null) {
-            // No matching record in the map? If we should infer it, we do so, otherwise we stop.
-            if (!config.inferenceConfiguration.inferRecords) return null
-
-            // We access an unknown field of an unknown record. so we need to handle that
-            val kind =
-                if (base.language is HasStructs) {
-                    "struct"
-                } else {
-                    "class"
-                }
-            record = base.startInference(ctx).inferRecordDeclaration(base, currentTU, kind)
-            // update the type's record
-            if (record != null) {
-                base.recordDeclaration = record
-            }
+            // We access an unknown field of an unknown record. so we need to handle that along the
+            // way as well
+            record = tryRecordInference(base)
         }
 
         if (record == null) {
@@ -680,14 +693,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             .mapNotNull {
                 val root = it.root as? ObjectType
                 var record = root?.recordDeclaration
-                if (root != null && record == null && config.inferenceConfiguration.inferRecords) {
-                    record = it.startInference(ctx).inferRecordDeclaration(it, currentTU)
+                if (root != null && record == null) {
+                    record =
+                        it.startInference(ctx)
+                            .inferRecordDeclaration(it, currentTU, locationHint = call)
                     // update the record declaration
                     root.recordDeclaration = record
                 }
                 record
             }
-            .map { record -> record.inferMethod(call, ctx = ctx) }
+            .mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
     }
 
     /**

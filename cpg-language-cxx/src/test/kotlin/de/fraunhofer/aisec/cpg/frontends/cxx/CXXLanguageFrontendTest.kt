@@ -512,7 +512,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 )
             assertEquals(incompleteType().reference(POINTER), pointerWithAssign.type)
             assertLocalName("ptr2", pointerWithAssign)
-            assertLocalName("NULL", pointerWithAssign.initializer)
+            assertLiteralValue(null, pointerWithAssign.initializer)
 
             val classWithVariable = statements[6].declarations
             assertEquals(2, classWithVariable.size)
