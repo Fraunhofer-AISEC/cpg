@@ -303,7 +303,8 @@ fun <T : Node, S> T.codeAndLocationFromChildren(
         // All regions are present and not default at this point
         val startLine = sortedNodes.first().location?.region?.startLine ?: -1
         val endLine = sortedNodes.last().location?.region?.endLine ?: -1
-        val newRegion = Region(
+        val newRegion =
+            Region(
                 startLine = startLine,
                 startColumn = sortedNodes.first().location?.region?.startColumn ?: -1,
                 endLine = endLine,
@@ -313,12 +314,10 @@ fun <T : Node, S> T.codeAndLocationFromChildren(
 
         val parentCode = frontend.codeOf(parentNode)
         val parentRegion = frontend.locationOf(parentNode)?.region
-        if(parentCode != null && parentRegion != null){
+        if (parentCode != null && parentRegion != null) {
             this.code = frontend.getCodeOfSubregion(parentCode, parentRegion, newRegion)
         }
-
     }
-
 
     return this
 }

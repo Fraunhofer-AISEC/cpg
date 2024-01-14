@@ -144,7 +144,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      */
     fun getNewLineType(node: Node): String {
         var region = node.location?.region
-        return getNewLineType(node.code?:"", region)
+        return getNewLineType(node.code ?: "", region)
     }
 
     /**
@@ -155,7 +155,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      *
      * @return the String of the newline or \n as default
      */
-    fun getNewLineType(multilineCode: String, region:Region? = null): String {
+    fun getNewLineType(multilineCode: String, region: Region? = null): String {
         var code = multilineCode
         region?.let {
             if (it.startLine != it.endLine) {
@@ -189,7 +189,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      */
     fun getCodeOfSubregion(node: Node, nodeRegion: Region, subRegion: Region): String {
         val code = node.code ?: return ""
-        return getCodeOfSubregion(code,nodeRegion,subRegion)
+        return getCodeOfSubregion(code, nodeRegion, subRegion)
     }
 
     fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): String {
