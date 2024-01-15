@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newConstructExpression
@@ -57,7 +56,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun fixInitializers(node: Node?, currClass: RecordDeclaration?) {
+    protected fun fixInitializers(node: Node?) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val record = node.type.root.recordDeclaration

@@ -217,7 +217,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {
-        val type =
+        val cpgType =
             when (type) {
                 is GoStandardLibrary.Ast.Ident -> {
                     val name: String =
@@ -349,7 +349,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, scopeManager))
     }
 
     /**

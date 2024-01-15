@@ -768,7 +768,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * @param node node that gets the incoming edge
      */
     fun pushToEOG(node: Node) {
-        LOGGER.trace("Pushing ${node.javaClass.simpleName} $node to EOG")
+        LOGGER.trace("Pushing {} {} to EOG", node.javaClass.simpleName, node)
         for (intermediate in intermediateNodes) {
             processedListener.process(intermediate, node)
         }
@@ -780,7 +780,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     fun setCurrentEOGs(nodes: List<Node>) {
-        LOGGER.trace("Setting $nodes to EOGs")
+        LOGGER.trace("Setting {} to EOGs", nodes)
         currentPredecessors = ArrayList(nodes)
     }
 
@@ -788,10 +788,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Connects the current EOG leaf nodes to the last stacked node, e.g. loop head, and removes the
      * nodes.
      *
-     * @param loopStatement the loop statement
      * @param loopScope the loop scope
      */
-    protected fun exitLoop(loopStatement: Statement, loopScope: LoopScope) {
+    protected fun exitLoop(loopScope: LoopScope) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
         // context is destroyed
         currentPredecessors.addAll(loopScope.breakStatements)
@@ -871,7 +870,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeProperties[Properties.BRANCH] = false
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit do loop, but no loop scope: $node")
         }
@@ -890,7 +889,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
@@ -916,7 +915,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
@@ -991,7 +990,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }

@@ -441,9 +441,6 @@ class QueryTest {
     @Test
     fun testOutOfBoundsQuery3() {
         val result = Query.getArray3()
-        val subscripts =
-            MultiValueEvaluator()
-                .evaluate(result.allChildren<SubscriptExpression>().first().subscriptExpression)
 
         val queryTreeResult =
             result.all<SubscriptExpression>(

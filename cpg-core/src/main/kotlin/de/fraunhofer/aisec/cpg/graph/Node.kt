@@ -290,7 +290,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     fun addAllPrevDFG(
         prev: Collection<Node>,
-        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+        properties: Map<Properties, Any?> = EnumMap(Properties::class.java)
     ) {
         prev.forEach { addPrevDFG(it, properties.toMutableMap()) }
     }

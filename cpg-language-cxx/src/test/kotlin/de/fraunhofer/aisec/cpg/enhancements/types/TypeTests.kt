@@ -187,7 +187,7 @@ internal class TypeTests : BaseTest() {
             val level1b = assertNotNull(result.records["Level1B"]).toType()
             val level2 = assertNotNull(result.records["Level2"]).toType()
             val unrelated = assertNotNull(result.records["Unrelated"]).toType()
-            getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated, result)
+            getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
         }
     }
 
@@ -262,8 +262,7 @@ internal class TypeTests : BaseTest() {
         level1: Type,
         level1b: Type,
         level2: Type,
-        unrelated: Type,
-        result: TranslationResult
+        unrelated: Type
     ) {
         /*
         Type hierarchy:
@@ -275,9 +274,6 @@ internal class TypeTests : BaseTest() {
                |
              Level2
          */
-        val provider = result.finalCtx.scopeManager
-        val typeManager = result.finalCtx.typeManager
-
         // A single type is its own least common ancestor
         for (t in listOf(root, level0, level1, level1b, level2)) {
             assertEquals(t, setOf(t).commonType)

@@ -437,11 +437,11 @@ internal class EOGTest : BaseTest() {
         nodes[0].accept(
             Strategy::EOG_BACKWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
+                override fun visit(t: Node) {
                     println(
-                        PhysicalLocation.locationLink(n.location) +
+                        PhysicalLocation.locationLink(t.location) +
                             " -> " +
-                            PhysicalLocation.locationLink(n.location)
+                            PhysicalLocation.locationLink(t.location)
                     )
                 }
             }
@@ -626,7 +626,7 @@ internal class EOGTest : BaseTest() {
         prints = Util.subnodesOfCode(functions[1], refNodeString)
         cases = swch.allChildren<CaseStatement>()
         defaults = swch.allChildren<DefaultStatement>()
-        var wstat = functions[1].allChildren<WhileStatement>().firstOrNull()
+        val wstat = functions[1].allChildren<WhileStatement>().firstOrNull()
         assertNotNull(wstat)
         assertTrue(Util.eogConnect(en = Util.Edge.EXITS, n = prints[0], refs = listOf(wstat)))
         assertTrue(
@@ -660,9 +660,6 @@ internal class EOGTest : BaseTest() {
         // switch-while
         swch = functions[2].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
-        wstat = functions[2].allChildren<WhileStatement>()[0]
-        cases = swch.allChildren<CaseStatement>()
-        defaults = swch.allChildren<DefaultStatement>()
         assertTrue(Util.eogConnect(en = Util.Edge.EXITS, n = prints[0], refs = listOf(swch)))
         assertTrue(Util.eogConnect(en = Util.Edge.EXITS, n = swch, refs = listOf(prints[2])))
         // Assert: Selector exits connect to either case or default statements entries
@@ -701,7 +698,6 @@ internal class EOGTest : BaseTest() {
                 )
             }
         }
-        swch = functions[2].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
         val whiles = functions[2].allChildren<WhileStatement>()[0]
         breaks = whiles.allChildren<BreakStatement>()
@@ -968,6 +964,5 @@ internal class EOGTest : BaseTest() {
 
     companion object {
         var REFNODESTRINGJAVA = "System.out.println();"
-        var REFNODESTRINGCXX = "printf(\"\\n\");"
     }
 }

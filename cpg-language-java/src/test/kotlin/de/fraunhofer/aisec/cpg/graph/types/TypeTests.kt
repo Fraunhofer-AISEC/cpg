@@ -94,16 +94,7 @@ internal class TypeTests : BaseTest() {
         val z = findByUniqueName(fieldDeclarations, "z")
         assertSame(x.type, z.type)
 
-        // Test propagation of specifiers in primitive fields (final int y)
-        val y = findByUniqueName(fieldDeclarations, "y")
-
-        // Test propagation of specifiers in non-primitive fields (final A a)
         val variableDeclarations = result.variables
-        val aA = findByUniqueName(variableDeclarations, "a")
-
-        // Test propagation of specifiers in variables (final String s)
-        val sString = findByUniqueName(variableDeclarations, "s")
-
         // Test PointerType chain with array
         val array = findByUniqueName(variableDeclarations, "array")
         assertTrue(array.type is PointerType)

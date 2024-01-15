@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.JavaToken
 import com.github.javaparser.ast.expr.Expression
-import com.github.javaparser.ast.expr.SimpleName
 import com.github.javaparser.ast.stmt.*
 import com.github.javaparser.ast.stmt.CatchClause
 import com.github.javaparser.ast.stmt.Statement
@@ -56,7 +55,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
@@ -320,16 +318,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     private fun handleBreakStatement(stmt: Statement): BreakStatement {
         val breakStmt = stmt.asBreakStmt()
         val breakStatement = newBreakStatement(rawNode = stmt)
-        breakStmt.label.ifPresent { label: SimpleName -> breakStatement.label = label.toString() }
+        breakStmt.label.ifPresent { label -> breakStatement.label = label.toString() }
         return breakStatement
     }
 
     private fun handleContinueStatement(stmt: Statement): ContinueStatement {
         val continueStmt = stmt.asContinueStmt()
         val continueStatement = newContinueStatement(rawNode = stmt)
-        continueStmt.label.ifPresent { label: SimpleName ->
-            continueStatement.label = label.toString()
-        }
+        continueStmt.label.ifPresent { label -> continueStatement.label = label.toString() }
         return continueStatement
     }
 
@@ -395,8 +391,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return caseStatement
     }
 
-    fun getPreviousTokenWith(text: String, token: JavaToken): JavaToken {
-        var token = token
+    fun getPreviousTokenWith(text: String, startToken: JavaToken): JavaToken {
+        var token = startToken
         var optional = token.previousToken
         while (token.text != text && optional.isPresent) {
             token = optional.get()
@@ -405,8 +401,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return token
     }
 
-    fun getNextTokenWith(text: String, token: JavaToken): JavaToken {
-        var token = token
+    fun getNextTokenWith(text: String, startToken: JavaToken): JavaToken {
+        var token = startToken
         var optional = token.nextToken
         while (token.text != text && optional.isPresent) {
             token = optional.get()
@@ -542,17 +538,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val tryStatement = newTryStatement(rawNode = stmt)
         frontend.scopeManager.enterScope(tryStatement)
         val resources =
-            tryStmt.resources.mapNotNull { ctx: Expression ->
-                frontend.expressionHandler.handle(ctx)
-            }
+            tryStmt.resources.mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
         val tryBlock = handleBlockStatement(tryStmt.tryBlock)
-        val catchClauses =
-            tryStmt.catchClauses
-                .stream()
-                .map { catchCls: CatchClause -> handleCatchClause(catchCls) }
-                .collect(Collectors.toList())
-        val finallyBlock =
-            tryStmt.finallyBlock.map { stmt: BlockStmt -> handleBlockStatement(stmt) }.orElse(null)
+        val catchClauses = tryStmt.catchClauses.map(::handleCatchClause)
+        val finallyBlock = tryStmt.finallyBlock.map(::handleBlockStatement).orElse(null)
         frontend.scopeManager.leaveScope(tryStatement)
         tryStatement.resources = resources
         tryStatement.tryBlock = tryBlock

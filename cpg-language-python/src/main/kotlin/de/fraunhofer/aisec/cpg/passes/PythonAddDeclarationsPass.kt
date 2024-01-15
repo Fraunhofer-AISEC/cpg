@@ -70,11 +70,13 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handle(node: Node?) {
         when (node) {
-            // TODO ist doppelt
+            // TODO is doubled. Whatever this means
             is AssignExpression -> handleAssignExpression(node)
             is Reference -> handleReference(node)
             is ForEachStatement -> handleForEach(node)
-            else -> {}
+            else -> {
+                // Nothing to do for all other types of nodes
+            }
         }
     }
 
@@ -86,55 +88,53 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             return null
         }
         val resolved = scopeManager.resolveReference(node)
-        if (resolved == null) {
-            val decl =
-                if (scopeManager.isInRecord) {
-                    if (scopeManager.isInFunction) {
-                        if (
-                            node is MemberExpression &&
-                                node.base.name ==
-                                    (scopeManager.currentFunction as? MethodDeclaration)
-                                        ?.receiver
-                                        ?.name
-                        ) {
-                            // We need to temporarily jump into the scope of the current record to
-                            // add the field
-                            val field =
-                                scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                                    newFieldDeclaration(node.name)
-                                }
-                            field
-                        } else {
-                            val v = newVariableDeclaration(node.name)
-                            v
-                        }
-                    } else {
+
+        // Nothing to create
+        if (resolved != null) return null
+
+        val decl =
+            if (scopeManager.isInRecord) {
+                if (scopeManager.isInFunction) {
+                    if (
+                        node is MemberExpression &&
+                            node.base.name ==
+                                (scopeManager.currentFunction as? MethodDeclaration)?.receiver?.name
+                    ) {
+                        // We need to temporarily jump into the scope of the current record to
+                        // add the field
                         val field =
                             scopeManager.withScope(scopeManager.currentRecord?.scope) {
                                 newFieldDeclaration(node.name)
                             }
                         field
+                    } else {
+                        val v = newVariableDeclaration(node.name)
+                        v
                     }
                 } else {
-                    newVariableDeclaration(node.name)
-                }
-
-            decl.code = node.code
-            decl.location = node.location
-            decl.isImplicit = true
-
-            if (decl is FieldDeclaration) {
-                scopeManager.currentRecord?.addField(decl)
-                scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                    scopeManager.addDeclaration(decl)
+                    val field =
+                        scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                            newFieldDeclaration(node.name)
+                        }
+                    field
                 }
             } else {
+                newVariableDeclaration(node.name)
+            }
+
+        decl.code = node.code
+        decl.location = node.location
+        decl.isImplicit = true
+
+        if (decl is FieldDeclaration) {
+            scopeManager.currentRecord?.addField(decl)
+            scopeManager.withScope(scopeManager.currentRecord?.scope) {
                 scopeManager.addDeclaration(decl)
             }
-            return decl
         } else {
-            return null
+            scopeManager.addDeclaration(decl)
         }
+        return decl
     }
 
     private fun handleAssignExpression(assignExpression: AssignExpression) {

@@ -456,7 +456,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 type = frontend.typeOf(declarator, declSpecifierToUse)
 
                 // Handle typedefs.
-                val declaration = handleTypedef(declarator, ctx, type)
+                val declaration = handleTypedef(declarator, type)
 
                 sequence.addDeclaration(declaration)
             } else {
@@ -618,11 +618,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return null
     }
 
-    private fun handleTypedef(
-        declarator: IASTDeclarator,
-        ctx: IASTSimpleDeclaration,
-        type: Type
-    ): Declaration {
+    private fun handleTypedef(declarator: IASTDeclarator, type: Type): Declaration {
         val (nameDecl: IASTDeclarator, _) = declarator.realName()
 
         val declaration =

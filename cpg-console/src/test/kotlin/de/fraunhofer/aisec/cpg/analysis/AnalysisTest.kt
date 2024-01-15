@@ -81,7 +81,7 @@ class AnalysisTest {
 
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
-        val tu = result.translationUnits.first()
+        val tu = result.components.flatMap { it.translationUnits }.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("Array.main", true)
         assertNotNull(main)

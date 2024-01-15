@@ -51,7 +51,7 @@ class CXXCompilationDatabaseTest {
                     it.registerLanguage<CPPLanguage>()
                     it.registerLanguage<CLanguage>()
                 }
-            val tu = result.translationUnits.firstOrNull()
+            val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             assertNotNull(tu)
 
             val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
@@ -104,7 +104,7 @@ class CXXCompilationDatabaseTest {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
         assertNotNull(tu)
 
@@ -126,7 +126,7 @@ class CXXCompilationDatabaseTest {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
-        val tus = result.translationUnits
+        val tus = result.components.flatMap { it.translationUnits }
         assertEquals(2, tus.size)
         val ref = mapOf("main_tu_1.c" to 1, "main_tu_2.c" to 2)
 
@@ -155,7 +155,11 @@ class CXXCompilationDatabaseTest {
                 it.registerLanguage<CLanguage>()
             }
 
-        val main = result.translationUnits.firstOrNull()?.byNameOrNull<FunctionDeclaration>("main")
+        val main =
+            result.components
+                .flatMap { it.translationUnits }
+                .firstOrNull()
+                ?.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
     }
 }

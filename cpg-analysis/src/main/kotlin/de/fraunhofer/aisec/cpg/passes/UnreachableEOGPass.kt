@@ -91,18 +91,20 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  */
 fun transfer(
     currentEdge: PropertyEdge<Node>,
-    currentState: State<PropertyEdge<Node>, Reachability>,
-    currentWorklist: Worklist<PropertyEdge<Node>, PropertyEdge<Node>, Reachability>
+    currentState: State<PropertyEdge<Node>, Reachability>
 ): State<PropertyEdge<Node>, Reachability> {
-    val currentNode = currentEdge.end
-    if (currentNode is IfStatement) {
-        handleIfStatement(currentEdge, currentNode, currentState)
-    } else if (currentNode is WhileStatement) {
-        handleWhileStatement(currentEdge, currentNode, currentState)
-    } else {
-        // For all other edges, we simply propagate the reachability property of the edge
-        // which made us come here.
-        currentNode.nextEOGEdges.forEach { currentState.push(it, currentState[currentEdge]) }
+    when (val currentNode = currentEdge.end) {
+        is IfStatement -> {
+            handleIfStatement(currentEdge, currentNode, currentState)
+        }
+        is WhileStatement -> {
+            handleWhileStatement(currentEdge, currentNode, currentState)
+        }
+        else -> {
+            // For all other edges, we simply propagate the reachability property of the edge
+            // which made us come here.
+            currentNode.nextEOGEdges.forEach { currentState.push(it, currentState[currentEdge]) }
+        }
     }
 
     return currentState

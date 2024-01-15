@@ -63,7 +63,7 @@ open class QueryTree<T>(
     fun printNicely(depth: Int = 0): String {
         var res =
             "  ".repeat(depth) +
-                "$stringRepresentation (==> ${if (value is List<*>) (value as List<*>).joinToString("\n","[", "]") else value})\n" +
+                "$stringRepresentation (==> ${if (value is List<*>) (value as List<*>).joinToString("\n","[", "]") else value.toString()})\n" +
                 "--------".repeat(depth + 1)
         if (children.isNotEmpty()) {
             res += "\n"
@@ -145,6 +145,7 @@ open class QueryTree<T>(
         if (this.value is Number && other.value is Number) {
             return (this.value as Number).compareTo(other.value as Number)
         } else if (this.value is Comparable<*> && other.value is Comparable<*>) {
+            @Suppress("UNCHECKED_CAST")
             return (this.value as Comparable<Any>).compareTo(other.value as Any)
         }
         throw QueryException("Cannot compare objects of type ${this.value} and ${other.value}")

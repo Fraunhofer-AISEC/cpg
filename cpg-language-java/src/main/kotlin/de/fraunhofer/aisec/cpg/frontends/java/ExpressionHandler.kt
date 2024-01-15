@@ -241,15 +241,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             handle(assignExpr.value)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
-        val assign =
-            newAssignExpression(
-                assignExpr.operator.asString(),
-                listOf(lhs),
-                listOf(rhs),
-                rawNode = assignExpr
-            )
-
-        return assign
+        return newAssignExpression(
+            assignExpr.operator.asString(),
+            listOf(lhs),
+            listOf(rhs),
+            rawNode = assignExpr
+        )
     }
 
     // Not sure how to handle this exactly yet
@@ -441,9 +438,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     private fun handleLiteralExpression(expr: Expression): Literal<*>? {
-        val literalExpr = expr.asLiteralExpr()
-        val value = literalExpr.toString()
-        return when (literalExpr) {
+        return when (val literalExpr = expr.asLiteralExpr()) {
             is IntegerLiteralExpr ->
                 newLiteral(
                     literalExpr.asIntegerLiteralExpr().asNumber(),

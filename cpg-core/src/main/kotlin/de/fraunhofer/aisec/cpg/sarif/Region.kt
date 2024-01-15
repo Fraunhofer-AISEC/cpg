@@ -28,8 +28,7 @@ package de.fraunhofer.aisec.cpg.sarif
 import java.util.*
 
 /** Code source location, in a SASP/SARIF-compliant "Region" format. */
-class Region
-constructor(
+class Region(
     @JvmField var startLine: Int = -1,
     @JvmField var startColumn: Int = -1,
     var endLine: Int = -1,

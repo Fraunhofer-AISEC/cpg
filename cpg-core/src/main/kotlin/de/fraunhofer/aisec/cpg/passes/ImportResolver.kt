@@ -73,9 +73,9 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
             val base = importables[matcher.group("base")]
             var members = setOf<ValueDeclaration>()
-            if (base is RecordDeclaration) {
+            if (base is EnumDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
-            } else if (base is EnumDeclaration) {
+            } else if (base is RecordDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
             }
             staticImports.addAll(members)
@@ -83,7 +83,9 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         for (asteriskImport in partitioned[true] ?: listOf()) {
             val base = importables[asteriskImport.replace(".*", "")]
-            if (base is RecordDeclaration) {
+            if (base is EnumDeclaration) {
+                staticImports.addAll(base.entries)
+            } else if (base is RecordDeclaration) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
                 // Add all the static methods implemented in the class "base" and its superclasses
                 staticImports.addAll(
@@ -93,8 +95,6 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 staticImports.addAll(
                     classes.flatMap { it.fields }.filter { "static" in it.modifiers }
                 )
-            } else if (base is EnumDeclaration) {
-                staticImports.addAll(base.entries)
             }
         }
         return staticImports
@@ -160,10 +160,10 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(t: Node) {
-                    if (t is RecordDeclaration) {
-                        records.add(t)
+                    if (t is EnumDeclaration) {
                         importables.putIfAbsent(t.name.toString(), t)
-                    } else if (t is EnumDeclaration) {
+                    } else if (t is RecordDeclaration) {
+                        records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)
                     }
                 }

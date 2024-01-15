@@ -613,6 +613,7 @@ operator fun <N : Expression> Expression.invoke(): N? {
 
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
+    @Suppress("UNCHECKED_CAST")
     return SubgraphWalker.flattenAST(this).filter { node ->
         node is CallExpression && node.invokes.any { it.name.lastPartsMatch(name) }
     } as List<CallExpression>

@@ -118,10 +118,8 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
             // Some magic that adds it to static imports. Not sure if this really needed
 
-            if (record != null) {
-                if (isStatic) {
-                    record.staticImports.add(inferred)
-                }
+            if (record != null && isStatic) {
+                record.staticImports.add(inferred)
             }
 
             // "upgrade" our struct to a class, if it was inferred by us, since we are calling
@@ -319,12 +317,12 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         kind: String = "class"
     ): RecordDeclaration? {
         if (type !is ObjectType) {
-            Companion.log.error(
+            log.error(
                 "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
             )
             return null
         }
-        Companion.log.debug(
+        log.debug(
             "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
         )
 

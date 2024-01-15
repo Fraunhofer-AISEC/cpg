@@ -401,9 +401,9 @@ class ScopeManager : ScopeProvider {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
                 scope?.addValueDeclaration(declaration, addToAST)
             }
+            is EnumDeclaration,
             is RecordDeclaration,
             is NamespaceDeclaration,
-            is EnumDeclaration,
             is TemplateDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
                 scope?.addDeclaration(declaration, addToAST)

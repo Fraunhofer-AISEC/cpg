@@ -120,7 +120,7 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result =
             TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
         val records = result.records

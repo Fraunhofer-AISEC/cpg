@@ -138,52 +138,50 @@ object SubgraphWalker {
         // We currently need to stick to pure Java reflection, since Kotlin reflection
         // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
         for (field in getAllFields(classType)) {
-            val ast = field.getAnnotation(AST::class.java)
-            if (ast != null) {
-                try {
-                    // We need to synchronize access to the field, because otherwise different
-                    // threads might restore the isAccessible property while this thread is still
-                    // accessing the field
-                    var obj =
-                        synchronized(field) {
-                            // disable access mechanisms
-                            field.trySetAccessible()
-                            val obj = field[node]
+            field.getAnnotation(AST::class.java) ?: continue
+            try {
+                // We need to synchronize access to the field, because otherwise different
+                // threads might restore the isAccessible property while this thread is still
+                // accessing the field
+                var obj =
+                    synchronized(field) {
+                        // disable access mechanisms
+                        field.trySetAccessible()
+                        val obj = field[node]
 
-                            // restore old state
-                            field.isAccessible = false
-                            obj
-                        }
-                            ?: continue
+                        // restore old state
+                        field.isAccessible = false
+                        obj
+                    }
+                        ?: continue
 
-                    // skip, if null
-                    var outgoing = true // default
-                    if (field.getAnnotation(Relationship::class.java) != null) {
-                        outgoing =
-                            (field.getAnnotation(Relationship::class.java).direction ==
-                                Relationship.Direction.OUTGOING)
-                    }
-                    if (checkForPropertyEdge(field, obj)) {
-                        obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
-                    }
-                    when (obj) {
-                        is Node -> {
-                            children.add(obj)
-                        }
-                        is Collection<*> -> {
-                            children.addAll(obj as Collection<Node>)
-                        }
-                        else -> {
-                            throw AnnotationFormatError(
-                                "Found @field:SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
-                            )
-                        }
-                    }
-                } catch (ex: IllegalAccessException) {
-                    LOGGER.error("Error while retrieving AST children: {}", ex.message)
+                // skip, if null
+                var outgoing = true // default
+                if (field.getAnnotation(Relationship::class.java) != null) {
+                    outgoing =
+                        (field.getAnnotation(Relationship::class.java).direction ==
+                            Relationship.Direction.OUTGOING)
                 }
+                if (checkForPropertyEdge(field, obj) && obj is Collection<*>) {
+                    obj = unwrap(obj.filterIsInstance<PropertyEdge<Node>>(), outgoing)
+                }
+                when (obj) {
+                    is Node -> {
+                        children.add(obj)
+                    }
+                    is Collection<*> -> {
+                        children.addAll(obj.filterIsInstance<Node>())
+                    }
+                    else -> {
+                        throw AnnotationFormatError(
+                            "Found @field:SubGraph(\"AST\") on field of type " +
+                                obj.javaClass +
+                                " but can only used with node graph classes or collections of graph nodes"
+                        )
+                    }
+                }
+            } catch (ex: IllegalAccessException) {
+                LOGGER.error("Error while retrieving AST children: {}", ex.message)
             }
         }
         return children

@@ -108,6 +108,7 @@ fun Node.applyMetadata(
     // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
     // calling a node builder from these should already set the location.
     if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+        @Suppress("UNCHECKED_CAST")
         (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 

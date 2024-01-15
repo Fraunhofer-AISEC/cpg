@@ -84,10 +84,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
      * [AutoType].
      */
     override fun typeOf(type: Python.AST?): Type {
-        when (type) {
+        return when (type) {
             null -> {
                 // No type information -> we return an autoType to infer things magically
-                return autoType()
+                autoType()
             }
             is Python.ASTName -> {
                 // We have some kind of name here; let's quickly check, if this is a primitive type
@@ -106,13 +106,13 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                         scopeManager.currentNamespace.fqn(id)
                     }
 
-                return objectType(name)
+                objectType(name)
             }
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we
                 // need to return the unknown type.
-                return unknownType()
+                unknownType()
             }
         }
     }

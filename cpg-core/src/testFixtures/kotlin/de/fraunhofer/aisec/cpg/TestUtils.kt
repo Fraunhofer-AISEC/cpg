@@ -49,7 +49,7 @@ object TestUtils {
 
     /**
      * Currently there is no unified enforced structure when using fields, this field is used set
-     * whether or not the tests enforce the presence of a member expression
+     * whether the tests enforce the presence of a member expression
      */
     var ENFORCE_MEMBER_EXPRESSION = false
 
@@ -168,7 +168,7 @@ object TestUtils {
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): TranslationUnitDeclaration {
         val result = analyze(files, topLevel, usePasses, configModifier)
-        return result.translationUnits.first()
+        return result.components.flatMap { it.translationUnits }.first()
     }
 
     @Throws(Exception::class)
@@ -181,6 +181,7 @@ object TestUtils {
             val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
+                @Suppress("UNCHECKED_CAST")
                 it.softwareComponents(db.components as MutableMap<String, List<File>>)
                 configModifier?.accept(it)
             }
