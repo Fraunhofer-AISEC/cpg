@@ -501,7 +501,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
                 log.debug(
-                    "Trying to access a field within the record declaration of ${record.name}"
+                    "Trying to access a field within the record declaration of {}",
+                    record.name
                 )
 
                 // look for the field

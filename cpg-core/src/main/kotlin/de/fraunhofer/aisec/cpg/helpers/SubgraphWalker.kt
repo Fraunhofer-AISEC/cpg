@@ -162,15 +162,15 @@ object SubgraphWalker {
                         (field.getAnnotation(Relationship::class.java).direction ==
                             Relationship.Direction.OUTGOING)
                 }
-                if (checkForPropertyEdge(field, obj)) {
-                    obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
+                if (checkForPropertyEdge(field, obj) && obj is Collection<*>) {
+                    obj = unwrap(obj.filterIsInstance<PropertyEdge<Node>>(), outgoing)
                 }
                 when (obj) {
                     is Node -> {
                         children.add(obj)
                     }
                     is Collection<*> -> {
-                        children.addAll(obj as Collection<Node>)
+                        children.addAll(obj.filterIsInstance<Node>())
                     }
                     else -> {
                         throw AnnotationFormatError(

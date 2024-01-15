@@ -304,8 +304,7 @@ open class CPPLanguage :
                             function,
                             initializationSignature,
                             initializationType,
-                            orderedInitializationSignature,
-                            ctx
+                            orderedInitializationSignature
                         )
                     return Pair(true, candidates)
                 }

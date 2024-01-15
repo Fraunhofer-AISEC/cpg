@@ -267,8 +267,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  */
 fun handleEdge(
     currentEdge: PropertyEdge<Node>,
-    currentState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>,
-    currentWorklist: Worklist<PropertyEdge<Node>, Node, IdentityHashMap<Node, IdentitySet<Node>>>
+    currentState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>
 ): State<Node, IdentityHashMap<Node, IdentitySet<Node>>> {
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.

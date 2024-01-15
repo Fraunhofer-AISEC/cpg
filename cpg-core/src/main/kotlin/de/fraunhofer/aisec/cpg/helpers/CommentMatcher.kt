@@ -48,7 +48,7 @@ class CommentMatcher {
         artifactLocation: PhysicalLocation.ArtifactLocation?
     ): Node {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
-        var children =
+        val children =
             SubgraphWalker.getAstChildren(node)
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
