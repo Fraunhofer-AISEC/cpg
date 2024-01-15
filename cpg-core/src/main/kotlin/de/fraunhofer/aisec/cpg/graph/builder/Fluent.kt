@@ -1422,7 +1422,7 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
 fun LanguageFrontend<*, *>.t(name: CharSequence, generics: List<Type> = listOf()) =
     objectType(name, generics)
 
-/** Creates a new [Type] with the given [name] in the Fluent Node DSL. */
+/** Creates a new [IncompleteType] in the Fluent Node DSL. */
 fun LanguageFrontend<*, *>.void() = incompleteType()
 
 /**

@@ -67,7 +67,7 @@ class PropertyEdgeConverter : CompositeAttributeConverter<Map<Properties, Any?>>
 
     override fun toEntityAttribute(value: Map<String?, *>): Map<Properties, Any?> {
         val result: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
-        for (prop in Properties.values()) {
+        for (prop in Properties.entries) {
             if (deserializer.containsKey(prop.name)) {
                 val deserializedProperty =
                     value[prop.name]?.let { deserializer[prop.name]?.apply(it) }

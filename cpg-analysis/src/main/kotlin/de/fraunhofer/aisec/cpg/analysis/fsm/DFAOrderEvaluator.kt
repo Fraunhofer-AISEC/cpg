@@ -160,7 +160,7 @@ open class DFAOrderEvaluator(
 
             val eogPathSet = node.getEogPaths()
             if (eogPathSet == null) {
-                log.debug("Error during order-evaluation, no path set for node $node")
+                log.debug("Error during order-evaluation, no path set for node {}", node)
                 continue
             }
 
@@ -452,7 +452,10 @@ open class DFAOrderEvaluator(
             outNodes[0].addEogPath(eogPath)
             val stateOfNext = getStateSnapshot(outNodes[0], baseToFSM)
             if (stateOfNext in seenStates) {
-                log.debug("Node/FSM state already visited: ${stateOfNext}. Remove from next nodes.")
+                log.debug(
+                    "Node/FSM state already visited: {}. Remove from next nodes.",
+                    stateOfNext
+                )
                 outNodes.removeAt(0)
             }
         } else if (outNodes.size > 1) {
@@ -498,7 +501,10 @@ open class DFAOrderEvaluator(
         for (i in outNodes.indices.reversed()) {
             val stateOfNext = getStateSnapshot(outNodes[i], baseToFSM)
             if (stateOfNext in seenStates) {
-                log.debug("Node/FSM state already visited: ${stateOfNext}. Remove from next nodes.")
+                log.debug(
+                    "Node/FSM state already visited: {}. Remove from next nodes.",
+                    stateOfNext
+                )
                 outNodes.removeAt(i)
             } else {
                 val newEOGPath = "$eogPath$i"
