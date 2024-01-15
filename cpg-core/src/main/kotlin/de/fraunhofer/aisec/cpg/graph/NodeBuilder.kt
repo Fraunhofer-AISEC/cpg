@@ -272,6 +272,18 @@ fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNod
     return this
 }
 
+/**
+ * This function allows the setting of a node's code and location region as the code and location of its children.
+ * Sometimes, when we translate a parent node in the language-specific AST with its children into the CPG AST,
+ * we have to set a specific intermediate Node between, that has no language-specific AST that can give it a proper
+ * code and location.
+ *
+ * While the location of the node is determined by the start and end of the child locations, the code is extracted from
+ * the parent node to catch separators and auxiliary syntactic elements that are between the child nodes.
+ *
+ * @param frontend Used to invoke language specific code and location generation
+ * @param parentNode Used to extract the code for this node
+ */
 fun <T : Node, S> T.codeAndLocationFromChildren(
     frontend: LanguageFrontend<S, *>,
     parentNode: S
