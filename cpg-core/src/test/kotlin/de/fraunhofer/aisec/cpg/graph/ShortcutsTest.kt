@@ -48,12 +48,14 @@ class ShortcutsTest {
 
         val toStringCall = result.callsByName("toString")[0]
         val printDecl =
-            result.translationUnits[0]
+            result.components
+                .flatMap { it.translationUnits }
+                .first()
                 .byNameOrNull<RecordDeclaration>("Dataflow")
                 ?.byNameOrNull<MethodDeclaration>("print")
 
         val (fulfilled, failed) =
-            toStringCall.followNextDFGEdgesUntilHit { it == printDecl!!.parameters[0] }
+            toStringCall.followNextDFGEdgesUntilHit { it == printDecl?.parameters?.first() }
 
         assertEquals(1, fulfilled.size)
         assertEquals(0, failed.size)

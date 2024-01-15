@@ -73,7 +73,6 @@ class UnresolvedDFGPassTest {
 
         // No flow from base to return value
         val firstCall = result.calls { it.name.localName == "get" }[0]
-        val osDecl = result.variables["os"]
         assertEquals(0, firstCall.prevDFG.size)
 
         // No flow from base or argument to return value

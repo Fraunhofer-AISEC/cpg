@@ -618,7 +618,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
-        val tu = findByUniqueName(result.translationUnits, "src/test/resources/fix-328/Cat.java")
+        val tu =
+            findByUniqueName(
+                result.components.flatMap { it.translationUnits },
+                "src/test/resources/fix-328/Cat.java"
+            )
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
 
@@ -730,7 +734,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .build()
         val analyzer = builder().config(config).build()
         val result = analyzer.analyze().get()
-        for (node in result.translationUnits) {
+        for (node in result.components.flatMap { it.translationUnits }) {
             assertNotNull(node)
         }
     }
@@ -742,7 +746,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
         val outerClass = tu.records["compiling.OuterClass"]
