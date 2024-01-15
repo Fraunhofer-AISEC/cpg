@@ -294,16 +294,16 @@ fun <T : Node, S> T.codeAndLocationFromChildren(
 
     // Search through all children to find the first and last node based on region startLine and
     // startColumn
-    var worklist: MutableList<Node> = this.astChildren.toMutableList()
+    val worklist: MutableList<Node> = this.astChildren.toMutableList()
     while (worklist.isNotEmpty()) {
-        var current = worklist.removeFirst()
+        val current = worklist.removeFirst()
         if (current.location?.region == null || current.location?.region == Region()) {
             // If the node has no location we use the same search on his children again
             worklist.addAll(current.astChildren)
         } else {
             // Compare nodes by line and column in lexicographic order, i.e. column is compared if
             // lines are equal
-            if (first == null || last == null) {
+            if (first == null) {
                 first = current
                 last = current
             }
@@ -312,8 +312,8 @@ fun <T : Node, S> T.codeAndLocationFromChildren(
                     first,
                     current,
                     compareBy(
-                        { it?.location?.region?.startLine },
-                        { it?.location?.region?.startColumn }
+                        { it.location?.region?.startLine },
+                        { it.location?.region?.startColumn }
                     )
                 )
             last =
