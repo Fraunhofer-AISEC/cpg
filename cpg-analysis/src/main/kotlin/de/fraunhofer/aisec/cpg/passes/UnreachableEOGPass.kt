@@ -93,8 +93,7 @@ fun transfer(
     currentEdge: PropertyEdge<Node>,
     currentState: State<PropertyEdge<Node>, Reachability>
 ): State<PropertyEdge<Node>, Reachability> {
-    val currentNode = currentEdge.end
-    when (currentNode) {
+    when (val currentNode = currentEdge.end) {
         is IfStatement -> {
             handleIfStatement(currentEdge, currentNode, currentState)
         }

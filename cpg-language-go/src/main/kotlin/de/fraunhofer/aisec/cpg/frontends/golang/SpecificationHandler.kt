@@ -70,9 +70,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleTypeSpec(spec: GoStandardLibrary.Ast.TypeSpec): Declaration {
-        val type = spec.type
         val decl =
-            when (type) {
+            when (val type = spec.type) {
                 is GoStandardLibrary.Ast.StructType -> handleStructTypeSpec(spec, type)
                 is GoStandardLibrary.Ast.InterfaceType -> handleInterfaceTypeSpec(spec, type)
                 is GoStandardLibrary.Ast.FuncType -> handleFuncTypeSpec(spec, type)
