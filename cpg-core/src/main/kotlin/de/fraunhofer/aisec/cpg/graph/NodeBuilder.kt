@@ -276,45 +276,60 @@ fun <T : Node, S> T.codeAndLocationFromChildren(
     frontend: LanguageFrontend<S, *>,
     parentNode: S
 ): T {
-    var nodesWithLocation =
-        this.astChildren
-            .filter { it.location?.region != null && it.location?.region != Region() }
-            .toMutableList()
-    var worklist: MutableList<Node> =
-        this.astChildren
-            .filter { !nodesWithLocation.contains(it) }
-            .flatMap { it.astChildren }
-            .toMutableList()
+    var first: Node? = null
+    var last: Node? = null
+
+    // Search through all children to find the first and last node based on region startLine and
+    // startColumn
+    var worklist: MutableList<Node> = this.astChildren.toMutableList()
     while (worklist.isNotEmpty()) {
         var current = worklist.removeFirst()
         if (current.location?.region == null || current.location?.region == Region()) {
+            // If the node has no location we use the same search on his children again
             worklist.addAll(current.astChildren)
         } else {
-            nodesWithLocation.add(current)
+            // Compare nodes by line and column in lexicographic order, i.e. column is compared if
+            // lines are equal
+            if (first == null || last == null) {
+                first = current
+                last = current
+            }
+            first =
+                minOf(
+                    first,
+                    current,
+                    compareBy(
+                        { it?.location?.region?.startLine },
+                        { it?.location?.region?.startColumn }
+                    )
+                )
+            last =
+                maxOf(
+                    last,
+                    current,
+                    compareBy(
+                        { it?.location?.region?.endLine },
+                        { it?.location?.region?.endColumn }
+                    )
+                )
         }
     }
 
-    val sortedNodes =
-        nodesWithLocation.sortedWith(
-            compareBy({ it.location?.region?.startLine }, { it.location?.region?.startColumn })
-        )
-
-    if (sortedNodes.isNotEmpty()) {
-        // All regions are present and not default at this point
-        val startLine = sortedNodes.first().location?.region?.startLine ?: -1
-        val endLine = sortedNodes.last().location?.region?.endLine ?: -1
+    if (first != null && last != null) {
+        // Starts and ends are combined to one region
         val newRegion =
             Region(
-                startLine = startLine,
-                startColumn = sortedNodes.first().location?.region?.startColumn ?: -1,
-                endLine = endLine,
-                endColumn = sortedNodes.last().location?.region?.endColumn ?: -1,
+                startLine = first.location?.region?.startLine ?: -1,
+                startColumn = first.location?.region?.startColumn ?: -1,
+                endLine = last.location?.region?.endLine ?: -1,
+                endColumn = last.location?.region?.endColumn ?: -1,
             )
         this.location?.region = newRegion
 
         val parentCode = frontend.codeOf(parentNode)
         val parentRegion = frontend.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
+            // If the parent has code and region the new region is used to extract the code
             this.code = frontend.getCodeOfSubregion(parentCode, parentRegion, newRegion)
         }
     }
