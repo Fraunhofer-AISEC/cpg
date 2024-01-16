@@ -726,13 +726,13 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["literal"]
         assertNotNull(p)
 
-        assertEquals(Region(1, 0, 1, 8), (p.statements[0]).location?.region)
-        assertEquals(Region(1, 4, 1, 8), (p.variables["b"])?.firstAssignment?.location?.region)
-        assertEquals(Region(2, 0, 2, 6), (p.statements[1]).location?.region)
-        assertEquals(Region(3, 0, 3, 7), (p.statements[2]).location?.region)
-        assertEquals(Region(4, 0, 4, 10), (p.statements[3]).location?.region)
-        assertEquals(Region(5, 0, 5, 11), (p.statements[4]).location?.region)
-        assertEquals(Region(6, 0, 6, 8), (p.statements[5]).location?.region)
+        assertEquals(Region(1, 1, 1, 9), (p.statements[0]).location?.region)
+        assertEquals(Region(1, 5, 1, 9), (p.variables["b"])?.firstAssignment?.location?.region)
+        assertEquals(Region(2, 1, 2, 7), (p.statements[1]).location?.region)
+        assertEquals(Region(3, 1, 3, 8), (p.statements[2]).location?.region)
+        assertEquals(Region(4, 1, 4, 11), (p.statements[3]).location?.region)
+        assertEquals(Region(5, 1, 5, 12), (p.statements[4]).location?.region)
+        assertEquals(Region(6, 1, 6, 9), (p.statements[5]).location?.region)
     }
 
     @Test
