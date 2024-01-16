@@ -949,7 +949,7 @@ class PythonFrontendTest : BaseTest() {
 
         val commentedNodes = SubgraphWalker.flattenAST(tu).filter { it.comment != null }
 
-        assertEquals(8, commentedNodes.size)
+        assertEquals(9, commentedNodes.size)
 
         val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
         assertEquals(1, functions.size)
@@ -967,9 +967,10 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("# a parameter", params.first { it.name.localName == "i" }.comment)
         assertEquals("# another parameter", params.first { it.name.localName == "j" }.comment)
 
-        val variable = commentedNodes.filterIsInstance<VariableDeclaration>()
-        assertEquals(1, variable.size)
-        assertEquals("# A comment", variable.first().comment)
+        val assignment = commentedNodes.filterIsInstance<AssignExpression>()
+        assertEquals(2, assignment.size)
+        assertEquals("# A comment# a number", assignment.first().comment)
+        assertEquals("# comment end", assignment.last().comment)
 
         val block = commentedNodes.filterIsInstance<Block>()
         assertEquals(1, block.size)
@@ -979,14 +980,6 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(2, kvs.size)
         assertEquals("# a entry", kvs.first { it.code?.contains("a") ?: false }.comment)
         assertEquals("# b entry", kvs.first { it.code?.contains("b") ?: false }.comment)
-
-        val declStmts = commentedNodes.filterIsInstance<DeclarationStatement>()
-        assertEquals(2, declStmts.size)
-        assertEquals("# a number", declStmts.first { it.location?.region?.startLine == 3 }.comment)
-        assertEquals(
-            "# comment end",
-            declStmts.first { it.location?.region?.startLine == 18 }.comment
-        )
     }
 
     @Test

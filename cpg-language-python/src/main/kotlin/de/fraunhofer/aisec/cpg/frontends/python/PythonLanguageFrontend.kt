@@ -193,18 +193,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         lines: MutableList<String>
     ): MutableList<String> {
         for (idx in lines.indices) {
-            val prefixLength = min(location.region.startColumn, lines[idx].length)
+            // -1 to equalize for +1 in sarif
+            val prefixLength = min(location.region.startColumn - 1, lines[idx].length)
             if (idx == 0) {
                 lines[idx] = lines[idx].substring(prefixLength)
-            } else {
-
-                for (j in 0..prefixLength - 1) {
-                    if (lines[idx][0] == ' ' || lines[idx][0] == '\t') {
-                        lines[idx] = lines[idx].substring(1)
-                    } else {
-                        break
-                    }
-                }
             }
         }
         return lines
@@ -217,7 +209,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         val lastLineIdx = lines.lastIndex
         val lastLineLength = lines[lastLineIdx].length
         val locationEndColumn = location.region.endColumn
-        val toRemove = lastLineLength - locationEndColumn
+        val toRemove = lastLineLength - locationEndColumn + 1
         if (toRemove > 0) {
             lines[lastLineIdx] = lines[lastLineIdx].dropLast(toRemove)
         }
@@ -231,8 +223,8 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 Region(
                     startLine = astNode.lineno,
                     endLine = astNode.end_lineno,
-                    startColumn = astNode.col_offset,
-                    endColumn = astNode.end_col_offset,
+                    startColumn = astNode.col_offset + 1,
+                    endColumn = astNode.end_col_offset + 1,
                 )
             )
         } else {

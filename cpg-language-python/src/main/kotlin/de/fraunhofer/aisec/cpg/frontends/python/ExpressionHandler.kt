@@ -87,7 +87,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         key = node.keys[i]?.let { handle(it) },
                         value = handle(node.values[i]),
                     )
-                    .codeAndLocationFromChildren(frontend, node)
+                    .codeAndLocationFromChildren(node)
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.initializers = lst.toList()
