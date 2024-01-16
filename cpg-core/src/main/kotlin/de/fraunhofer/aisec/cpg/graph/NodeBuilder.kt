@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -63,10 +64,14 @@ interface LanguageProvider : MetadataProvider {
 
 /**
  * This interface denotes that the class is able to provide source code and location information for
- * a specific node and set it using the [setCodeAndLocation] function.
+ * a specific node.
  */
 interface CodeAndLocationProvider<in AstNode> : MetadataProvider {
-    fun setCodeAndLocation(cpgNode: Node, astNode: AstNode)
+    /** Returns the raw code of the supplied [AstNode]. */
+    fun codeOf(astNode: AstNode): String?
+
+    /** Returns the [PhysicalLocation] of the supplied [AstNode]. */
+    fun locationOf(astNode: AstNode): PhysicalLocation?
 }
 
 /**
@@ -102,6 +107,16 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
+    // We need to keep a local reference to the context for smart casting. We also definitely need a
+    // context provider, because otherwise we cannot set the context and the node cannot access
+    // necessary information about the current translation context it lives in.
+    val ctx =
+        (provider as? ContextProvider)?.ctx
+            ?: throw TranslationException(
+                "Trying to create a node without a ContextProvider. This will fail."
+            )
+    this.ctx = ctx
+
     // We try to set the code and especially the location as soon as possible because the hashCode
     // implementation of the Node class relies on it. Otherwise, we could have a problem that the
     // location is not yet set, but the node is put into a hashmap. In this case the hashCode is
@@ -109,8 +124,17 @@ fun Node.applyMetadata(
     // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
     // calling a node builder from these should already set the location.
     if (provider is CodeAndLocationProvider<*> && rawNode != null) {
-        @Suppress("UNCHECKED_CAST")
-        (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
+        @Suppress("UNCHECKED_CAST") (provider as CodeAndLocationProvider<Any>)
+        if (ctx.config.codeInNodes) {
+            // only set code, if it's not already set or empty
+            val code = provider.codeOf(rawNode)
+            if (code != null) {
+                this.code = code
+            } else {
+                LOGGER.warn("Unexpected: No code for node {}", rawNode)
+            }
+        }
+        this.location = provider.locationOf(rawNode)
     }
 
     if (provider is LanguageProvider) {
@@ -131,16 +155,6 @@ fun Node.applyMetadata(
         LOGGER.warn(
             "No scope provider was provided when creating the node {}. This might be an error",
             name
-        )
-    }
-
-    if (provider is ContextProvider) {
-        this.ctx = provider.ctx
-    }
-
-    if (this.ctx == null) {
-        throw TranslationException(
-            "Trying to create a node without a ContextProvider. This will fail."
         )
     }
 
@@ -285,10 +299,9 @@ fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNod
  * @param frontend Used to invoke language specific code and location generation
  * @param parentNode Used to extract the code for this node
  */
-fun <T : Node, S> T.codeAndLocationFromChildren(
-    frontend: LanguageFrontend<S, *>,
-    parentNode: S
-): T {
+context(CodeAndLocationProvider<S>)
+
+fun <T : Node, S> T.codeAndLocationFromChildren(parentNode: S): T {
     var first: Node? = null
     var last: Node? = null
 
@@ -339,11 +352,11 @@ fun <T : Node, S> T.codeAndLocationFromChildren(
             )
         this.location?.region = newRegion
 
-        val parentCode = frontend.codeOf(parentNode)
-        val parentRegion = frontend.locationOf(parentNode)?.region
+        val parentCode = this@CodeAndLocationProvider.codeOf(parentNode)
+        val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
             // If the parent has code and region the new region is used to extract the code
-            this.code = frontend.getCodeOfSubregion(parentCode, parentRegion, newRegion)
+            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion)
         }
     }
 

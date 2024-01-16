@@ -52,6 +52,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
+import de.fraunhofer.aisec.cpg.helpers.mergeRegions
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
@@ -199,17 +201,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     ofExprList = s.location
                 }
                 ofExprList?.region?.let { ofRegion ->
-                    s.location?.region?.let {
-                        ofExprList?.region = frontend.mergeRegions(ofRegion, it)
-                    }
+                    s.location?.region?.let { ofExprList?.region = mergeRegions(ofRegion, it) }
                 }
             }
 
             // set code and location of init list
             statement.location?.let { location ->
                 ofExprList?.let {
-                    val initCode =
-                        frontend.getCodeOfSubregion(statement, location.region, it.region)
+                    val initCode = getCodeOfSubregion(statement, location.region, it.region)
                     initExprList.location = ofExprList
                     initExprList.code = initCode
                 }
@@ -253,17 +252,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     ofExprList = s.location
                 }
                 ofExprList?.region?.let { ofRegion ->
-                    s.location?.region?.let {
-                        ofExprList.region = frontend.mergeRegions(ofRegion, it)
-                    }
+                    s.location?.region?.let { ofExprList.region = mergeRegions(ofRegion, it) }
                 }
             }
 
             // set code and location of init list
             statement.location?.let { location ->
                 ofExprList?.let {
-                    val updateCode =
-                        frontend.getCodeOfSubregion(statement, location.region, it.region)
+                    val updateCode = getCodeOfSubregion(statement, location.region, it.region)
                     iterationExprList.location = ofExprList
                     iterationExprList.code = updateCode
                 }
