@@ -52,8 +52,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
-import de.fraunhofer.aisec.cpg.helpers.mergeRegions
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.util.function.Supplier
@@ -178,8 +176,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val statement = this.newForStatement(rawNode = stmt)
         frontend.scopeManager.enterScope(statement)
         if (forStmt.initialization.size > 1) {
-            var ofExprList: PhysicalLocation? = null
-
             // code will be set later
             val initExprList = this.newExpressionList()
             for (initExpr in forStmt.initialization) {
@@ -190,23 +186,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 if (s?.location == null) {
                     continue
                 }
-                if (ofExprList == null) {
-                    ofExprList = s.location
-                }
-                ofExprList?.region?.let { ofRegion ->
-                    s.location?.region?.let { ofExprList?.region = mergeRegions(ofRegion, it) }
-                }
             }
 
-            // set code and location of init list
-            statement.location?.let { location ->
-                ofExprList?.let {
-                    val initCode = getCodeOfSubregion(statement, location.region, it.region)
-                    initExprList.location = ofExprList
-                    initExprList.code = initCode
-                }
-            }
-            statement.initializerStatement = initExprList
+            statement.initializerStatement = initExprList.codeAndLocationFromChildren(stmt)
         } else if (forStmt.initialization.size == 1) {
             statement.initializerStatement =
                 frontend.expressionHandler.handle(forStmt.initialization[0])
@@ -225,8 +207,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             statement.condition = literal
         }
         if (forStmt.update.size > 1) {
-            var ofExprList = statement.location
-
             // code will be set later
             val iterationExprList = this.newExpressionList()
             for (updateExpr in forStmt.update) {
@@ -240,23 +220,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 if (s?.location == null) {
                     continue
                 }
-                if (ofExprList == null) {
-                    ofExprList = s.location
-                }
-                ofExprList?.region?.let { ofRegion ->
-                    s.location?.region?.let { ofExprList.region = mergeRegions(ofRegion, it) }
-                }
             }
 
-            // set code and location of init list
-            statement.location?.let { location ->
-                ofExprList?.let {
-                    val updateCode = getCodeOfSubregion(statement, location.region, it.region)
-                    iterationExprList.location = ofExprList
-                    iterationExprList.code = updateCode
-                }
-            }
-            statement.iterationStatement = iterationExprList
+            statement.iterationStatement = iterationExprList.codeAndLocationFromChildren(stmt)
         } else if (forStmt.update.size == 1) {
             statement.iterationStatement = frontend.expressionHandler.handle(forStmt.update[0])
         }

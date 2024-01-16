@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -308,7 +309,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
     val worklist: MutableList<Node> = this.astChildren.toMutableList()
     while (worklist.isNotEmpty()) {
         val current = worklist.removeFirst()
-        if (current.location?.region == null || current.location?.region == Region()) {
+        if (current.location == null || current.location?.region == Region()) {
             // If the node has no location we use the same search on his children again
             worklist.addAll(current.astChildren)
         } else {
@@ -348,7 +349,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
                 endLine = last.location?.region?.endLine ?: -1,
                 endColumn = last.location?.region?.endColumn ?: -1,
             )
-        this.location?.region = newRegion
+        this.location =
+            PhysicalLocation(first.location?.artifactLocation?.uri ?: URI(""), newRegion)
 
         val parentCode = this@CodeAndLocationProvider.codeOf(parentNode)
         val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
