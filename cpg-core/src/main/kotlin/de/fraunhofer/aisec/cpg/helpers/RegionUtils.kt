@@ -26,20 +26,8 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.sarif.Region
 import org.apache.commons.lang3.StringUtils
-
-/**
- * To prevent issues with different newline types and formatting.
- *
- * @param node The newline type is extracted from this node's code.
- * @return the string of the newline
- */
-fun getNewLineType(node: Node): String {
-    val region = node.location?.region
-    return getNewLineType(node.code ?: "", region)
-}
 
 /**
  * To prevent issues with different newline types and formatting.
@@ -65,19 +53,6 @@ fun getNewLineType(multilineCode: String, region: Region? = null): String {
     return "\n"
 }
 
-/**
- * Returns the code represented by the subregion extracted from the parent node and its region.
- *
- * @param node The parent node of the subregion
- * @param nodeRegion region needs to be precomputed.
- * @param subRegion precomputed subregion
- * @return the code of the subregion.
- */
-fun getCodeOfSubregion(node: Node, nodeRegion: Region, subRegion: Region): String {
-    val code = node.code ?: return ""
-    return getCodeOfSubregion(code, nodeRegion, subRegion)
-}
-
 fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): String {
     val nlType = getNewLineType(code, nodeRegion)
     val start =
@@ -95,37 +70,4 @@ fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): Str
                 subRegion.endColumn)
         }
     return code.substring(start, end)
-}
-
-/**
- * Merges two regions. The new region contains both and is the minimal region to do so.
- *
- * @param regionOne the first region
- * @param regionTwo the second region
- * @return the merged region
- */
-fun mergeRegions(regionOne: Region, regionTwo: Region): Region {
-    val ret = Region()
-    if (
-        regionOne.startLine < regionTwo.startLine ||
-            regionOne.startLine == regionTwo.startLine &&
-                regionOne.startColumn < regionTwo.startColumn
-    ) {
-        ret.startLine = regionOne.startLine
-        ret.startColumn = regionOne.startColumn
-    } else {
-        ret.startLine = regionTwo.startLine
-        ret.startColumn = regionTwo.startColumn
-    }
-    if (
-        regionOne.endLine > regionTwo.endLine ||
-            regionOne.endLine == regionTwo.endLine && regionOne.endColumn > regionTwo.endColumn
-    ) {
-        ret.endLine = regionOne.endLine
-        ret.endColumn = regionOne.startColumn
-    } else {
-        ret.endLine = regionTwo.endLine
-        ret.endColumn = regionTwo.endColumn
-    }
-    return ret
 }
