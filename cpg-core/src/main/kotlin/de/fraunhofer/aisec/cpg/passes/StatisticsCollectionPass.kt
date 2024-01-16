@@ -51,7 +51,7 @@ class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(
             }
         }
 
-        for (tu in result.translationUnits) {
+        for (tu in result.components.flatMap { it.translationUnits }) {
             walker.iterate(tu)
         }
 

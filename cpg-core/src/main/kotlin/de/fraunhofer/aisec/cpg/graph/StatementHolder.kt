@@ -72,9 +72,9 @@ interface StatementHolder : Holder<Statement> {
     }
 
     /** Inserts the statement [s] before the statement specified in [before]. */
-    fun insertStatementBefore(s: Statement, before: Statement) {
+    fun insertStatementBefore(s: Statement, beforeStmt: Statement) {
         val statements = this.statements
-        val idx = statements.indexOf(before)
+        val idx = statements.indexOf(beforeStmt)
         if (idx != -1) {
             val before = statements.subList(0, idx)
             val after = statements.subList(idx, statements.size)

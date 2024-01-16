@@ -50,8 +50,6 @@ class RunPlugin : Plugin {
                     "NullPointerCheck().run(result)"
                 )
             )
-
-            // return Command.Result.RunSnippets(listOf(content))
         }
     }
 

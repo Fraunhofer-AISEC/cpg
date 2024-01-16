@@ -202,9 +202,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
             if (node.singleDeclaration is HasType)
                 fancyType(node, (node.singleDeclaration as HasType), list)
 
-            for (declaration in node.declarations) {
-                list.addAll(getFanciesFor(original, declaration))
-            }
+            list.addAll(node.declarations.flatMap { getFanciesFor(original, it) })
 
             return list
         }
@@ -216,9 +214,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
         }
         is Block -> {
             // loop through statements
-            for (statement in node.statements) {
-                list.addAll(getFanciesFor(original, statement))
-            }
+            list.addAll(node.statements.flatMap { getFanciesFor(original, it) })
 
             return list
         }
@@ -256,9 +252,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
             node.initializer?.let { list.addAll(getFanciesFor(original, it)) }
 
             // color dimensions, if any
-            for (dimension in node.dimensions) {
-                list.addAll(getFanciesFor(original, dimension))
-            }
+            list.addAll(node.dimensions.flatMap { getFanciesFor(original, it) })
 
             return list
         }

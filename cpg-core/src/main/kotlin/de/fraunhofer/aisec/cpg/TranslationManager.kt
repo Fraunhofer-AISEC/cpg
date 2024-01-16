@@ -83,7 +83,7 @@ private constructor(
 
         try {
             // Parse Java/C/CPP files
-            var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+            val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
             executedFrontends = runFrontends(ctx, result)
             bench.addMeasurement()
 

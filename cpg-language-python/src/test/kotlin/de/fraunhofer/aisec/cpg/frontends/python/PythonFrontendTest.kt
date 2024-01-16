@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.nio.file.Path
+import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
@@ -1019,7 +1020,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val forloopFunc = tu.functions["forloop"] as? FunctionDeclaration
+        val forloopFunc = tu.functions["forloop"]
         assertNotNull(forloopFunc)
 
         val varDefinedBeforeLoop = forloopFunc.variables["varDefinedBeforeLoop"]
@@ -1112,7 +1113,7 @@ class PythonFrontendTest : BaseTest() {
             return if (has?.operatorCode == "**") {
                 when {
                     lhsValue is Number && rhsValue is Number ->
-                        Math.pow(lhsValue.toDouble(), rhsValue.toDouble())
+                        lhsValue.toDouble().pow(rhsValue.toDouble())
                     else -> cannotEvaluate(has as Node, this)
                 }
             } else {

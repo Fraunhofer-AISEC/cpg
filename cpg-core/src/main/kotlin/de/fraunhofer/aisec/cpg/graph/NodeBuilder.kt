@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -92,9 +93,7 @@ interface NamespaceProvider : MetadataProvider {
  * - Setting [Node.scope]. if a [ScopeProvider] is given
  * - Setting [Node.isInferred], if an [IsInferredProvider] is given
  *
- * Note, that one provider can implement multiple provider interfaces. Additionally, if
- * [codeOverride] is specified, the supplied source code is used to override anything from the
- * provider.
+ * Note, that one provider can implement multiple provider interfaces.
  */
 fun Node.applyMetadata(
     provider: MetadataProvider?,
@@ -103,7 +102,14 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
+    // We try to set the code and especially the location as soon as possible because the hashCode
+    // implementation of the Node class relies on it. Otherwise, we could have a problem that the
+    // location is not yet set, but the node is put into a hashmap. In this case the hashCode is
+    // calculated based on an empty location and if we would later set the location, we would have a
+    // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
+    // calling a node builder from these should already set the location.
     if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+        @Suppress("UNCHECKED_CAST")
         (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
     }
 
@@ -262,6 +268,84 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
 
 fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
     frontend.setCodeAndLocation(this, rawNode)
+
+    return this
+}
+
+/**
+ * This function allows the setting of a node's code and location region as the code and location of
+ * its children. Sometimes, when we translate a parent node in the language-specific AST with its
+ * children into the CPG AST, we have to set a specific intermediate Node between, that has no
+ * language-specific AST that can give it a proper code and location.
+ *
+ * While the location of the node is determined by the start and end of the child locations, the
+ * code is extracted from the parent node to catch separators and auxiliary syntactic elements that
+ * are between the child nodes.
+ *
+ * @param frontend Used to invoke language specific code and location generation
+ * @param parentNode Used to extract the code for this node
+ */
+fun <T : Node, S> T.codeAndLocationFromChildren(
+    frontend: LanguageFrontend<S, *>,
+    parentNode: S
+): T {
+    var first: Node? = null
+    var last: Node? = null
+
+    // Search through all children to find the first and last node based on region startLine and
+    // startColumn
+    val worklist: MutableList<Node> = this.astChildren.toMutableList()
+    while (worklist.isNotEmpty()) {
+        val current = worklist.removeFirst()
+        if (current.location?.region == null || current.location?.region == Region()) {
+            // If the node has no location we use the same search on his children again
+            worklist.addAll(current.astChildren)
+        } else {
+            // Compare nodes by line and column in lexicographic order, i.e. column is compared if
+            // lines are equal
+            if (first == null) {
+                first = current
+                last = current
+            }
+            first =
+                minOf(
+                    first,
+                    current,
+                    compareBy(
+                        { it.location?.region?.startLine },
+                        { it.location?.region?.startColumn }
+                    )
+                )
+            last =
+                maxOf(
+                    last,
+                    current,
+                    compareBy(
+                        { it?.location?.region?.endLine },
+                        { it?.location?.region?.endColumn }
+                    )
+                )
+        }
+    }
+
+    if (first != null && last != null) {
+        // Starts and ends are combined to one region
+        val newRegion =
+            Region(
+                startLine = first.location?.region?.startLine ?: -1,
+                startColumn = first.location?.region?.startColumn ?: -1,
+                endLine = last.location?.region?.endLine ?: -1,
+                endColumn = last.location?.region?.endColumn ?: -1,
+            )
+        this.location?.region = newRegion
+
+        val parentCode = frontend.codeOf(parentNode)
+        val parentRegion = frontend.locationOf(parentNode)?.region
+        if (parentCode != null && parentRegion != null) {
+            // If the parent has code and region the new region is used to extract the code
+            this.code = frontend.getCodeOfSubregion(parentCode, parentRegion, newRegion)
+        }
+    }
 
     return this
 }

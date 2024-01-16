@@ -84,8 +84,6 @@ class TranslatePlugin : Plugin {
                     "val tu = result.translationUnits.first()"
                 )
             )
-
-            // return Command.Result.RunSnippets(listOf(content))
         }
     }
 

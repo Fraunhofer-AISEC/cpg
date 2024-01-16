@@ -207,8 +207,8 @@ class TypeManager {
                 log.trace(
                     "Registering unique first order type {}{}",
                     t.name,
-                    if (t is ObjectType && t.generics.isNotEmpty()) {
-                        " with generics [${t.generics.joinToString(",") { it.name.toString() }}]"
+                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
+                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
                     } else {
                         ""
                     }

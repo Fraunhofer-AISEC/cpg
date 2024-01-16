@@ -28,19 +28,19 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.graph.Node
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-abstract class NumberSet {
-    abstract fun min(): Long
+interface NumberSet {
+    fun min(): Long
 
-    abstract fun max(): Long
+    fun max(): Long
 
-    abstract fun addValue(value: Long)
+    fun addValue(value: Long)
 
-    abstract fun maybe(value: Long): Boolean
+    fun maybe(value: Long): Boolean
 
-    abstract fun clear()
+    fun clear()
 }
 
-class Interval : NumberSet() {
+class Interval : NumberSet {
     private var min: Long = Long.MAX_VALUE
     private var max: Long = Long.MIN_VALUE
 
@@ -71,7 +71,7 @@ class Interval : NumberSet() {
     }
 }
 
-class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberSet() {
+class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberSet {
     override fun addValue(value: Long) {
         values.add(value)
     }

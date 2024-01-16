@@ -507,7 +507,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
                 ?: newProblemExpression("could not parse rhs")
 
-        if (lhs is CastExpression && frontend.config.inferenceConfiguration.guessCastExpressions) {
+        if (
+            lhs is CastExpression &&
+                (language as? CLanguage)
+                    ?.unaryOperators
+                    ?.contains((binaryOperator.operatorCode ?: "")) == true &&
+                frontend.config.inferenceConfiguration.guessCastExpressions
+        ) {
             // this really is a combination of a cast and a unary operator
             val op = newUnaryOperator(operatorCode, postfix = true, prefix = false, rawNode = ctx)
             op.input = rhs

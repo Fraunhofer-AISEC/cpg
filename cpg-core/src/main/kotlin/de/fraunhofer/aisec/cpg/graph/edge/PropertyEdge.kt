@@ -216,8 +216,11 @@ open class PropertyEdge<T : Node> : Persistable {
             if (element is PropertyEdge<*>) {
                 try {
                     val outputCollection =
-                        collection.javaClass.getDeclaredConstructor().newInstance()
-                            as MutableCollection<Node>
+                        collection.javaClass
+                            .getDeclaredConstructor()
+                            .newInstance()
+                            .filterIsInstance<Node>()
+                            .toMutableList()
                     for (obj in collection) {
                         if (obj is PropertyEdge<*>) {
                             if (outgoing) {
