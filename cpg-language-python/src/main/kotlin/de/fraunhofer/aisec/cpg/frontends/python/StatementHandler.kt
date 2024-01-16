@@ -77,7 +77,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleWhile(node: Python.ASTWhile): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeBlock(node.body)
+        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(frontend, node)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -86,7 +86,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val ret = newForEachStatement(rawNode = node)
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body)
+        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(frontend, node)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -114,13 +114,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
             if (node.body.isNotEmpty()) {
-                makeBlock(node.body)
+                makeBlock(node.body).codeAndLocationFromChildren(frontend, node)
             } else {
                 null
             }
         ret.elseStatement =
             if (node.orelse.isNotEmpty()) {
-                makeBlock(node.orelse)
+                makeBlock(node.orelse).codeAndLocationFromChildren(frontend, node)
             } else {
                 null
             }
@@ -330,7 +330,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // END HANDLE ARGUMENTS
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body)
+            result.body = makeBlock(s.body).codeAndLocationFromChildren(frontend, s)
         }
 
         frontend.scopeManager.leaveScope(result)

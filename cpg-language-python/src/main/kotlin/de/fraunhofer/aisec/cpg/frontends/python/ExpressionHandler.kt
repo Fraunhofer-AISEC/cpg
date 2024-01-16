@@ -84,9 +84,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             // Here we can not use node as raw node as it spans all keys and values
             lst +=
                 newKeyValueExpression(
-                    key = node.keys[i]?.let { handle(it) },
-                    value = handle(node.values[i]),
-                )
+                        key = node.keys[i]?.let { handle(it) },
+                        value = handle(node.values[i]),
+                    )
+                    .codeAndLocationFromChildren(frontend, node)
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.initializers = lst.toList()
