@@ -124,8 +124,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         Pair(field.names[0].name, listOf())
                     }
 
-                val decl = newFieldDeclaration(fieldName, type, modifiers)
-                frontend.setCodeAndLocation(decl, field)
+                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
             }
         }
@@ -155,8 +154,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // "method" actually has a name, we declare a new method
                 // declaration.
                 if (field.names.isNotEmpty()) {
-                    val method = newMethodDeclaration(field.names[0].name)
-                    frontend.setCodeAndLocation(method, field)
+                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
 
                     frontend.scopeManager.enterScope(method)

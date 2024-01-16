@@ -107,15 +107,13 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    // We need to keep a local reference to the context for smart casting. We also definitely need a
-    // context provider, because otherwise we cannot set the context and the node cannot access
-    // necessary information about the current translation context it lives in.
-    val ctx =
+    // We definitely need a context provider, because otherwise we cannot set the context and the
+    // node cannot access necessary information about the current translation context it lives in.
+    this.ctx =
         (provider as? ContextProvider)?.ctx
             ?: throw TranslationException(
                 "Trying to create a node without a ContextProvider. This will fail."
             )
-    this.ctx = ctx
 
     // We try to set the code and especially the location as soon as possible because the hashCode
     // implementation of the Node class relies on it. Otherwise, we could have a problem that the
@@ -124,17 +122,8 @@ fun Node.applyMetadata(
     // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
     // calling a node builder from these should already set the location.
     if (provider is CodeAndLocationProvider<*> && rawNode != null) {
-        @Suppress("UNCHECKED_CAST") (provider as CodeAndLocationProvider<Any>)
-        if (ctx.config.codeInNodes) {
-            // only set code, if it's not already set or empty
-            val code = provider.codeOf(rawNode)
-            if (code != null) {
-                this.code = code
-            } else {
-                LOGGER.warn("Unexpected: No code for node {}", rawNode)
-            }
-        }
-        this.location = provider.locationOf(rawNode)
+        @Suppress("UNCHECKED_CAST")
+        setCodeAndLocation(provider as CodeAndLocationProvider<Any>, rawNode)
     }
 
     if (provider is LanguageProvider) {
@@ -280,9 +269,19 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
     return this
 }
 
-fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
-    frontend.setCodeAndLocation(this, rawNode)
+/**
+ * Sometimes we need to explicitly (re)set the code and location of a node to another raw node than
+ * originally used in the node builder. A common use-case for that is languages that contain
+ * expression statements, which we simplify to simple expressions. But in these languages, the
+ * expression often does not contain a semicolon at the end, where-as the statement does. In this
+ * case we want to preserve the original code containing the semicolon and need to set the node's
+ * code/location to the statement rather than the expression, after it comes back from the
+ * expression handler.
+ */
+context(CodeAndLocationProvider<AstNode>)
 
+fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
+    setCodeAndLocation(this@CodeAndLocationProvider, rawNode)
     return this
 }
 
@@ -296,12 +295,11 @@ fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNod
  * code is extracted from the parent node to catch separators and auxiliary syntactic elements that
  * are between the child nodes.
  *
- * @param frontend Used to invoke language specific code and location generation
  * @param parentNode Used to extract the code for this node
  */
-context(CodeAndLocationProvider<S>)
+context(CodeAndLocationProvider<AstNode>)
 
-fun <T : Node, S> T.codeAndLocationFromChildren(parentNode: S): T {
+fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
     var first: Node? = null
     var last: Node? = null
 
@@ -361,4 +359,24 @@ fun <T : Node, S> T.codeAndLocationFromChildren(parentNode: S): T {
     }
 
     return this
+}
+
+/**
+ * This internal function sets the code and location according to the [CodeAndLocationProvider].
+ * This also performs some checks, e.g., if the config disabled setting the code.
+ */
+private fun <AstNode> Node.setCodeAndLocation(
+    provider: CodeAndLocationProvider<AstNode>,
+    rawNode: AstNode
+) {
+    if (this.ctx?.config?.codeInNodes == true) {
+        // only set code, if it's not already set or empty
+        val code = provider.codeOf(rawNode)
+        if (code != null) {
+            this.code = code
+        } else {
+            LOGGER.warn("Unexpected: No code for node {}", rawNode)
+        }
+    }
+    this.location = provider.locationOf(rawNode)
 }

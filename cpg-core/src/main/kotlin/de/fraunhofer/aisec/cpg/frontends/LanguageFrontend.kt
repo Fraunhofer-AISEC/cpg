@@ -120,23 +120,6 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      */
     abstract override fun locationOf(astNode: AstNode): PhysicalLocation?
 
-    @Deprecated(
-        message =
-            "This function should not be called directly, instead the node builders should be supplied with a raw node"
-    )
-    fun setCodeAndLocation(cpgNode: Node, astNode: AstNode) {
-        if (config.codeInNodes) {
-            // only set code, if it's not already set or empty
-            val code = codeOf(astNode)
-            if (code != null) {
-                cpgNode.code = code
-            } else {
-                log.warn("Unexpected: No code for node {}", astNode)
-            }
-        }
-        cpgNode.location = locationOf(astNode)
-    }
-
     open fun cleanup() {
         clearProcessed()
     }

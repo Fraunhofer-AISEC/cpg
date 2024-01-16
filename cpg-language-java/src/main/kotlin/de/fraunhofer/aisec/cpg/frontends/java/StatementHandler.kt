@@ -68,14 +68,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     fun handleExpressionStatement(
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement? {
-        val expression = frontend.expressionHandler.handle(stmt.asExpressionStmt().expression)
+        // We want to use the code of the stmt, rather than the expression
+        val expr =
+            frontend.expressionHandler
+                .handle(stmt.asExpressionStmt().expression)
+                ?.codeAndLocationFromOtherRawNode(stmt)
 
-        // update expression's code and location to match the statement
-        if (expression != null) {
-            frontend.setCodeAndLocation(expression, stmt)
-        }
-
-        return expression
+        return expr
     }
 
     private fun handleThrowStmt(
@@ -110,7 +109,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         // expressionRefersToDeclaration to arguments, if there are any
         expression?.let { returnStatement.returnValue = it }
 
-        frontend.setCodeAndLocation(returnStatement, stmt)
         return returnStatement
     }
 
@@ -178,7 +176,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     private fun handleForStatement(stmt: Statement): ForStatement {
         val forStmt = stmt.asForStmt()
         val statement = this.newForStatement(rawNode = stmt)
-        frontend.setCodeAndLocation(statement, stmt)
         frontend.scopeManager.enterScope(statement)
         if (forStmt.initialization.size > 1) {
             var ofExprList: PhysicalLocation? = null
@@ -187,11 +184,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val initExprList = this.newExpressionList()
             for (initExpr in forStmt.initialization) {
                 val s = frontend.expressionHandler.handle(initExpr)
-                s?.let {
-                    // make sure location is set
-                    frontend.setCodeAndLocation(it, initExpr)
-                    initExprList.addExpression(it)
-                }
+                s?.let { initExprList.addExpression(it) }
 
                 // can not update location
                 if (s?.location == null) {
@@ -240,7 +233,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 val s = frontend.expressionHandler.handle(updateExpr)
                 s?.let {
                     // make sure location is set
-                    frontend.setCodeAndLocation(s, updateExpr)
                     iterationExprList.addExpression(it)
                 }
 
@@ -335,7 +327,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val statement = handle(child)
             statement?.let { compoundStatement.addStatement(it) }
         }
-        frontend.setCodeAndLocation(compoundStatement, stmt)
         frontend.scopeManager.leaveScope(compoundStatement)
         return compoundStatement
     }
@@ -455,8 +446,6 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val switchStmt = stmt.asSwitchStmt()
         val switchStatement = newSwitchStatement(rawNode = stmt)
 
-        // make sure location is set
-        frontend.setCodeAndLocation(switchStatement, switchStmt)
         frontend.scopeManager.enterScope(switchStatement)
         switchStatement.selector =
             frontend.expressionHandler.handle(switchStmt.selector)
@@ -576,10 +565,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
         val parameter =
             this.newVariableDeclaration(
-                    catchCls.parameter.name.toString(),
-                    concreteType,
-                )
-                .codeAndLocationFrom(frontend, catchCls.parameter)
+                catchCls.parameter.name.toString(),
+                concreteType,
+                rawNode = catchCls.parameter
+            )
         parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body
