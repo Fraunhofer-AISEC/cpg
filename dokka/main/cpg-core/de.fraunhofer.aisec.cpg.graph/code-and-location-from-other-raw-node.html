@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>codeAndLocationFrom</title>
+    <title>codeAndLocationFromOtherRawNode</title>
 <link href="../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,9 +43,9 @@
                             cpg
                     </a>            </div>
             <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph/code-and-location-from.html&quot;}"><div class="versions-dropdown">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph/code-and-location-from-other-raw-node.html&quot;}"><div class="versions-dropdown">
   <div class="versions-dropdown-button">main</div>
-  <div class="versions-dropdown-data"><a href="../../older/8.0.0/cpg-core/de.fraunhofer.aisec.cpg.graph/code-and-location-from.html">8.0.0</a><a href="code-and-location-from.html">main</a></div>
+  <div class="versions-dropdown-data"><a href="../../not-found-version.html?v=8.0.0">8.0.0</a><a href="code-and-location-from-other-raw-node.html">main</a></div>
 </div>
 </dokka-template-command>            </div>
         </div>
@@ -63,12 +63,12 @@
                 <div class="sidebar--inner" id="sideMenu"></div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph//codeAndLocationFrom/TypeParam(bounds=[de.fraunhofer.aisec.cpg.graph.Node])#de.fraunhofer.aisec.cpg.graph.Node/PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><a href="index.html">de.fraunhofer.aisec.cpg.graph</a><span class="delimiter">/</span><span class="current">codeAndLocationFrom</span></div>
+<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph//codeAndLocationFromOtherRawNode/TypeParam(bounds=[de.fraunhofer.aisec.cpg.graph.Node])#TypeParam(bounds=[kotlin.Any?])/PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><a href="index.html">de.fraunhofer.aisec.cpg.graph</a><span class="delimiter">/</span><span class="current">codeAndLocationFromOtherRawNode</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>code</span><wbr><span>And</span><wbr><span>Location</span><wbr><span><span>From</span></span></h1>
+    <h1 class="cover"><span>code</span><wbr><span>And</span><wbr><span>Location</span><wbr><span>From</span><wbr><span>Other</span><wbr><span>Raw</span><wbr><span><span>Node</span></span></h1>
   </div>
-  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="code-and-location-from.html">T</a><span class="token operator"> : </span><a href="-node/index.html">Node</a><span class="token operator">&gt; </span><a href="code-and-location-from.html">T</a><span class="token punctuation">.</span><a href="code-and-location-from.html"><span class="token function">codeAndLocationFrom</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="-node/index.html">Node</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="code-and-location-from.html">T</a></div></div></div>
+  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="code-and-location-from-other-raw-node.html">T</a><span class="token operator"> : </span><a href="-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="code-and-location-from-other-raw-node.html">AstNode</a><span class="token operator">&gt; </span><a href="code-and-location-from-other-raw-node.html">T</a><span class="token punctuation">.</span><a href="code-and-location-from-other-raw-node.html"><span class="token function">codeAndLocationFromOtherRawNode</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rawNode<span class="token operator">: </span><a href="code-and-location-from-other-raw-node.html">AstNode</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="code-and-location-from-other-raw-node.html">T</a></div><p class="paragraph">Sometimes we need to explicitly (re)set the code and location of a node to another raw node than originally used in the node builder. A common use-case for that is languages that contain expression statements, which we simplify to simple expressions. But in these languages, the expression often does not contain a semicolon at the end, where-as the statement does. In this case we want to preserve the original code containing the semicolon and need to set the node's code/location to the statement rather than the expression, after it comes back from the expression handler.</p></div></div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
