@@ -78,10 +78,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newParameterDeclaration(
                     parameter.nameAsString,
                     frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
-                    parameter.isVarArgs
+                    parameter.isVarArgs,
+                    rawNode = parameter
                 )
             declaration.addParameter(param)
-            frontend.setCodeAndLocation(param, parameter)
             frontend.scopeManager.addDeclaration(param)
         }
 
@@ -132,10 +132,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newParameterDeclaration(
                     parameter.nameAsString,
                     resolvedType,
-                    parameter.isVarArgs
+                    parameter.isVarArgs,
+                    rawNode = parameter
                 )
             functionDeclaration.addParameter(param)
-            frontend.setCodeAndLocation(param, parameter)
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
         }
