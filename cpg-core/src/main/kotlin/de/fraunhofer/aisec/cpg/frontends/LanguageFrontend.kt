@@ -143,13 +143,33 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      * @return the String of the newline
      */
     fun getNewLineType(node: Node): String {
+        var region = node.location?.region
+        return getNewLineType(node.code ?: "", region)
+    }
+
+    /**
+     * To prevent issues with different newline types and formatting.
+     *
+     * @param multilineCode
+     * - The newline type is extracted from the code assuming it contains newlines
+     *
+     * @return the String of the newline or \n as default
+     */
+    fun getNewLineType(multilineCode: String, region: Region? = null): String {
+        var code = multilineCode
+        region?.let {
+            if (it.startLine != it.endLine) {
+                code = code.substring(0, code.length - it.endColumn + 1)
+            }
+        }
+
         val nls = listOf("\n\r", "\r\n", "\n")
         for (nl in nls) {
-            if (node.toString().endsWith(nl)) {
+            if (code.endsWith(nl)) {
                 return nl
             }
         }
-        log.debug("Could not determine newline type. Assuming \\n. {}", node)
+        log.debug("Could not determine newline type. Assuming \\n.")
         return "\n"
     }
 
@@ -169,7 +189,11 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      */
     fun getCodeOfSubregion(node: Node, nodeRegion: Region, subRegion: Region): String {
         val code = node.code ?: return ""
-        val nlType = getNewLineType(node)
+        return getCodeOfSubregion(code, nodeRegion, subRegion)
+    }
+
+    fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): String {
+        val nlType = getNewLineType(code, nodeRegion)
         val start =
             if (subRegion.startLine == nodeRegion.startLine) {
                 subRegion.startColumn - nodeRegion.startColumn
