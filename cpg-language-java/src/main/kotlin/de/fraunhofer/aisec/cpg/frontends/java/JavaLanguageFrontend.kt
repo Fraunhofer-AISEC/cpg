@@ -122,7 +122,6 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             if (packDecl != null) {
                 namespaceDeclaration =
                     newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
-                setCodeAndLocation(namespaceDeclaration, packDecl)
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
             }

@@ -83,7 +83,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val param =
                 newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
             anonymousFunction.addParameter(param)
-            frontend.setCodeAndLocation(param, parameter)
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
         }
@@ -255,7 +254,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
-            frontend.setCodeAndLocation(declaration, variable)
             declarationStatement.addToPropertyEdgeDeclaration(declaration)
             frontend.processAnnotations(declaration, variableDeclarationExpr)
             frontend.scopeManager.addDeclaration(declaration)
@@ -331,7 +329,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             }
             base = newReference(scope.asNameExpr().nameAsString, baseType, rawNode = scope)
             base.isStaticAccess = isStaticAccess
-            frontend.setCodeAndLocation(base, fieldAccessExpr.scope)
         } else if (scope.isFieldAccessExpr) {
             base =
                 handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
@@ -365,7 +362,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     newReference(scope.asFieldAccessExpr().nameAsString, baseType, rawNode = scope)
                 base.isStaticAccess = true
             }
-            frontend.setCodeAndLocation(base, fieldAccessExpr.scope)
         } else {
             base =
                 handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
@@ -487,10 +483,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             newReference(
                 classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
                 type,
-                rawNode = expr
+                rawNode = expr,
             )
         thisExpression.isStaticAccess = true
-        frontend.setCodeAndLocation(thisExpression, classExpr)
         return thisExpression
     }
 
@@ -510,7 +505,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             name = "this$" + typeName.get().identifier
         }
         val thisExpression = newReference(name, type, rawNode = expr)
-        frontend.setCodeAndLocation(thisExpression, thisExpr)
         return thisExpression
     }
 
@@ -519,7 +513,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // about the inheritance structure. Thus, we delay the resolving to the variable resolving
         // process
         val superExpression = newReference(expr.toString(), unknownType(), rawNode = expr)
-        frontend.setCodeAndLocation(superExpression, expr)
         return superExpression
     }
 
@@ -771,11 +764,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base = createImplicitThis()
             }
         }
-        val member = newMemberExpression(name, base, unknownType(), ".")
-        frontend.setCodeAndLocation(
-            member,
-            methodCallExpr.name
-        ) // This will also overwrite the code set to the empty string set above
+        val member =
+            newMemberExpression(name, base, unknownType(), ".", rawNode = methodCallExpr.name)
         callExpression = newMemberCallExpression(member, isStatic, rawNode = expr)
         callExpression.type = typeString?.let { this.objectType(it) } ?: unknownType()
         val arguments = methodCallExpr.arguments
@@ -826,9 +816,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val newExpression = newNewExpression(t, rawNode = expr)
         val arguments = objectCreationExpr.arguments
 
-        val ctor = newConstructExpression()
+        val ctor = newConstructExpression(rawNode = expr)
         ctor.type = t
-        frontend.setCodeAndLocation(ctor, expr)
 
         // handle the arguments
         for (i in arguments.indices) {
