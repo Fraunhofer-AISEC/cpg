@@ -189,7 +189,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         Pair(assignment.target as Declaration, assignment.target)
                     else {
                         val unwrappedTarget = (assignment.target as? Expression).unwrapReference()
-                        if (unwrappedTarget?.refersTo == null) {
+                        if (assignment.target is SubscriptExpression) {
+                            val subscriptExpression = assignment.target as? SubscriptExpression
+                            val unwrappedBufTarget =
+                                subscriptExpression?.arrayExpression?.unwrapReference()
+                            unwrappedBufTarget?.refersTo?.let { Pair(it, assignment.target) }
+                        } else if (unwrappedTarget?.refersTo == null) {
                             null
                         } else {
                             Pair(unwrappedTarget.refersTo!!, unwrappedTarget)

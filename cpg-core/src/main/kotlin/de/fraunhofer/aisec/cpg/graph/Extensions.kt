@@ -273,6 +273,7 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
 fun Node.followNextDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -296,7 +297,7 @@ fun Node.followNextDFGEdgesUntilHit(
         if (currentNode.nextDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
             if (collectFailedPaths) failedPaths.add(currentPath)
-            continue
+            if (!continueAfterHit) continue
         }
 
         for (next in currentNode.nextDFG) {
