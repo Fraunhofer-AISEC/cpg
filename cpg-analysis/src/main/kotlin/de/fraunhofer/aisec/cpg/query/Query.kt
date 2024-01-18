@@ -34,7 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import kotlin.math.pow
 
 /**
  * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
@@ -280,39 +283,39 @@ operator fun Expression?.invoke(): QueryTree<Any?> {
 }
 
 /**
- * Determines the maximal value. Only works for a couple of types! TODO: This method needs
- * improvement! It only works for Java types!
+ * Determines the maximal value of a type. We assume either a IEEE754 encoding of floating point
+ * values or compute 2^type.bitWidth for unsigned integer values and 2^(type.bitwidth-1)-1 for
+ * signed integer values. This conforms with many but certainly not all supported languages. If
+ * something goes wrong, we return [ Double.NaN]
  */
 fun maxSizeOfType(type: Type): QueryTree<Number> {
     val maxVal =
-        when (type.typeName) {
-            "byte" -> Byte.MAX_VALUE
-            "short" -> Short.MAX_VALUE
-            "int" -> Int.MAX_VALUE
-            "long" -> Long.MAX_VALUE
-            "float" -> Float.MAX_VALUE
-            "double" -> Double.MAX_VALUE
-            else -> Long.MAX_VALUE
+        when {
+            type is IntegerType && type.modifier == NumericType.Modifier.UNSIGNED ->
+                type.bitWidth?.let { 2.0.pow(it) } ?: Double.NaN
+            type is IntegerType -> type.bitWidth?.let { 2.0.pow(it - 1) - 1 } ?: Double.NaN
+            type.typeName == "float" -> Float.MAX_VALUE
+            type.typeName == "double" -> Double.MAX_VALUE
+            else -> Double.NaN
         }
     return QueryTree(maxVal, mutableListOf(QueryTree(type)), "maxSizeOfType($type)")
 }
 
 /**
- * Determines the minimal value. Only works for a couple of types! TODO: This method needs
- * improvement! It only works for Java types!
+ * Determines the maximal value of a type. We assume either a IEEE754 encoding of floating point
+ * values or use 0 for unsigned integer values and -(2^(type.bitwidth-1)) for signed integer values.
+ * This conforms with many but certainly not all supported languages.
  */
 fun minSizeOfType(type: Type): QueryTree<Number> {
-    val maxVal =
-        when (type.typeName) {
-            "byte" -> Byte.MIN_VALUE
-            "short" -> Short.MIN_VALUE
-            "int" -> Int.MIN_VALUE
-            "long" -> Long.MIN_VALUE
-            "float" -> Float.MIN_VALUE
-            "double" -> Double.MIN_VALUE
-            else -> Long.MIN_VALUE
+    val minVal =
+        when {
+            type is IntegerType && type.modifier == NumericType.Modifier.UNSIGNED -> 0
+            type is IntegerType -> type.bitWidth?.let { -(2.0.pow(it - 1)) } ?: Double.NaN
+            type.typeName == "float" -> Float.MIN_VALUE
+            type.typeName == "double" -> Double.MIN_VALUE
+            else -> Double.NaN
         }
-    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "minSizeOfType($type)")
+    return QueryTree(minVal, mutableListOf(QueryTree(type)), "minSizeOfType($type)")
 }
 
 /** The size of this expression. It uses the default argument for `eval` of [size] */

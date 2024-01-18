@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.astParent
@@ -275,6 +277,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             forStatement.iterationStatement == node.astParent
     }
 
+    /** Updates the possible values in case we encounter a loop on the way. */
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
             expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
@@ -291,17 +294,19 @@ class MultiValueEvaluator : ValueEvaluator() {
         val cond = loop.condition as BinaryOperator
         val result = mutableSetOf<Any?>()
         var lhs =
-            if ((cond.lhs as? Reference)?.refersTo == expr.refersTo) {
-                loopVar
-            } else {
+            loopVarIfRefMatchesDeclOrElse(
+                cond.lhs as? Reference,
+                expr.refersTo,
+                loopVar,
                 evaluateInternal(cond.lhs, depth + 1)
-            }
+            )
         var rhs =
-            if ((cond.rhs as? Reference)?.refersTo == expr.refersTo) {
-                loopVar
-            } else {
+            loopVarIfRefMatchesDeclOrElse(
+                cond.rhs as? Reference,
+                expr.refersTo,
+                loopVar,
                 evaluateInternal(cond.rhs, depth + 1)
-            }
+            )
 
         var comparisonResult = computeBinaryOpEffect(lhs, rhs, cond)
         while (comparisonResult == true) {
@@ -311,73 +316,8 @@ class MultiValueEvaluator : ValueEvaluator() {
             // the statement which made us end up here.
 
             val loopOp = loop.iterationStatement
-            loopVar =
-                when (loopOp) {
-                    is AssignExpression -> {
-                        if (
-                            loopOp.operatorCode == "=" &&
-                                (loopOp.lhs.singleOrNull() as? Reference)?.refersTo ==
-                                    expr.refersTo &&
-                                loopOp.rhs.singleOrNull() is BinaryOperator
-                        ) {
-                            // Assignment to the variable, take the rhs and see if it's also a
-                            // binary operator
-                            val opLhs =
-                                if (
-                                    ((loopOp.rhs<BinaryOperator>())?.lhs as? Reference)?.refersTo ==
-                                        expr.refersTo
-                                ) {
-                                    loopVar
-                                } else {
-                                    (loopOp.rhs<BinaryOperator>())?.lhs
-                                }
-                            val opRhs =
-                                if (
-                                    ((loopOp.rhs<BinaryOperator>())?.rhs as? Reference)?.refersTo ==
-                                        expr.refersTo
-                                ) {
-                                    loopVar
-                                } else {
-                                    evaluateInternal((loopOp.rhs<BinaryOperator>())?.rhs, depth + 1)
-                                }
-                            computeBinaryOpEffect(opLhs, opRhs, (loopOp.rhs<BinaryOperator>()))
-                                as? Number
-                        } else {
-                            cannotEvaluate(loopOp, this)
-                        }
-                    }
-                    is BinaryOperator -> {
+            loopVar = updateLoopVar(loopOp, loopVar, expr.refersTo, depth)
 
-                        // No idea what this is but it's a binary op...
-                        val opLhs =
-                            if ((loopOp.lhs as? Reference)?.refersTo == expr.refersTo) {
-                                loopVar
-                            } else {
-                                loopOp.lhs
-                            }
-                        val opRhs =
-                            if ((loopOp.rhs as? Reference)?.refersTo == expr.refersTo) {
-                                loopVar
-                            } else {
-                                loopOp.rhs
-                            }
-                        computeBinaryOpEffect(opLhs, opRhs, loopOp) as? Number
-                    }
-                    is UnaryOperator -> {
-                        computeUnaryOpEffect(
-                            if ((loopOp.input as? Reference)?.refersTo == expr.refersTo) {
-                                loopVar
-                            } else {
-                                loopOp.input
-                            },
-                            loopOp
-                        )
-                            as? Number
-                    }
-                    else -> {
-                        null
-                    }
-                }
             if (loopVar == null) {
                 return result
             }
@@ -392,6 +332,93 @@ class MultiValueEvaluator : ValueEvaluator() {
         }
         return result
     }
+
+    private fun loopVarIfRefMatchesDeclOrElse(
+        ref: Reference?,
+        decl: Declaration?,
+        loopVar: Any?,
+        elseCase: Any?
+    ) =
+        if (ref?.refersTo == decl) {
+            loopVar
+        } else {
+            elseCase
+        }
+
+    private fun updateLoopVar(
+        loopOp: Statement?,
+        loopVar: Any?,
+        exprRef: Declaration?,
+        depth: Int
+    ) =
+        when (loopOp) {
+            is AssignExpression -> {
+                if (
+                    loopOp.operatorCode == "=" &&
+                        (loopOp.lhs.singleOrNull() as? Reference)?.refersTo == exprRef &&
+                        loopOp.rhs.singleOrNull() is BinaryOperator
+                ) {
+                    val rhsLoopOp = loopOp.rhs<BinaryOperator>()
+
+                    // Assignment to the variable, take the rhs and see if it's also a
+                    // binary operator
+                    val opLhs =
+                        loopVarIfRefMatchesDeclOrElse(
+                            rhsLoopOp?.lhs as? Reference,
+                            exprRef,
+                            loopVar,
+                            rhsLoopOp?.lhs
+                        )
+
+                    val opRhs =
+                        loopVarIfRefMatchesDeclOrElse(
+                            rhsLoopOp?.rhs as? Reference,
+                            exprRef,
+                            loopVar,
+                            evaluateInternal(rhsLoopOp?.rhs, depth + 1)
+                        )
+
+                    computeBinaryOpEffect(opLhs, opRhs, rhsLoopOp) as? Number
+                } else {
+                    // So far, we can only handle simple assignments (i.e., an "=") with exactly one
+                    // lhs and one rhs.
+                    cannotEvaluate(loopOp, this)
+                }
+            }
+            is BinaryOperator -> {
+                // No idea what this is but it's a binary op...
+                val opLhs =
+                    loopVarIfRefMatchesDeclOrElse(
+                        loopOp.lhs as? Reference,
+                        exprRef,
+                        loopVar,
+                        loopOp.lhs
+                    )
+                val opRhs =
+                    loopVarIfRefMatchesDeclOrElse(
+                        loopOp.rhs as? Reference,
+                        exprRef,
+                        loopVar,
+                        loopOp.rhs
+                    )
+                computeBinaryOpEffect(opLhs, opRhs, loopOp) as? Number
+            }
+            is UnaryOperator -> {
+                computeUnaryOpEffect(
+                    loopVarIfRefMatchesDeclOrElse(
+                        loopOp.input as? Reference,
+                        exprRef,
+                        loopVar,
+                        loopOp.input
+                    ),
+                    loopOp
+                )
+                    as? Number
+            }
+            else -> {
+                null
+            }
+        }
 
     private fun computeUnaryOpEffect(input: Any?, expr: UnaryOperator): Any? {
         return when (expr.operatorCode) {

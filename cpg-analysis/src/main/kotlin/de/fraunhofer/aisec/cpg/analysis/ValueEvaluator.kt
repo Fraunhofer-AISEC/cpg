@@ -443,43 +443,85 @@ open class ValueEvaluator(
  * for the individual implementations of [Number], such as [Int.compareTo].
  */
 fun <T : Number> Number.compareTo(other: T): Int {
-    return when {
-        this is Byte && other is Double -> this.compareTo(other)
-        this is Byte && other is Float -> this.compareTo(other)
-        this is Byte && other is Byte -> this.compareTo(other)
-        this is Byte && other is Short -> this.compareTo(other)
-        this is Byte && other is Int -> this.compareTo(other)
-        this is Byte && other is Long -> this.compareTo(other)
-        this is Short && other is Double -> this.compareTo(other)
-        this is Short && other is Float -> this.compareTo(other)
-        this is Short && other is Byte -> this.compareTo(other)
-        this is Short && other is Short -> this.compareTo(other)
-        this is Short && other is Int -> this.compareTo(other)
-        this is Short && other is Long -> this.compareTo(other)
-        this is Int && other is Double -> this.compareTo(other)
-        this is Int && other is Float -> this.compareTo(other)
-        this is Int && other is Byte -> this.compareTo(other)
-        this is Int && other is Short -> this.compareTo(other)
-        this is Int && other is Int -> this.compareTo(other)
-        this is Int && other is Long -> this.compareTo(other)
-        this is Long && other is Double -> this.compareTo(other)
-        this is Long && other is Float -> this.compareTo(other)
-        this is Long && other is Byte -> this.compareTo(other)
-        this is Long && other is Short -> this.compareTo(other)
-        this is Long && other is Int -> this.compareTo(other)
-        this is Long && other is Long -> this.compareTo(other)
-        this is Float && other is Double -> this.compareTo(other)
-        this is Float && other is Float -> this.compareTo(other)
-        this is Float && other is Byte -> this.compareTo(other)
-        this is Float && other is Short -> this.compareTo(other)
-        this is Float && other is Int -> this.compareTo(other)
-        this is Float && other is Long -> this.compareTo(other)
-        this is Double && other is Double -> this.compareTo(other)
-        this is Double && other is Float -> this.compareTo(other)
-        this is Double && other is Byte -> this.compareTo(other)
-        this is Double && other is Short -> this.compareTo(other)
-        this is Double && other is Int -> this.compareTo(other)
-        this is Double && other is Long -> this.compareTo(other)
+    return when (this) {
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Double -> this.compareTo(other)
+        else -> 1
+    }
+}
+
+fun <T : Number> Byte.compareTo(other: T): Int {
+    return when (other) {
+        is Double -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
+        else -> 1
+    }
+}
+
+fun <T : Number> Short.compareTo(other: T): Int {
+    return when (other) {
+        is Double -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
+        else -> 1
+    }
+}
+
+fun <T : Number> Int.compareTo(other: T): Int {
+    return when (other) {
+        is Double -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
+        else -> 1
+    }
+}
+
+fun <T : Number> Long.compareTo(other: T): Int {
+    return when (other) {
+        is Double -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
+        else -> 1
+    }
+}
+
+fun <T : Number> Float.compareTo(other: T): Int {
+    return when (other) {
+        is Double -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
+        else -> 1
+    }
+}
+
+fun <T : Number> Double.compareTo(other: T): Int {
+    return when (other) {
+        is Double -> this.compareTo(other)
+        is Float -> this.compareTo(other)
+        is Byte -> this.compareTo(other)
+        is Short -> this.compareTo(other)
+        is Int -> this.compareTo(other)
+        is Long -> this.compareTo(other)
         else -> 1
     }
 }
