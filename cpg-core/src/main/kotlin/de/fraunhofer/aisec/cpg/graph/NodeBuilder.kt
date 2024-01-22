@@ -313,7 +313,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
             // If the node has no location we use the same search on his children again
             worklist.addAll(current.astChildren)
         } else {
-            // Compare nodes by line and column in lexicographitec order, i.e. column is compared if
+            // Compare nodes by line and column in lexicographic order, i.e. column is compared if
             // lines are equal
             if (first == null) {
                 first = current

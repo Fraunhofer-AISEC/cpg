@@ -409,9 +409,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     it.receiver?.let { receiver -> call.base?.addNextDFG(receiver) }
                 }
                 call.addPrevDFG(it)
-                if (it.isInferred && it.prevDFG.isEmpty()) {
-                    handleFunctionDeclaration(it)
-                }
             }
         }
     }
