@@ -117,6 +117,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 signature.map { it?.name }
             )
 
+            // Create parameter declarations and receiver (only for methods).
             if (inferred is MethodDeclaration) {
                 createInferredReceiver(inferred, record)
             }
@@ -130,7 +131,6 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
             scopeManager.addDeclaration(inferred)
 
             // Some magic that adds it to static imports. Not sure if this really needed
-
             if (record != null && isStatic) {
                 record.staticImports.add(inferred)
             }
