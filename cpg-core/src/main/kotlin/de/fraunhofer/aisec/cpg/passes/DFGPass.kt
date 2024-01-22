@@ -152,8 +152,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the function.
      */
     protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
-        if (node.isInferred) {
+        if (node.isInferred && node.prevDFG.isEmpty() && node.nextDFG.isEmpty()) {
             // If the function is inferred, we connect all parameters to the function declaration.
+            // The condition should make sure that we don't add edges multiple times, i.e., we
+            // only handle the declaration exactly once.
             node.addAllPrevDFG(node.parameters)
             // If it's a method with a receiver, we connect that one too.
             if (node is MethodDeclaration) {
@@ -409,6 +411,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     it.receiver?.let { receiver -> call.base?.addNextDFG(receiver) }
                 }
                 call.addPrevDFG(it)
+                if (it.isInferred && it.prevDFG.isEmpty()) {
+                    // This triggers adding the DFG edges for inferred function declarations which
+                    // are not part of the AST and are thus not traversed by the SubgraphWalker.
+                    // With this, we ensure that we don't miss anything.
+                    handleFunctionDeclaration(it)
+                }
             }
         }
     }
