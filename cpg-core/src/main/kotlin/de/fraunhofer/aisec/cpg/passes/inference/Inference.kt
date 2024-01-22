@@ -171,6 +171,11 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
     }
 
+    /**
+     * This function creates a [VariableDeclaration], which acts as the
+     * [MethodDeclaration.receiver], in order to hold all data flows to the object instance of this
+     * particular [method].
+     */
     private fun createInferredReceiver(method: MethodDeclaration, record: RecordDeclaration?) {
         // We do not really know, how a receiver is called in a particular language, but we will
         // probably not do anything wrong by calling it "this".
@@ -178,6 +183,10 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         method.receiver = receiver
     }
 
+    /**
+     * This function creates a [ParameterDeclaration] for each parameter in the [function]'s
+     * [signature].
+     */
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters
