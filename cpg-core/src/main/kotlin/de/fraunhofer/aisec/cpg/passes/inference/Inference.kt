@@ -117,6 +117,9 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 signature.map { it?.name }
             )
 
+            if (inferred is MethodDeclaration) {
+                createInferredReceiver(inferred, record)
+            }
             createInferredParameters(inferred, signature)
 
             // Set the type and return type(s)
@@ -166,6 +169,13 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
      */
     private fun <T : Declaration> inferInScopeOf(start: Node, init: () -> T): T {
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
+    }
+
+    private fun createInferredReceiver(method: MethodDeclaration, record: RecordDeclaration?) {
+        // We do not really know, how a receiver is called in a particular language, but we will
+        // probably not do anything wrong by calling it "this".
+        val receiver = newVariableDeclaration("this", record?.toType() ?: unknownType())
+        method.receiver = receiver
     }
 
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
