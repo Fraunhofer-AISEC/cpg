@@ -99,7 +99,7 @@ class CommentMatcher {
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
-                .toMutableList()
+                .toMutableSet()
 
         // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
         // children with a location
@@ -107,6 +107,19 @@ class CommentMatcher {
             children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
                 SubgraphWalker.getAstChildren(namespace).filter { it !in children }
             }
+        )
+
+        // When a child has no location we can not properly consider it for comment matching,
+        // however, it might have
+        // a child with a location that we want to consider, this can overlap with namespaces but
+        // nodes are considered
+        // only once in the set
+        children.addAll(
+            children
+                .filter { node -> node.location == null || node.location?.region == Region() }
+                .flatMap { locationLess ->
+                    SubgraphWalker.getAstChildren(locationLess).filter { it !in children }
+                }
         )
 
         // Searching for the closest successor to our comment amongst the children of the smallest
