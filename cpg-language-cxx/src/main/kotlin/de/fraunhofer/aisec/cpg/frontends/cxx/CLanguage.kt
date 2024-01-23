@@ -33,9 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
-import java.util.regex.Pattern
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -55,6 +54,8 @@ open class CLanguage :
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+    val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See
@@ -130,13 +131,13 @@ open class CLanguage :
         call: CallExpression,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
-        callResolver: CallResolver
+        callResolver: SymbolResolver
     ): List<FunctionDeclaration> = emptyList()
 
     override fun refineInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration,
         call: CallExpression,
-        namePattern: Pattern,
+        name: String,
         ctx: TranslationContext
     ): List<FunctionDeclaration> = emptyList()
 

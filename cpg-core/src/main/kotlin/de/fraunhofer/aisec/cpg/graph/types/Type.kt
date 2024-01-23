@@ -30,11 +30,13 @@ import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -42,6 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * this class. Contains information which is included in any Type such as name, storage, qualifier
  * and origin
  */
+@NodeEntity
 abstract class Type : Node {
     /** All direct supertypes of this type. */
     @PopulatedByPass(TypeHierarchyResolver::class)
@@ -221,3 +224,14 @@ abstract class Type : Node {
         }
     }
 }
+
+/** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
+var Type.recordDeclaration: RecordDeclaration?
+    get() {
+        return (this as? ObjectType)?.recordDeclaration
+    }
+    set(value) {
+        if (this is ObjectType) {
+            this.recordDeclaration = value
+        }
+    }

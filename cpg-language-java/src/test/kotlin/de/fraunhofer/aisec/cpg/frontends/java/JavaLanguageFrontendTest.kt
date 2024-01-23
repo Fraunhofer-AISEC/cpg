@@ -530,8 +530,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                     .sourceLocations(listOf(file))
                     .topLevel(file.parentFile)
                     .defaultPasses()
-                    .defaultLanguages()
-                    .registerLanguage(JavaLanguage())
+                    .registerLanguage<JavaLanguage>()
                     .processAnnotations(true)
             )
         assertFalse(declarations.isEmpty())
@@ -619,7 +618,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
-        val tu = findByUniqueName(result.translationUnits, "src/test/resources/fix-328/Cat.java")
+        val tu =
+            findByUniqueName(
+                result.components.flatMap { it.translationUnits },
+                "src/test/resources/fix-328/Cat.java"
+            )
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
 
@@ -674,7 +677,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.unregisterLanguage(JavaLanguage::class.java)
                 it.registerLanguage(MyJavaLanguage())
             }
 
@@ -702,8 +704,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .sourceLocations(*files.toTypedArray())
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .debugParser(true)
                 .failOnError(true)
                 .build()
@@ -727,14 +728,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .sourceLocations(*files.toTypedArray())
                 .topLevel(topLevel.toFile())
                 .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .debugParser(true)
                 .failOnError(true)
                 .build()
         val analyzer = builder().config(config).build()
         val result = analyzer.analyze().get()
-        for (node in result.translationUnits) {
+        for (node in result.components.flatMap { it.translationUnits }) {
             assertNotNull(node)
         }
     }
@@ -746,7 +746,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
         val outerClass = tu.records["compiling.OuterClass"]

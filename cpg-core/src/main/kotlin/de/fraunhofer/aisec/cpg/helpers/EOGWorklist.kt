@@ -55,11 +55,13 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
  * constructed by the powerset.
  */
-class PowersetLattice(override val elements: Set<Node>) : LatticeElement<Set<Node>>(elements) {
+class PowersetLattice(override val elements: IdentitySet<Node>) :
+    LatticeElement<Set<Node>>(elements) {
     override fun lub(other: LatticeElement<Set<Node>>) =
-        PowersetLattice(other.elements.union(this.elements))
+        PowersetLattice(this.elements.union(other.elements))
 
-    override fun duplicate() = PowersetLattice(this.elements.toSet())
+    override fun duplicate(): LatticeElement<Set<Node>> =
+        PowersetLattice(this.elements.toIdentitySet())
 
     override fun compareTo(other: LatticeElement<Set<Node>>): Int {
         return if (this.elements.containsAll(other.elements)) {
@@ -135,7 +137,7 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
             // upper bound
             this[newNode] = newLatticeElement.lub(current)
         } else {
-            this[newNode] = newLatticeElement.duplicate()
+            this[newNode] = newLatticeElement
         }
         return true
     }
@@ -147,13 +149,15 @@ open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
  */
 class Worklist<K : Any, N : Any, V>() {
     /** A mapping of nodes to the state which is currently available there. */
-    var globalState: MutableMap<K, State<N, V>> = mutableMapOf()
+    var globalState = IdentityHashMap<K, State<N, V>>()
         private set
 
     /** A list of all nodes which have already been visited. */
     private val alreadySeen = IdentitySet<K>()
 
-    constructor(globalState: MutableMap<K, State<N, V>> = mutableMapOf()) : this() {
+    constructor(
+        globalState: IdentityHashMap<K, State<N, V>> = IdentityHashMap<K, State<N, V>>()
+    ) : this() {
         this.globalState = globalState
     }
 
@@ -232,6 +236,23 @@ class Worklist<K : Any, N : Any, V>() {
  * [State] [startState]. For each node, the [transformation] is applied which should update the
  * state.
  *
+ * [transformation] receives the current [Node] popped from the worklist and the [State] at this
+ * node which is considered for this analysis. The [transformation] has to return the updated
+ * [State].
+ */
+inline fun <reified K : Node, V> iterateEOG(
+    startNode: K,
+    startState: State<K, V>,
+    transformation: (K, State<K, V>) -> State<K, V>
+): State<K, V>? {
+    return iterateEOG(startNode, startState) { k, s, _ -> transformation(k, s) }
+}
+
+/**
+ * Iterates through the worklist of the Evaluation Order Graph starting at [startNode] and with the
+ * [State] [startState]. For each node, the [transformation] is applied which should update the
+ * state.
+ *
  * [transformation] receives the current [Node] popped from the worklist, the [State] at this node
  * which is considered for this analysis and even the current [Worklist]. The worklist is given if
  * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
@@ -242,7 +263,9 @@ inline fun <reified K : Node, V> iterateEOG(
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>
 ): State<K, V>? {
-    val worklist = Worklist(mutableMapOf(Pair(startNode, startState)))
+    val initialState = IdentityHashMap<K, State<K, V>>()
+    initialState[startNode] = startState
+    val worklist = Worklist(initialState)
     worklist.push(startNode, startState)
 
     while (worklist.isNotEmpty()) {
@@ -271,9 +294,17 @@ inline fun <reified K : Node, V> iterateEOG(
 inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
+    transformation: (K, State<N, V>) -> State<N, V>
+): State<N, V>? {
+    return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
+}
+
+inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+    startEdges: List<K>,
+    startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>
 ): State<N, V>? {
-    val globalState = mutableMapOf<K, State<N, V>>()
+    val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {
         globalState[startEdge] = startState
     }

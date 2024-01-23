@@ -34,10 +34,11 @@ In order to get familiar with the graph itself, you can use the subproject [cpg-
 ### As Library
 
 The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
-```
+
+```kotlin
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.0/cdt-11.0.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
         metadataSources {
             artifact()
         }
@@ -48,11 +49,11 @@ repositories {
 }
 
 dependencies {
-    var cpgVersion = "5.1.0" 
-    
+    val cpgVersion = "8.0.0"
+
     // if you want to include all published cpg modules
     implementation("de.fraunhofer.aisec", "cpg", cpgVersion)
-    
+
     // if you only want to use some of the cpg modules
     // use the 'cpg-core' module
     // and then add the needed extra modules, such as Go and Python
@@ -115,20 +116,19 @@ val translationConfig = TranslationConfiguration
 ### Experimental Languages
 
 Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included in the `cpg-core` module but have separate gradle submodules.
-C/CPP and Java are currently required by some of the modules (e.g. `cpg-analysis`) and thus, disabling them can lead to compile errors!
 To include the desired submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
 We provide a sample file with all languages switched on [here](./gradle.properties.example).
 Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
 
 #### Golang
 
-In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically find JNI headers and stores the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS. In order to use it in an external project, the resulting library needs to be placed somewhere in `java.library.path`.
+In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically store the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS.
 
 #### Python
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
 
-Currently, only Python 3.{9,10,11,12} is supported.
+Currently, only Python 3.{9,10,11,12,13} is supported.
 
 ##### System Wide
 
@@ -145,7 +145,6 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 #### TypeScript
 
 For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
-
 
 ### Code Style
 
@@ -184,8 +183,7 @@ The following authors have contributed to this project (in alphabetical order):
 
 ## Contributing
 
-We are currently discussing the implementation of a Contributor License Agreement (CLA). Unfortunately,
-we cannot merge external pull requests until this issue is resolved.
+Before accepting external contributions, you need to sign our [CLA](https://cla-assistant.io/Fraunhofer-AISEC/cpg). Our CLA assistent will check, whether you already signed the CLA when you open your first pull request.
 
 ## Further reading
 

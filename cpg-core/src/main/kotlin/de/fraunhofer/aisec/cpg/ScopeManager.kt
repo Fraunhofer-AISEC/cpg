@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.HasFirstClassFunctions
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -33,10 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
@@ -69,11 +72,27 @@ class ScopeManager : ScopeProvider {
     var currentScope: Scope? = null
         private set
 
+    /** Represents an alias with the name [to] for the particular name [from]. */
+    data class Alias(var from: Name, var to: Name)
+
     /**
-     * The language frontend tied to the scope manager. Can be used to implement language specific
-     * scope resolution or lookup.
+     * A cache map of reference tags (computed with [Reference.referenceTag]) and their respective
+     * pair of original [Reference] and resolved [ValueDeclaration]. This is used by
+     * [resolveReference] as a caching mechanism.
      */
-    var lang: LanguageFrontend<*, *>? = null
+    private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
+
+    /**
+     * In some languages, we can define aliases for names. An example is renaming package imports in
+     * Go, e.g., to avoid name conflicts.
+     *
+     * In reality, they can probably be defined at different scopes for other languages, but for now
+     * we only allow it for the current file.
+     *
+     * This can potentially be used to replace [addTypedef] at some point, which still relies on the
+     * existence of a [LanguageFrontend].
+     */
+    private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
@@ -382,9 +401,9 @@ class ScopeManager : ScopeProvider {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
                 scope?.addValueDeclaration(declaration, addToAST)
             }
+            is EnumDeclaration,
             is RecordDeclaration,
             is NamespaceDeclaration,
-            is EnumDeclaration,
             is TemplateDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
                 scope?.addDeclaration(declaration, addToAST)
@@ -543,10 +562,7 @@ class ScopeManager : ScopeProvider {
         }
     }
 
-    /**
-     * Only used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
-     * [ValueDeclarationScope].
-     */
+    /** Only used by the [TypeManager], adds typedefs to the current [ValueDeclarationScope]. */
     fun addTypedef(typedef: TypedefDeclaration) {
         val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
@@ -555,12 +571,6 @@ class ScopeManager : ScopeProvider {
         }
 
         scope.addTypedef(typedef)
-
-        if (scope.astNode == null) {
-            lang?.currentTU?.addTypedef(typedef)
-        } else {
-            scope.astNode?.addTypedef(typedef)
-        }
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
@@ -590,41 +600,65 @@ class ScopeManager : ScopeProvider {
      * Resolves only references to Values in the current scope, static references to other visible
      * records are not resolved over the ScopeManager.
      *
-     * @param scope
      * @param ref
      * @return
      *
      * TODO: We should merge this function with [.resolveFunction]
      */
-    @JvmOverloads
-    fun resolveReference(ref: Reference, scope: Scope? = currentScope): ValueDeclaration? {
-        return resolve<ValueDeclaration>(scope) {
-                if (
-                    it.name.lastPartsMatch(ref.name)
-                ) { // TODO: This place is likely to make things fail
-                    var helper = ref.resolutionHelper
-                    // If the reference seems to point to a function the entire signature is checked
-                    // for equality
-                    if (helper?.type is FunctionPointerType && it is FunctionDeclaration) {
-                        val fptrType = helper.type as FunctionPointerType
-                        // TODO(oxisto): This is the third place where function pointers are
-                        //   resolved. WHY?
-                        // TODO(oxisto): Support multiple return values
-                        val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
-                        if (
-                            returnType == fptrType.returnType &&
-                                it.hasSignature(fptrType.parameters)
-                        ) {
-                            return@resolve true
-                        }
-                    } else {
-                        return@resolve it !is FunctionDeclaration
-                    }
-                }
+    fun resolveReference(ref: Reference): ValueDeclaration? {
+        val startScope = ref.scope
 
-                return@resolve false
-            }
-            .firstOrNull()
+        // Retrieve a unique tag for the particular reference based on the current scope
+        val tag = ref.referenceTag
+
+        // If we find a match in our symbol table, we can immediately return the declaration. We
+        // need to be careful about potential collisions in our tags, since they are based on the
+        // hash-code of the scope. We therefore take the extra precaution to compare the scope in
+        // case we get a hit. This should not take too much performance overhead.
+        val pair = symbolTable[tag]
+        if (pair != null && ref.scope == pair.first.scope) {
+            return pair.second
+        }
+
+        val (scope, name) = extractScope(ref, startScope)
+
+        // Try to resolve value declarations according to our criteria
+        val decl =
+            resolve<ValueDeclaration>(scope) {
+                    if (it.name.lastPartsMatch(name)) {
+                        val helper = ref.resolutionHelper
+                        return@resolve when {
+                            // If the reference seems to point to a function (using a function
+                            // pointer) the entire signature is checked for equality
+                            helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
+                                val fptrType = helper.type as FunctionPointerType
+                                // TODO(oxisto): Support multiple return values
+                                val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                                returnType == fptrType.returnType &&
+                                    it.hasSignature(fptrType.parameters)
+                            }
+                            // If our language has first-class functions, we can safely return them
+                            // as a reference
+                            ref.language is HasFirstClassFunctions -> {
+                                true
+                            }
+                            // Otherwise, we are not looking for functions here
+                            else -> {
+                                it !is FunctionDeclaration
+                            }
+                        }
+                    }
+
+                    return@resolve false
+                }
+                .firstOrNull()
+
+        // Update the symbol cache, if we found a declaration for the tag
+        if (decl != null) {
+            symbolTable[tag] = Pair(ref, decl)
+        }
+
+        return decl
     }
 
     /**
@@ -636,23 +670,46 @@ class ScopeManager : ScopeProvider {
     @JvmOverloads
     fun resolveFunction(
         call: CallExpression,
-        scope: Scope? = currentScope
+        startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
-        val s = extractScope(call, scope)
+        val (scope, name) = extractScope(call, startScope)
 
-        return resolve(s) { it.name.lastPartsMatch(call.name) && it.hasSignature(call.signature) }
+        val func =
+            resolve<FunctionDeclaration>(scope) {
+                it.name.lastPartsMatch(name) && it.hasSignature(call)
+            }
+
+        return func
     }
 
-    fun extractScope(node: Node, scope: Scope? = currentScope): Scope? {
+    /**
+     * This function extracts a possible scope out of a [Name], e.g. if the name is fully qualified.
+     * This also resolves possible name aliases (e.g. because of imports). It returns a pair of a
+     * scope (if found) as well as the name, which is possibly adjusted for the aliases.
+     *
+     * Note: Currently only *fully* qualified names are properly resolved. This function will
+     * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
+     * `B` points to `A::B`, rather than to `A`.
+     */
+    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+        var name: Name = node.name
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (node.name.parent != null) {
+        if (node.name.isQualified()) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            val scopeName = node.name.parent
+            var scopeName = node.name.parent
 
-            // TODO: proper scope selection
+            // We need to check, whether we have an alias for the scope name in this file
+            val list = aliases[node.location?.artifactLocation]
+            val alias = list?.firstOrNull { it.to == scopeName }?.from
+            if (alias != null) {
+                scopeName = alias
+                // Reconstruct the original name with the alias, so we can resolve declarations with
+                // the namespace
+                name = Name(name.localName, alias)
+            }
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
@@ -661,22 +718,22 @@ class ScopeManager : ScopeProvider {
                     Util.errorWithFileLocation(
                         node,
                         LOGGER,
-                        "Could not find the scope $scopeName needed to resolve the call ${node.name}. Falling back to the default (current) scope"
+                        "Could not find the scope $scopeName needed to resolve the call ${node.name}"
                     )
-                    s
+                    scope
                 } else {
                     scopes[0]
                 }
         }
 
-        return s
+        return Pair(s, name)
     }
 
     /**
      * Directly jumps to a given scope. Returns the previous scope. Do not forget to set the scope
      * back to the old scope after performing the actions inside this scope.
      *
-     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     * Handle with care, here be dragons. Should not be exposed outside the cpg-core module.
      */
     @PleaseBeCareful
     internal fun jumpTo(scope: Scope?): Scope? {
@@ -722,23 +779,34 @@ class ScopeManager : ScopeProvider {
         stopIfFound: Boolean = false,
         noinline predicate: (T) -> Boolean
     ): List<T> {
+        return resolve(T::class.java, searchScope, stopIfFound, predicate)
+    }
+
+    fun <T : Declaration> resolve(
+        klass: Class<T>,
+        searchScope: Scope?,
+        stopIfFound: Boolean = false,
+        predicate: (T) -> Boolean
+    ): List<T> {
         var scope = searchScope
         val declarations = mutableListOf<T>()
 
         while (scope != null) {
             if (scope is ValueDeclarationScope) {
-                declarations.addAll(scope.valueDeclarations.filterIsInstance<T>().filter(predicate))
+                declarations.addAll(
+                    scope.valueDeclarations.filterIsInstance(klass).filter(predicate)
+                )
             }
 
             if (scope is StructureDeclarationScope) {
-                var list = scope.structureDeclarations.filterIsInstance<T>().filter(predicate)
+                var list = scope.structureDeclarations.filterIsInstance(klass).filter(predicate)
 
                 // this was taken over from the old resolveStructureDeclaration.
                 // TODO(oxisto): why is this only when the list is empty?
                 if (list.isEmpty()) {
                     for (declaration in scope.structureDeclarations) {
                         if (declaration is RecordDeclaration) {
-                            list = declaration.templates.filterIsInstance<T>().filter(predicate)
+                            list = declaration.templates.filterIsInstance(klass).filter(predicate)
                         }
                     }
                 }
@@ -779,13 +847,39 @@ class ScopeManager : ScopeProvider {
     /**
      * Retrieves the [RecordDeclaration] for the given name in the given scope.
      *
-     * @param scope the scope
      * @param name the name
+     * * @param scope the scope. Default is [currentScope]
+     *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: Name): RecordDeclaration? {
+    fun getRecordForName(name: Name, scope: Scope? = currentScope): RecordDeclaration? {
         return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
             .firstOrNull()
+    }
+
+    fun addAlias(file: PhysicalLocation.ArtifactLocation, from: Name, to: Name) {
+        val list = aliases.computeIfAbsent(file) { mutableSetOf() }
+
+        list += Alias(from, to)
+    }
+
+    fun typedefFor(alias: Type): Type? {
+        var current = currentScope
+
+        // We need to build a path from the current scope to the top most one. This ensures us that
+        // a local definition overwrites / shadows one that was there on a higher scope.
+        while (current != null) {
+            if (current is ValueDeclarationScope) {
+                val decl = current.typedefs[alias]
+                if (decl != null) {
+                    return decl.type
+                }
+            }
+
+            current = current.parent
+        }
+
+        return null
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */

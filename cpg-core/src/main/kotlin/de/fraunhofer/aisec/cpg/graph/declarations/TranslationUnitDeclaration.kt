@@ -25,21 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.passes.PassTarget
-import java.util.Objects
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** The top most declaration, representing a translation unit, for example a file. */
-class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHolder, PassTarget {
+class TranslationUnitDeclaration :
+    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
@@ -126,6 +124,17 @@ class TranslationUnitDeclaration : Declaration(), DeclarationHolder, StatementHo
             .append("namespaces", namespaceEdges)
             .toString()
     }
+
+    override val eogStarters: List<Node>
+        get() {
+            val list = mutableListOf<Node>()
+            // Add all top-level declarations
+            list += declarations
+            // Add all top-level statements
+            list += statements
+
+            return list
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

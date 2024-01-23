@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.assertLocalName
@@ -100,7 +101,7 @@ class ExpressionTest {
         // [:1]
         var slice =
             assertIs<RangeExpression>(
-                assertIs<SubscriptExpression>(b.initializer).subscriptExpression
+                assertIs<SubscriptExpression>(b.firstAssignment).subscriptExpression
             )
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
@@ -111,7 +112,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<SubscriptExpression>(c.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(c.firstAssignment).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -121,7 +122,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<SubscriptExpression>(d.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(d.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -131,9 +132,45 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<SubscriptExpression>(e.initializer).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(e.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)
+    }
+
+    @Test
+    fun testSendStmt() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("chan.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        with(tu) {
+            val main = tu.functions["main"]
+            assertNotNull(main)
+
+            val v = main.variables["v"]
+            assertNotNull(v)
+            assertEquals(primitiveType("int"), v.type)
+
+            val ch = main.variables["ch"]
+            assertNotNull(ch)
+            assertEquals(objectType("chan", generics = listOf(primitiveType("int"))), ch.type)
+
+            val binOp = main.bodyOrNull<BinaryOperator>()
+            assertNotNull(binOp)
+            assertRefersTo(binOp.lhs, ch)
+            assertRefersTo(binOp.rhs, v)
+
+            val unaryOp = main.bodyOrNull<UnaryOperator>()
+            assertNotNull(unaryOp)
+            assertRefersTo(unaryOp.input, ch)
+        }
     }
 }

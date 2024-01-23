@@ -59,33 +59,14 @@ tasks.test {
 
 dependencies {
     api(libs.apache.commons.lang3)
-
     api(libs.neo4j.ogm.core)
-
-    implementation(libs.bundles.log4j)
-
-    api(libs.javaparser)
     api(libs.jackson)
 
-    // Eclipse dependencies
-    api(libs.eclipse.runtime) {
-        // For some reason, this group name is wrong
-        exclude("org.osgi.service", "org.osgi.service.prefs")
-    }
-    api(libs.osgi.service)
-    api(libs.icu4j)
-
-    // CDT
-    api(libs.eclipse.cdt.core)
-
-    api(libs.commons.io)
-
+    implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
-    implementation(libs.jetbrains.annotations)
 
     testImplementation(libs.junit.params)
 
-    // JUnit
     testFixturesApi(libs.kotlin.test.junit5)  // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures
     testFixturesApi(libs.mockito)
 }

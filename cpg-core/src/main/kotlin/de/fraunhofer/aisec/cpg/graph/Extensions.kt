@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.astParent
 
 /**
@@ -53,6 +55,21 @@ inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? =
         filtered
     }
 }
+
+/**
+ * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
+ * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
+ * declarations, such as functions and variables. For a more detailed explanation, see
+ * [EOGStarterHolder].
+ *
+ * While it is in theory possible to retrieve this property from all nodes, most use cases should
+ * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
+ * [TranslationResult].
+ */
+val Node.allEOGStarters: Set<Node>
+    get() {
+        return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }.toIdentitySet()
+    }
 
 @JvmName("astNodes")
 fun Node.ast(): List<Node> {
@@ -253,30 +270,38 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+fun Node.followNextDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
     val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableListOf<List<Node>>()
+    val worklist = mutableSetOf<List<Node>>()
     worklist.add(listOf(this)) // We start only with the "from" node (=this)
 
+    val alreadySeenNodes = mutableSetOf<Node>()
+
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.removeFirst()
+        val currentPath = worklist.maxBy { it.size }
+        worklist.remove(currentPath)
+        val currentNode = currentPath.last()
+        alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (currentPath.last().nextDFG.isEmpty()) {
+        if (currentNode.nextDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
+            if (collectFailedPaths) failedPaths.add(currentPath)
             continue
         }
 
-        for (next in currentPath.last().nextDFG) {
+        for (next in currentNode.nextDFG) {
             // Copy the path for each outgoing DFG edge and add the next node
-            val nextPath = mutableListOf<Node>()
-            nextPath.addAll(currentPath)
+            val nextPath = currentPath.toMutableList()
             nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -286,7 +311,11 @@ fun Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
+            if (
+                next !in currentPath &&
+                    (findAllPossiblePaths ||
+                        (next !in alreadySeenNodes && worklist.none { next in it }))
+            ) {
                 worklist.add(nextPath)
             }
         }
@@ -507,6 +536,10 @@ val Node?.calls: List<CallExpression>
 val Node?.mcalls: List<MemberCallExpression>
     get() = this.allChildren()
 
+/** Returns all [CastExpression] children in this graph, starting with this [Node]. */
+val Node?.casts: List<CastExpression>
+    get() = this.allChildren()
+
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
 val Node?.methods: List<MethodDeclaration>
     get() = this.allChildren()
@@ -580,6 +613,7 @@ operator fun <N : Expression> Expression.invoke(): N? {
 
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
+    @Suppress("UNCHECKED_CAST")
     return SubgraphWalker.flattenAST(this).filter { node ->
         node is CallExpression && node.invokes.any { it.name.lastPartsMatch(name) }
     } as List<CallExpression>
@@ -661,4 +695,26 @@ private fun Node.eogDistanceTo(to: Node): Int {
     }
 
     return i
+}
+
+/**
+ * This is a small utility function to "unwrap" a [Reference] that it is wrapped in (multiple)
+ * [Expression] nodes. This will only work on expression that only have one "argument" (such as a
+ * unary operator), in order to avoid ambiguous results. This can be useful for data-flow analysis,
+ * if you want to quickly retrieve the reference that is affected by an operation. For example in
+ * C++ it is common to take an address of a variable and cast it into an appropriate type:
+ * ```cpp
+ * int64_t addr = (int64_t) &a;
+ * ```
+ *
+ * When called on the right-hand side of this assignment, this function will return `a`.
+ */
+fun Expression?.unwrapReference(): Reference? {
+    return when {
+        this is Reference -> this
+        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
+            this.input.unwrapReference()
+        this is CastExpression -> this.expression.unwrapReference()
+        else -> null
+    }
 }

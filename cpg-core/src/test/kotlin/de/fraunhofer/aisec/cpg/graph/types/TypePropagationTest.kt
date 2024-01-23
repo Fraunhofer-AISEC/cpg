@@ -34,16 +34,23 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import kotlin.test.*
 
 class TypePropagationTest {
     @Test
     fun testBinopTypePropagation() {
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
+
         val result =
-            TestLanguageFrontend().build {
+            frontend.build {
                 translationResult {
                     translationUnit("test") {
                         function("main", t("int")) {
@@ -61,8 +68,6 @@ class TypePropagationTest {
                     }
                 }
             }
-
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         val intVar = result.variables["intVar"]
         assertNotNull(intVar)
@@ -85,7 +90,15 @@ class TypePropagationTest {
 
     @Test
     fun testAssignTypePropagation() {
-        val frontend = TestLanguageFrontend()
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
 
         /**
          * This roughly represents the following program in C:
@@ -116,12 +129,6 @@ class TypePropagationTest {
                     }
                 }
             }
-
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
-        EvaluationOrderGraphPass(result.finalCtx)
-            .accept(result.components.first().translationUnits.first())
-        ControlFlowSensitiveDFGPass(result.finalCtx)
-            .accept(result.components.first().translationUnits.first())
 
         with(frontend) {
             val main = result.functions["main"]
@@ -165,7 +172,15 @@ class TypePropagationTest {
 
     @Test
     fun testNewPropagation() {
-        val frontend = TestLanguageFrontend()
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().defaultPasses().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
 
         /**
          * This roughly represents the following C++ code:
@@ -196,8 +211,6 @@ class TypePropagationTest {
                     }
                 }
             }
-
-        VariableUsageResolver(result.finalCtx).accept(result.components.first())
 
         with(frontend) {
             val main = result.functions["main"]

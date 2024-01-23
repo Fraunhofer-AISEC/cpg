@@ -56,7 +56,7 @@ open class ValueEvaluator(
      * Contains a reference to a function that gets called if the value cannot be resolved by the
      * standard behaviour.
      */
-    val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
+    open val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
         // end of the line, lets just keep the expression name
         if (node != null) {
             "{${node.name}}"
@@ -148,7 +148,7 @@ open class ValueEvaluator(
      * Note: this is both used by a [BinaryOperator] with basic arithmetic operations as well as
      * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
      */
-    protected fun computeBinaryOpEffect(
+    protected open fun computeBinaryOpEffect(
         lhsValue: Any?,
         rhsValue: Any?,
         has: HasOperatorCode?,
@@ -163,6 +163,11 @@ open class ValueEvaluator(
             "/=" -> handleDiv(lhsValue, rhsValue, expr)
             "*",
             "*=" -> handleTimes(lhsValue, rhsValue, expr)
+            "<<" -> handleShiftLeft(lhsValue, rhsValue, expr)
+            ">>" -> handleShiftRight(lhsValue, rhsValue, expr)
+            "&" -> handleBitwiseAnd(lhsValue, rhsValue, expr)
+            "|" -> handleBitwiseOr(lhsValue, rhsValue, expr)
+            "^" -> handleBitwiseXor(lhsValue, rhsValue, expr)
             ">" -> handleGreater(lhsValue, rhsValue, expr)
             ">=" -> handleGEq(lhsValue, rhsValue, expr)
             "<" -> handleLess(lhsValue, rhsValue, expr)
@@ -198,6 +203,51 @@ open class ValueEvaluator(
     private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return when {
             lhsValue is Number && rhsValue is Number -> lhsValue * rhsValue
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleShiftLeft(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            // right side must always be an int
+            lhsValue is Int && rhsValue is Int -> lhsValue shl rhsValue
+            lhsValue is Long && rhsValue is Int -> lhsValue shl rhsValue
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleShiftRight(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            // right side must always be an int
+            lhsValue is Int && rhsValue is Int -> lhsValue shr rhsValue
+            lhsValue is Long && rhsValue is Int -> lhsValue shr rhsValue
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleBitwiseAnd(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            // left and right must be equal and only long and int are supported
+            lhsValue is Int && rhsValue is Int -> lhsValue and rhsValue
+            lhsValue is Long && rhsValue is Long -> lhsValue and rhsValue
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleBitwiseOr(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            // left and right must be equal and only long and int are supported
+            lhsValue is Int && rhsValue is Int -> lhsValue or rhsValue
+            lhsValue is Long && rhsValue is Long -> lhsValue or rhsValue
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleBitwiseXor(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            // left and right must be equal and only long and int are supported
+            lhsValue is Int && rhsValue is Int -> lhsValue xor rhsValue
+            lhsValue is Long && rhsValue is Long -> lhsValue xor rhsValue
             else -> cannotEvaluate(expr, this)
         }
     }

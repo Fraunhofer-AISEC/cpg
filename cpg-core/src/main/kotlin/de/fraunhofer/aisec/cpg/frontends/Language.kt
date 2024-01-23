@@ -27,16 +27,21 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -163,6 +168,9 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             "-",
             "*",
             "/" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "&",
+            "|",
+            "^",
             "<<",
             ">>" ->
                 if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
@@ -181,8 +189,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * enough.
      */
     open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
-        val node = hasType as Node
-        var nodeType = hasType.type
+        val nodeType = hasType.type
 
         // We only want to add certain types, in case we have a numeric type
         if (nodeType is NumericType) {
@@ -199,13 +206,74 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         return true
     }
+
+    /**
+     * This function checks, if [type] is derived from [superType]. Optionally, the nodes that hold
+     * the respective type can be supplied as [hint] and [superHint].
+     */
+    open fun isDerivedFrom(
+        type: Type,
+        superType: Type,
+        hint: HasType?,
+        superHint: HasType?
+    ): Boolean {
+        // Retrieve all ancestor types of our type (more concretely of the root type)
+        val root = type.root
+        val superTypes = root.ancestors.map { it.type }
+
+        // Check, if super type (or its root) is in the list
+        return superType.root in superTypes
+    }
+
+    /**
+     * This function checks, if the two supplied signatures are equal. The usual use-case is
+     * comparing the signature arguments of a [CallExpression] (in [signature]) against the
+     * signature of a [FunctionDeclaration] (in [target]). Optionally, a list of [expressions]
+     * (e.g., the actual call arguments) can be supplied as a hint, these will be forwarded to other
+     * comparing functions, such as [isDerivedFrom].
+     */
+    open fun hasSignature(
+        target: FunctionDeclaration,
+        signature: List<Type>,
+        expressions: List<Expression>? = null,
+    ): Boolean {
+        val targetSignature = target.parameters
+        return if (
+            targetSignature.all { !it.isVariadic } && signature.size < targetSignature.size
+        ) {
+            // TODO: So we don't consider arguments with default values (among others) but then, the
+            //  SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
+            false
+        } else {
+            // signature is a collection of positional arguments, so the order must be preserved
+            for (i in targetSignature.indices) {
+                val declared = targetSignature[i]
+                if (declared.isVariadic) {
+                    // Everything that follows is collected by this param, so the signature is
+                    // fulfilled no matter what comes now
+                    // FIXME: in Java, we could have overloading with different vararg types, in
+                    //  C++ we can't, as vararg types are not defined here anyways)
+                    return true
+                }
+                val provided = signature[i]
+                val expression = expressions?.get(i)
+                if (!provided.isDerivedFrom(declared.type, expression, target)) {
+                    return false
+                }
+            }
+
+            // Longer target signatures are only allowed with varargs. If we reach this point, no
+            // vararg has been encountered
+            signature.size == targetSignature.size
+        }
+    }
 }
 
 /**
  * We need to bring our own serializer for [KClass] until
  * https://github.com/FasterXML/jackson-module-kotlin/issues/361 is resolved.
  */
-internal class KClassSerializer : StdSerializer<KClass<*>>(KClass::class.java) {
+internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
         gen.writeString(value.qualifiedName)

@@ -46,8 +46,12 @@ class CXXCompilationDatabaseTest {
             )
         for (path in ccs) {
             val cc = File(path)
-            val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
-            val tu = result.translationUnits.firstOrNull()
+            val result =
+                TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                    it.registerLanguage<CPPLanguage>()
+                    it.registerLanguage<CLanguage>()
+                }
+            val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             assertNotNull(tu)
 
             val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
@@ -95,8 +99,12 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseSimple() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_simple.json")
-        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
-        val tu = result.translationUnits.firstOrNull()
+        val result =
+            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+            }
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
         assertNotNull(tu)
 
@@ -113,8 +121,12 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseMultiTUs() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_multi_tus.json")
-        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
-        val tus = result.translationUnits
+        val result =
+            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+            }
+        val tus = result.components.flatMap { it.translationUnits }
         assertEquals(2, tus.size)
         val ref = mapOf("main_tu_1.c" to 1, "main_tu_2.c" to 2)
 
@@ -137,9 +149,17 @@ class CXXCompilationDatabaseTest {
     @Test
     fun testCompilationDatabaseArch() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_arch.json")
-        val result = TestUtils.analyzeWithCompilationDatabase(cc, true)
+        val result =
+            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+            }
 
-        val main = result.translationUnits.firstOrNull()?.byNameOrNull<FunctionDeclaration>("main")
+        val main =
+            result.components
+                .flatMap { it.translationUnits }
+                .firstOrNull()
+                ?.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
     }
 }

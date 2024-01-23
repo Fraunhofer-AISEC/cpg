@@ -39,8 +39,6 @@ import java.lang.reflect.Field
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Consumer
-import java.util.function.Predicate
-import java.util.stream.Collectors
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
@@ -140,47 +138,50 @@ object SubgraphWalker {
         // We currently need to stick to pure Java reflection, since Kotlin reflection
         // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
         for (field in getAllFields(classType)) {
-            val ast = field.getAnnotation(AST::class.java)
-            if (ast != null) {
-                try {
-                    // disable access mechanisms
-                    field.trySetAccessible()
-                    var obj = field[node]
+            field.getAnnotation(AST::class.java) ?: continue
+            try {
+                // We need to synchronize access to the field, because otherwise different
+                // threads might restore the isAccessible property while this thread is still
+                // accessing the field
+                var obj =
+                    synchronized(field) {
+                        // disable access mechanisms
+                        field.trySetAccessible()
+                        val obj = field[node]
 
-                    // restore old state
-                    field.isAccessible = false
+                        // restore old state
+                        field.isAccessible = false
+                        obj
+                    }
+                        ?: continue
 
-                    // skip, if null
-                    if (obj == null) {
-                        continue
-                    }
-                    var outgoing = true // default
-                    if (field.getAnnotation(Relationship::class.java) != null) {
-                        outgoing =
-                            (field.getAnnotation(Relationship::class.java).direction ==
-                                Relationship.Direction.OUTGOING)
-                    }
-                    if (checkForPropertyEdge(field, obj)) {
-                        obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
-                    }
-                    when (obj) {
-                        is Node -> {
-                            children.add(obj)
-                        }
-                        is Collection<*> -> {
-                            children.addAll(obj as Collection<Node>)
-                        }
-                        else -> {
-                            throw AnnotationFormatError(
-                                "Found @field:SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
-                            )
-                        }
-                    }
-                } catch (ex: IllegalAccessException) {
-                    LOGGER.error("Error while retrieving AST children: {}", ex.message)
+                // skip, if null
+                var outgoing = true // default
+                if (field.getAnnotation(Relationship::class.java) != null) {
+                    outgoing =
+                        (field.getAnnotation(Relationship::class.java).direction ==
+                            Relationship.Direction.OUTGOING)
                 }
+                if (checkForPropertyEdge(field, obj) && obj is Collection<*>) {
+                    obj = unwrap(obj.filterIsInstance<PropertyEdge<Node>>(), outgoing)
+                }
+                when (obj) {
+                    is Node -> {
+                        children.add(obj)
+                    }
+                    is Collection<*> -> {
+                        children.addAll(obj.filterIsInstance<Node>())
+                    }
+                    else -> {
+                        throw AnnotationFormatError(
+                            "Found @field:SubGraph(\"AST\") on field of type " +
+                                obj.javaClass +
+                                " but can only used with node graph classes or collections of graph nodes"
+                        )
+                    }
+                }
+            } catch (ex: IllegalAccessException) {
+                LOGGER.error("Error while retrieving AST children: {}", ex.message)
             }
         }
         return children
@@ -258,13 +259,17 @@ object SubgraphWalker {
         var backlog: Deque<Node>? = null
             private set
 
+        var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
          * place where usual graph manipulation will happen. The current node is the single argument
          * passed to the function
          */
-        private val onNodeVisit: MutableList<Consumer<Node>> = ArrayList()
-        private val onNodeVisit2: MutableList<BiConsumer<Node, Node?>> = ArrayList()
+        private val onNodeVisit: MutableList<Consumer<Node>> = mutableListOf()
+        private val onNodeVisit2: MutableList<BiConsumer<Node, Node?>> = mutableListOf()
+
+        private val replacements = mutableMapOf<Node, Node>()
 
         /**
          * The callback that is designed to tell the user when we leave the current scope. The
@@ -300,7 +305,7 @@ object SubgraphWalker {
             val seen: MutableSet<Node> = LinkedHashSet()
             todo?.push(Pair<Node, Node?>(root, null))
             while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
-                val (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
+                var (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
                 if (
                     (backlog as ArrayDeque<Node>).isNotEmpty() &&
                         (backlog as ArrayDeque<Node>).peek() == current
@@ -308,18 +313,25 @@ object SubgraphWalker {
                     val exiting = (backlog as ArrayDeque<Node>).pop()
                     onNodeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
                 } else {
-                    // re-place the current node as a marker for the above check to find out when we
-                    // need to exit a scope
-                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
                     onNodeVisit.forEach(Consumer { c: Consumer<Node> -> c.accept(current) })
                     onNodeVisit2.forEach(
                         Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
                     )
+
+                    // Check if we have a replacement node
+                    val toReplace = replacements[current]
+                    if (toReplace != null) {
+                        current = toReplace
+                        replacements.remove(toReplace)
+                    }
+
                     val unseenChildren =
-                        getAstChildren(current)
-                            .stream()
-                            .filter(Predicate.not { o: Node -> seen.contains(o) })
-                            .collect(Collectors.toList())
+                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+
+                    // re-place the current node as a marker for the above check to find out when we
+                    // need to exit a scope
+                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
+
                     seen.addAll(unseenChildren)
                     unseenChildren.asReversed().forEach { child: Node ->
                         (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
@@ -327,6 +339,15 @@ object SubgraphWalker {
                     (backlog as ArrayDeque<Node>).push(current)
                 }
             }
+        }
+
+        /**
+         * Sometimes during walking the graph, we are replacing the current node. This causes
+         * problems, that the walker still assumes the old node. Calling this function will ensure
+         * that the walker knows about the new node.
+         */
+        fun registerReplacement(from: Node, to: Node) {
+            replacements[from] = to
         }
 
         fun registerOnNodeVisit(callback: Consumer<Node>) {
@@ -359,6 +380,7 @@ object SubgraphWalker {
      * resolving declarations or other scope-related tasks.
      */
     class ScopedWalker {
+        lateinit var strategy: (Node) -> Iterator<Node>
         private var walker: IterativeGraphWalker? = null
         private val scopeManager: ScopeManager
 
@@ -366,8 +388,12 @@ object SubgraphWalker {
             scopeManager = lang.scopeManager
         }
 
-        constructor(scopeManager: ScopeManager) {
+        constructor(
+            scopeManager: ScopeManager,
+            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+        ) {
             this.scopeManager = scopeManager
+            this.strategy = strategy
         }
 
         /**
@@ -392,15 +418,31 @@ object SubgraphWalker {
             )
         }
 
+        fun registerHandler(handler: Consumer<Node?>) {
+            handlers.add(
+                TriConsumer { _: RecordDeclaration?, _: Node?, currNode: Node? ->
+                    handler.accept(currNode)
+                }
+            )
+        }
+
+        fun registerReplacement(from: Node, to: Node) {
+            walker?.registerReplacement(from, to)
+        }
+
         /**
          * Wraps [IterativeGraphWalker] to handle declaration scopes.
          *
          * @param root The node where AST descent is started
          */
         fun iterate(root: Node) {
-            walker = IterativeGraphWalker()
-            handlers.forEach { h -> walker?.registerOnNodeVisit { n -> handleNode(n, h) } }
-            walker?.iterate(root)
+            val walker = IterativeGraphWalker()
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n -> handleNode(n, h) } }
+
+            this.walker = walker
+
+            walker.iterate(root)
         }
 
         private fun handleNode(

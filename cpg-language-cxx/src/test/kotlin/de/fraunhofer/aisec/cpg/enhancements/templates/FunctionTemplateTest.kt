@@ -51,7 +51,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val x = result.variables["x"]
         assertNotNull(x)
         assertIs<AutoType>(x.type)
@@ -93,7 +95,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
         val functionTemplateDecl = result.allChildren<FunctionTemplateDeclaration>()[0]
 
@@ -161,7 +165,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val doubleFixedMultiply =
             findByUniquePredicate(result.functions) { f: FunctionDeclaration ->
                 f.name.localName == "fixed_multiply" &&
@@ -189,7 +195,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -233,7 +241,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -273,7 +283,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 it.name.localName == "fixed_multiply"
@@ -320,7 +332,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -364,7 +378,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -418,7 +434,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -470,7 +488,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val recordDeclaration =
             findByUniquePredicate(result.records) { c: RecordDeclaration ->
                 c.name.localName == "MyClass"
@@ -524,7 +544,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage<CPPLanguage>()
+            }
 
         // Check inferred for first fixed_division call
         var templateDeclaration =

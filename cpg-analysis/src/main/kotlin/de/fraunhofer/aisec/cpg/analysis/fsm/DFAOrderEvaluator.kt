@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -140,7 +139,7 @@ open class DFAOrderEvaluator(
         // Stores the current markings in the FSM (i.e., which base is at which FSM-node).
         val baseToFSM = mutableMapOf<String, DFA>()
         // Stores the states (i.e., nodes and their states in the fsm) to avoid endless loops.
-        val seenStates = mutableSetOf<String>()
+        val seenStates = mutableSetOf<Pair<Node, String>>()
         // Maps a node to all the paths which were followed to reach the node.
         startNode.addEogPath("")
         // Collect bases (with their eogPath) which have already been found to be incorrect due to
@@ -161,7 +160,7 @@ open class DFAOrderEvaluator(
 
             val eogPathSet = node.getEogPaths()
             if (eogPathSet == null) {
-                log.debug("Error during order-evaluation, no path set for node $node")
+                log.debug("Error during order-evaluation, no path set for node {}", node)
                 continue
             }
 
@@ -291,7 +290,8 @@ open class DFAOrderEvaluator(
         if (
             node is MemberCallExpression &&
                 node.base is Reference &&
-                consideredBases.contains((node.base as Reference).refersTo as Declaration)
+                (node.base as Reference).refersTo != null &&
+                consideredBases.contains((node.base as Reference).refersTo!!)
         ) {
             allUsedBases.add((node.base as Reference).refersTo)
         }
@@ -429,21 +429,18 @@ open class DFAOrderEvaluator(
         node: Node,
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
-        seenStates: MutableSet<String>,
+        seenStates: Set<Pair<Node, String>>,
         interproceduralFlows: MutableMap<String, Boolean>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
-        if (eliminateUnreachableCode) {
-            outNodes +=
+        outNodes +=
+            if (eliminateUnreachableCode) {
                 PropertyEdge.unwrap(
-                    node.nextEOGEdges.filter { e ->
-                        e.getProperty(Properties.UNREACHABLE) == null ||
-                            e.getProperty(Properties.UNREACHABLE) == false
-                    }
+                    node.nextEOGEdges.filter { e -> e.getProperty(Properties.UNREACHABLE) != true }
                 )
-        } else {
-            outNodes += node.nextEOG
-        }
+            } else {
+                node.nextEOG
+            }
 
         if (outNodes.size == 1 && node.nextEOG.size == 1) {
             // We only have one node following this node, so we
@@ -453,53 +450,75 @@ open class DFAOrderEvaluator(
             // We still add this node but this time, we also check if have seen the state it before
             // to avoid endless loops etc.
             outNodes[0].addEogPath(eogPath)
-            val stateOfNext: String = getStateSnapshot(outNodes[0], baseToFSM)
-            if (seenStates.contains(stateOfNext)) {
-                log.debug("Node/FSM state already visited: ${stateOfNext}. Remove from next nodes.")
+            val stateOfNext = getStateSnapshot(outNodes[0], baseToFSM)
+            if (stateOfNext in seenStates) {
+                log.debug(
+                    "Node/FSM state already visited: {}. Remove from next nodes.",
+                    stateOfNext
+                )
                 outNodes.removeAt(0)
             }
         } else if (outNodes.size > 1) {
-            // We have multiple outgoing nodes, so we generate multiple new entries:
-            //  - Each node gets its own eogPath which is split up
-            //  - Each node gets a copy of the current DFA
-            val newBases = mutableMapOf<String, DFA>()
-            // Remove all the entries from baseToFSM which are now replaced with multiple new ones.
-            // We store these entries without the eogPath prefix and update them in (1)
-            val iterator = baseToFSM.entries.iterator()
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (entry.key.startsWith(eogPath)) {
-                    // keep the "|" before the real base, as we need it later anyway
-                    newBases[entry.key.substring(eogPath.length)] = entry.value
-                    // Remove the old entry as it will be replaced with 2 new ones.
-                    iterator.remove()
-                }
-            }
-
-            // (1) Update all entries previously removed from the baseToFSM map with
-            // the new eog-path as prefix to the base
-            for (i in outNodes.indices.reversed()) {
-                val stateOfNext: String = getStateSnapshot(outNodes[i], baseToFSM)
-                if (seenStates.contains(stateOfNext)) {
-                    log.debug(
-                        "Node/FSM state already visited: ${stateOfNext}. Remove from next nodes."
-                    )
-                    outNodes.removeAt(i)
-                } else {
-                    val newEOGPath = "$eogPath$i"
-                    // Clone the FSM for each of the paths in the baseToFSM map.
-                    // Also, copy the value in interproceduralFlows
-                    newBases.forEach { (k: String, v: DFA) ->
-                        baseToFSM[newEOGPath + k] = v.deepCopy()
-                        interproceduralFlows[newEOGPath + k] =
-                            interproceduralFlows.computeIfAbsent(eogPath) { false }
-                    }
-                    // Update the eog-path directly in the map of paths for the respective node.
-                    outNodes[i].addEogPath(newEOGPath)
-                }
-            }
+            getNextNodesForAllOutgoingNodes(
+                outNodes,
+                eogPath,
+                baseToFSM,
+                seenStates,
+                interproceduralFlows
+            )
         }
         return outNodes
+    }
+
+    /**
+     * We have multiple outgoing nodes, so we generate multiple new entries:
+     * - Each node gets its own eogPath which is split up
+     * - Each node gets a copy of the current DFA
+     */
+    private fun getNextNodesForAllOutgoingNodes(
+        outNodes: MutableList<Node>,
+        eogPath: String,
+        baseToFSM: MutableMap<String, DFA>,
+        seenStates: Set<Pair<Node, String>>,
+        interproceduralFlows: MutableMap<String, Boolean>
+    ) {
+        val newBases = mutableMapOf<String, DFA>()
+        // Remove all the entries from baseToFSM which are now replaced with multiple new ones.
+        // We store these entries without the eogPath prefix and update them in (1)
+        val iterator = baseToFSM.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (entry.key.startsWith(eogPath)) {
+                // keep the "|" before the real base, as we need it later anyway
+                newBases[entry.key.substring(eogPath.length)] = entry.value
+                // Remove the old entry as it will be replaced with 2 new ones.
+                iterator.remove()
+            }
+        }
+
+        // (1) Update all entries previously removed from the baseToFSM map with
+        // the new eog-path as prefix to the base
+        for (i in outNodes.indices.reversed()) {
+            val stateOfNext = getStateSnapshot(outNodes[i], baseToFSM)
+            if (stateOfNext in seenStates) {
+                log.debug(
+                    "Node/FSM state already visited: {}. Remove from next nodes.",
+                    stateOfNext
+                )
+                outNodes.removeAt(i)
+            } else {
+                val newEOGPath = "$eogPath$i"
+                // Clone the FSM for each of the paths in the baseToFSM map.
+                // Also, copy the value in interproceduralFlows
+                newBases.forEach { (k: String, v: DFA) ->
+                    baseToFSM[newEOGPath + k] = v.deepCopy()
+                    interproceduralFlows[newEOGPath + k] =
+                        interproceduralFlows.computeIfAbsent(eogPath) { false }
+                }
+                // Update the eog-path directly in the map of paths for the respective node.
+                outNodes[i].addEogPath(newEOGPath)
+            }
+        }
     }
 
     /**
@@ -507,7 +526,7 @@ open class DFAOrderEvaluator(
      * [node]. It is used to keep track of the states which have already been analyzed and to avoid
      * getting stuck in loops.
      */
-    private fun getStateSnapshot(node: Node, baseToFSM: Map<String, DFA>): String {
+    private fun getStateSnapshot(node: Node, baseToFSM: Map<String, DFA>): Pair<Node, String> {
         val grouped =
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
@@ -517,6 +536,6 @@ open class DFAOrderEvaluator(
                 .sorted()
                 .joinToString(",")
 
-        return "$node $grouped"
+        return Pair(node, grouped)
     }
 }

@@ -28,23 +28,15 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class EnumDeclaration : Declaration() {
+class EnumDeclaration : RecordDeclaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
     @AST
     var entryEdges: MutableList<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
 
-    @Relationship(value = "SUPER_TYPES", direction = Relationship.Direction.OUTGOING)
-    var superTypeEdges: MutableList<PropertyEdge<Type>> = ArrayList()
-
-    @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
-
     var entries by PropertyEdgeDelegate(EnumDeclaration::entryEdges)
-
-    var superTypes by PropertyEdgeDelegate(EnumDeclaration::superTypeEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

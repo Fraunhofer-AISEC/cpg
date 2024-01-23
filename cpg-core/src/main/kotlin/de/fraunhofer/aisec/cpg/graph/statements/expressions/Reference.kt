@@ -27,14 +27,16 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.HasAliases
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -44,12 +46,12 @@ import org.neo4j.ogm.annotation.Relationship
  * expression `a = b`, which itself is an [AssignExpression], contains two [Reference]s, one for the
  * variable `a` and one for variable `b`, which have been previously been declared.
  */
-open class Reference : Expression(), HasType.TypeObserver {
+open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     /**
      * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
      * this expression.
      */
-    @PopulatedByPass(VariableUsageResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "REFERS_TO")
     var refersTo: Declaration? = null
         set(value) {
@@ -71,7 +73,9 @@ open class Reference : Expression(), HasType.TypeObserver {
                 value.registerTypeObserver(this)
             }
         }
-    // set the access
+
+    override var aliases = mutableSetOf<HasAliases>()
+
     /**
      * Is this reference used for writing data instead of just reading it? Determines dataflow
      * direction
@@ -103,7 +107,7 @@ open class Reference : Expression(), HasType.TypeObserver {
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .append(super.toString())
+            .appendSuper(super.toString())
             .append("refersTo", refersTo)
             .toString()
     }
@@ -136,7 +140,11 @@ open class Reference : Expression(), HasType.TypeObserver {
         if (other !is Reference) {
             return false
         }
-        return super.equals(other) && refersTo == other.refersTo
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
     }
 
     override fun addPrevDFG(prev: Node, properties: MutableMap<Properties, Any?>) {
@@ -150,5 +158,19 @@ open class Reference : Expression(), HasType.TypeObserver {
         }
     }
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), refersTo)
+    /**
+     * This function builds a tag for the particular reference, based on its [name],
+     * [resolutionHelper] and [scope]. Its purpose is to cache symbol resolutions, similar to LLVMs
+     * system of Unified Symbol Resolution (USR). Please be aware, that this tag is not guaranteed
+     * to be 100 % unique, especially if the language frontend is missing [Node.location]
+     * information (of the [Scope.astNode]. Therefore, its usage should be similar to a [hashCode],
+     * so that in case of an equal hash-code, a [equals] comparison (in this case of the [scope]) is
+     * needed.
+     */
+    val referenceTag: ReferenceTag
+        get() {
+            return Objects.hash(this.name, this.resolutionHelper, this.scope)
+        }
 }
+
+typealias ReferenceTag = Int

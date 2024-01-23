@@ -37,7 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
+open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -171,6 +171,17 @@ class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder {
             .append("records", records)
             .toString()
     }
+
+    override val eogStarters: List<Node>
+        get() {
+            val list = mutableListOf<Node>()
+
+            list += fields
+            list += methods
+            list += constructors
+
+            return list
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

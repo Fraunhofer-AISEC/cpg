@@ -47,8 +47,7 @@ class CommentMatcherTest {
                 .sourceLocations(listOf(file))
                 .defaultPasses()
                 .debugParser(true)
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .failOnError(true)
                 .build()
 
@@ -57,7 +56,7 @@ class CommentMatcherTest {
         val result = analyzer.analyze().get()
         assertNotNull(result)
         // The class should have 2 comments: The javadoc and "Class comment"
-        val tu = result.translationUnits.first()
+        val tu = result.components.flatMap { it.translationUnits }.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
         classDeclaration.comment = "" // Reset the comment of the ClassDeclaration
 

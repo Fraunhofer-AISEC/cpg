@@ -36,8 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.FunctionPointerCallResolver
+import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
+import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
 import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -77,8 +79,9 @@ import org.slf4j.LoggerFactory
  * ad [GPPLanguage]). This enables us (to some degree) to deal with the finer difference between C
  * and C++ code.
  */
-@RegisterExtraPass(FunctionPointerCallResolver::class)
-class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
+@RegisterExtraPass(DynamicInvokeResolver::class)
+@RegisterExtraPass(CXXExtraPass::class)
+open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
 
     /**
@@ -191,8 +194,6 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     val parameterDeclarationHandler = ParameterDeclarationHandler(this)
     val statementHandler = StatementHandler(this)
 
-    private val comments = HashMap<Pair<String, Int>, String>()
-
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
@@ -244,22 +245,23 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                 explore(translationUnit, 0)
             }
 
-            for (c in translationUnit.comments) {
-                if (c.rawSignature.isEmpty()) {
-                    continue
-                }
-
-                if (c.fileLocation == null) {
-                    LOGGER.warn("Found comment with null location in {}", translationUnit.filePath)
-                    continue
-                }
-
-                comments[Pair(c.fileLocation.fileName, c.fileLocation.startingLineNumber)] =
-                    c.rawSignature
-            }
-
             val translationUnitDeclaration =
                 declarationHandler.handleTranslationUnit(translationUnit)
+
+            for (c in translationUnit.comments) {
+                if (c.rawSignature.isNotEmpty()) {
+                    locationOf(c)?.let {
+                        CommentMatcher()
+                            .matchCommentToNode(
+                                c.rawSignature,
+                                it.region,
+                                translationUnitDeclaration,
+                                it.artifactLocation
+                            )
+                    }
+                }
+            }
+
             bench.stop()
             translationUnitDeclaration
         } catch (ex: CoreException) {
@@ -273,7 +275,13 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     }
 
     override fun locationOf(astNode: IASTNode): PhysicalLocation? {
-        val fLocation = astNode.fileLocation ?: return null
+        return regionOf(astNode.fileLocation)?.let {
+            PhysicalLocation(Path.of(astNode.containingFilename).toUri(), it)
+        }
+    }
+
+    private fun regionOf(fLocation: IASTFileLocation?): Region? {
+        if (fLocation == null) return null
         val lineBreaks: IntArray =
             try {
                 val fLoc = getField(fLocation.javaClass, "fLocationCtx")
@@ -306,19 +314,19 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
             }
 
         // our start line, indexed by 0
-        val startLine = astNode.fileLocation.startingLineNumber - 1
+        val startLine = fLocation.startingLineNumber - 1
 
         // our end line, indexed by 0
-        val endLine = astNode.fileLocation.endingLineNumber - 1
+        val endLine = fLocation.endingLineNumber - 1
 
         // our start column, index by 0
         val startColumn =
             if (startLine == 0) {
                 // if we are in the first line, the start column is just the node offset
-                astNode.fileLocation.nodeOffset
+                fLocation.nodeOffset
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                astNode.fileLocation.nodeOffset -
+                fLocation.nodeOffset -
                     lineBreaks[startLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
@@ -327,18 +335,17 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val endColumn =
             if (endLine == 0) {
                 // if we are in the first line, the end column is just the node offset
-                astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength
+                fLocation.nodeOffset + fLocation.nodeLength
             } else {
                 // otherwise, we need to calculate the difference to the previous line break
-                (astNode.fileLocation.nodeOffset + astNode.fileLocation.nodeLength) -
+                (fLocation.nodeOffset + fLocation.nodeLength) -
                     lineBreaks[endLine - 1] -
                     1 // additional -1 because of the '\n' itself
             }
 
         // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
         // not 0
-        val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
-        return PhysicalLocation(Path.of(astNode.containingFilename).toUri(), region)
+        return Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
     }
 
     /**
@@ -357,7 +364,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation = newAnnotation(String(attribute.name), attribute.rawSignature)
+            val annotation = newAnnotation(String(attribute.name), rawNode = owner)
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -386,18 +393,18 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                newReference(code, unknownType(), code)
+                newReference(code, unknownType(), rawNode = token)
                 2 -> // an integer
-                newLiteral(code.toInt(), primitiveType("int"), code)
+                newLiteral(code.toInt(), primitiveType("int"), rawNode = token)
                 130 -> // a string
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
                         primitiveType("char").pointer(),
-                        code
+                        rawNode = token
                     )
-                else -> newLiteral(code, primitiveType("char").pointer(), code)
+                else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
             }
-        return newAnnotationMember("", expression, code)
+        return newAnnotationMember("", expression, rawNode = token)
     }
 
     @Throws(NoSuchFieldException::class)
@@ -429,19 +436,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
     }
 
     override fun setComment(node: Node, astNode: IASTNode) {
-        val location = node.location ?: return
-
-        // No location, no comment
-
-        val loc: Pair<String, Int> =
-            Pair(location.artifactLocation.uri.path, location.region.endLine)
-        comments[loc]?.let {
-            // only exact match for now
-            node.comment = it
-        }
-        // TODO: handle orphanComments? i.e. comments which do not correspond to one line
-        // TODO: what to do with comments which are in a line which contains multiple
-        //  statements?
+        // Nothing to do. We use the CommentMatcher instead.
     }
 
     /** Returns the [Type] that is represented by an [IASTTypeId]. */
@@ -498,10 +493,7 @@ class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Translat
                         // translation unit
                         resolveAlias = true
 
-                        val decl =
-                            scopeManager.currentScope?.let {
-                                scopeManager.getRecordForName(it, Name(name))
-                            }
+                        val decl = scopeManager.getRecordForName(Name(name))
 
                         // We found a symbol, so we can use its name
                         if (decl != null) {

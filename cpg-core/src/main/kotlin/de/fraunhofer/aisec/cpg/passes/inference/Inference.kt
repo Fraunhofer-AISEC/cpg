@@ -51,7 +51,11 @@ import org.slf4j.LoggerFactory
  * builder functions, will automatically have [Node.isInferred] set to true.
  */
 class Inference(val start: Node, override val ctx: TranslationContext) :
-    LanguageProvider, ScopeProvider, IsInferredProvider, ContextProvider {
+    LanguageProvider,
+    ScopeProvider,
+    IsInferredProvider,
+    ContextProvider,
+    RawNodeTypeProvider<Nothing> {
 
     override val language: Language<*>?
         get() = start.language
@@ -88,10 +92,11 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         return inferInScopeOf(start) {
             val inferred: FunctionDeclaration =
                 if (record != null) {
-                    newMethodDeclaration(name ?: "", code, isStatic, record)
+                    newMethodDeclaration(name ?: "", isStatic, record)
                 } else {
-                    newFunctionDeclaration(name ?: "", code)
+                    newFunctionDeclaration(name ?: "")
                 }
+            inferred.code = code
 
             debugWithFileLocation(
                 hint,
@@ -113,10 +118,8 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
             // Some magic that adds it to static imports. Not sure if this really needed
 
-            if (record != null) {
-                if (isStatic) {
-                    record.staticImports.add(inferred)
-                }
+            if (record != null && isStatic) {
+                record.staticImports.add(inferred)
             }
 
             // "upgrade" our struct to a class, if it was inferred by us, since we are calling
@@ -136,11 +139,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
         return inferInScopeOf(start) {
             val inferred =
-                newConstructorDeclaration(
-                    start.name.localName,
-                    "",
-                    start as? RecordDeclaration,
-                )
+                newConstructorDeclaration(start.name.localName, start as? RecordDeclaration)
             createInferredParameters(inferred, signature)
 
             scopeManager.addDeclaration(inferred)
@@ -168,7 +167,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
             for (i in signature.indices) {
                 val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
                 val paramName = generateParamName(i, targetType)
-                val param = newParameterDeclaration(paramName, targetType, false, "")
+                val param = newParameterDeclaration(paramName, targetType, false)
                 param.argumentIndex = i
 
                 scopeManager.addDeclaration(param)
@@ -230,7 +229,9 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 )
 
         // Non-Type Template Parameter
-        return newParameterDeclaration(name, expr.type, false, name)
+        val param = newParameterDeclaration(name, expr.type, false)
+        param.code = name
+        return param
     }
 
     private fun inferTemplateParameter(
@@ -239,7 +240,8 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         val parameterizedType = ParameterizedType(name, language)
         typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
-        val decl = newTypeParameterDeclaration(name, name)
+        val decl = newTypeParameterDeclaration(name)
+        decl.code = name
         decl.type = parameterizedType
 
         return decl
@@ -266,7 +268,8 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 
         val name = call.name.localName
         val code = call.code
-        val inferred = newFunctionTemplateDeclaration(name, code)
+        val inferred = newFunctionTemplateDeclaration(name)
+        inferred.code = code
         inferred.isInferred = true
 
         val inferredRealization =
@@ -314,18 +317,18 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         kind: String = "class"
     ): RecordDeclaration? {
         if (type !is ObjectType) {
-            Companion.log.error(
+            log.error(
                 "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
             )
             return null
         }
-        Companion.log.debug(
+        log.debug(
             "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
         )
 
         // This could be a class or a struct. We start with a class and may have to fine-tune this
         // later.
-        val declaration = currentTU.newRecordDeclaration(type.typeName, kind, "")
+        val declaration = newRecordDeclaration(type.typeName, kind)
         declaration.isInferred = true
 
         // update the type
@@ -341,7 +344,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         // delegate further operations to the scope manager. We also save the old scope so we can
         // restore it.
         return inferInScopeOf(start) {
-            Companion.log.debug(
+            log.debug(
                 "Inferring a new namespace declaration {} {}",
                 name,
                 if (path != null) {
@@ -415,6 +418,11 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
 /** Provides information about the inference status of a node. */
 interface IsInferredProvider : MetadataProvider {
     val isInferred: Boolean
+}
+
+/** Provides information about the implicit status of a node. */
+interface IsImplicitProvider : MetadataProvider {
+    val isImplicit: Boolean
 }
 
 /** Returns a new [Inference] object starting from this node. */

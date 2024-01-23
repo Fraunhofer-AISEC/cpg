@@ -172,8 +172,8 @@ class MultiValueEvaluator : ValueEvaluator() {
         val result = mutableSetOf<Any?>()
         val elseResult = evaluateInternal(expr.elseExpression, depth + 1)
         val thenResult = evaluateInternal(expr.thenExpression, depth + 1)
-        if (thenResult is Collection<*>) result.addAll(thenResult) else result.add(thenResult)
-        if (elseResult is Collection<*>) result.addAll(elseResult) else result.add(elseResult)
+        result.addAnything(thenResult)
+        result.addAnything(elseResult)
         return result
     }
 
@@ -226,7 +226,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
             val internalRes = evaluateInternal(prevDFG.first(), depth + 1)
-            return if (internalRes is Collection<*>) internalRes else mutableSetOf(internalRes)
+            return (internalRes as? Collection<*>) ?: mutableSetOf(internalRes)
         }
 
         if (prevDFG.size == 2 && prevDFG.all(::isSimpleForLoop)) {
@@ -239,23 +239,19 @@ class MultiValueEvaluator : ValueEvaluator() {
             val decl = prevDFG.filterIsInstance<VariableDeclaration>()
             for (declaration in decl) {
                 val res = evaluateInternal(declaration, depth + 1)
-                if (res is Collection<*>) {
-                    result.addAll(res)
-                } else {
-                    result.add(res)
-                }
+                result.addAnything(res)
             }
         }
 
         for (expression in prevDFG) {
             val res = evaluateInternal(expression, depth + 1)
-            if (res is Collection<*>) {
-                result.addAll(res)
-            } else {
-                result.add(res)
-            }
+            result.addAnything(res)
         }
         return result
+    }
+
+    private fun MutableSet<Any?>.addAnything(element: Any?) {
+        if (element is Collection<*>) this.addAll(element) else this.add(element)
     }
 
     private fun isSimpleForLoop(node: Node): Boolean {
@@ -281,8 +277,11 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { e -> e.astParent is ForStatement }?.astParent
-                as? ForStatement
+            expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
+                ?: expr.prevDFG
+                    .firstOrNull { it.astParent?.astParent is ForStatement }
+                    ?.astParent
+                    ?.astParent as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =

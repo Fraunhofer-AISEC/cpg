@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -203,8 +202,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
     var prevPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevPDGEdges, false)
 
-    var typedefs: MutableSet<TypedefDeclaration> = HashSet()
-
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
      * necessarily have a real counterpart in the scanned source code. However, the nodes
@@ -282,15 +279,18 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextDFGEdges.add(edge)
     }
 
-    fun addPrevCDG(prev: Node) {
-        val edge = PropertyEdge(prev, this)
+    fun addPrevCDG(
+        prev: Node,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge = PropertyEdge(prev, this, properties)
         prevCDGEdges.add(edge)
         prev.nextCDGEdges.add(edge)
     }
 
     fun addAllPrevDFG(
         prev: Collection<Node>,
-        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+        properties: Map<Properties, Any?> = EnumMap(Properties::class.java)
     ) {
         prev.forEach { addPrevDFG(it, properties.toMutableMap()) }
     }
@@ -331,10 +331,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         for (prev in ArrayList(nextDFG)) {
             removeNextDFG(prev)
         }
-    }
-
-    fun addTypedef(typedef: TypedefDeclaration) {
-        typedefs.add(typedef)
     }
 
     fun addAnnotations(annotations: Collection<Annotation>) {
@@ -406,7 +402,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                file == other.file &&
+                // We need to exclude "file" here, because in C++ the same header node can be
+                // imported in two different files and in this case, the "file" property will be
+                // different. Since want to squash those equal nodes, we will only consider all the
+                // other attributes, including "location" (which contains the *original* file
+                // location in the header file), but not "file".
+                // file == other.file &&
                 isImplicit == other.isImplicit
     }
 

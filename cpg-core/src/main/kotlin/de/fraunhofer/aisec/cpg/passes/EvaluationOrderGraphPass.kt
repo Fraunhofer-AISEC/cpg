@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
+import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.isDerivedFrom
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -71,7 +71,6 @@ import org.slf4j.LoggerFactory
  * this pass and fine-tune it.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@DependsOn(CallResolver::class)
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     protected var currentPredecessors = mutableListOf<Node>()
@@ -127,6 +126,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
         map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
         map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
+        map[TypeExpression::class.java] = { handleTypeExpression(it as TypeExpression) }
         map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
         map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
         map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
@@ -175,7 +175,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
-     * remove there outgoing edges. This also removes cycles.
+     * remove their outgoing edges. This also removes cycles.
      */
     protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
         // All nodes which have an eog edge
@@ -187,18 +187,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         )
         // only eog entry points
         var validStarts =
-            eogNodes
-                .filter { node ->
-                    node is FunctionDeclaration ||
-                        node is RecordDeclaration ||
-                        node is NamespaceDeclaration ||
-                        node is TranslationUnitDeclaration
-                }
-                .toSet()
+            eogNodes.filter { it is EOGStarterHolder || it is VariableDeclaration }.toSet()
         // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
+        val alreadySeen = IdentitySet<Node>()
         while (validStarts.isNotEmpty()) {
             eogNodes.removeAll(validStarts)
-            validStarts = validStarts.flatMap { it.nextEOG }.filter { it in eogNodes }.toSet()
+            validStarts = validStarts.flatMap { it.nextEOG }.filter { it !in alreadySeen }.toSet()
+            alreadySeen.addAll(validStarts)
         }
         // The remaining nodes are unreachable from the entry points. We delete their outgoing EOG
         // edges.
@@ -207,7 +202,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 next.end.removePrevEOGEntry(unvisitedNode)
             }
 
-            unvisitedNode.nextEOGEdges.clear()
+            unvisitedNode.clearNextEOG()
         }
     }
 
@@ -216,6 +211,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // loop through functions
         for (child in node.declarations) {
+            currentPredecessors.clear()
             createEOG(child)
         }
         processedListener.clearProcessed()
@@ -226,25 +222,25 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // loop through functions
         for (child in node.declarations) {
+            currentPredecessors.clear()
             createEOG(child)
         }
         processedListener.clearProcessed()
     }
 
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
+        pushToEOG(node)
         // analyze the initializer
         createEOG(node.initializer)
-        pushToEOG(node)
     }
 
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
+        pushToEOG(node)
         // analyze the initializer
         createEOG(node.initializer)
-        node.elements.forEach { createEOG(it) }
-        pushToEOG(node)
     }
 
-    protected fun handleRecordDeclaration(node: RecordDeclaration) {
+    protected open fun handleRecordDeclaration(node: RecordDeclaration) {
         scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
@@ -253,6 +249,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         for (method in node.methods) {
             createEOG(method)
+        }
+        for (fields in node.fields) {
+            createEOG(fields)
         }
         for (records in node.records) {
             createEOG(records)
@@ -515,8 +514,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Handle left hand side(s) first
         node.lhs.forEach { createEOG(it) }
 
-        // Then the right side(s)
-        node.rhs.forEach { createEOG(it) }
+        // Then the right side(s). Avoid creating the EOG twice if it's already part of the
+        // initializer of a declaration
+        node.rhs.forEach {
+            if (it !in node.declarations.map { decl -> decl.initializer }) {
+                createEOG(it)
+            }
+        }
 
         pushToEOG(node)
     }
@@ -584,6 +588,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(node)
     }
 
+    protected fun handleTypeExpression(node: TypeExpression) {
+        pushToEOG(node)
+    }
+
     protected fun handleTryStatement(node: TryStatement) {
         scopeManager.enterScope(node)
         val tryScope = scopeManager.currentScope as TryScope?
@@ -608,9 +616,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
             }
             toRemove.forEach { catchesOrRelays?.remove(it) }
+            pushToEOG(catchClause)
             createEOG(catchClause.body)
             tmpEOGNodes.addAll(currentPredecessors)
         }
+
         val canTerminateExceptionfree = tmpEOGNodes.any { reachableFromValidEOGRoot(it) }
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
@@ -728,6 +738,28 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             createEOG(arg)
         }
         pushToEOG(node)
+
+        if (node.anoymousClass != null) {
+            // Generate the EOG inside the anonymous class. It's not linked to the EOG of the outer
+            // part.
+            val tmpCurrentEOG = currentPredecessors.toMutableList()
+            val tmpCurrentProperties = nextEdgeProperties.toMutableMap()
+            val tmpIntermediateNodes = intermediateNodes.toMutableList()
+
+            nextEdgeProperties.clear()
+            currentPredecessors.clear()
+            intermediateNodes.clear()
+
+            createEOG(node.anoymousClass)
+
+            nextEdgeProperties.clear()
+            currentPredecessors.clear()
+            intermediateNodes.clear()
+
+            nextEdgeProperties.putAll(tmpCurrentProperties)
+            currentPredecessors.addAll(tmpCurrentEOG)
+            intermediateNodes.addAll(tmpIntermediateNodes)
+        }
     }
 
     /**
@@ -736,7 +768,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * @param node node that gets the incoming edge
      */
     fun pushToEOG(node: Node) {
-        LOGGER.trace("Pushing ${node.javaClass.simpleName} $node to EOG")
+        LOGGER.trace("Pushing {} {} to EOG", node.javaClass.simpleName, node)
         for (intermediate in intermediateNodes) {
             processedListener.process(intermediate, node)
         }
@@ -748,7 +780,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     fun setCurrentEOGs(nodes: List<Node>) {
-        LOGGER.trace("Setting $nodes to EOGs")
+        LOGGER.trace("Setting {} to EOGs", nodes)
         currentPredecessors = ArrayList(nodes)
     }
 
@@ -756,10 +788,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Connects the current EOG leaf nodes to the last stacked node, e.g. loop head, and removes the
      * nodes.
      *
-     * @param loopStatement the loop statement
      * @param loopScope the loop scope
      */
-    protected fun exitLoop(loopStatement: Statement, loopScope: LoopScope) {
+    protected fun exitLoop(loopScope: LoopScope) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
         // context is destroyed
         currentPredecessors.addAll(loopScope.breakStatements)
@@ -839,7 +870,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeProperties[Properties.BRANCH] = false
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit do loop, but no loop scope: $node")
         }
@@ -858,7 +889,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
@@ -884,7 +915,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
@@ -959,7 +990,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
-            exitLoop(node, currentLoopScope)
+            exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }

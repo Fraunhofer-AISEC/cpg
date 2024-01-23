@@ -33,13 +33,16 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
-abstract class ValueDeclaration : Declaration(), HasType {
+@NodeEntity
+abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
+
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     /** The type of this declaration. */
@@ -61,6 +64,8 @@ abstract class ValueDeclaration : Declaration(), HasType {
             }
         }
 
+    override var aliases = mutableSetOf<HasAliases>()
+
     override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {
             if (field == value) {
@@ -75,12 +80,12 @@ abstract class ValueDeclaration : Declaration(), HasType {
      * Links to all the [Reference]s accessing the variable and the respective access value (read,
      * write, readwrite).
      */
-    @PopulatedByPass(VariableUsageResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "USAGE")
     var usageEdges: MutableList<PropertyEdge<Reference>> = ArrayList()
 
     /** All usages of the variable/field. */
-    @PopulatedByPass(VariableUsageResolver::class)
+    @PopulatedByPass(SymbolResolver::class)
     var usages: List<Reference>
         get() = unwrap(usageEdges, true)
         /** Set all usages of the variable/field and assembles the access properties. */

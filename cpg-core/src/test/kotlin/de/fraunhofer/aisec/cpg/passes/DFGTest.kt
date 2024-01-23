@@ -368,9 +368,10 @@ class DFGTest {
         val b = result.variables["b"]
         assertNotNull(b)
 
-        val ab = b.prevEOG[0] as Reference
+        val ab = b.nextEOG[0] as Reference
         val literal4 = result.literals[{ it.value == 4 }]
         assertNotNull(literal4)
+
         val a4 = ab.prevDFG.first { it is Reference }
         assertTrue(literal4.nextDFG.contains(a4))
         assertEquals(1, ab.prevDFG.size)
@@ -419,7 +420,7 @@ class DFGTest {
         assertEquals(1, aPrintln.nextEOG.size)
         assertEquals(println, aPrintln.nextEOG[0])
 
-        val ab = b.prevEOG[0] as Reference
+        val ab = b.nextEOG[0] as Reference
         assertTrue(refersTo.nextDFG.contains(ab))
         assertTrue(a2.nextDFG.contains(ab))
     }
@@ -435,7 +436,7 @@ class DFGTest {
         val b = result.variables["b"]
         assertNotNull(b)
 
-        val ab = b.prevEOG[0] as Reference
+        val ab = b.nextEOG[0] as Reference
         val a10 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 8) }]
         val a11 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 11) }]
         val a12 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 14) }]

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
 import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
@@ -76,7 +77,7 @@ internal class VariableResolverCppTest : BaseTest() {
             listOf("scope_variables.cpp", "external_class.cpp").map {
                 topLevel.resolve(it).toFile()
             }
-        val result = analyze(files, topLevel, true)
+        val result = analyze(files, topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val calls = result.calls { it.name.localName == "printLog" }
         val records = result.records
         val functions = result.functions

@@ -25,12 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import com.google.common.base.Objects
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+import java.util.*
+import kotlin.collections.HashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -335,13 +336,17 @@ internal class LocationConverterTest : BaseTest() {
         }
 
         override fun hashCode(): Int {
-            return Objects.hashCode(value)
+            return Objects.hash(value)
         }
 
         override fun toByte(): Byte {
             return value.toByte()
         }
 
+        @Deprecated(
+            "Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.\nIf you override toChar() function in your Number inheritor, it's recommended to gradually deprecate the overriding function and then remove it.\nSee https://youtrack.jetbrains.com/issue/KT-46465 for details about the migration",
+            replaceWith = ReplaceWith("this.toInt().toChar()")
+        )
         override fun toChar(): Char {
             return value.toChar()
         }

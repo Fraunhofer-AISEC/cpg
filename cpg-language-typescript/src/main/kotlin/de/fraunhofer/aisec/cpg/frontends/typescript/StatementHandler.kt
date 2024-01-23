@@ -58,7 +58,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = newDeclarationStatement(this.frontend.codeOf(node))
+        val statement = newDeclarationStatement(rawNode = node)
 
         val decl = this.frontend.declarationHandler.handle(node)
 
@@ -72,7 +72,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
-        val returnStmt = newReturnStatement(this.frontend.codeOf(node))
+        val returnStmt = newReturnStatement(rawNode = node)
 
         node.children?.first()?.let {
             returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
@@ -82,7 +82,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleBlock(node: TypeScriptNode): Block {
-        val block = newBlock(this.frontend.codeOf(node))
+        val block = newBlock(rawNode = node)
 
         node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
 
@@ -98,7 +98,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement = newDeclarationStatement(this.frontend.codeOf(node))
+        val statement = newDeclarationStatement(rawNode = node)
 
         // the declarations are contained in a VariableDeclarationList
         val nodes = node.firstChild("VariableDeclarationList")?.children

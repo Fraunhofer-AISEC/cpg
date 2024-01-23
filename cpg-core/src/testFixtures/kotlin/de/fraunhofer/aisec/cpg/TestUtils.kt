@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -49,7 +49,7 @@ object TestUtils {
 
     /**
      * Currently there is no unified enforced structure when using fields, this field is used set
-     * whether or not the tests enforce the presence of a member expression
+     * whether the tests enforce the presence of a member expression
      */
     var ENFORCE_MEMBER_EXPRESSION = false
 
@@ -132,7 +132,6 @@ object TestUtils {
                 .debugParser(true)
                 .failOnError(true)
                 .useParallelFrontends(true)
-                .defaultLanguages()
         if (usePasses) {
             builder.defaultPasses()
         }
@@ -155,7 +154,9 @@ object TestUtils {
     ): List<TranslationUnitDeclaration> {
         val config = builder.build()
         val analyzer = TranslationManager.builder().config(config).build()
-        return analyzer.analyze().get().translationUnits
+        val result = analyzer.analyze().get()
+
+        return result.components["application"]?.translationUnits ?: listOf()
     }
 
     @JvmOverloads
@@ -167,7 +168,7 @@ object TestUtils {
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): TranslationUnitDeclaration {
         val result = analyze(files, topLevel, usePasses, configModifier)
-        return result.translationUnits.first()
+        return result.components.flatMap { it.translationUnits }.first()
     }
 
     @Throws(Exception::class)
@@ -180,6 +181,7 @@ object TestUtils {
             val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
+                @Suppress("UNCHECKED_CAST")
                 it.softwareComponents(db.components as MutableMap<String, List<File>>)
                 configModifier?.accept(it)
             }
@@ -264,7 +266,7 @@ object TestUtils {
      * @param usedMember
      * - THe expected member that is used
      */
-    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Node?) {
+    fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
         assertNotNull(usingNode)
         if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
             // Assumtion here is that the target of the member portion of the expression and not the

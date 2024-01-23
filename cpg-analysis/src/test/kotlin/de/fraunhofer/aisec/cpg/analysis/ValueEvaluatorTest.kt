@@ -25,15 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import java.nio.file.Path
+import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -70,15 +68,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun test() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("example.cpp").toFile()),
-                topLevel,
-                true
-            )
-
-        assertNotNull(tu)
+        val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
@@ -168,20 +158,16 @@ class ValueEvaluatorTest {
         value = m.evaluate()
         assertFalse(value as Boolean)
 
-        m.fields
+        val n = main.bodyOrNull<DeclarationStatement>(13)?.singleDeclaration
+        assertNotNull(n)
+        value = n.evaluate()
+        assertFalse(value as Boolean)
     }
 
     @Test
     fun testComplex() {
-        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("complex.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(JavaLanguage())
-            }
+            ValueEvaluationTests.getComplexExample().components.first().translationUnits.first()
 
         assertNotNull(tu)
 
@@ -650,6 +636,106 @@ class ValueEvaluatorTest {
             binOp.lhs = newLiteral("Hello", primitiveType("string"))
             binOp.rhs = newLiteral(" world", primitiveType("string"))
             assertEquals("{/}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleShiftLeft() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("<<")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(12, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(12L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{<<}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleShiftRight() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator(">>")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(0, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(0L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{>>}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleBitwiseAnd() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("&")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(2, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2L, primitiveType("long"))
+            assertEquals(2L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{&}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleBitwiseOr() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("|")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(3, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2L, primitiveType("long"))
+            assertEquals(3L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{|}", ValueEvaluator().evaluate(binOp))
+        }
+    }
+
+    @Test
+    fun testHandleBitwiseXor() {
+        with(TestHandler(TestLanguageFrontend())) {
+            val binOp = newBinaryOperator("^")
+            // Int.plus
+            binOp.lhs = newLiteral(3, primitiveType("int"))
+            binOp.rhs = newLiteral(2, primitiveType("int"))
+            assertEquals(1, ValueEvaluator().evaluate(binOp))
+
+            // Long.plus
+            binOp.lhs = newLiteral(3L, primitiveType("long"))
+            binOp.rhs = newLiteral(2L, primitiveType("long"))
+            assertEquals(1L, ValueEvaluator().evaluate(binOp))
+
+            binOp.lhs = newLiteral("Hello", primitiveType("string"))
+            binOp.rhs = newLiteral(" world", primitiveType("string"))
+            assertEquals("{^}", ValueEvaluator().evaluate(binOp))
         }
     }
 

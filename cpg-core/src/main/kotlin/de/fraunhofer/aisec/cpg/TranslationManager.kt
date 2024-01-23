@@ -83,18 +83,25 @@ private constructor(
 
         try {
             // Parse Java/C/CPP files
-            var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+            val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
             executedFrontends = runFrontends(ctx, result)
             bench.addMeasurement()
 
-            // Apply passes
-            for (pass in config.registeredPasses) {
-                bench = Benchmark(pass.java, "Executing Pass", false, result)
-                executePassSequential(pass, ctx, result, executedFrontends)
-
-                bench.addMeasurement()
-                if (result.isCancelled) {
-                    log.warn("Analysis interrupted, stopping Pass evaluation")
+            if (config.useParallelPasses) {
+                // Execute list of parallel passes together in parallel
+                for (list in config.registeredPasses) {
+                    executePassesInParallel(list, ctx, result, executedFrontends)
+                    if (result.isCancelled) {
+                        log.warn("Analysis interrupted, stopping Pass evaluation")
+                    }
+                }
+            } else {
+                // Execute all passes in sequence
+                for (pass in config.registeredPasses.flatten()) {
+                    executePass(pass, ctx, result, executedFrontends)
+                    if (result.isCancelled) {
+                        log.warn("Analysis interrupted, stopping Pass evaluation")
+                    }
                 }
             }
         } catch (ex: TranslationException) {

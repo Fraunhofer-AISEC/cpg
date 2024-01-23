@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.PassTarget
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -35,7 +34,7 @@ import de.fraunhofer.aisec.cpg.passes.PassTarget
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class Component() : Node(), PassTarget {
+open class Component : Node() {
     /** All translation units belonging to this application. */
     @AST val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
 

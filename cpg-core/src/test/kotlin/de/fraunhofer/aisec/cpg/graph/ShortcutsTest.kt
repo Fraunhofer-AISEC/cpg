@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -47,12 +48,14 @@ class ShortcutsTest {
 
         val toStringCall = result.callsByName("toString")[0]
         val printDecl =
-            result.translationUnits[0]
+            result.components
+                .flatMap { it.translationUnits }
+                .first()
                 .byNameOrNull<RecordDeclaration>("Dataflow")
                 ?.byNameOrNull<MethodDeclaration>("print")
 
         val (fulfilled, failed) =
-            toStringCall.followNextDFGEdgesUntilHit { it == printDecl!!.parameters[0] }
+            toStringCall.followNextDFGEdgesUntilHit { it == printDecl?.parameters?.first() }
 
         assertEquals(1, fulfilled.size)
         assertEquals(0, failed.size)
@@ -346,6 +349,20 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
+    }
+
+    @Test
+    fun testUnwrapReference() {
+        with(TestLanguageFrontend()) {
+            val a = newReference("a")
+            val op = newUnaryOperator("&", prefix = true, postfix = false)
+            op.input = a
+            val cast = newCastExpression()
+            cast.castType = objectType("int64")
+            cast.expression = op
+
+            assertEquals(a, cast.unwrapReference())
+        }
     }
 
     private lateinit var shortcutClassResult: TranslationResult

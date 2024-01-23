@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -241,64 +240,6 @@ fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: St
 }
 
 /**
- * @param constructExpression we want to find an invocation target for
- * @param recordDeclaration associated with the Object the ConstructExpression constructs
- * @return a ConstructDeclaration that matches the signature of the ConstructExpression by applying
- *   one or more implicit casts to the primitive type arguments of the ConstructExpressions. The
- *   arguments are proxied through a CastExpression to the type required by the
- *   ConstructDeclaration.
- */
-fun resolveConstructorWithImplicitCast(
-    constructExpression: ConstructExpression,
-    recordDeclaration: RecordDeclaration
-): ConstructorDeclaration? {
-    for (constructorDeclaration in recordDeclaration.constructors) {
-        val workingSignature = mutableListOf(*constructExpression.signature.toTypedArray())
-        val defaultParameterSignature = constructorDeclaration.defaultParameterSignature
-        if (constructExpression.arguments.size <= defaultParameterSignature.size) {
-            workingSignature.addAll(
-                defaultParameterSignature.subList(
-                    constructExpression.arguments.size,
-                    defaultParameterSignature.size
-                )
-            )
-        }
-        if (
-            compatibleSignatures(
-                constructExpression.signature,
-                constructorDeclaration.signatureTypes,
-            )
-        ) {
-            val implicitCasts =
-                signatureWithImplicitCastTransformation(
-                    constructExpression,
-                    constructExpression.signature,
-                    constructExpression.arguments,
-                    constructorDeclaration.signatureTypes,
-                )
-            applyImplicitCastToArguments(constructExpression, implicitCasts)
-            return constructorDeclaration
-        } else if (
-            compatibleSignatures(
-                workingSignature,
-                constructorDeclaration.signatureTypes,
-            )
-        ) {
-            val implicitCasts =
-                signatureWithImplicitCastTransformation(
-                    constructExpression,
-                    getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
-                    constructExpression.arguments,
-                    constructorDeclaration.signatureTypes,
-                )
-            applyImplicitCastToArguments(constructExpression, implicitCasts)
-            return constructorDeclaration
-        }
-    }
-    return null
-}
-
-/**
  * Performs all necessary steps to make a CallExpression instantiate a template: 1. Set
  * TemplateInstantiation Edge from CallExpression to Template 2. Set Invokes Edge to all
  * realizations of the Template 3. Set return type of the CallExpression and checks if it uses a
@@ -322,8 +263,7 @@ fun applyTemplateInstantiation(
     function: FunctionDeclaration,
     initializationSignature: Map<Declaration?, Node?>,
     initializationType: Map<Node?, TemplateDeclaration.TemplateInitialization?>,
-    orderedInitializationSignature: Map<Declaration, Int>,
-    ctx: TranslationContext
+    orderedInitializationSignature: Map<Declaration, Int>
 ): List<FunctionDeclaration> {
     val templateInstantiationParameters =
         mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
@@ -679,7 +619,10 @@ fun checkArgumentValidity(
             ) // Use provided arguments
         callArguments.addAll(
             functionDeclaration.defaultParameters
-                .subList(callArguments.size, functionDeclaration.defaultParameters.size)
+                .subList(
+                    callArguments.size,
+                    functionDeclaration.defaultParameters.size
+                ) // TODO: Could be replaced with functionDeclaration.parameters.size
                 .filterNotNull()
         ) // Extend by defaults
         for (i in callArguments.indices) {

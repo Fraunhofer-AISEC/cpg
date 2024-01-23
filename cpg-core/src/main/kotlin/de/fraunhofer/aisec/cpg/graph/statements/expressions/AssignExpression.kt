@@ -113,7 +113,7 @@ class AssignExpression :
      * we need to later resolve this in an additional pass. The declarations are then stored in
      * [declarations].
      */
-    override var declarations = mutableListOf<VariableDeclaration>()
+    @AST override var declarations = mutableListOf<VariableDeclaration>()
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpression: HasType): Expression? {

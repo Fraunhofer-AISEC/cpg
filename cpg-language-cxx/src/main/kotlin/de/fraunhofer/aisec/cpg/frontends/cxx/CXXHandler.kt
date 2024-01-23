@@ -57,13 +57,6 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
 
         val node = handleNode(ctx)
 
-        // The language frontend might set a location, which we should respect. Otherwise, we will
-        // set the location here.
-        if (node.location == null) {
-            frontend.setCodeAndLocation(node, ctx)
-        }
-
-        frontend.setComment(node, ctx)
         frontend.process(ctx, node)
 
         this.lastNode = node

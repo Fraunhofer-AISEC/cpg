@@ -50,12 +50,11 @@ class TypeManager {
      * Generics) to the ParameterizedType to be able to resolve the Type of the fields, since
      * ParameterizedTypes are unique to the RecordDeclaration and are not merged.
      */
-    private val recordToTypeParameters =
-        Collections.synchronizedMap(mutableMapOf<RecordDeclaration, List<ParameterizedType>>())
-    private val templateToTypeParameters =
-        Collections.synchronizedMap(
-            mutableMapOf<TemplateDeclaration, MutableList<ParameterizedType>>()
-        )
+    private val recordToTypeParameters: MutableMap<RecordDeclaration, List<ParameterizedType>> =
+        ConcurrentHashMap()
+    private val templateToTypeParameters:
+        MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
+        ConcurrentHashMap()
 
     val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
     val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
@@ -208,8 +207,8 @@ class TypeManager {
                 log.trace(
                     "Registering unique first order type {}{}",
                     t.name,
-                    if (t is ObjectType && t.generics.isNotEmpty()) {
-                        " with generics [${t.generics.joinToString(",") { it.name.toString() }}]"
+                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
+                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
                     } else {
                         ""
                     }
@@ -242,21 +241,17 @@ class TypeManager {
      */
     fun createTypeAlias(
         frontend: LanguageFrontend<*, *>,
-        rawCode: String?,
         target: Type,
         alias: Type,
     ): Declaration {
-        val typedef = frontend.newTypedefDeclaration(target, alias, rawCode)
+        val typedef = frontend.newTypedefDeclaration(target, alias)
         frontend.scopeManager.addTypedef(typedef)
         return typedef
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable =
-            scopeManager.currentTypedefs
-                .firstOrNull { t: TypedefDeclaration -> t.alias.root == finalToCheck }
-                ?.type
+        val applicable = scopeManager.typedefFor(finalToCheck)
         return applicable ?: alias
     }
 }
@@ -288,14 +283,16 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     return types
 }
 
-/** Checks, if this [Type] is either derived from or equals to [superType]. */
-fun Type.isDerivedFrom(superType: Type): Boolean {
-    // Retrieve all ancestor types of our type (more concretely of the root type)
-    val root = this.root
-    val superTypes = root.ancestors.map { it.type }
-
-    // Check, if super type (or its root) is in the list
-    return superType.root in superTypes
+/**
+ * Checks, if this [Type] is either derived from or equals to [superType]. This is forwarded to the
+ * [Language] of the [Type] and can be overridden by the individual languages.
+ */
+fun Type.isDerivedFrom(
+    superType: Type,
+    hint: HasType? = null,
+    superHint: HasType? = null
+): Boolean {
+    return this.language?.isDerivedFrom(this, superType, hint, superHint) ?: false
 }
 
 /**

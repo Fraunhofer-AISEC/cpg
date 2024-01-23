@@ -122,21 +122,6 @@ spotless {
         licenseHeader(headerWithStars).yearSeparator(" - ")
     }
 
-    python {
-        targetExclude(
-            fileTree(project.projectDir) {
-                include("**/node_modules")
-            }
-        )
-        target("src/main/**/*.py")
-        targetExclude(
-            fileTree(project.projectDir) {
-                include("src/main/nodejs/node_modules")
-            }
-        )
-        licenseHeader(headerWithHashes, "from").yearSeparator(" - ")
-    }
-
     format("golang") {
         target("src/main/golang/**/*.go")
         licenseHeader(headerWithSlashes, "package").yearSeparator(" - ")

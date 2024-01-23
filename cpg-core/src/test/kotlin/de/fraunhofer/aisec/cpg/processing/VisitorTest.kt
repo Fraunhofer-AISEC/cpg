@@ -59,8 +59,8 @@ class VisitorTest : BaseTest() {
         tu.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    visited += n
+                override fun visit(t: Node) {
+                    visited += t
                 }
             }
         )
@@ -84,9 +84,9 @@ class VisitorTest : BaseTest() {
         firstStmt.accept(
             Strategy::EOG_FORWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    log.info("Node: $n")
-                    nodeList.add(n)
+                override fun visit(t: Node) {
+                    log.info("Node: $t")
+                    nodeList.add(t)
                 }
             }
         )
@@ -102,9 +102,9 @@ class VisitorTest : BaseTest() {
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    log.info("Node: $n")
-                    nodeList.add(n)
+                override fun visit(t: Node) {
+                    log.info("Node: $t")
+                    nodeList.add(t)
                 }
             }
         )

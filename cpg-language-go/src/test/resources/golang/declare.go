@@ -23,24 +23,21 @@ func main() {
 	// VariableDeclaration nodes
 	var c, d = 3, 4
 
+	var e, f = test()
+
 	// Short assignment using an assignment, where all variables were not
 	// defined before. This is an AssignStmt which has DEFINE as its token.
-	//
-	// We need to split this up into several nodes. First, we translate this
-	// into one (implicit) DeclarationStatement with two VariableDeclaration
-	// nodes. Afterwards we are parsing it as a regular assignment.
-	e, f := 5, 6
+	g, h := 5, 6
 
 	// Short assignment using an assignment, where one variable (f) was defined
 	// before in the local scope. This is an AssignStmt which has DEFINE as its
 	// token. From the AST we cannot differentiate this from the previous
 	// example and we need to do a (local) variable lookup here.
-	//
-	// Finally, We need to split this up into several nodes. First, we translate
-	// this into one (implicit) DeclarationStatement with one
-	// VariableDeclaration node. Afterwards we are parsing it as a regular
-	// assignment.
-	f, g := 7, 8
+	h, i := test()
 
-	fmt.Printf("%d %d %d %d %d %d %d\n", a, b, c, d, e, f, g)
+	fmt.Printf("%d %d %d %d %d %d %d\n", a, b, c, d, e, f, g, h, i)
+}
+
+func test() (i int, err error) {
+	return 0, nil
 }

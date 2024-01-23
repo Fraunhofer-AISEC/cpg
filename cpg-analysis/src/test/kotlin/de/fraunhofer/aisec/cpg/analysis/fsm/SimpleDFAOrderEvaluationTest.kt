@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
@@ -35,9 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
-import java.nio.file.Path
+import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -64,18 +59,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @BeforeAll
     fun beforeAll() {
-        val topLevel = Path.of("src", "test", "resources", "analyses", "ordering")
-        TranslationManager.builder().build().analyze()
-        tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("SimpleOrder.java").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<JavaLanguage>()
-                    .registerPass<UnreachableEOGPass>()
-                    .registerPass<EdgeCachePass>()
-            }
+        tu = GraphExamples.getSimpleOrder().components.first().translationUnits.first()
     }
 
     @Test
@@ -238,7 +222,7 @@ class SimpleDFAOrderEvaluationTest {
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[thenBranch.statements[1]] = setOf("finish()")
         nodesToOp[(functionOk.body as Block).statements[2]] = setOf("start()")
-        nodesToOp[(functionOk.body as Block).statements[4]] = setOf("finish()")
+        nodesToOp[(functionOk.body as Block).statements[3]] = setOf("finish()")
 
         val orderEvaluator = DFAOrderEvaluator(dfa, consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(p4Decl)

@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -45,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship
  *
  * The name property of this node need to be a FQN for property resolution.
  */
-class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder {
+class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /**
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
@@ -93,4 +91,15 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder {
 
     override var statements: List<Statement> by
         PropertyEdgeDelegate(NamespaceDeclaration::statementEdges)
+
+    override val eogStarters: List<Node>
+        get() {
+            val list = mutableListOf<Node>()
+            // Add all top-level declarations
+            list += declarations
+            // Add all top-level statements
+            list += statements
+
+            return list
+        }
 }

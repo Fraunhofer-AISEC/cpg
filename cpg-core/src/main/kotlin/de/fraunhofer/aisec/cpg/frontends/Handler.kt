@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend </L></T></S>
  */
-abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<HandlerNode, *>>(
+abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in HandlerNode, *>>(
     protected val configConstructor: Supplier<ResultNode>,
     /** Returns the frontend which used this handler. */
     val frontend: L
@@ -53,7 +53,8 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<Han
     CodeAndLocationProvider<HandlerNode> by frontend,
     ScopeProvider by frontend,
     NamespaceProvider by frontend,
-    ContextProvider by frontend {
+    ContextProvider by frontend,
+    RawNodeTypeProvider<HandlerNode> {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
 
@@ -105,12 +106,6 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<Han
         if (handler != null) {
             val s = handler.handle(ctx)
             if (s != null) {
-                // The language frontend might set a location, which we should respect. Otherwise,
-                // we will
-                // set the location here.
-                if (s.location == null) {
-                    frontend.setCodeAndLocation(s, ctx)
-                }
                 frontend.setComment(s, ctx)
             }
             ret = s

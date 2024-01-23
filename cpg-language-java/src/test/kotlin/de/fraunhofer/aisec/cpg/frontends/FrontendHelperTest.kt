@@ -50,9 +50,8 @@ class FrontendHelperTest {
                 .sourceLocations(listOf(file))
                 .defaultPasses()
                 .debugParser(true)
-                .defaultLanguages()
+                .registerLanguage<JavaLanguage>()
                 .failOnError(true)
-                .registerLanguage(JavaLanguage())
                 .build()
 
         val analyzer = TranslationManager.builder().config(config).build()
@@ -60,7 +59,7 @@ class FrontendHelperTest {
         val result = analyzer.analyze().get()
         assertNotNull(result)
         // The class should have 2 comments: The javadoc and "Class comment"
-        val tu = result.translationUnits.first()
+        val tu = result.components.flatMap { it.translationUnits }.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
         classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
 
@@ -135,8 +134,7 @@ class FrontendHelperTest {
                 .sourceLocations(listOf(file))
                 .defaultPasses()
                 .debugParser(true)
-                .defaultLanguages()
-                .registerLanguage(JavaLanguage())
+                .registerLanguage<JavaLanguage>()
                 .failOnError(true)
                 .build()
 
@@ -145,7 +143,7 @@ class FrontendHelperTest {
         val result = analyzer.analyze().get()
         assertNotNull(result)
 
-        val tu = result.translationUnits.first()
+        val tu = result.components.flatMap { it.translationUnits }.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
         val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
         val forLoop = (mainMethod.body as Block).statements[0] as ForStatement

@@ -56,11 +56,11 @@ class CPPLambdaTest {
 
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
-        assertTrue(lambda in lambdaVar.prevEOG)
+        assertTrue(lambda in lambdaVar.nextEOG)
 
         val printFunctionCall = function.calls["print_function"]
         assertNotNull(printFunctionCall)
-        assertTrue(printFunctionCall in lambda.prevEOG)
+        assertTrue(printFunctionCall in lambdaVar.prevEOG)
 
         val lambdaCall = function.calls["this_is_a_lambda"]
         assertEquals(1, lambdaCall?.invokes?.size)
@@ -95,10 +95,10 @@ class CPPLambdaTest {
         assertNotNull(numberRef)
         assertEquals(lambda.function?.parameters?.firstOrNull(), numberRef.refersTo)
 
-        assertTrue(lambda in lambdaVar.prevEOG)
+        assertTrue(lambda in lambdaVar.nextEOG)
         val printFunctionCall = function.calls["print_function"]
         assertNotNull(printFunctionCall)
-        assertTrue(printFunctionCall in lambda.prevEOG)
+        assertTrue(printFunctionCall in lambdaVar.prevEOG)
     }
 
     @Test

@@ -60,10 +60,10 @@ func NewFileSet() unsafe.Pointer {
 }
 
 //export goParserParseFile
-func goParserParseFile(fset unsafe.Pointer, path *C.char, src *C.char) unsafe.Pointer {
+func goParserParseFile(fset unsafe.Pointer, path *C.char) unsafe.Pointer {
 	f, err := parser.ParseFile(
 		pointer.Restore(fset).(*token.FileSet),
-		C.GoString(path), C.GoString(src), parser.ParseComments)
+		C.GoString(path), nil, parser.ParseComments|parser.SkipObjectResolution)
 	if err != nil {
 		panic(err)
 	}
@@ -175,9 +175,10 @@ func GetCommentMapNodeComment(ptr1 unsafe.Pointer, ptr2 unsafe.Pointer) *C.char 
 	}
 
 	for _, c := range comments {
-		text := strings.TrimRight(c.Text(), "\n")
-		comment += text
+		comment += c.Text()
 	}
+	// Remove last \n
+	comment = strings.TrimRight(comment, "\n")
 
 	return C.CString(comment)
 }
@@ -284,6 +285,12 @@ func GetCallExprArg(ptr unsafe.Pointer, i int) unsafe.Pointer {
 	return item[*ast.CallExpr](ptr, i, func(t *ast.CallExpr) []ast.Expr {
 		return t.Args
 	})
+}
+
+//export GetEllipsisElt
+func GetEllipsisElt(ptr unsafe.Pointer) unsafe.Pointer {
+	expr := restore[*ast.Ellipsis](ptr)
+	return save(expr.Elt)
 }
 
 //export GetForStmtInit
@@ -466,6 +473,26 @@ func GetIndexExprIndex(ptr unsafe.Pointer) unsafe.Pointer {
 	return save(expr.Index)
 }
 
+//export GetIndexListExprX
+func GetIndexListExprX(ptr unsafe.Pointer) unsafe.Pointer {
+	expr := restore[*ast.IndexListExpr](ptr)
+	return save(expr.X)
+}
+
+//export GetNumIndexListExprIndices
+func GetNumIndexListExprIndices(ptr unsafe.Pointer) C.int {
+	return num[*ast.IndexListExpr](ptr, func(t *ast.IndexListExpr) []ast.Expr {
+		return t.Indices
+	})
+}
+
+//export GetIndexListExprIndex
+func GetIndexListExprIndex(ptr unsafe.Pointer, i int) unsafe.Pointer {
+	return item[*ast.IndexListExpr](ptr, i, func(t *ast.IndexListExpr) []ast.Expr {
+		return t.Indices
+	})
+}
+
 //export GetKeyValueExprKey
 func GetKeyValueExprKey(ptr unsafe.Pointer) unsafe.Pointer {
 	kv := restore[*ast.KeyValueExpr](ptr)
@@ -476,6 +503,12 @@ func GetKeyValueExprKey(ptr unsafe.Pointer) unsafe.Pointer {
 func GetKeyValueExprValue(ptr unsafe.Pointer) unsafe.Pointer {
 	kv := restore[*ast.KeyValueExpr](ptr)
 	return save(kv.Value)
+}
+
+//export GetParenExprX
+func GetParenExprX(ptr unsafe.Pointer) unsafe.Pointer {
+	p := restore[*ast.ParenExpr](ptr)
+	return save(p.X)
 }
 
 //export GetSelectorExprX
@@ -643,6 +676,12 @@ func GetGenDeclSpec(ptr unsafe.Pointer, i int) unsafe.Pointer {
 	})
 }
 
+//export GetGenDeclTok
+func GetGenDeclTok(ptr unsafe.Pointer) int {
+	decl := restore[*ast.GenDecl](ptr)
+	return int(decl.Tok)
+}
+
 //export GetInterfaceTypeMethods
 func GetInterfaceTypeMethods(ptr unsafe.Pointer) unsafe.Pointer {
 	i := restore[*ast.InterfaceType](ptr)
@@ -737,6 +776,12 @@ func GetValueSpecValue(ptr unsafe.Pointer, i int) unsafe.Pointer {
 func GetTypeSpecName(ptr unsafe.Pointer) unsafe.Pointer {
 	spec := restore[*ast.TypeSpec](ptr)
 	return save(spec.Name)
+}
+
+//export GetTypeSpecAssign
+func GetTypeSpecAssign(ptr unsafe.Pointer) int {
+	spec := restore[*ast.TypeSpec](ptr)
+	return int(spec.Assign)
 }
 
 //export GetTypeSpecType
@@ -847,6 +892,18 @@ func GetReturnStmtResult(ptr unsafe.Pointer, i int) unsafe.Pointer {
 	})
 }
 
+//export GetSendStmtChan
+func GetSendStmtChan(ptr unsafe.Pointer) unsafe.Pointer {
+	stmt := restore[*ast.SendStmt](ptr)
+	return save(stmt.Chan)
+}
+
+//export GetSendStmtValue
+func GetSendStmtValue(ptr unsafe.Pointer) unsafe.Pointer {
+	stmt := restore[*ast.SendStmt](ptr)
+	return save(stmt.Value)
+}
+
 //export GetSwitchStmtInit
 func GetSwitchStmtInit(ptr unsafe.Pointer) unsafe.Pointer {
 	stmt := restore[*ast.SwitchStmt](ptr)
@@ -862,6 +919,24 @@ func GetSwitchStmtTag(ptr unsafe.Pointer) unsafe.Pointer {
 //export GetSwitchStmtBody
 func GetSwitchStmtBody(ptr unsafe.Pointer) unsafe.Pointer {
 	stmt := restore[*ast.SwitchStmt](ptr)
+	return save(stmt.Body)
+}
+
+//export GetTypeSwitchStmtInit
+func GetTypeSwitchStmtInit(ptr unsafe.Pointer) unsafe.Pointer {
+	stmt := restore[*ast.TypeSwitchStmt](ptr)
+	return save(stmt.Init)
+}
+
+//export GetTypeSwitchStmtAssign
+func GetTypeSwitchStmtAssign(ptr unsafe.Pointer) unsafe.Pointer {
+	stmt := restore[*ast.TypeSwitchStmt](ptr)
+	return save(stmt.Assign)
+}
+
+//export GetTypeSwitchStmtBody
+func GetTypeSwitchStmtBody(ptr unsafe.Pointer) unsafe.Pointer {
+	stmt := restore[*ast.TypeSwitchStmt](ptr)
 	return save(stmt.Body)
 }
 

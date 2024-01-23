@@ -26,14 +26,21 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import kotlin.collections.set
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -45,52 +52,75 @@ import kotlin.contracts.contract
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+
+    class Configuration(
+        /**
+         * This specifies the maximum complexity (as calculated per
+         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
+         * considered.
+         */
+        var maxComplexity: Int? = null
+    ) : PassConfiguration()
 
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
-        tu.functions.forEach(::handle)
-    }
+    /** We perform the actions for each [FunctionDeclaration]. */
+    override fun accept(node: Node) {
+        // For now, we only execute this for function declarations, we will support all EOG starters
+        // in the future.
+        if (node !is FunctionDeclaration) {
+            return
+        }
 
-    /**
-     * We perform the actions for each [FunctionDeclaration].
-     *
-     * @param node every node in the TranslationResult
-     */
-    protected fun handle(node: Node) {
-        if (node is FunctionDeclaration) {
-            clearFlowsOfVariableDeclarations(node)
-            val startState = DFGPassState<Set<Node>>()
-            startState.declarationsState.push(node, PowersetLattice(setOf()))
-            val finalState =
-                iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+        // Skip empty functions
+        if (node.body == null) {
+            return
+        }
 
-            removeUnreachableImplicitReturnStatement(
-                node,
-                finalState.returnStatements.values.flatMap {
-                    it.elements.filterIsInstance<ReturnStatement>()
-                }
+        // Calculate the complexity of the function and see, if it exceeds our threshold
+        val max = passConfig<Configuration>()?.maxComplexity
+        val c = node.body?.cyclomaticComplexity ?: 0
+        if (max != null && c > max) {
+            log.info(
+                "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
             )
+            return
+        }
 
-            for ((key, value) in finalState.generalState) {
-                if (key is TupleDeclaration) {
-                    // We need a little hack for tuple statements to set the index. We have the
-                    // outer part (i.e., the tuple) here but we generate the DFG edges to the
-                    // elements. We have the indices here, so it's amazing.
-                    key.elements.forEachIndexed { i, element ->
-                        element.addAllPrevDFG(
-                            value.elements.filterNot { it is VariableDeclaration && key == it },
-                            mutableMapOf(Properties.INDEX to i)
-                        )
-                    }
-                } else {
-                    key.addAllPrevDFG(
-                        value.elements.filterNot { it is VariableDeclaration && key == it }
+        log.debug("Handling {} (complexity: {})", node.name, c)
+
+        clearFlowsOfVariableDeclarations(node)
+        val startState = DFGPassState<Set<Node>>()
+
+        startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
+        val finalState =
+            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+
+        removeUnreachableImplicitReturnStatement(
+            node,
+            finalState.returnStatements.values.flatMap {
+                it.elements.filterIsInstance<ReturnStatement>()
+            }
+        )
+
+        for ((key, value) in finalState.generalState) {
+            if (key is TupleDeclaration) {
+                // We need a little hack for tuple statements to set the index. We have the
+                // outer part (i.e., the tuple) here, but we generate the DFG edges to the
+                // elements. We have the indices here, so it's amazing.
+                key.elements.forEachIndexed { i, element ->
+                    element.addAllPrevDFG(
+                        value.elements.filterNot { it is VariableDeclaration && key == it },
+                        mutableMapOf(Properties.INDEX to i)
                     )
                 }
+            } else {
+                key.addAllPrevDFG(
+                    value.elements.filterNot { it is VariableDeclaration && key == it }
+                )
             }
         }
     }
@@ -115,13 +145,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.
      */
-    protected fun transfer(
+    protected open fun transfer(
         currentEdge: PropertyEdge<Node>,
         state: State<Node, Set<Node>>,
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
-        var writtenDeclaration: Declaration?
+        val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
 
         val doubleState = state as DFGPassState
@@ -130,19 +160,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
         if (initializer != null) {
             // A variable declaration with an initializer => The initializer flows to the
             // declaration. This also affects tuples. We split it up later.
-            state.push(currentNode, PowersetLattice(setOf(initializer)))
+            state.push(currentNode, PowersetLattice(identitySetOf(initializer)))
 
             if (currentNode is TupleDeclaration) {
                 // For a tuple declaration, we write the elements in this statement. We do not
                 // really care about the tuple when using the elements subsequently.
                 currentNode.elements.forEach {
-                    doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
+                    doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
                 }
             } else {
                 // We also wrote something to this variable declaration here.
                 doubleState.pushToDeclarationsState(
                     currentNode,
-                    PowersetLattice(setOf(currentNode))
+                    PowersetLattice(identitySetOf(currentNode))
                 )
             }
         } else if (isSimpleAssignment(currentNode)) {
@@ -155,7 +185,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
                     ?.let {
                         doubleState.declarationsState[it] =
-                            PowersetLattice(setOf(assignment.target as Node))
+                            PowersetLattice(identitySetOf(assignment.target as Node))
                     }
             }
         } else if (isIncOrDec(currentNode)) {
@@ -167,7 +197,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             if (writtenDeclaration != null) {
                 state.push(input, doubleState.declarationsState[writtenDeclaration])
-                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(input))
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(input))
             }
         } else if (isCompoundAssignment(currentNode)) {
             // We write to the lhs, but it also serves as an input => We first get all previous
@@ -182,7 +213,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
                 state.push(lhs, doubleState.declarationsState[writtenDeclaration])
 
                 // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDeclaration] = PowersetLattice(setOf(lhs))
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(lhs))
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
@@ -200,11 +232,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
             // the "normal" case won't work. We handle this case separately here...
             // This is what we write to the declaration
             val iterable = currentNode.iterable as? Expression
-
             val writtenTo =
-                when (currentNode.variable) {
-                    is DeclarationStatement ->
-                        (currentNode.variable as DeclarationStatement).singleDeclaration
+                when (val variable = currentNode.variable) {
+                    is DeclarationStatement -> {
+                        if (variable.isSingleDeclaration()) {
+                            variable.singleDeclaration
+                        } else if (variable.variables.size == 2) {
+                            // If there are two variables, we just blindly assume that the order is
+                            // (key, value), so we return the second one
+                            variable.declarations[1]
+                        } else {
+                            null
+                        }
+                    }
                     else -> currentNode.variable
                 }
 
@@ -235,19 +275,23 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : TranslationUni
 
             iterable?.let {
                 writtenTo?.let {
-                    state.push(writtenTo, PowersetLattice(setOf(iterable)))
+                    state.push(writtenTo, PowersetLattice(identitySetOf(iterable)))
                     // Add the variable declaration (or the reference) to the list of previous
                     // write nodes in this path
-                    state.declarationsState[writtenDeclaration] = PowersetLattice(setOf(writtenTo))
+                    state.declarationsState[writtenDeclaration] =
+                        PowersetLattice(identitySetOf(writtenTo))
                 }
             }
         } else if (currentNode is FunctionDeclaration) {
             // We have to add the parameters
             currentNode.parameters.forEach {
-                doubleState.pushToDeclarationsState(it, PowersetLattice(setOf(it)))
+                doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
             }
         } else if (currentNode is ReturnStatement) {
-            doubleState.returnStatements.push(currentNode, PowersetLattice(setOf(currentNode)))
+            doubleState.returnStatements.push(
+                currentNode,
+                PowersetLattice(identitySetOf(currentNode))
+            )
         } else {
             doubleState.declarationsState.push(
                 currentNode,

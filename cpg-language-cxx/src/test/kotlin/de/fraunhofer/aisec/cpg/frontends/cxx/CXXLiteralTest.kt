@@ -47,7 +47,10 @@ internal class CXXLiteralTest : BaseTest() {
     @Throws(Exception::class)
     fun testZeroIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val zero = tu.getDeclarationsByName("zero", FunctionDeclaration::class.java)
         assertFalse(zero.isEmpty())
 
@@ -68,7 +71,10 @@ internal class CXXLiteralTest : BaseTest() {
     @Throws(Exception::class)
     fun testDecimalIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val decimal = tu.getDeclarationsByName("decimal", FunctionDeclaration::class.java)
         assertFalse(decimal.isEmpty())
         val funcDecl = decimal.iterator().next()
@@ -107,7 +113,10 @@ internal class CXXLiteralTest : BaseTest() {
     @Throws(Exception::class)
     fun testOctalIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val octal = tu.getDeclarationsByName("octal", FunctionDeclaration::class.java)
         assertFalse(octal.isEmpty())
         val funcDecl = octal.iterator().next()
@@ -127,7 +136,10 @@ internal class CXXLiteralTest : BaseTest() {
     @Throws(Exception::class)
     fun testNonDecimalIntegerLiterals() {
         val file = File("src/test/resources/integer_literals.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val hex = tu.getDeclarationsByName("hex", FunctionDeclaration::class.java)
         assertFalse(hex.isEmpty())
         val funcDecl = hex.iterator().next()
@@ -146,7 +158,10 @@ internal class CXXLiteralTest : BaseTest() {
     @Throws(Exception::class)
     fun testLargeNegativeNumber() {
         val file = File("src/test/resources/largenegativenumber.cpp")
-        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
         val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
         assertFalse(main.isEmpty())
 

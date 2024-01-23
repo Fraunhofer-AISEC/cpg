@@ -66,7 +66,7 @@ interface DeclarationHolder {
     ) {
         // create a new property edge
         val propertyEdge =
-            if (outgoing) PropertyEdge((this as Node), declaration)
+            if (outgoing) PropertyEdge(this as Node, declaration)
             else PropertyEdge(declaration, this as T)
 
         // set the index property
