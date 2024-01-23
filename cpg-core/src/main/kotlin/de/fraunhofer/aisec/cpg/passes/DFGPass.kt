@@ -406,10 +406,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             handleUnresolvedCalls(call, call)
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
-                Util.attachCallParameters(it, call.arguments)
-                if (it is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
-                    it.receiver?.let { receiver -> call.base?.addNextDFG(receiver) }
-                }
+                Util.attachCallParameters(it, call)
                 call.addPrevDFG(it)
             }
         }
