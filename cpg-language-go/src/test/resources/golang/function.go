@@ -3,8 +3,10 @@ package p
 import "fmt"
 
 func main() {
-	var i int
-	var err error
+	var (
+		i   int
+		err error
+	)
 
 	i, err = funcA("some string")
 
