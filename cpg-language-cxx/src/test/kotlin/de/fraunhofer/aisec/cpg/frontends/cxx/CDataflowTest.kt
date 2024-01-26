@@ -103,6 +103,18 @@ class CDataflowTest {
 
         println(main.variables["ctx"]?.printDFG())
     }
+
+    @Test
+    fun testRef() {
+        val file = File("src/test/resources/c/dataflow/ref.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        println(tu.variables["var"]!!.printDFG())
+    }
 }
 
 private fun Node.printDFG(): String {
@@ -133,10 +145,16 @@ private fun Node.printDFG(): String {
         conns++
 
         // Add next and prev edges to the work-list (if not already seen)
-        val next = end.nextDFGEdges.filter { it !in alreadySeen }
+        var next = end.nextDFGEdges.filter { it !in alreadySeen }
         worklist += next
 
-        val prev = end.prevDFGEdges.filter { it !in alreadySeen }
+        var prev = end.prevDFGEdges.filter { it !in alreadySeen }
+        worklist += prev
+
+        next = start.nextDFGEdges.filter { it !in alreadySeen }
+        worklist += next
+
+        prev = start.prevDFGEdges.filter { it !in alreadySeen }
         worklist += prev
     }
 
