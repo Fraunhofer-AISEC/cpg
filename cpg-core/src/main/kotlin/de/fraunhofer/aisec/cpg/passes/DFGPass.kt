@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -66,7 +67,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is NewArrayExpression -> handleNewArrayExpression(node)
             is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
-            is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
+            is MemberExpression -> handleMemberExpression(node)
             is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
@@ -116,17 +117,26 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * For a [MemberExpression], the base flows to the expression if the field is not implemented in
-     * the code under analysis. Otherwise, it's handled as a [Reference].
+     * For a [MemberExpression], the base flows from/to the expression, depending on the
+     * [MemberExpression.access].
      */
-    protected fun handleMemberExpression(
-        node: MemberExpression,
-        inferDfgForUnresolvedCalls: Boolean
-    ) {
-        if (node.refersTo == null && inferDfgForUnresolvedCalls) {
-            node.addPrevDFG(node.base)
+    protected fun handleMemberExpression(node: MemberExpression) {
+        if (node.access == AccessValues.WRITE) {
+            node.addNextDFG(
+                node.base,
+                mutableMapOf(
+                    Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
+                    Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+                )
+            )
         } else {
-            handleReference(node)
+            node.addPrevDFG(
+                node.base,
+                mutableMapOf(
+                    Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
+                    Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+                )
+            )
         }
     }
 

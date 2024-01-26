@@ -27,8 +27,12 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -115,6 +119,18 @@ class CDataflowTest {
 
         println(tu.variables["var"]!!.printDFG())
     }
+
+    @Test
+    fun testField() {
+        val file = File("src/test/resources/c/dataflow/field.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        println(tu.variables["s"]!!.printDFG())
+    }
 }
 
 private fun Node.printDFG(): String {
@@ -124,8 +140,8 @@ private fun Node.printDFG(): String {
     builder.append("%%{init: {\"flowchart\": {\"htmlLabels\": false}} }%%\n")
     builder.append("flowchart TD\n")
 
-    val worklist = mutableListOf<PropertyEdge<Node>>()
-    val alreadySeen = mutableSetOf<PropertyEdge<Node>>()
+    val worklist = identitySetOf<PropertyEdge<Node>>()
+    val alreadySeen = identitySetOf<PropertyEdge<Node>>()
     val maxConnections = 25
     var conns = 0
 
@@ -133,14 +149,16 @@ private fun Node.printDFG(): String {
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
-        val edge = worklist.removeFirst()
+        val edge = worklist.first()
+        worklist.remove(edge)
+
         // Add it to the seen-list
         alreadySeen += edge
 
         val start = edge.start
         val end = edge.end
         builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|DFG|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.dfgLabel}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
         )
         conns++
 
@@ -163,6 +181,21 @@ private fun Node.printDFG(): String {
     return builder.toString()
 }
 
+private val <T : Node> PropertyEdge<T>.dfgLabel: String
+    get() {
+        val builder = StringBuilder()
+        builder.append("\"")
+        builder.append("DFG")
+
+        if (this.getProperty(Properties.DFG_GRANULARITY) == GranularityType.PARTIAL) {
+            builder.append(
+                " (partial, ${(this.getProperty(Properties.DFG_RECORD_MEMBER_FIELD) as? FieldDeclaration)?.name})"
+            )
+        }
+
+        builder.append("\"")
+        return builder.toString()
+    }
 private val Node.nodeLabel: String
     get() {
         return "`${this.name}\n(${this::class.simpleName})\n${this.location}`"

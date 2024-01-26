@@ -130,7 +130,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        for (varDecl in node.variables.filter { it !is FieldDeclaration }) {
+        for (varDecl in node.variables /*.filter { it !is FieldDeclaration }*/) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
         }
@@ -177,6 +177,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     PowersetLattice(identitySetOf(currentNode))
                 )
             }
+        } else if (currentNode is MemberExpression && currentNode.access == AccessValues.WRITE) {
+            // already set in DFG pass, because otherwise we cannot set the field property
+            // state.push(currentNode.base, PowersetLattice(identitySetOf(currentNode)))
+
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+
+            if (writtenDeclaration != null) {
+                // we also want to set the last write to our base here.
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(currentNode.base))
+            }
         } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
             // rhs. The lhs could be a declaration or a reference (or multiple of these things).
@@ -186,6 +197,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // This was the last write to the respective declaration.
                 (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
                     ?.let {
+                        // If our target is a field declaration, we want to
                         doubleState.declarationsState[it] =
                             PowersetLattice(identitySetOf(assignment.target as Node))
                     }
