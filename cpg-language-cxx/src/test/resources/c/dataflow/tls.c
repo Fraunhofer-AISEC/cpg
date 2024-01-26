@@ -5,8 +5,14 @@ struct tls_context {
   int j;
 };
 
+void inner_renegotiate(struct tls_context *c) {
+  c->j = 4;
+}
+
 void renegotiate(struct tls_context *ctx) {
   ctx->i = 3;
+
+  inner_renegotiate(ctx);
 }
 
 int main() {
