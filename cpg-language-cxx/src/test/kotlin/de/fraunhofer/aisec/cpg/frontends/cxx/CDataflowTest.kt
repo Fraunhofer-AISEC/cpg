@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -110,11 +109,12 @@ private fun Node.printDFG(): String {
     val builder = StringBuilder()
 
     builder.append("```mermaid\n")
+    builder.append("%%{init: {\"flowchart\": {\"htmlLabels\": false}} }%%\n")
     builder.append("flowchart TD\n")
 
     val worklist = mutableListOf<PropertyEdge<Node>>()
-    val alreadySeen = identitySetOf<PropertyEdge<Node>>()
-    val maxConnections = 10
+    val alreadySeen = mutableSetOf<PropertyEdge<Node>>()
+    val maxConnections = 25
     var conns = 0
 
     worklist.addAll(this.nextDFGEdges)
@@ -122,6 +122,9 @@ private fun Node.printDFG(): String {
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
         val edge = worklist.removeFirst()
+        // Add it to the seen-list
+        alreadySeen += edge
+
         val start = edge.start
         val end = edge.end
         builder.append(
@@ -129,9 +132,12 @@ private fun Node.printDFG(): String {
         )
         conns++
 
-        // Add next edges to the work-list (if not already seen)
+        // Add next and prev edges to the work-list (if not already seen)
         val next = end.nextDFGEdges.filter { it !in alreadySeen }
         worklist += next
+
+        val prev = end.prevDFGEdges.filter { it !in alreadySeen }
+        worklist += prev
     }
 
     builder.append("```")
@@ -141,5 +147,5 @@ private fun Node.printDFG(): String {
 
 private val Node.nodeLabel: String
     get() {
-        return "${this.name} (${this::class.simpleName})"
+        return "`${this.name}\n(${this::class.simpleName})\n${this.location}`"
     }
