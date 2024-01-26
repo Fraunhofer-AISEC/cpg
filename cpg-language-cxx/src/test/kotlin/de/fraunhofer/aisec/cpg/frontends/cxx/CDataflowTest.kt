@@ -129,7 +129,7 @@ class CDataflowTest {
             }
         assertNotNull(tu)
 
-        println(tu.variables["s"]!!.printDFG())
+        println(tu.variables["s1"]!!.printDFG())
     }
 }
 
@@ -137,7 +137,6 @@ private fun Node.printDFG(): String {
     val builder = StringBuilder()
 
     builder.append("```mermaid\n")
-    builder.append("%%{init: {\"flowchart\": {\"htmlLabels\": false}} }%%\n")
     builder.append("flowchart TD\n")
 
     val worklist = identitySetOf<PropertyEdge<Node>>()
@@ -181,7 +180,7 @@ private fun Node.printDFG(): String {
     return builder.toString()
 }
 
-private val <T : Node> PropertyEdge<T>.dfgLabel: String
+private val PropertyEdge<Node>.dfgLabel: String
     get() {
         val builder = StringBuilder()
         builder.append("\"")
@@ -200,5 +199,5 @@ private val <T : Node> PropertyEdge<T>.dfgLabel: String
     }
 private val Node.nodeLabel: String
     get() {
-        return "`${this.name}\n(${this::class.simpleName})\n${this.location}`"
+        return "${this.name}\n(${this::class.simpleName})\n${this.location}"
     }

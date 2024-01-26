@@ -5,8 +5,12 @@ struct myStruct {
 void doSomething(int i) {}
 
 int main() {
-  struct myStruct s;
-  s.field1 = 1;
+  struct myStruct s1;
+  struct myStruct s2;
 
-  doSomething(s.field1);
+  s1.field1 = 1;
+  s2.field1 = 1;
+
+  doSomething(s1.field1);
+  doSomething(s2.field1);
 }
