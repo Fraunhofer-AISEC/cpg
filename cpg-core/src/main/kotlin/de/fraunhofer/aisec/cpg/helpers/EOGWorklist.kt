@@ -78,7 +78,7 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
  * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
  * one).
  */
-open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
+open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
     /**
      * It updates this state by adding all new nodes in [other] to `this` and by computing the least

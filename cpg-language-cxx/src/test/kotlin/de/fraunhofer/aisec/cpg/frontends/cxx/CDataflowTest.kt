@@ -191,6 +191,8 @@ private val <T : Node> PropertyEdge<T>.dfgLabel: String
             builder.append(
                 " (partial, ${(this.getProperty(Properties.DFG_RECORD_MEMBER_FIELD) as? FieldDeclaration)?.name})"
             )
+        } else {
+            builder.append(" (full)")
         }
 
         builder.append("\"")

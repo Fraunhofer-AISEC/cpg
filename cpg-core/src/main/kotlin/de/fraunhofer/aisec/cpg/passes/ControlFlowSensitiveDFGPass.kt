@@ -181,12 +181,30 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // already set in DFG pass, because otherwise we cannot set the field property
             // state.push(currentNode.base, PowersetLattice(identitySetOf(currentNode)))
 
-            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            writtenDeclaration = (currentNode.base as? Reference)?.refersTo
 
             if (writtenDeclaration != null) {
                 // we also want to set the last write to our base here.
                 doubleState.declarationsState[writtenDeclaration] =
                     PowersetLattice(identitySetOf(currentNode.base))
+
+                val fieldInObjectID =
+                    writtenDeclaration.hashCode() + currentNode.refersTo.hashCode()
+
+                doubleState.declarationsState[fieldInObjectID] =
+                    PowersetLattice(identitySetOf(currentNode))
+            }
+        } else if (currentNode is MemberExpression && currentNode.access == AccessValues.READ) {
+            writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            val fieldDeclaration = currentNode.refersTo
+
+            if (writtenDeclaration != null && fieldDeclaration != null) {
+                // We do an ugly hack here: We store a (unique) hash out of field declaration and
+                // the variable declaration in the declaration state so that we can retrieve it
+                // later for READ accesses.
+                doubleState.declarationsState[
+                        writtenDeclaration.hashCode() + fieldDeclaration.hashCode()]
+                    ?.let { state.push(currentNode, it) }
             }
         } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
@@ -197,7 +215,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // This was the last write to the respective declaration.
                 (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
                     ?.let {
-                        // If our target is a field declaration, we want to
                         doubleState.declarationsState[it] =
                             PowersetLattice(identitySetOf(assignment.target as Node))
                     }
@@ -365,7 +382,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * A mapping of a [Node] to its [LatticeElement]. The keys of this state will later get the
          * DFG edges from the value!
          */
-        var generalState: State<Node, V> = State(),
+        var generalState: State<de.fraunhofer.aisec.cpg.graph.Node, V> = State(),
         /**
          * It's main purpose is to store the most recent mapping of a [Declaration] to its
          * [LatticeElement]. However, it is also used to figure out if we have to continue with the
@@ -373,19 +390,22 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * here. However, since we never use them except from determining if we changed something,
          * it won't affect the result.
          */
-        var declarationsState: State<Node, V> = State(),
+        var declarationsState: State<Any?, V> = State(),
+
         /** The [returnStatements] which are reachable. */
-        var returnStatements: State<Node, V> = State()
+        var returnStatements: State<de.fraunhofer.aisec.cpg.graph.Node, V> = State()
     ) : State<Node, V>() {
         override fun duplicate(): DFGPassState<V> {
             return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
         }
 
-        override fun get(key: Node?): LatticeElement<V>? {
+        override fun get(key: de.fraunhofer.aisec.cpg.graph.Node): LatticeElement<V>? {
             return generalState[key] ?: declarationsState[key]
         }
 
-        override fun lub(other: State<Node, V>): Pair<State<Node, V>, Boolean> {
+        override fun lub(
+            other: State<de.fraunhofer.aisec.cpg.graph.Node, V>
+        ): Pair<State<de.fraunhofer.aisec.cpg.graph.Node, V>, Boolean> {
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
@@ -396,7 +416,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun needsUpdate(other: State<Node, V>): Boolean {
+        override fun needsUpdate(other: State<de.fraunhofer.aisec.cpg.graph.Node, V>): Boolean {
             return if (other is DFGPassState) {
                 generalState.needsUpdate(other.generalState) ||
                     declarationsState.needsUpdate(other.declarationsState)
@@ -405,7 +425,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun push(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
+        override fun push(
+            newNode: de.fraunhofer.aisec.cpg.graph.Node,
+            newLatticeElement: LatticeElement<V>?
+        ): Boolean {
             return generalState.push(newNode, newLatticeElement)
         }
 
