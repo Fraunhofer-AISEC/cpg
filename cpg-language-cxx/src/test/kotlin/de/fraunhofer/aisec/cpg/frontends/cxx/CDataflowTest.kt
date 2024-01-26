@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -48,8 +47,10 @@ class CDataflowTest {
         val renegotiate = tu.functions["renegotiate"]
         assertNotNull(renegotiate)
 
-        val me = renegotiate.allChildren<MemberExpression>()
-        val writtenFields = me.filter { it.access == AccessValues.WRITE }
+        // In this first, very basic example we want to have the list of all fields that are written
+        // to in the renegotiate function (independent of the order)
+        val writtenFields =
+            tu.functions["renegotiate"].memberExpressions { it.access == AccessValues.WRITE }
         println("renegotiate writes to the following fields: " + writtenFields.map { it.name })
     }
 }
