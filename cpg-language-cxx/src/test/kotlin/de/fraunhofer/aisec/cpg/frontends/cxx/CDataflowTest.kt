@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -99,5 +101,45 @@ class CDataflowTest {
             "renegotiate and its direct callees writes to the following fields: " +
                 writtenFields.map { it.name }
         )
+
+        println(main.variables["ctx"]?.printDFG())
     }
 }
+
+private fun Node.printDFG(): String {
+    val builder = StringBuilder()
+
+    builder.append("```mermaid\n")
+    builder.append("flowchart TD\n")
+
+    val worklist = mutableListOf<PropertyEdge<Node>>()
+    val alreadySeen = identitySetOf<PropertyEdge<Node>>()
+    val maxConnections = 10
+    var conns = 0
+
+    worklist.addAll(this.nextDFGEdges)
+
+    while (worklist.isNotEmpty() && conns < maxConnections) {
+        // Take one edge out of the work-list
+        val edge = worklist.removeFirst()
+        val start = edge.start
+        val end = edge.end
+        builder.append(
+            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|DFG|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+        )
+        conns++
+
+        // Add next edges to the work-list (if not already seen)
+        val next = end.nextDFGEdges.filter { it !in alreadySeen }
+        worklist += next
+    }
+
+    builder.append("```")
+
+    return builder.toString()
+}
+
+private val Node.nodeLabel: String
+    get() {
+        return "${this.name} (${this::class.simpleName})"
+    }
