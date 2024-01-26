@@ -726,13 +726,13 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["literal"]
         assertNotNull(p)
 
-        assertEquals(Region(1, 0, 1, 8), (p.statements[0]).location?.region)
-        assertEquals(Region(1, 4, 1, 8), (p.variables["b"])?.firstAssignment?.location?.region)
-        assertEquals(Region(2, 0, 2, 6), (p.statements[1]).location?.region)
-        assertEquals(Region(3, 0, 3, 7), (p.statements[2]).location?.region)
-        assertEquals(Region(4, 0, 4, 10), (p.statements[3]).location?.region)
-        assertEquals(Region(5, 0, 5, 11), (p.statements[4]).location?.region)
-        assertEquals(Region(6, 0, 6, 8), (p.statements[5]).location?.region)
+        assertEquals(Region(1, 1, 1, 9), (p.statements[0]).location?.region)
+        assertEquals(Region(1, 5, 1, 9), (p.variables["b"])?.firstAssignment?.location?.region)
+        assertEquals(Region(2, 1, 2, 7), (p.statements[1]).location?.region)
+        assertEquals(Region(3, 1, 3, 8), (p.statements[2]).location?.region)
+        assertEquals(Region(4, 1, 4, 11), (p.statements[3]).location?.region)
+        assertEquals(Region(5, 1, 5, 12), (p.statements[4]).location?.region)
+        assertEquals(Region(6, 1, 6, 9), (p.statements[5]).location?.region)
     }
 
     @Test
@@ -935,7 +935,6 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
-    @Ignore // TODO
     fun testCommentMatching() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
@@ -950,7 +949,7 @@ class PythonFrontendTest : BaseTest() {
 
         val commentedNodes = SubgraphWalker.flattenAST(tu).filter { it.comment != null }
 
-        assertEquals(10, commentedNodes.size)
+        assertEquals(9, commentedNodes.size)
 
         val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
         assertEquals(1, functions.size)
@@ -968,9 +967,10 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("# a parameter", params.first { it.name.localName == "i" }.comment)
         assertEquals("# another parameter", params.first { it.name.localName == "j" }.comment)
 
-        val variable = commentedNodes.filterIsInstance<VariableDeclaration>()
-        assertEquals(1, variable.size)
-        assertEquals("# A comment", variable.first().comment)
+        val assignment = commentedNodes.filterIsInstance<AssignExpression>()
+        assertEquals(2, assignment.size)
+        assertEquals("# A comment# a number", assignment.first().comment)
+        assertEquals("# comment end", assignment.last().comment)
 
         val block = commentedNodes.filterIsInstance<Block>()
         assertEquals(1, block.size)
@@ -980,14 +980,6 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(2, kvs.size)
         assertEquals("# a entry", kvs.first { it.code?.contains("a") ?: false }.comment)
         assertEquals("# b entry", kvs.first { it.code?.contains("b") ?: false }.comment)
-
-        val declStmts = commentedNodes.filterIsInstance<DeclarationStatement>()
-        assertEquals(2, declStmts.size)
-        assertEquals("# a number", declStmts.first { it.location?.region?.startLine == 3 }.comment)
-        assertEquals(
-            "# comment end",
-            declStmts.first { it.location?.region?.startLine == 18 }.comment
-        )
     }
 
     @Test

@@ -81,12 +81,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleDict(node: Python.ASTDict): Expression {
         val lst = mutableListOf<Expression>()
         for (i in node.values.indices) { // TODO: keys longer than values possible?
+            // Here we can not use node as raw node as it spans all keys and values
             lst +=
                 newKeyValueExpression(
-                    key = node.keys[i]?.let { handle(it) },
-                    value = handle(node.values[i]),
-                    rawNode = node
-                )
+                        key = node.keys[i]?.let { handle(it) },
+                        value = handle(node.values[i]),
+                    )
+                    .codeAndLocationFromChildren(node)
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.initializers = lst.toList()

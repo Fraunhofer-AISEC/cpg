@@ -1197,7 +1197,7 @@ interface Python {
      *  |  arg(identifier arg, expr? annotation, string? type_comment)
      * ```
      */
-    class ASTarg(pyObject: PyObject) : AST(pyObject) {
+    class ASTarg(pyObject: PyObject) : AST(pyObject), WithPythonLocation {
         val arg: String by lazy { "arg" of pyObject }
         val annotation: ASTBASEexpr? by lazy { "annotation" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
