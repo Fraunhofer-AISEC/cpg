@@ -8,6 +8,8 @@ int main() {
   struct myStruct s1;
   struct myStruct s2;
 
+  doSomething(s1.field1);
+
   s1.field1 = 1;
   s2.field1 = 1;
 

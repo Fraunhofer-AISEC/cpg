@@ -202,9 +202,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We do an ugly hack here: We store a (unique) hash out of field declaration and
                 // the variable declaration in the declaration state so that we can retrieve it
                 // later for READ accesses.
-                doubleState.declarationsState[
-                        writtenDeclaration.hashCode() + fieldDeclaration.hashCode()]
-                    ?.let { state.push(currentNode, it) }
+                val declState =
+                    doubleState.declarationsState[
+                            writtenDeclaration.hashCode() + fieldDeclaration.hashCode()]
+                if (declState != null) {
+                    state.push(currentNode, declState)
+                } else {
+                    // If we do not have a stored state of our object+field, we can use the field
+                    // declaration. This will help us follow a data flow from field initializers (if
+                    // they exist in the language)
+                    state.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
+                }
             }
         } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
