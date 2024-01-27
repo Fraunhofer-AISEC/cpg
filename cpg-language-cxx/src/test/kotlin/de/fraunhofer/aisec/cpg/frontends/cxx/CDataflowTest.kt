@@ -84,7 +84,7 @@ class CDataflowTest {
         for (call in renegotiate.calls) {
             // We need to see, if the call connects our ctx with a ctx of the function
             val ctxArg =
-                call.arguments.firstOrNull() { it.unwrapReference()?.refersTo == startVariable }
+                call.arguments.firstOrNull { it.unwrapReference()?.refersTo == startVariable }
                     ?: // function call does not forward our context
                 continue
 
@@ -139,7 +139,9 @@ private fun Node.printDFG(): String {
     builder.append("```mermaid\n")
     builder.append("flowchart TD\n")
 
-    val worklist = identitySetOf<PropertyEdge<Node>>()
+    // We use a set with a defined ordering to hold our worklist to have a somewhat consistent
+    // ordering of statements in the mermaid file.
+    val worklist = LinkedHashSet<PropertyEdge<Node>>()
     val alreadySeen = identitySetOf<PropertyEdge<Node>>()
     val maxConnections = 25
     var conns = 0
@@ -161,17 +163,18 @@ private fun Node.printDFG(): String {
         )
         conns++
 
-        // Add next and prev edges to the work-list (if not already seen)
-        var next = end.nextDFGEdges.filter { it !in alreadySeen }
+        // Add next and prev edges to the work-list (if not already seen). We sort the entries by
+        // name to have this somewhat consistent across multiple invocations of this function
+        var next = end.nextDFGEdges.filter { it !in alreadySeen }.sortedBy { it.end.name }
         worklist += next
 
-        var prev = end.prevDFGEdges.filter { it !in alreadySeen }
+        var prev = end.prevDFGEdges.filter { it !in alreadySeen }.sortedBy { it.start.name }
         worklist += prev
 
-        next = start.nextDFGEdges.filter { it !in alreadySeen }
+        next = start.nextDFGEdges.filter { it !in alreadySeen }.sortedBy { it.end.name }
         worklist += next
 
-        prev = start.prevDFGEdges.filter { it !in alreadySeen }
+        prev = start.prevDFGEdges.filter { it !in alreadySeen }.sortedBy { it.start.name }
         worklist += prev
     }
 

@@ -188,10 +188,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 doubleState.declarationsState[writtenDeclaration] =
                     PowersetLattice(identitySetOf(currentNode.base))
 
-                val fieldInObjectID =
-                    writtenDeclaration.hashCode() + currentNode.refersTo.hashCode()
-
-                doubleState.declarationsState[fieldInObjectID] =
+                // Update the state identifier of this node, so that the data flows to later member
+                // expressions accessing the same object/field combination.
+                doubleState.declarationsState[currentNode.stateIdentifier()] =
                     PowersetLattice(identitySetOf(currentNode))
             }
         } else if (currentNode is MemberExpression && currentNode.access == AccessValues.READ) {
@@ -202,9 +201,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We do an ugly hack here: We store a (unique) hash out of field declaration and
                 // the variable declaration in the declaration state so that we can retrieve it
                 // later for READ accesses.
-                val declState =
-                    doubleState.declarationsState[
-                            writtenDeclaration.hashCode() + fieldDeclaration.hashCode()]
+                val declState = doubleState.declarationsState[currentNode.stateIdentifier()]
                 if (declState != null) {
                     state.push(currentNode, declState)
                 } else {
@@ -447,5 +444,32 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         ): Boolean {
             return declarationsState.push(newNode, newLatticeElement)
         }
+    }
+}
+
+private fun MemberExpression.stateIdentifier(): Int? {
+    val ref = this.refersTo
+    return if (ref == null) {
+        null
+    } else {
+        val baseIdentifier = base.stateIdentifier()
+        if (baseIdentifier != null) {
+            ref.hashCode() + baseIdentifier
+        } else {
+            null
+        }
+    }
+}
+
+private fun Reference.stateIdentifier(): Int? {
+    return this.refersTo?.hashCode()
+}
+
+private fun Node.stateIdentifier(): Int? {
+    return when (this) {
+        is MemberExpression -> this.stateIdentifier()
+        is Reference -> this.stateIdentifier()
+        is Declaration -> this.hashCode()
+        else -> null
     }
 }
