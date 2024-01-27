@@ -105,7 +105,7 @@ class CDataflowTest {
                 writtenFields.map { it.name }
         )
 
-        println(main.variables["ctx"]?.printDFG())
+        println(main.variables["ctx"]?.printDFG(100))
     }
 
     @Test
@@ -133,7 +133,7 @@ class CDataflowTest {
     }
 }
 
-private fun Node.printDFG(): String {
+private fun Node.printDFG(maxConnections: Int = 25): String {
     val builder = StringBuilder()
 
     builder.append("```mermaid\n")
@@ -143,7 +143,6 @@ private fun Node.printDFG(): String {
     // ordering of statements in the mermaid file.
     val worklist = LinkedHashSet<PropertyEdge<Node>>()
     val alreadySeen = identitySetOf<PropertyEdge<Node>>()
-    val maxConnections = 25
     var conns = 0
 
     worklist.addAll(this.nextDFGEdges)
