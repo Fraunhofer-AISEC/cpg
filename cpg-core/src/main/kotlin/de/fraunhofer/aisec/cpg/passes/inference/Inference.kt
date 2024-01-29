@@ -395,6 +395,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
     }
 
+    /**
+     * This infers a [VariableDeclaration] based on an unresolved [Reference], which is supplied as
+     * a [hint]. Currently, this is only used to infer global variables. In the future, we might
+     * also infer static variables in namespaces.
+     */
     fun inferVariableDeclaration(hint: Reference): VariableDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferVariables) {
             return null

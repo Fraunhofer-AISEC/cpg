@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.*
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 
 class CXXInferenceTest {
@@ -41,5 +43,10 @@ class CXXInferenceTest {
                 it.addIncludesToGraph(false)
             }
         assertNotNull(tu)
+
+        val global = tu.variables["somethingGlobal"]
+        assertNotNull(global)
+
+        assertContains(tu.declarations, global)
     }
 }
