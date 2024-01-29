@@ -45,7 +45,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTIfExp -> handleIfExp(node)
             is Python.ASTTuple -> handleTuple(node)
             is Python.ASTList -> handleList(node)
-            else -> TODO()
+            else -> {
+                log.error("Node {} not handled yet", node)
+                ProblemExpression(
+                    "Node ${node} not handled yet",
+                    ProblemNode.ProblemType.TRANSLATION
+                )
+            }
         }
     }
 

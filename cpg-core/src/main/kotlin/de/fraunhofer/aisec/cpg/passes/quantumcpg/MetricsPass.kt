@@ -55,6 +55,6 @@ class MetricsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     override fun cleanup() {
-        TODO("Not yet implemented")
+        // Nothing to do here
     }
 }

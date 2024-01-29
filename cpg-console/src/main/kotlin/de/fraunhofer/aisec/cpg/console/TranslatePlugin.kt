@@ -71,12 +71,20 @@ class TranslatePlugin : Plugin {
                         "                    .sourceLocations(File(\"" +
                         path +
                         "\"))\n" +
-                        "                    .defaultLanguages()\n" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguage\")" +
                         "                    .defaultPasses()\n" +
+                        "                    .registerPass(de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass::class)\n" +
+                        "                    .registerPass(de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass::class)\n" +
+                        "                    .registerPass(de.fraunhofer.aisec.cpg.passes.quantumcpg.MetricsPass::class)\n" +
+                        "                    .registerPass(de.fraunhofer.aisec.cpg.passes.DFGConnectionPass::class)\n" +
+                        "                    .registerPass(de.fraunhofer.aisec.cpg.passes.QiskitPass::class)\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
                     "val result = analyzer.analyze().get()",

@@ -52,6 +52,10 @@ tasks.withType<Test> {
     }
 }
 
+repositories {
+  mavenLocal()
+}
+
 dependencies {
     // CPG
     api(projects.cpgAnalysis)
@@ -59,5 +63,5 @@ dependencies {
 
     implementation(libs.kotlin.script.runtime)
     implementation(libs.kotlin.coroutines.core)
-    implementation(libs.kotlin.ki.shell)
+    implementation("org.jetbrains.kotlinx:ki-shell:0.5.3-SNAPSHOT:jar-with-dependencies")
 }
