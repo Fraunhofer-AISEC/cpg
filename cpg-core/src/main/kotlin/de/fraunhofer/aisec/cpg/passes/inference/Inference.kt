@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
@@ -53,7 +56,7 @@ import org.slf4j.LoggerFactory
  * Since this class implements [IsInferredProvider], all nodes that are created using the node
  * builder functions, will automatically have [Node.isInferred] set to true.
  */
-class Inference(val start: Node, override val ctx: TranslationContext) :
+class Inference internal constructor(val start: Node, override val ctx: TranslationContext) :
     LanguageProvider,
     ScopeProvider,
     IsInferredProvider,
@@ -66,8 +69,8 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     override val isInferred: Boolean
         get() = true
 
-    val scopeManager = ctx.scopeManager
-    val typeManager = ctx.typeManager
+    val scopeManager: ScopeManager
+    val typeManager: TypeManager
 
     override val scope: Scope?
         get() = scopeManager.currentScope
@@ -80,10 +83,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         returnType: Type?,
         hint: CallExpression? = null
     ): FunctionDeclaration? {
-        if (
-            !ctx.config.inferenceConfiguration.enabled ||
-                !ctx.config.inferenceConfiguration.inferFunctions
-        ) {
+        if (!ctx.config.inferenceConfiguration.inferFunctions) {
             return null
         }
 
@@ -290,11 +290,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
      * @param call
      * @return inferred FunctionTemplateDeclaration which can be invoked by the call
      */
-    fun createInferredFunctionTemplate(call: CallExpression): FunctionTemplateDeclaration? {
-        if (!ctx.config.inferenceConfiguration.enabled) {
-            return null
-        }
-
+    fun inferFunctionTemplate(call: CallExpression): FunctionTemplateDeclaration {
         // We assume that the start is either a record or the translation unit
         val record = start as? RecordDeclaration
         val tu = start as? TranslationUnitDeclaration
@@ -330,18 +326,24 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 // Template Parameter
                 val inferredTypeIdentifier = "T$typeCounter"
                 val typeParamDeclaration =
-                    inferred.startInference(ctx).inferTemplateParameter(inferredTypeIdentifier)
+                    inferred.startInference(ctx)?.inferTemplateParameter(inferredTypeIdentifier)
                 typeCounter++
-                inferred.addParameter(typeParamDeclaration)
+                if (typeParamDeclaration != null) {
+                    inferred.addParameter(typeParamDeclaration)
+                }
             } else if (node is Expression) {
                 val inferredNonTypeIdentifier = "N$nonTypeCounter"
                 val paramVariableDeclaration =
                     node
                         .startInference(ctx)
-                        .inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
-                node.addNextDFG(paramVariableDeclaration)
+                        ?.inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
+                if (paramVariableDeclaration != null) {
+                    node.addNextDFG(paramVariableDeclaration)
+                }
                 nonTypeCounter++
-                inferred.addParameter(paramVariableDeclaration)
+                if (paramVariableDeclaration != null) {
+                    inferred.addParameter(paramVariableDeclaration)
+                }
             }
         }
         return inferred
@@ -361,10 +363,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         kind: String = "class",
         locationHint: Node? = null
     ): RecordDeclaration? {
-        if (
-            !ctx.config.inferenceConfiguration.enabled ||
-                !ctx.config.inferenceConfiguration.inferRecords
-        ) {
+        if (!ctx.config.inferenceConfiguration.inferRecords) {
             return null
         }
 
@@ -397,10 +396,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     }
 
     fun inferVariableDeclaration(hint: Reference): VariableDeclaration? {
-        if (
-            !ctx.config.inferenceConfiguration.enabled ||
-                !ctx.config.inferenceConfiguration.inferVariables
-        ) {
+        if (!ctx.config.inferenceConfiguration.inferVariables) {
             return null
         }
 
@@ -429,11 +425,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         }
     }
 
-    fun inferNamespaceDeclaration(name: Name, path: String?): NamespaceDeclaration? {
-        if (!ctx.config.inferenceConfiguration.enabled) {
-            return null
-        }
-
+    fun inferNamespaceDeclaration(name: Name, path: String?): NamespaceDeclaration {
         // Here be dragons. Jump to the scope that the node defines directly, so that we can
         // delegate further operations to the scope manager. We also save the old scope so we can
         // restore it.
@@ -507,6 +499,11 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     companion object {
         val log: Logger = LoggerFactory.getLogger(Inference::class.java)
     }
+
+    init {
+        this.scopeManager = ctx.scopeManager
+        this.typeManager = ctx.typeManager
+    }
 }
 
 /** Provides information about the inference status of a node. */
@@ -519,8 +516,17 @@ interface IsImplicitProvider : MetadataProvider {
     val isImplicit: Boolean
 }
 
-/** Returns a new [Inference] object starting from this node. */
-fun Node.startInference(ctx: TranslationContext) = Inference(this, ctx)
+/**
+ * Returns a new [Inference] object starting from this node. This will check, whether inference is
+ * enabled at all (using [InferenceConfiguration.enabled]). Otherwise null, will be returned.
+ */
+fun Node.startInference(ctx: TranslationContext): Inference? {
+    if (!ctx.config.inferenceConfiguration.enabled) {
+        return null
+    }
+
+    return Inference(this, ctx)
+}
 
 /** Tries to infer a [FunctionDeclaration] from a [CallExpression]. */
 fun TranslationUnitDeclaration.inferFunction(
@@ -528,8 +534,8 @@ fun TranslationUnitDeclaration.inferFunction(
     isStatic: Boolean = false,
     ctx: TranslationContext
 ): FunctionDeclaration? {
-    return Inference(this, ctx)
-        .inferFunctionDeclaration(
+    return startInference(ctx)
+        ?.inferFunctionDeclaration(
             call.name.localName,
             call.code,
             isStatic,
@@ -546,8 +552,8 @@ fun NamespaceDeclaration.inferFunction(
     isStatic: Boolean = false,
     ctx: TranslationContext
 ): FunctionDeclaration? {
-    return Inference(this, ctx)
-        .inferFunctionDeclaration(
+    return startInference(ctx)
+        ?.inferFunctionDeclaration(
             call.name,
             call.code,
             isStatic,
@@ -564,8 +570,8 @@ fun RecordDeclaration.inferMethod(
     isStatic: Boolean = false,
     ctx: TranslationContext
 ): MethodDeclaration? {
-    return Inference(this, ctx)
-        .inferFunctionDeclaration(
+    return startInference(ctx)
+        ?.inferFunctionDeclaration(
             call.name.localName,
             call.code,
             isStatic,

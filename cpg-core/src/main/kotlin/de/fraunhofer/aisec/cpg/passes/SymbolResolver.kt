@@ -145,7 +145,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             target =
                 (scope?.astNode ?: currentTU)
                     .startInference(ctx)
-                    .inferFunctionDeclaration(
+                    ?.inferFunctionDeclaration(
                         reference.name,
                         null,
                         false,
@@ -286,7 +286,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             } else {
                 "class"
             }
-        val record = type.startInference(ctx).inferRecordDeclaration(type, currentTU, kind)
+        val record = type.startInference(ctx)?.inferRecordDeclaration(type, currentTU, kind)
 
         // update the type's record
         if (record != null) {
@@ -696,7 +696,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (root != null && record == null) {
                     record =
                         it.startInference(ctx)
-                            .inferRecordDeclaration(it, currentTU, locationHint = call)
+                            ?.inferRecordDeclaration(it, currentTU, locationHint = call)
                     // update the record declaration
                     root.recordDeclaration = record
                 }
@@ -861,7 +861,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
         recordDeclaration: RecordDeclaration
-    ): ConstructorDeclaration {
+    ): ConstructorDeclaration? {
         val signature = constructExpression.signature
         var constructorCandidate =
             recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
@@ -882,15 +882,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return constructorCandidate
             ?: recordDeclaration
                 .startInference(ctx)
-                .createInferredConstructor(constructExpression.signature)
+                ?.createInferredConstructor(constructExpression.signature)
     }
 
     protected fun getConstructorDeclarationForExplicitInvocation(
         signature: List<Type>,
         recordDeclaration: RecordDeclaration
-    ): ConstructorDeclaration {
+    ): ConstructorDeclaration? {
         return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDeclaration.startInference(ctx).createInferredConstructor(signature)
+            ?: recordDeclaration.startInference(ctx)?.createInferredConstructor(signature)
     }
 
     companion object {
