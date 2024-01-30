@@ -156,8 +156,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         val doubleState = state as DFGPassState
 
-        val initializer = (currentNode as? VariableDeclaration)?.initializer
         if (currentNode is VariableDeclaration) {
+            val initializer = currentNode.initializer
             if (initializer != null) {
                 // A variable declaration with an initializer => The initializer flows to the
                 // declaration. This also affects tuples. We split it up later.
