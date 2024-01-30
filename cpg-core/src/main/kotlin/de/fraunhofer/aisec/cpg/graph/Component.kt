@@ -38,6 +38,11 @@ open class Component : Node() {
     /** All translation units belonging to this application. */
     @AST val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
 
+    @Synchronized
+    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+        translationUnits.add(tu)
+    }
+
     /**
      * All points where unknown data may enter this application, e.g., the main method, or other
      * targets such as listeners to external events such as HTTP requests. This also includes the

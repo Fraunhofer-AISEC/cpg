@@ -351,7 +351,7 @@ private constructor(
                 }
                 return null
             }
-            component.translationUnits.add(frontend.parse(sourceLocation))
+            component.addTranslationUnit(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
             log.error("An error occurred during parsing of ${sourceLocation.name}: ${ex.message}")
             if (config.failOnError) {
