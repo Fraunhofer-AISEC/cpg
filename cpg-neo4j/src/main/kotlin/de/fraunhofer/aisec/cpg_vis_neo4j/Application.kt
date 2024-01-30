@@ -192,7 +192,7 @@ class Application : Callable<Int> {
         names = ["--custom-pass-list"],
         description =
             [
-                "Add custom list of passes (includes --no-default-passes) which is" +
+                "Add custom list of passes (might be used additional to --no-default-passes) which is" +
                     " passed as a comma-separated list; give either pass name if pass is in list," +
                     " or its FQDN" +
                     " (e.g. --custom-pass-list=DFGPass,CallResolver)"
@@ -245,7 +245,9 @@ class Application : Callable<Int> {
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
             ControlFlowSensitiveDFGPass::class,
-            FilenameMapper::class
+            FilenameMapper::class,
+            ControlDependenceGraphPass::class,
+            ProgramDependenceGraphPass::class
         )
     private var passClassMap = passClassList.associateBy { it.simpleName }
 
@@ -484,9 +486,10 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses && customPasses == "DEFAULT") {
+        if (!noDefaultPasses) {
             translationConfiguration.defaultPasses()
-        } else if (!noDefaultPasses && customPasses != "DEFAULT") {
+        }
+        if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
                 if (pass.contains(".")) {
@@ -495,7 +498,7 @@ class Application : Callable<Int> {
                     )
                 } else {
                     if (pass !in passClassMap) {
-                        throw ConfigurationException("Asked to produce unknown pass")
+                        throw ConfigurationException("Asked to produce unknown pass: $pass")
                     }
                     passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
                 }
