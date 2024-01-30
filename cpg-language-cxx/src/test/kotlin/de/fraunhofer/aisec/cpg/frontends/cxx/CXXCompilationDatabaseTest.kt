@@ -130,8 +130,7 @@ class CXXCompilationDatabaseTest {
         assertEquals(2, tus.size)
         val ref = mapOf("main_tu_1.c" to 1, "main_tu_2.c" to 2)
 
-        for (i in tus.indices) {
-            val tu = tus[i]
+        for (tu in tus) {
             val value = ref[File(tu.name.toString()).name]
             val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
             assertNotNull(mainFunc)

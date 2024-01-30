@@ -67,8 +67,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                                     (it as? BranchingNode)?.branchedBy?.allChildren<Reference> { c
                                         ->
                                         c in prevDfgNode.nextDFG
-                                    }
-                                        ?: listOf()
+                                    } ?: listOf()
                                 }
                             if (
                                 cdgConditionChildren.isNotEmpty() &&

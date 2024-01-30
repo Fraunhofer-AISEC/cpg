@@ -324,8 +324,7 @@ class Application : Callable<Int> {
                     node.labels.toSet(),
                     node.propertyList.associate { prop -> prop.key to prop.value }
                 )
-            }
-                ?: emptyList()
+            } ?: emptyList()
         val edges =
             newRelationshipBuilders
                 // For some reason, there are edges without start or end node??
@@ -339,8 +338,7 @@ class Application : Callable<Int> {
                         edge.endNode,
                         edge.propertyList.associate { prop -> prop.key to prop.value }
                     )
-                }
-                ?: emptyList()
+                } ?: emptyList()
 
         return JsonGraph(nodes, edges)
     }

@@ -160,8 +160,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.trim()
                 ?.replace("\"", "")
                 ?.replace("`", "")
-                ?.replace("'", "")
-                ?: ""
+                ?.replace("'", "") ?: ""
 
         return newLiteral(value, primitiveType("string"), rawNode = node)
     }
