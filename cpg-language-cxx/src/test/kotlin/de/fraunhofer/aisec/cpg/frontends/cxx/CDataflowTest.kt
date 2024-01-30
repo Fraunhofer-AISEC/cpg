@@ -131,6 +131,18 @@ class CDataflowTest {
 
         println(tu.variables["s1"]!!.printDFG())
     }
+
+    @Test
+    fun testNestedField() {
+        val file = File("src/test/resources/c/dataflow/nested.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        println(tu.variables["o"]!!.printDFG())
+    }
 }
 
 private fun Node.printDFG(maxConnections: Int = 25): String {
