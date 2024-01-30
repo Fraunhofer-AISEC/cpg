@@ -132,7 +132,7 @@ class TranslationResult(
                 components.add(swc)
             }
         }
-        tu?.let { swc.translationUnits.add(it) }
+        tu?.let { swc.addTranslationUnit(it) }
     }
 
     /**
