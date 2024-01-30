@@ -123,8 +123,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             dominatorsList.remove(entry)
                             val update = entry.second.addAll(newV)
                             if (update) dominatorsList.add(entry) else finalDominators.add(entry)
-                        }
-                            ?: dominatorsList.add(Pair(newK, newV.toMutableSet()))
+                        } ?: dominatorsList.add(Pair(newK, newV.toMutableSet()))
                     }
                 }
             }
@@ -199,8 +198,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             properties[Properties.BRANCH] = branchesSet
                         }
                         k is IfStatement &&
-                            (branchingNodeConditionals[k]?.size
-                                ?: 0) > 1 -> { // Note: branchesSet must be empty here
+                            (branchingNodeConditionals[k]?.size ?: 0) >
+                                1 -> { // Note: branchesSet must be empty here
                             // The if statement has only a then branch but there's a way to "jump
                             // out" of this branch. In this case, we want to set the false property
                             // here.

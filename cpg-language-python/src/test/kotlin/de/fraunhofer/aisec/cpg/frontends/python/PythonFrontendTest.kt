@@ -1039,8 +1039,7 @@ class PythonFrontendTest : BaseTest() {
 
         val varDefinedBeforeLoopRef =
             (functionBody.statements.firstOrNull() as? AssignExpression)?.lhs?.firstOrNull()
-                as? Reference
-                ?: TODO()
+                as? Reference ?: TODO()
         // no dataflow from var declaration to loop variable because it's a write access
         assert((firstLoop.variable?.prevDFG?.contains(varDefinedBeforeLoopRef) == false))
 

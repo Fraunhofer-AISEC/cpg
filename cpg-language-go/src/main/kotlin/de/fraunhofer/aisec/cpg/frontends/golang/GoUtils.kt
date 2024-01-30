@@ -80,8 +80,7 @@ internal fun shouldBeBuild(file: File, symbols: Map<String, String>): Boolean {
         file
             .bufferedReader()
             .useLines { lines -> lines.take(50).toList() }
-            .firstOrNull { it.startsWith("//go:build") }
-            ?: return true
+            .firstOrNull { it.startsWith("//go:build") } ?: return true
 
     val constraint = BuildConstraintExpression.fromString(goBuildLine.substringAfter("//go:build "))
 
