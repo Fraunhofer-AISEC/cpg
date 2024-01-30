@@ -148,7 +148,7 @@ class Schema {
             val name = entity.neo4jName() ?: entity.underlyingClass.simpleName
             allRels[name]?.let { relationPair ->
                 inherentRels[name] =
-                    relationPair.filter { rel -> fields.any { it.name.equals(rel.first) } }.toSet()
+                    relationPair.filter { rel -> fields.any { it.name == rel.first } }.toSet()
             }
 
             entity.propertyFields().forEach { property ->
@@ -420,7 +420,7 @@ class Schema {
                 hierarchy
                     .map { it.key }
                     .firstOrNull {
-                        baseClass.typeName.split(" ").contains(it.underlyingClass.canonicalName)
+                        it.underlyingClass.canonicalName in baseClass.typeName.split(" ")
                     }
         }
 
@@ -436,9 +436,7 @@ class Schema {
 
     private fun getNestedMultiplicity(type: Type): Boolean {
         if (type is ParameterizedType) {
-            return if (
-                type.rawType.typeName.substringBeforeLast(".") == "java.util"
-            ) { // listOf(List::class).contains(type.rawType)
+            return if (type.rawType.typeName.substringBeforeLast(".") == "java.util") {
                 true
             } else {
                 type.actualTypeArguments.any { getNestedMultiplicity(it) }
