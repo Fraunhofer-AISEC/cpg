@@ -228,8 +228,7 @@ class Schema {
                                 classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]
                                 ?: setOf()
                         }
-                        ?.toSet()
-                        ?: setOf()
+                        ?.toSet() ?: setOf()
                 )
             }
     }
