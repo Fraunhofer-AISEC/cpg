@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -381,15 +383,17 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
             // We go one step back to see if that one goes into to but also check that no assignment
             // to from happens in the paths between from and to
             val prevQTs =
-                if (from is MemberExpression && from.prevDFG.size > 1) {
-                    // The base flows into a MemberExpression, but we don't care about it and are
-                    // only interested in the prevDFG setting the field (if it exists). So, if there
-                    // are multiple edges, we filter the one only taking care of the base.
-                    val step = from.prevDFG.filter { it != from.base }
-                    step.map { dataFlow(it, to) }.toMutableSet()
-                } else {
-                    from.prevDFG.map { dataFlow(it, to) }.toMutableSet()
-                }
+                from.prevDFGEdges
+                    .filter {
+                        it.getProperty(Properties.DFG_GRANULARITY) != GranularityType.PARTIAL
+                    }
+                    .map { it.start }
+                    .map { dataFlow(it, to) }
+                    .toMutableSet()
+            // The base flows into a MemberExpression, but we don't care about such a partial
+            // flow and are only interested in the prevDFG setting the field (if it exists). So, if
+            // there are multiple edges, we filter out partial edges.
+
             val noAssignmentToFrom =
                 allPaths.none {
                     it.any { it2 ->
