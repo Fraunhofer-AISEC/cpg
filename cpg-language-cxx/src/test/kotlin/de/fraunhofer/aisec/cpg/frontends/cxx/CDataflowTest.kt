@@ -85,8 +85,7 @@ class CDataflowTest {
             // We need to see, if the call connects our ctx with a ctx of the function
             val ctxArg =
                 call.arguments.firstOrNull { it.unwrapReference()?.refersTo == startVariable }
-                    ?: // function call does not forward our context
-                continue
+                    ?: continue // function call does not forward our context
 
             // update our start function and variable
             startFunction = call.invokes.first()
