@@ -369,7 +369,7 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
                         }
                         l
                     }
-                    .toMutableList()
+                    .toMutableSet()
             prevEdges.addAll(from.arguments)
             // For a call, we collect the incoming data flows (typically only the arguments)
             val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
@@ -380,7 +380,16 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
         else -> {
             // We go one step back to see if that one goes into to but also check that no assignment
             // to from happens in the paths between from and to
-            val prevQTs = from.prevDFG.map { dataFlow(it, to) }
+            val prevQTs =
+                if (from is MemberExpression && from.prevDFG.size > 1) {
+                    // The base flows into a MemberExpression, but we don't care about it and are
+                    // only interested in the prevDFG setting the field (if it exists). So, if there
+                    // are multiple edges, we filter the one only taking care of the base.
+                    val step = from.prevDFG.filter { it != from.base }
+                    step.map { dataFlow(it, to) }.toMutableSet()
+                } else {
+                    from.prevDFG.map { dataFlow(it, to) }.toMutableSet()
+                }
             val noAssignmentToFrom =
                 allPaths.none {
                     it.any { it2 ->

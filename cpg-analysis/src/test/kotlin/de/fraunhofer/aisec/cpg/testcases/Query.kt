@@ -158,7 +158,7 @@ class Query {
                                     memberCall("log", ref("logger")) {
                                         member("INFO", ref("Level", makeMagic = false))
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a", ref("sc", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
                                     returnStmt {}
@@ -215,7 +215,7 @@ class Query {
                                     memberCall("log", ref("logger")) {
                                         member("INFO", ref("Level", makeMagic = false))
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a", ref("sc", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
 
