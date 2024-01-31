@@ -187,6 +187,8 @@ Before accepting external contributions, you need to sign our [CLA](https://cla-
 
 ## Further reading
 
+You can find a complete list of papers [here](https://fraunhofer-aisec.github.io/cpg/#publications)
+
 A quick write-up of our CPG has been published on arXiv:
 
 [1] Konrad Weiss, Christian Banse. A Language-Independent Analysis Platform for Source Code. https://arxiv.org/abs/2203.08424
@@ -205,6 +207,11 @@ An initial publication on the concept of using code property graphs for static a
 
 [5] https://github.com/ShiftLeftSecurity/joern/
 
-Additional extensions of the CPG into the field of Cloud security:
+Additional extensions of the CPG to support further use-cases:
 
 [6] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis.  IEEE CLOUD 2021. https://doi.org/10.1109/CLOUD53861.2021.00014
+
+[7] Alexander Küchler, Christian Banse. Representing LLVM-IR in a Code Property Graph. 25th Information Security Conference (ISC). Bali, Indonesia. 2022
+
+[8] Maximilian Kaul, Alexander Küchler, Christian Banse. A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis. IEEE International Conference on Quantum Computing and Engineering (QCE). Bellevue, WA, USA. 2023
+
