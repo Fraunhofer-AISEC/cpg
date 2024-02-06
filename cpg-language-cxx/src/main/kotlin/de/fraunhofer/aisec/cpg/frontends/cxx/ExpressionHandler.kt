@@ -462,7 +462,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return callExpression
     }
 
-    private fun handleIdExpression(ctx: IASTIdExpression): Reference {
+    private fun handleIdExpression(ctx: IASTIdExpression): Expression {
+        // In order to avoid many inferred/unresolved symbols, we want to make sure that we convert
+        // NULL into a proper null-literal, regardless whether headers are included or not.
+        if (ctx.name.toString() == "NULL") {
+            return if (language is CPPLanguage) {
+                newLiteral(null, objectType("std::nullptr_t"), rawNode = ctx)
+            } else {
+                newLiteral(0, unknownType(), rawNode = ctx)
+            }
+        }
+
         // this expression could actually be a field / member expression, but somehow CDT only
         // recognizes them as a member expression if it has an explicit 'this'
         // TODO: handle this? convert the declared reference expression into a member expression?
