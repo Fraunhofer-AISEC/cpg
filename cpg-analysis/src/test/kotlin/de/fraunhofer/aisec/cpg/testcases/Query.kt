@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.testcases
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
@@ -99,6 +100,7 @@ class Query {
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
                     .registerPass<EdgeCachePass>()
+                    .inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
                     .build()
         ) =
             testFrontend(config).build {
@@ -158,7 +160,7 @@ class Query {
                                     memberCall("log", ref("logger")) {
                                         member("INFO", ref("Level", makeMagic = false))
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a", ref("sc", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
                                     returnStmt {}
@@ -175,6 +177,9 @@ class Query {
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
                     .registerPass<EdgeCachePass>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder().inferFunctions(false).build()
+                    )
                     .build()
         ) =
             testFrontend(config).build {
@@ -215,7 +220,7 @@ class Query {
                                     memberCall("log", ref("logger")) {
                                         member("INFO", ref("Level", makeMagic = false))
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a", ref("sc", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
 

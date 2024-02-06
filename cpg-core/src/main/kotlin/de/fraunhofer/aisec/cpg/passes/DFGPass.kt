@@ -27,10 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -155,7 +152,18 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the function.
      */
     protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
-        node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
+        if (node.isInferred) {
+            // If the function is inferred, we connect all parameters to the function declaration.
+            // The condition should make sure that we don't add edges multiple times, i.e., we
+            // only handle the declaration exactly once.
+            node.addAllPrevDFG(node.parameters)
+            // If it's a method with a receiver, we connect that one too.
+            if (node is MethodDeclaration) {
+                node.receiver?.let { node.addPrevDFG(it) }
+            }
+        } else {
+            node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
+        }
     }
 
     /**
@@ -398,12 +406,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             handleUnresolvedCalls(call, call)
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
-                if (it.isInferred && inferDfgForUnresolvedSymbols) {
-                    handleUnresolvedCalls(call, it)
-                } else {
-                    Util.attachCallParameters(it, call.arguments)
-                    call.addPrevDFG(it)
-                }
+                Util.attachCallParameters(it, call)
+                call.addPrevDFG(it)
             }
         }
     }
