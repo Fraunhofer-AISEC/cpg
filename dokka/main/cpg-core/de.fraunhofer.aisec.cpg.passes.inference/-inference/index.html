@@ -63,30 +63,11 @@
   <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes.inference</a><span class="delimiter">/</span><span class="current">Inference</span></div>
   <div class="cover ">
     <h1 class="cover"><span><span>Inference</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">Inference</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>start<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>ctx<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/index.html">ScopeProvider</a>, <a href="../-is-inferred-provider/index.html">IsInferredProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/index.html">ContextProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-raw-node-type-provider/index.html">RawNodeTypeProvider</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-nothing/index.html">Nothing</a><span class="token operator">&gt; </span></div><p class="paragraph">This class contains different kinds of helper that <i>infer</i> certain <a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a>s that are not present in the source code but that we assure are present in the overall program (e.g., if because we only see parts of it).</p><p class="paragraph">Each inference has a certain <a href="start.html">start</a> point, which might depend on the type of inference. For example, to infer a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-method-declaration/index.html">MethodDeclaration</a>, the obvious start point would be a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a>. Since this class implements <a href="../-is-inferred-provider/index.html">IsInferredProvider</a>, all nodes that are created using the node builder functions, will automatically have <a href="../../de.fraunhofer.aisec.cpg.graph/-node/is-inferred.html">Node.isInferred</a> set to true.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">Inference</a> : <a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-scope-provider/index.html">ScopeProvider</a>, <a href="../-is-inferred-provider/index.html">IsInferredProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-context-provider/index.html">ContextProvider</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-raw-node-type-provider/index.html">RawNodeTypeProvider</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-nothing/index.html">Nothing</a><span class="token operator">&gt; </span></div><p class="paragraph">This class contains different kinds of helper that <i>infer</i> certain <a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a>s that are not present in the source code but that we assure are present in the overall program (e.g., if because we only see parts of it).</p><p class="paragraph">Each inference has a certain <a href="start.html">start</a> point, which might depend on the type of inference. For example, to infer a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-method-declaration/index.html">MethodDeclaration</a>, the obvious start point would be a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a>. Since this class implements <a href="../-is-inferred-provider/index.html">IsInferredProvider</a>, all nodes that are created using the node builder functions, will automatically have <a href="../../de.fraunhofer.aisec.cpg.graph/-node/is-inferred.html">Node.isInferred</a> set to true.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button><button class="section-tab" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION,EXTENSION_PROPERTY,EXTENSION_FUNCTION">Members &amp; Extensions</button></div>
     <div class="tabs-section-body">
-      <div data-togglable="CONSTRUCTOR">
-        <h2 class="">Constructors</h2>
-        <div class="table"><a data-name="1007086656%2FConstructors%2F1556141526" anchor-label="Inference" id="1007086656%2FConstructors%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-inference.html"><span><span>Inference</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1007086656%2FConstructors%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       <div data-togglable="TYPE">
         <h2 class="">Types</h2>
         <div class="table"><a data-name="1667448995%2FClasslikes%2F1556141526" anchor-label="Companion" id="1667448995%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
@@ -114,7 +95,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-type-inference-observer/index.html">TypeInferenceObserver</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>declaration<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="../../de.fraunhofer.aisec.cpg.graph.types/-has-type/-type-observer/index.html">HasType.TypeObserver</a></div><div class="brief "><p class="paragraph">This class implements a <a href="../../de.fraunhofer.aisec.cpg.graph.types/-has-type/-type-observer/index.html">HasType.TypeObserver</a> and uses the observed type to set the <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/type.html">ValueDeclaration.type</a> of a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a>, based on the types we see. It can be registered on objects that are used to "start" an inference, for example a MemberExpression, which infers a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a>. Once the type of the member expression becomes known, we can use this information to set the type of the field.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-type-inference-observer/index.html">TypeInferenceObserver</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>declaration<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="../../de.fraunhofer.aisec.cpg.graph.types/-has-type/-type-observer/index.html">HasType.TypeObserver</a></div><div class="brief "><p class="paragraph">This class implements a <a href="../../de.fraunhofer.aisec.cpg.graph.types/-has-type/-type-observer/index.html">HasType.TypeObserver</a> and uses the observed type to set the <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/type.html">ValueDeclaration.type</a> of a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a>, based on the types we see. It can be registered on objects that are used to "start" an inference, for example a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a>, which infers a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a>. Once the type of the member expression becomes known, we can use this information to set the type of the field.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -262,51 +243,6 @@
               </div>
             </div>
           </div>
-<a data-name="518078285%2FFunctions%2F1556141526" anchor-label="createInferredFunctionDeclaration" id="518078285%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="create-inferred-function-declaration.html"><span>create</span><wbr><span>Inferred</span><wbr><span>Function</span><wbr><span><span>Declaration</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="518078285%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="create-inferred-function-declaration.html"><span class="token function">createInferredFunctionDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-char-sequence/index.html">CharSequence</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">code<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">isStatic<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token punctuation">, </span></span><span class="parameter ">signature<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">?</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">returnType<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">hint<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-53164738%2FFunctions%2F1556141526" anchor-label="createInferredFunctionTemplate" id="-53164738%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="create-inferred-function-template.html"><span>create</span><wbr><span>Inferred</span><wbr><span>Function</span><wbr><span><span>Template</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-53164738%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="create-inferred-function-template.html"><span class="token function">createInferredFunctionTemplate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">call<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-function-template-declaration/index.html">FunctionTemplateDeclaration</a></div><div class="brief "><p class="paragraph">Create an inferred FunctionTemplateDeclaration if a call to an FunctionTemplate could not be resolved</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="1415233861%2FFunctions%2F1556141526" anchor-label="createInferredNamespaceDeclaration" id="1415233861%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="create-inferred-namespace-declaration.html"><span>create</span><wbr><span>Inferred</span><wbr><span>Namespace</span><wbr><span><span>Declaration</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1415233861%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="create-inferred-namespace-declaration.html"><span class="token function">createInferredNamespaceDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-name/index.html">Name</a><span class="token punctuation">, </span></span><span class="parameter ">path<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-namespace-declaration/index.html">NamespaceDeclaration</a></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 <a data-name="-287618516%2FFunctions%2F1556141526" anchor-label="incompleteType" id="-287618516%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -322,17 +258,77 @@
               </div>
             </div>
           </div>
-<a data-name="705984258%2FFunctions%2F1556141526" anchor-label="inferRecordDeclaration" id="705984258%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+<a data-name="-1467738658%2FFunctions%2F1556141526" anchor-label="inferFunctionDeclaration" id="-1467738658%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="infer-record-declaration.html"><span>infer</span><wbr><span>Record</span><wbr><span><span>Declaration</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="705984258%2FFunctions%2F1556141526"></span>
+                  <div><a href="infer-function-declaration.html"><span>infer</span><wbr><span>Function</span><wbr><span><span>Declaration</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1467738658%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="infer-record-declaration.html"><span class="token function">inferRecordDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token punctuation">, </span></span><span class="parameter ">currentTU<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token punctuation">, </span></span><span class="parameter ">kind<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">"class"</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Infers a record declaration for the given type. <a href="infer-record-declaration.html">type</a> is the object type representing a record that we want to infer. The <a href="infer-record-declaration.html">kind</a> specifies if we create a class or a struct.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="infer-function-declaration.html"><span class="token function">inferFunctionDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-char-sequence/index.html">CharSequence</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">code<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">isStatic<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token punctuation">, </span></span><span class="parameter ">signature<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">?</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">returnType<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">hint<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-706863025%2FFunctions%2F1556141526" anchor-label="inferFunctionTemplate" id="-706863025%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="infer-function-template.html"><span>infer</span><wbr><span>Function</span><wbr><span><span>Template</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-706863025%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="infer-function-template.html"><span class="token function">inferFunctionTemplate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">call<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-function-template-declaration/index.html">FunctionTemplateDeclaration</a></div><div class="brief "><p class="paragraph">Create an inferred FunctionTemplateDeclaration if a call to an FunctionTemplate could not be resolved</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="42163734%2FFunctions%2F1556141526" anchor-label="inferNamespaceDeclaration" id="42163734%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="infer-namespace-declaration.html"><span>infer</span><wbr><span>Namespace</span><wbr><span><span>Declaration</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="42163734%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="infer-namespace-declaration.html"><span class="token function">inferNamespaceDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-name/index.html">Name</a><span class="token punctuation">, </span></span><span class="parameter ">path<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-namespace-declaration/index.html">NamespaceDeclaration</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1895458876%2FFunctions%2F1556141526" anchor-label="inferRecordDeclaration" id="-1895458876%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="infer-record-declaration.html"><span>infer</span><wbr><span>Record</span><wbr><span><span>Declaration</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1895458876%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="infer-record-declaration.html"><span class="token function">inferRecordDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token punctuation">, </span></span><span class="parameter ">currentTU<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token punctuation">, </span></span><span class="parameter ">kind<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">"class"</span><span class="token punctuation">, </span></span><span class="parameter ">locationHint<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-record-declaration/index.html">RecordDeclaration</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Infers a record declaration for the given type. <a href="infer-record-declaration.html">type</a> is the object type representing a record that we want to infer. The <a href="infer-record-declaration.html">kind</a> specifies if we create a class or a struct.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1254500892%2FFunctions%2F1556141526" anchor-label="inferVariableDeclaration" id="-1254500892%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="infer-variable-declaration.html"><span>infer</span><wbr><span>Variable</span><wbr><span><span>Declaration</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1254500892%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="infer-variable-declaration.html"><span class="token function">inferVariableDeclaration</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">hint<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">This infers a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a> based on an unresolved <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a>, which is supplied as a <a href="infer-variable-declaration.html">hint</a>. Currently, this is only used to infer global variables. In the future, we might also infer static variables in namespaces.</p></div></div></div>
                 </div>
               </div>
             </div>
