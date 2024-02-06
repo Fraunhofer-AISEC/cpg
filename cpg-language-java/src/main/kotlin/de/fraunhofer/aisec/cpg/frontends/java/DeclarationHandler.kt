@@ -322,8 +322,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 frontend.typeManager.getTypeParameter(
                     frontend.scopeManager.currentRecord,
                     variable.resolve().type.describe()
-                )
-                    ?: frontend.typeOf(variable.resolve().type)
+                ) ?: frontend.typeOf(variable.resolve().type)
         } catch (e: UnsolvedSymbolException) {
             val t = frontend.recoverTypeFromUnsolvedException(e)
             if (t == null) {

@@ -128,13 +128,37 @@ collaborate and push the boundaries of static code analysis.
 <div class="papers">
 
 <div class="admonition paper">
+    <p class="admonition-title">A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis</p>
+    <div class="left">
+    <p class="authors">Maximilian Kaul, Alexander Küchler, Christian Banse</p>
+    <p class="conference">In: IEEE International Conference on Quantum Computing and Engineering (QCE). Bellevue, WA, USA.</p>
+    <details><summary>bibtex</summary>
+    <pre><code>@inproceedings{kaul2023qcpg,
+  author={Maximilian Kaul and Alexander K\"uchler and Christian Banse},
+  title={A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis},
+  year={2023},
+  booktitle={2023 IEEE International Conference on Quantum Computing and Engineering},
+  series={QCE '23},
+  doi={10.1109/QCE57702.2023.00115},
+  location={Bellevue, WA, USA},
+  publisher={IEEE}
+}</code></pre>
+    </details>
+    </div>
+    <div class="right">
+    <a class="green-button" href="https://arxiv.org/pdf/2308.06113.pdf">preprint</a><br />
+    <a class="green-button" href="https://doi.org/10.1109/QCE57702.2023.00115">paper</a>
+    </div>
+</div>
+
+<div class="admonition paper">
     <p class="admonition-title">AbsIntIO: Towards Showing the Absence of Integer Overflows in Binaries using Abstract Interpretation</p>
     <div class="left">
     <p class="authors">Alexander Küchler, Leon Wenning, Florian Wendland</p>
     <p class="conference">In: ACM ASIA Conference on Computer and Communications Security (Asia CCS). Melbourne, VIC, Australia.</p>
     <details><summary>bibtex</summary>
     <pre><code>@inproceedings{kuechler2023absintio,
-  author={Alexander K\"uchler and Leon Wenning, and Florian Wendland},
+  author={Alexander K\"uchler and Leon Wenning and Florian Wendland},
   title={AbsIntIO: Towards Showing the Absence of Integer Overflows in Binaries using Abstract Interpretation},
   year={2023},
   booktitle={ACM ASIA Conference on Computer and Communications Security},

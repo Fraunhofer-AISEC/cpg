@@ -823,8 +823,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (i in arguments.indices) {
             val argument =
                 handle(arguments[i])
-                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                    ?: continue
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression ?: continue
             argument.argumentIndex = i
             ctor.addArgument(argument)
         }

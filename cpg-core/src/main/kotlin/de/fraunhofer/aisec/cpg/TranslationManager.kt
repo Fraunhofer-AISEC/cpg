@@ -163,8 +163,7 @@ private constructor(
                             file.language
                                 ?.frontend
                                 ?.findAnnotation<SupportsParallelParsing>()
-                                ?.supported
-                                ?: true
+                                ?.supported ?: true
                         // By default, the frontends support parallel parsing. But the
                         // SupportsParallelParsing annotation can be set to false and force
                         // to disable it.
@@ -351,7 +350,7 @@ private constructor(
                 }
                 return null
             }
-            component.translationUnits.add(frontend.parse(sourceLocation))
+            component.addTranslationUnit(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
             log.error("An error occurred during parsing of ${sourceLocation.name}: ${ex.message}")
             if (config.failOnError) {

@@ -115,7 +115,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 // check, if the white-list exists at all
                 if (
                     hasIncludeWhitelist() && // and ignore the file if it is not on the whitelist
-                    !absoluteOrRelativePathIsInList(Path.of(path), config.includeWhitelist)
+                        !absoluteOrRelativePathIsInList(Path.of(path), config.includeWhitelist)
                 ) {
                     LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path)
                     return null
