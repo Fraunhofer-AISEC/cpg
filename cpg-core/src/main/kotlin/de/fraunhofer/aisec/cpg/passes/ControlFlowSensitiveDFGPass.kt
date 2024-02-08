@@ -211,6 +211,37 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     state.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
                 }
             }
+        } else if (
+            currentNode is MemberExpression && currentNode.access == AccessValues.READWRITE
+        ) {
+            writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            val fieldDeclaration = currentNode.refersTo
+
+            if (writtenDeclaration != null && fieldDeclaration != null) {
+                // We do an ugly hack here: We store a (unique) hash out of field declaration and
+                // the variable declaration in the declaration state so that we can retrieve it
+                // later for READ accesses.
+                val declState = doubleState.declarationsState[currentNode.stateIdentifier()]
+                if (declState != null) {
+                    state.push(currentNode, declState)
+                } else {
+                    // If we do not have a stored state of our object+field, we can use the field
+                    // declaration. This will help us follow a data flow from field initializers (if
+                    // they exist in the language)
+                    state.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
+                }
+            }
+
+            if (writtenDeclaration != null) {
+                // we also want to set the last write to our base here.
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(currentNode.base))
+
+                // Update the state identifier of this node, so that the data flows to later member
+                // expressions accessing the same object/field combination.
+                doubleState.declarationsState[currentNode.stateIdentifier()] =
+                    PowersetLattice(identitySetOf(currentNode))
+            }
         } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
             // rhs. The lhs could be a declaration or a reference (or multiple of these things).

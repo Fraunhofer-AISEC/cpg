@@ -59,6 +59,13 @@ class AssignExpression :
     var lhs: List<Expression> = listOf()
         set(value) {
             field = value
+            field.forEach {
+                var base = (it as? MemberExpression)?.base as? MemberExpression
+                while (base != null) {
+                    base.access = AccessValues.READWRITE
+                    base = (base as? MemberExpression)?.base as? MemberExpression
+                }
+            }
             if (operatorCode == "=") {
                 field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
             } else {
