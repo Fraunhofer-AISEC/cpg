@@ -223,10 +223,16 @@ class Application : Callable<Int> {
     private var inferNodes: Boolean = false
 
     @CommandLine.Option(
-        names = ["--schema"],
+        names = ["--schema-markdown", "--schema"],
         description = ["Print the CPGs nodes and edges that they can have."]
     )
-    private var schema: Boolean = false
+    private var schemaMarkdown: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--schema-json"],
+        description = ["Print the CPGs nodes and edges that they can have."]
+    )
+    private var schemaJson: Boolean = false
 
     @CommandLine.Option(
         names = ["--top-level"],
@@ -544,10 +550,10 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
-    private fun printSchema(filenames: Collection<String>) {
+    private fun printSchema(filenames: Collection<String>, format: Schema.Format) {
         val schema = Schema()
         schema.extractSchema()
-        filenames.forEach { schema.printToFile(it) }
+        filenames.forEach { schema.printToFile(it, format) }
     }
 
     /**
@@ -563,8 +569,12 @@ class Application : Callable<Int> {
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
 
-        if (schema) {
-            printSchema(mutuallyExclusiveParameters.files)
+        if (schemaMarkdown || schemaJson) {
+            if (schemaMarkdown) {
+                printSchema(mutuallyExclusiveParameters.files, Schema.Format.MARKDOWN)
+            } else {
+                printSchema(mutuallyExclusiveParameters.files, Schema.Format.JSON)
+            }
             return EXIT_SUCCESS
         }
 

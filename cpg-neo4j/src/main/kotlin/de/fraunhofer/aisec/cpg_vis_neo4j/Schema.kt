@@ -38,6 +38,11 @@ import org.neo4j.ogm.metadata.MetaData
 
 class Schema {
 
+    enum class Format {
+        MARKDOWN,
+        JSON
+    }
+
     private val styling =
         "<style>" +
             ".superclassLabel{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}" +
@@ -233,15 +238,20 @@ class Schema {
             }
     }
 
-    fun printToFile(fileName: String) {
-        val file = File(fileName)
+    fun printToFile(fileName: String, format: Format) {
+        val fileExtension = if (Format.MARKDOWN == format) ".md" else ".json"
+        val file =
+            File(if (fileName.endsWith(fileExtension)) fileName else fileName + fileExtension)
         file.parentFile.mkdirs()
         file.createNewFile()
         file.printWriter().use { out ->
             out.println(header)
             val entityRoots: MutableList<ClassInfo> =
                 hierarchy.filter { it.value.first == null }.map { it.key }.toMutableList()
-            entityRoots.forEach { printEntities(it, out) }
+            entityRoots.forEach {
+                if (format == Format.MARKDOWN) printEntitiesToMarkdown(it, out)
+                else printEntitiesToJson(it, out)
+            }
         }
     }
 
@@ -252,7 +262,7 @@ class Schema {
      *
      * Generates links between the boxes.
      */
-    private fun printEntities(classInfo: ClassInfo, out: PrintWriter) {
+    private fun printEntitiesToMarkdown(classInfo: ClassInfo, out: PrintWriter) {
         val entityLabel = toLabel(classInfo)
 
         out.println("## $entityLabel<a id=\"${toAnchorLink("e${entityLabel}")}\"></a>")
@@ -260,7 +270,6 @@ class Schema {
         // Todo print entity description
         if (hierarchy[classInfo]?.first != null) {
             out.print("**Labels**:")
-            // Todo Print markdown with hierarchy, and not inherent relationships
 
             hierarchy[classInfo]?.first?.let {
                 getHierarchy(it).forEach {
@@ -333,7 +342,7 @@ class Schema {
             }
 
             removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
-                printRelationships(classInfo, it, out)
+                printRelationshipsToMarkdown(classInfo, it, out)
             }
         }
 
@@ -355,7 +364,87 @@ class Schema {
             }
         }
 
-        hierarchy[classInfo]?.second?.forEach { printEntities(it, out) }
+        hierarchy[classInfo]?.second?.forEach { printEntitiesToMarkdown(it, out) }
+    }
+
+    /**
+     * Prints a section for every entity with a list of labels (e.g. superclasses), a list of
+     * relationships, a dropdown with inherited relationships, a list of properties and a dropdown
+     * with inherited properties.
+     *
+     * Generates links between the boxes.
+     */
+    private fun printEntitiesToJson(classInfo: ClassInfo, out: PrintWriter) {
+        val entityLabel = toLabel(classInfo)
+        // Todo {
+        out.println("name: $entityLabel")
+
+        if (hierarchy[classInfo]?.first != null) {
+            out.print("labels: ")
+
+            hierarchy[classInfo]?.first?.let { getHierarchy(it).forEach { out.print(toLabel(it)) } }
+            out.print(entityLabel)
+        }
+        if (hierarchy[classInfo]?.second?.isNotEmpty() == true) {
+            out.println("childLabels: ")
+
+            hierarchy[classInfo]?.second?.let {
+                if (it.isNotEmpty()) {
+                    it.forEach { classInfo -> out.print(toLabel(classInfo)) }
+                }
+            }
+        }
+
+        if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
+            out.println("relationships:")
+
+            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
+                out.print("[${it.second} " + toLabel(classInfo))
+            }
+
+            if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
+                out.println("Inherited Relationships")
+                removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inherited ->
+                    var current = classInfo
+                    var baseClass: ClassInfo? = null
+                    while (baseClass == null) {
+                        inherentRels[toLabel(current)]?.let { rels ->
+                            if (rels.any { it.second == inherited.second }) {
+                                baseClass = current
+                            }
+                        }
+                        hierarchy[current]?.first?.let { current = it }
+                    }
+                    out.println("${inherited.second} ${toLabel(baseClass)}")
+                }
+            }
+
+            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
+                printRelationshipsToJson(classInfo, it, out)
+            }
+        }
+
+        if (inherentProperties.isNotEmpty() && inheritedProperties.isNotEmpty()) {
+            out.println("properties:")
+
+            removeLabelDuplicates(inherentProperties[entityLabel])?.forEach {
+                out.println("name: ${it.second}")
+                out.println("valueType: ${it.first}")
+                out.println("inherited: false")
+            }
+            if (inheritedProperties[entityLabel]?.isNotEmpty() == true) {
+                out.println("Inherited Properties")
+                removeLabelDuplicates(inheritedProperties[entityLabel])?.forEach {
+                    out.println("name: ${it.second}")
+                    out.println("valueType: ${it.first}")
+                    out.println("inherited: true")
+                }
+            }
+        }
+
+        // Todo {
+
+        hierarchy[classInfo]?.second?.forEach { printEntitiesToJson(it, out) }
     }
 
     private fun removeLabelDuplicates(
@@ -448,7 +537,7 @@ class Schema {
         return "<span class=\"${cssClass}\">${text}</span>\n"
     }
 
-    private fun printRelationships(
+    private fun printRelationshipsToMarkdown(
         classInfo: ClassInfo,
         relationshipLabel: Pair<String, String>,
         out: PrintWriter
@@ -464,5 +553,17 @@ class Schema {
             "${toLabel(classInfo)}--\"${relationshipLabel.second}${multiplicity}\"-->${toLabel(classInfo)}${relationshipLabel.second}[<a href='#${toAnchorLink("e" + toLabel(targetInfo.second))}'>${toLabel(targetInfo.second)}</a>]:::outer"
         )
         closeMermaid(out)
+    }
+
+    private fun printRelationshipsToJson(
+        classInfo: ClassInfo,
+        relationshipLabel: Pair<String, String>,
+        out: PrintWriter
+    ) {
+        val fieldInfo: FieldInfo = classInfo.getFieldInfo(relationshipLabel.first)
+        val targetInfo = getTargetInfo(fieldInfo)
+        val multiplicity = if (targetInfo.first) "*" else "¹"
+        out.println(relationshipLabel.second)
+        out.println("$${relationshipLabel.second}${multiplicity}${toLabel(classInfo)}")
     }
 }
