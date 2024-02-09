@@ -161,6 +161,7 @@ nav:
       - CPG/specs/index.md
       - "Graph Schema": CPG/specs/graph.md
       - "Dataflow Graph (DFG)": CPG/specs/dfg.md
+      - "Dataflow Graph (DFG) Function Summaries": CPG/specs/dfg-function-summaries.md
       - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
   - "Implementation":
       - CPG/impl/index.md

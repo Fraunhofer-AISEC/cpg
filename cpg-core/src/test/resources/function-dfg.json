@@ -7,7 +7,7 @@
     },
     "dataFlows": [
       {
-        "from": "param2",
+        "from": "param1",
         "to": "base",
         "dfgType": "full"
       }
@@ -21,7 +21,7 @@
     },
     "dataFlows": [
       {
-        "from": "param1",
+        "from": "param0",
         "to": "base",
         "dfgType": "full"
       }
@@ -34,7 +34,7 @@
     },
     "dataFlows": [
       {
-        "from": "param1",
+        "from": "param0",
         "to": "base",
         "dfgType": "full"
       }
@@ -47,8 +47,8 @@
     },
     "dataFlows": [
       {
-        "from": "param2",
-        "to": "param1",
+        "from": "param1",
+        "to": "param0",
         "dfgType": "full"
       }
     ]

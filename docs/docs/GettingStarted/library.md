@@ -59,6 +59,8 @@ val translationConfig = TranslationConfiguration
 
 For a complete list of available methods, please check the KDoc.
 
+If you want/have to specify data flow summaries for some methods or functions, you add the method `registerFunctionSummary` when building the `TranslationCOnfiguration` and add a file with the format specified [here](../CPG/specs/dfg-function-summaries.md)
+
 ## 3. Running the analysis
 
 Now it's time to get the CPG. All you have to do is to run the analysis with the
