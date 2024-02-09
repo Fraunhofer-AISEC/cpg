@@ -25,16 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
-import de.fraunhofer.aisec.cpg.passes.inference.DFGSummaries
+import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class DFGSummariesTest {
+class DFGFunctionSummariesTest {
 
     @Test
     fun testRecordInference() {
-        val summaries = DFGSummaries.fromFiles(listOf(File("src/test/resources/function-dfg.json")))
+        val summaries =
+            DFGFunctionSummaries.fromFiles(listOf(File("src/test/resources/function-dfg.json")))
 
         assertTrue(summaries.functionToDFGEntryMap.isNotEmpty())
     }

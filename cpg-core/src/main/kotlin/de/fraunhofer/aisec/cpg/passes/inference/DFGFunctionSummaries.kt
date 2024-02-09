@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.io.File
 
-class DFGSummaries {
+class DFGFunctionSummaries {
     private constructor()
 
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
@@ -183,11 +183,11 @@ class DFGSummaries {
     data class DFGEntry(val from: String, val to: String, val dfgType: String)
 
     companion object {
-        /** Generates a [DFGSummaries] object from the given [files]. */
-        fun fromFiles(files: List<File>): DFGSummaries {
-            val dfgSummaries = DFGSummaries()
-            files.forEach { dfgSummaries.addEntriesFromFile(it) }
-            return dfgSummaries
+        /** Generates a [DFGFunctionSummaries] object from the given [files]. */
+        fun fromFiles(files: List<File>): DFGFunctionSummaries {
+            val dfgFunctionSummaries = DFGFunctionSummaries()
+            files.forEach { dfgFunctionSummaries.addEntriesFromFile(it) }
+            return dfgFunctionSummaries
         }
     }
 }

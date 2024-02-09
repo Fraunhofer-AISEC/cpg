@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.inference.DFGSummaries
+import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.nio.file.Path
@@ -104,7 +104,7 @@ private constructor(
     val replacedPasses:
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
-    val functionSummaries: DFGSummaries,
+    val functionSummaries: DFGFunctionSummaries,
     languages: List<Language<*>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -639,7 +639,7 @@ private constructor(
                 includeBlocklist,
                 orderPasses(),
                 replacedPasses,
-                DFGSummaries.fromFiles(functionSummaries),
+                DFGFunctionSummaries.fromFiles(functionSummaries),
                 languages,
                 codeInNodes,
                 processAnnotations,
