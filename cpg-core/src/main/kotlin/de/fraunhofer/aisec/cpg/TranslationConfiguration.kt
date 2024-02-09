@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.inference.DFGSummaries
 import de.fraunhofer.aisec.cpg.passes.order.*
 import java.io.File
 import java.nio.file.Path
@@ -102,6 +103,8 @@ private constructor(
      */
     val replacedPasses:
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
+    /** This list contains the files with function summaries which should be considered. */
+    val functionSummaries: DFGSummaries,
     languages: List<Language<*>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -240,6 +243,7 @@ private constructor(
         private val passes = mutableListOf<KClass<out Pass<*>>>()
         private val replacedPasses =
             mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
+        private val functionSummaries = mutableListOf<File>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -417,6 +421,16 @@ private constructor(
             with: KClass<out Pass<*>>
         ): Builder {
             replacedPasses[Pair(passType, forLanguage)] = with
+            return this
+        }
+
+        fun registerFunctionSummaries(functionSummaries: List<File>): Builder {
+            this.functionSummaries.addAll(functionSummaries)
+            return this
+        }
+
+        fun registerFunctionSummary(functionSummary: File): Builder {
+            this.functionSummaries.add(functionSummary)
             return this
         }
 
@@ -625,6 +639,7 @@ private constructor(
                 includeBlocklist,
                 orderPasses(),
                 replacedPasses,
+                DFGSummaries.fromFiles(functionSummaries),
                 languages,
                 codeInNodes,
                 processAnnotations,
