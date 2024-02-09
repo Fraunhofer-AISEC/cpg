@@ -62,6 +62,8 @@ class DFGFunctionSummaries {
     }
 
     private fun findFunctionDeclarationEntry(functionDecl: FunctionDeclaration): List<DFGEntry>? {
+        if (functionToDFGEntryMap.isEmpty()) return null
+
         val language = functionDecl.language
         val languageName = language?.javaClass?.name
         val methodName = functionDecl.name
@@ -82,7 +84,7 @@ class DFGFunctionSummaries {
         } else if (matchingEntries.filter { it.signature != null }.size == 1) {
             // Only one entry with a matching signature => We take this one.
             functionToDFGEntryMap[matchingEntries.single { it.signature != null }]
-        } else {
+        } else if (matchingEntries.isNotEmpty()) {
             /* There are multiple matching entries. We use the following routine:
              * First, we filter for existing signatures.
              * Second, we filter for the most precise class.
@@ -116,6 +118,8 @@ class DFGFunctionSummaries {
                 mostPreciseClassEntries.sortByDescending { it.signature?.size ?: 0 }
             }
             functionToDFGEntryMap[matchingEntries.first()]
+        } else {
+            null
         }
     }
 
