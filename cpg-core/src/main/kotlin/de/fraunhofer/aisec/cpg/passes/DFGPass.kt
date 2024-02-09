@@ -118,22 +118,36 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * [MemberExpression.access].
      */
     protected fun handleMemberExpression(node: MemberExpression) {
-        if (node.access == AccessValues.WRITE) {
-            node.addNextDFG(
-                node.base,
-                mutableMapOf(
-                    Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
-                    Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+        when (node.access) {
+            AccessValues.WRITE -> {
+                node.addNextDFG(
+                    node.base,
+                    mutableMapOf(
+                        Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
+                        Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+                    )
                 )
-            )
-        } else {
-            node.addPrevDFG(
-                node.base,
-                mutableMapOf(
-                    Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
-                    Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+            }
+            AccessValues.READWRITE -> {
+                node.addNextDFG(
+                    node.base,
+                    mutableMapOf(
+                        Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
+                        Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+                    )
                 )
-            )
+                // We do not make an edge in the other direction on purpose as a workaround for
+                // nested field accesses on the lhs of an assignment.
+            }
+            else -> {
+                node.addPrevDFG(
+                    node.base,
+                    mutableMapOf(
+                        Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
+                        Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
+                    )
+                )
+            }
         }
     }
 
