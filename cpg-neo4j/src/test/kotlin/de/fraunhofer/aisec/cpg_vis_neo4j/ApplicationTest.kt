@@ -62,7 +62,7 @@ class ApplicationTest {
     fun testPush() {
         val (application, translationResult) = createTranslationResult()
 
-        assertEquals(31, translationResult.functions.size)
+        assertEquals(32, translationResult.functions.size)
 
         application.pushToNeo4j(translationResult)
 
@@ -73,7 +73,7 @@ class ApplicationTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(31, functions.size)
+            assertEquals(32, functions.size)
 
             transaction.commit()
         }
@@ -86,7 +86,7 @@ class ApplicationTest {
     fun testSerializeCpgViaOGM() {
         val (application, translationResult) = createTranslationResult()
 
-        assertEquals(31, translationResult.functions.size)
+        assertEquals(32, translationResult.functions.size)
 
         val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
         val graph = application.buildJsonGraph(nodes, edges)
@@ -118,7 +118,7 @@ class ApplicationTest {
     @Test
     fun testExportToJson() {
         val (application, translationResult) = createTranslationResult()
-        assertEquals(31, translationResult.functions.size)
+        assertEquals(32, translationResult.functions.size)
         val path = createTempFile().toFile()
         application.exportToJson(translationResult, path)
         assert(path.length() > 0)

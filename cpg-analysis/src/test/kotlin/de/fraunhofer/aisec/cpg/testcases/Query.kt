@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.testcases
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
@@ -99,6 +100,7 @@ class Query {
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
                     .registerPass<EdgeCachePass>()
+                    .inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
                     .build()
         ) =
             testFrontend(config).build {
@@ -175,6 +177,9 @@ class Query {
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
                     .registerPass<EdgeCachePass>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder().inferFunctions(false).build()
+                    )
                     .build()
         ) =
             testFrontend(config).build {

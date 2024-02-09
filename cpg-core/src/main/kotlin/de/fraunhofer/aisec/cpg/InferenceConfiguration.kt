@@ -34,11 +34,21 @@ import org.apache.commons.lang3.builder.ToStringStyle
  */
 class InferenceConfiguration
 private constructor(
-    /** Enables smart guessing of cast vs. call expressions in the C/C++ language frontend */
+    /** Enables or disables the inference system as a whole. */
+    val enabled: Boolean,
+
+    /** Enables smart guessing of cast vs. call expressions in the C/C++ language frontend. */
     val guessCastExpressions: Boolean,
 
-    /** Enables the inference of record declarations */
+    /** Enables the inference of record declarations. */
     val inferRecords: Boolean,
+
+    /** Enables the inference of function declarations. */
+    val inferFunctions: Boolean,
+
+    /** Enables the inference of variables, such as global variables. */
+    val inferVariables: Boolean,
+
     /**
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
@@ -46,20 +56,36 @@ private constructor(
     val inferDfgForUnresolvedSymbols: Boolean
 ) {
     class Builder(
-        var guessCastExpressions: Boolean = false,
-        var inferRecords: Boolean = false,
-        var inferDfgForUnresolvedCalls: Boolean = true
+        private var enabled: Boolean = true,
+        private var guessCastExpressions: Boolean = true,
+        private var inferRecords: Boolean = true,
+        private var inferFunctions: Boolean = true,
+        private var inferVariables: Boolean = true,
+        private var inferDfgForUnresolvedCalls: Boolean = true
     ) {
         fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
 
+        fun enabled(infer: Boolean) = apply { this.enabled = infer }
+
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
+
+        fun inferFunctions(infer: Boolean) = apply { this.inferFunctions = infer }
+
+        fun inferVariables(infer: Boolean) = apply { this.inferVariables = infer }
 
         fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
             this.inferDfgForUnresolvedCalls = infer
         }
 
         fun build() =
-            InferenceConfiguration(guessCastExpressions, inferRecords, inferDfgForUnresolvedCalls)
+            InferenceConfiguration(
+                enabled,
+                guessCastExpressions,
+                inferRecords,
+                inferFunctions,
+                inferVariables,
+                inferDfgForUnresolvedCalls
+            )
     }
 
     companion object {
