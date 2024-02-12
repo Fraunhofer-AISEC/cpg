@@ -355,7 +355,12 @@ object Util {
     fun attachCallParameters(target: FunctionDeclaration, call: CallExpression) {
         // Add an incoming DFG edge from a member call's base to the method's receiver
         if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
-            target.receiver?.let { receiver -> call.base?.addNextDFG(receiver) }
+            target.receiver?.let { receiver ->
+                call.base?.addNextDFG(
+                    receiver,
+                    mutableMapOf(Pair(Properties.CALLING_CONTEXT_IN, call))
+                )
+            }
         }
 
         // Connect the arguments to parameters
@@ -370,12 +375,18 @@ object Util {
                 if (param.isVariadic) {
                     while (j < arguments.size) {
                         // map all the following arguments to this variadic param
-                        param.addPrevDFG(arguments[j])
+                        param.addPrevDFG(
+                            arguments[j],
+                            mutableMapOf(Pair(Properties.CALLING_CONTEXT_IN, call))
+                        )
                         j++
                     }
                     break
                 } else {
-                    param.addPrevDFG(arguments[j])
+                    param.addPrevDFG(
+                        arguments[j],
+                        mutableMapOf(Pair(Properties.CALLING_CONTEXT_IN, call))
+                    )
                 }
             }
             j++

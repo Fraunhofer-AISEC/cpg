@@ -32,8 +32,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder
 import de.fraunhofer.aisec.cpg.ancestors
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -50,6 +50,16 @@ class DFGFunctionSummaries {
 
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
+
+    /**
+     * Saves the information on which parameter(s) of a function are modified by the function. This
+     * is interesting since we need to add DFG edges between the modified parameter and the
+     * respective argument(s). For each [ParameterDeclaration] as well as the
+     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
+     * [FunctionDeclaration], we store all previous DFG nodes.
+     */
+    val functionToChangedParameters =
+        mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
@@ -179,12 +189,28 @@ class DFGFunctionSummaries {
                 if (entry.to.startsWith("param")) {
                     try {
                         val paramIndex = entry.to.removePrefix("param").toInt()
-                        functionDeclaration.parameters[paramIndex]
+                        val paramTo = functionDeclaration.parameters[paramIndex]
+                        if (from != null) {
+                            functionToChangedParameters
+                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                                .computeIfAbsent(paramTo) { mutableSetOf() }
+                                .add(from)
+                        }
+                        paramTo
                     } catch (e: NumberFormatException) {
                         null
                     }
                 } else if (entry.to == "base") {
-                    (functionDeclaration as? MethodDeclaration)?.receiver
+                    val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
+                    if (from != null) {
+                        if (receiver != null) {
+                            functionToChangedParameters
+                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                                .computeIfAbsent(receiver, ::mutableSetOf)
+                                .add(from)
+                        }
+                    }
+                    receiver
                 } else if (entry.to == "return") {
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {

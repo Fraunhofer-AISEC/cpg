@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
 class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
+    private val callsInferredFunctions = mutableListOf<CallExpression>()
+
     override fun accept(component: Component) {
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
@@ -47,6 +49,40 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         for (tu in component.translationUnits) {
             walker.iterate(tu)
+        }
+
+        connectInferredCallArguments(config.functionSummaries)
+    }
+
+    /**
+     * For inferred functions which have function summaries encoded, we connect the arguments to
+     * modified parameter to propagate the changes to the arguments out of the [FunctionDeclaration]
+     * again.
+     */
+    private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
+        for (call in callsInferredFunctions) {
+            for (invoked in call.invokes.filter { it.isInferred }) {
+                val changedParams =
+                    functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                for ((param, _) in changedParams) {
+                    if (param == (invoked as? MethodDeclaration)?.receiver) {
+                        (call as? MemberCallExpression)?.base?.let { base ->
+                            base.addPrevDFG(
+                                param,
+                                mutableMapOf(Pair(Properties.CALLING_CONTEXT_OUT, call))
+                            )
+                            // (base as? Reference)?.access = AccessValues.READWRITE
+                        }
+                    } else if (param is ParameterDeclaration) {
+                        val arg = call.arguments[param.argumentIndex]
+                        arg.addPrevDFG(
+                            param,
+                            mutableMapOf(Pair(Properties.CALLING_CONTEXT_OUT, call))
+                        )
+                        // (arg as? Reference)?.access = AccessValues.READWRITE
+                    }
+                }
+            }
         }
     }
 
@@ -430,6 +466,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             call.invokes.forEach {
                 Util.attachCallParameters(it, call)
                 call.addPrevDFG(it)
+                if (it.isInferred) {
+                    callsInferredFunctions.add(call)
+                }
             }
         }
     }

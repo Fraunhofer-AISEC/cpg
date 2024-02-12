@@ -52,5 +52,18 @@
         "dfgType": "full"
       }
     ]
+  },
+  {
+    "functionDeclaration": {
+      "language": "de.fraunhofer.aisec.cpg.frontends.TestLanguage",
+      "methodName": "memcpy"
+    },
+    "dataFlows": [
+      {
+        "from": "param1",
+        "to": "param0",
+        "dfgType": "full"
+      }
+    ]
   }
 ]
