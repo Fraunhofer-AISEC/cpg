@@ -65,6 +65,8 @@ dependencies {
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
 
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.16.1")
+
     testImplementation(libs.junit.params)
 
     testFixturesApi(libs.kotlin.test.junit5)  // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures

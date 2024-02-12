@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -42,9 +44,14 @@ class DFGFunctionSummaries {
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
-        val jsonStringFile = file.readText()
-        val mapper = ObjectMapper().registerKotlinModule()
-        val entries = mapper.readValue<List<DataflowEntry>>(jsonStringFile)
+        val mapper =
+            if (file.extension.lowercase() in listOf("yaml", "yml")) {
+                    ObjectMapper(YAMLFactory())
+                } else {
+                    ObjectMapper(JsonFactory())
+                }
+                .registerKotlinModule()
+        val entries = mapper.readValue<List<DataflowEntry>>(file)
         for (entry in entries) {
             functionToDFGEntryMap[entry.functionDeclaration] = entry.dataFlows
         }
