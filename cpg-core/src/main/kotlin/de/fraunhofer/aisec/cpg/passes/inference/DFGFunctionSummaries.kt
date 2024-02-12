@@ -30,6 +30,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -37,9 +39,16 @@ import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.io.File
 
+/**
+ * If the user of the library registers one or multiple DFG-function summary files (via
+ * [Builder.registerFunctionSummaries] or [Builder.registerFunctionSummary]), this class is
+ * responsible for parsing the files, caching the result and adding the respective DFG summaries to
+ * the [FunctionDeclaration].
+ */
 class DFGFunctionSummaries {
     private constructor()
 
+    /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
@@ -68,6 +77,20 @@ class DFGFunctionSummaries {
         return true
     }
 
+    /**
+     * It identifies the "best match" of all [FunctionDeclarationEntry]s stored in the
+     * [functionToDFGEntryMap] for the given [functionDecl]. It therefore checks that
+     * 1) The languages match
+     * 2) The method/function names match
+     * 3) If there are multiple entries with different signatures, the signature has to match. If
+     *    none of the entries with a signature matches, we take the "default" entry without a
+     *    signature.
+     * 4) If it's a method (i.e., invoked on an object), we also consider which type of the
+     *    receiver/base is the most precise one
+     *
+     * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
+     * matches.
+     */
     private fun findFunctionDeclarationEntry(functionDecl: FunctionDeclaration): List<DFGEntry>? {
         if (functionToDFGEntryMap.isEmpty()) return null
 
@@ -110,7 +133,7 @@ class DFGFunctionSummaries {
                     }
             val mostPreciseClassEntries = mutableListOf<FunctionDeclarationEntry>()
             var mostPreciseType = typeEntryList.first().first
-            var superTypes = getAllSupertypes(mostPreciseType)
+            var superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
             for (typeEntry in typeEntryList) {
                 if (typeEntry.first == mostPreciseType) {
                     mostPreciseClassEntries.add(typeEntry.second)
@@ -118,7 +141,7 @@ class DFGFunctionSummaries {
                     mostPreciseClassEntries.clear()
                     mostPreciseClassEntries.add(typeEntry.second)
                     mostPreciseType = typeEntry.first
-                    superTypes = getAllSupertypes(typeEntry.first)
+                    superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
                 }
             }
             if (mostPreciseClassEntries.size > 1) {
@@ -130,13 +153,10 @@ class DFGFunctionSummaries {
         }
     }
 
-    private fun getAllSupertypes(type: Type?): Set<Type> {
-        if (type == null) return setOf()
-        val superTypes = type.superTypes
-        superTypes.addAll(type.superTypes.flatMap { getAllSupertypes(it) })
-        return superTypes
-    }
-
+    /**
+     * This method parses the [DFGEntry] entries in [dfgEntries] and adds the respective DFG edges
+     * between the parameters, receiver and potentially the [functionDeclaration] itself.
+     */
     private fun applyDfgEntryToFunctionDeclaration(
         functionDeclaration: FunctionDeclaration,
         dfgEntries: List<DFGEntry>
@@ -180,18 +200,48 @@ class DFGFunctionSummaries {
         }
     }
 
+    /**
+     * This class summarizes a data flow entry. Consists of the [functionDeclaration] for which it
+     * is relevant and a list [dataFlows] of data flow summaries.
+     */
     private data class DataflowEntry(
         val functionDeclaration: FunctionDeclarationEntry,
         val dataFlows: List<DFGEntry>
     )
 
+    /**
+     * This class is used to identify the [FunctionDeclaration] of interest for the specified flows.
+     */
     data class FunctionDeclarationEntry(
+        /** The FQN of the [Language] for which this flow is relevant. */
         val language: String,
+        /** The FQN of the [FunctionDeclaration] or [MethodDeclaration]. */
         val methodName: String,
+        /**
+         * The signature of the [FunctionDeclaration]. We use a list of the FQN of the [Type]s of
+         * parameter. This is optional and if not specified, we perform the matching only based on
+         * the [methodName].
+         */
         val signature: List<String>? = null
     )
 
-    data class DFGEntry(val from: String, val to: String, val dfgType: String)
+    /** Represents a data flow entry. */
+    data class DFGEntry(
+        /**
+         * The start of the DFG edge. Can be a parameter (`paramX`, where X is a number), or `base`.
+         */
+        val from: String,
+        /**
+         * The end of the DFG edge. Can be a parameter (`paramX`, where X is a number), `base`, or
+         * the return value (`returnX`, where X is optional and a number indicating an index).
+         */
+        val to: String,
+        /**
+         * A property which can give us more information. Currently, it's ignored, but it would make
+         * sense to add e.g. partial flows based on PR 1421.
+         */
+        val dfgType: String
+    )
 
     companion object {
         /** Generates a [DFGFunctionSummaries] object from the given [files]. */
