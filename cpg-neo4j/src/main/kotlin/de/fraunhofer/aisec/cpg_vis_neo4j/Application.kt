@@ -223,7 +223,7 @@ class Application : Callable<Int> {
     private var inferNodes: Boolean = false
 
     @CommandLine.Option(
-        names = ["--schema-markdown", "--schema"],
+        names = ["--schema-markdown"],
         description = ["Print the CPGs nodes and edges that they can have."]
     )
     private var schemaMarkdown: Boolean = false
@@ -572,7 +572,8 @@ class Application : Callable<Int> {
         if (schemaMarkdown || schemaJson) {
             if (schemaMarkdown) {
                 printSchema(mutuallyExclusiveParameters.files, Schema.Format.MARKDOWN)
-            } else {
+            }
+            if (schemaJson) {
                 printSchema(mutuallyExclusiveParameters.files, Schema.Format.JSON)
             }
             return EXIT_SUCCESS

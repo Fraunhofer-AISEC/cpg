@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.neo4j.CpgCompositeConverter
 import java.io.File
@@ -38,6 +39,41 @@ import org.neo4j.ogm.metadata.MetaData
 
 class Schema {
 
+    /**
+     * Schema definition for node entities that is persisted to the neo4j database
+     */
+    data class SchemaNode(
+        val name: String,
+        val labels: Set<String>,
+        val childLabels: Set<String>,
+        val relationships: Set<SchemaRelationship>,
+        val properties: Set<SchemaProperty>
+    )
+
+    /**
+     * Definition of a CPG relationship with relationship label, the targeted node and whether
+     * the node has multiple or a single relationship edge of the declared type.
+     */
+    data class SchemaRelationship(
+        val label: String,
+        val targetNode: String,
+        val multiplicity: Char
+    )
+
+    /**
+     * Key-value pair defining a node property and if the property was inherited from a parent node
+     * entity type or newly introduced in this node entity.
+     */
+    data class SchemaProperty(
+        val name: String,
+        val valueType: String,
+        val inherited: Boolean,
+    )
+
+
+    /**
+     * Output format of the CPG Schema description.
+     */
     enum class Format {
         MARKDOWN,
         JSON
@@ -110,6 +146,9 @@ class Schema {
      */
     private val relationshipFields: MutableMap<Pair<ClassInfo, String>, FieldInfo> = mutableMapOf()
 
+    /**
+     * Extracts information on the nodes and edges that can be persisted to the neo4 database over the OGM.
+     */
     fun extractSchema() {
         val meta = MetaData(Node.javaClass.packageName)
         val nodeClassInfo =
@@ -133,7 +172,6 @@ class Schema {
         }
 
         // node in neo4j
-
         entities.forEach { classInfo ->
             val key = meta.schema.findNode(classInfo.neo4jName())
             allRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName] =
@@ -156,6 +194,7 @@ class Schema {
                     relationPair.filter { rel -> fields.any { it.name == rel.first } }.toSet()
             }
 
+            // Extracting the key-value pairs that are persisted as node properties
             entity.propertyFields().forEach { property ->
                 val persistedField =
                     if (
@@ -188,7 +227,7 @@ class Schema {
         entityRoots.forEach {
             inheritedRels[it.neo4jName() ?: it.underlyingClass.simpleName] = mutableSetOf()
         }
-        entityRoots.forEach { buildInheritedFields(it) }
+        entityRoots.forEach { extractFieldInformationFromHierarchy(it) }
 
         allRels.forEach {
             childrensRels[it.key] =
@@ -199,7 +238,10 @@ class Schema {
         println()
     }
 
-    private fun buildInheritedFields(classInfo: ClassInfo) {
+    /**
+     * Extracts the field information for every entity and relationship.
+     */
+    private fun extractFieldInformationFromHierarchy(classInfo: ClassInfo) {
         val fields: MutableSet<Pair<String, String>> = mutableSetOf()
         inherentRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
             fields.addAll(it)
@@ -210,10 +252,13 @@ class Schema {
 
         hierarchy[classInfo]?.second?.forEach {
             inheritedRels[it.neo4jName() ?: it.underlyingClass.simpleName] = fields
-            buildInheritedFields(it)
+            extractFieldInformationFromHierarchy(it)
         }
     }
 
+    /**
+     * Complements the hierarchy and relationship information for abstract classes to not have empty entities.
+     */
     private fun completeSchema(
         relCanHave: MutableMap<String, Set<Pair<String, String>>>,
         hierarchy: MutableMap<ClassInfo, Pair<ClassInfo?, List<ClassInfo>>>,
@@ -238,6 +283,9 @@ class Schema {
             }
     }
 
+    /**
+     * Depending on the specified output format the Neo4j Schema for the CPG is printed to the specified file.
+     */
     fun printToFile(fileName: String, format: Format) {
         val fileExtension = if (Format.MARKDOWN == format) ".md" else ".json"
         val file =
@@ -245,12 +293,16 @@ class Schema {
         file.parentFile.mkdirs()
         file.createNewFile()
         file.printWriter().use { out ->
-            out.println(header)
             val entityRoots: MutableList<ClassInfo> =
                 hierarchy.filter { it.value.first == null }.map { it.key }.toMutableList()
-            entityRoots.forEach {
-                if (format == Format.MARKDOWN) printEntitiesToMarkdown(it, out)
-                else printEntitiesToJson(it, out)
+            if (format == Format.MARKDOWN) {
+                out.println(header)
+                entityRoots.forEach { printEntitiesToMarkdown(it, out) }
+            } else {
+                entityRoots.forEach {
+                    val objectMapper = ObjectMapper()
+                    objectMapper.writeValue(out, entitiesToJson(it))
+                }
             }
         }
     }
@@ -267,7 +319,6 @@ class Schema {
 
         out.println("## $entityLabel<a id=\"${toAnchorLink("e${entityLabel}")}\"></a>")
 
-        // Todo print entity description
         if (hierarchy[classInfo]?.first != null) {
             out.print("**Labels**:")
 
@@ -374,36 +425,31 @@ class Schema {
      *
      * Generates links between the boxes.
      */
-    private fun printEntitiesToJson(classInfo: ClassInfo, out: PrintWriter) {
+    private fun entitiesToJson(classInfo: ClassInfo): MutableList<SchemaNode> {
         val entityLabel = toLabel(classInfo)
-        // Todo {
-        out.println("name: $entityLabel")
 
+        val labels: MutableSet<String> = mutableSetOf()
         if (hierarchy[classInfo]?.first != null) {
-            out.print("labels: ")
 
-            hierarchy[classInfo]?.first?.let { getHierarchy(it).forEach { out.print(toLabel(it)) } }
-            out.print(entityLabel)
+            hierarchy[classInfo]?.first?.let {
+                getHierarchy(it).forEach { labels.add(toLabel(it)) }
+            }
+            labels.add(entityLabel)
         }
+        val childLabels: MutableSet<String> = mutableSetOf()
         if (hierarchy[classInfo]?.second?.isNotEmpty() == true) {
-            out.println("childLabels: ")
 
             hierarchy[classInfo]?.second?.let {
                 if (it.isNotEmpty()) {
-                    it.forEach { classInfo -> out.print(toLabel(classInfo)) }
+                    it.forEach { classInfo -> childLabels.add(toLabel(classInfo)) }
                 }
             }
         }
 
+        val relationships: MutableSet<SchemaRelationship> = mutableSetOf<SchemaRelationship>()
         if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
-            out.println("relationships:")
-
-            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
-                out.print("[${it.second} " + toLabel(classInfo))
-            }
 
             if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
-                out.println("Inherited Relationships")
                 removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inherited ->
                     var current = classInfo
                     var baseClass: ClassInfo? = null
@@ -415,36 +461,33 @@ class Schema {
                         }
                         hierarchy[current]?.first?.let { current = it }
                     }
-                    out.println("${inherited.second} ${toLabel(baseClass)}")
+                    baseClass?.let { relationshipsToJson(it, inherited) }
                 }
             }
 
             removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
-                printRelationshipsToJson(classInfo, it, out)
+                relationships.add(relationshipsToJson(classInfo, it))
             }
         }
 
+        val properties: MutableSet<SchemaProperty> = mutableSetOf<SchemaProperty>()
         if (inherentProperties.isNotEmpty() && inheritedProperties.isNotEmpty()) {
-            out.println("properties:")
 
             removeLabelDuplicates(inherentProperties[entityLabel])?.forEach {
-                out.println("name: ${it.second}")
-                out.println("valueType: ${it.first}")
-                out.println("inherited: false")
+                properties.add(SchemaProperty(it.second, it.first, false))
             }
             if (inheritedProperties[entityLabel]?.isNotEmpty() == true) {
-                out.println("Inherited Properties")
                 removeLabelDuplicates(inheritedProperties[entityLabel])?.forEach {
-                    out.println("name: ${it.second}")
-                    out.println("valueType: ${it.first}")
-                    out.println("inherited: true")
+                    properties.add(SchemaProperty(it.second, it.first, true))
                 }
             }
         }
+        val entityNodes =
+            hierarchy[classInfo]?.second?.flatMap { entitiesToJson(it) }?.toMutableList()
+                ?: mutableListOf<Schema.SchemaNode>()
+        entityNodes.add(0, SchemaNode(entityLabel, labels, childLabels, relationships, properties))
 
-        // Todo {
-
-        hierarchy[classInfo]?.second?.forEach { printEntitiesToJson(it, out) }
+        return entityNodes
     }
 
     private fun removeLabelDuplicates(
@@ -465,6 +508,9 @@ class Schema {
         return classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName
     }
 
+    /**
+     * Creates a unique markdown anchor to make navigation unambiguous.
+     */
     private fun toAnchorLink(entityName: String): String {
         return toConcatName(entityName).lowercase(Locale.getDefault())
     }
@@ -493,6 +539,10 @@ class Schema {
         return inheritance
     }
 
+    /**
+     * By specifying a field that constitutes a relationship, this function returns information on the
+     * multiplicity and the target class entity.
+     */
     private fun getTargetInfo(fInfo: FieldInfo): Pair<Boolean, ClassInfo?> {
         val type = fInfo.field.genericType
         relationshipFields
@@ -555,15 +605,13 @@ class Schema {
         closeMermaid(out)
     }
 
-    private fun printRelationshipsToJson(
+    private fun relationshipsToJson(
         classInfo: ClassInfo,
-        relationshipLabel: Pair<String, String>,
-        out: PrintWriter
-    ) {
+        relationshipLabel: Pair<String, String>
+    ): SchemaRelationship {
         val fieldInfo: FieldInfo = classInfo.getFieldInfo(relationshipLabel.first)
         val targetInfo = getTargetInfo(fieldInfo)
-        val multiplicity = if (targetInfo.first) "*" else "¹"
-        out.println(relationshipLabel.second)
-        out.println("$${relationshipLabel.second}${multiplicity}${toLabel(classInfo)}")
+        val multiplicity = if (targetInfo.first) '*' else '1'
+        return SchemaRelationship(relationshipLabel.second, toLabel(classInfo), multiplicity)
     }
 }
