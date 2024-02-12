@@ -41,12 +41,11 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Tag
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.config.ObjectMapperFactory.objectMapper
 import picocli.CommandLine
 
-@Tag("integration")
+// @Tag("integration")
 class ApplicationTest {
     private fun createTranslationResult(): Pair<Application, TranslationResult> {
         val topLevel = Paths.get("src").resolve("test").resolve("resources").toAbsolutePath()
