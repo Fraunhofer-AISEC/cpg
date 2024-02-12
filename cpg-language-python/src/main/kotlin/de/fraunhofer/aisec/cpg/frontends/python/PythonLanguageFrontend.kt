@@ -49,6 +49,7 @@ import kotlin.math.min
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST, Python.AST?>(language, ctx) {
     private val lineSeparator = '\n' // TODO
+    private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
     // val declarationHandler = DeclarationHandler(this)
@@ -82,20 +83,29 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 it.exec("reader = tokenize.open(filename).readline")
                 it.exec("tokens = tokenize.generate_tokens(reader)")
                 it.exec("tokenList = list(tokens)")
+                // This constant has to be retrieved from the system as it was changed in different
+                // Python versions
+                it.exec("commentCode = tokenize.COMMENT")
+
+                val pyCommentCode = (it.getValue("commentCode") as? Long) ?: TODO()
                 val pyTokens = (it.getValue("tokenList") as? ArrayList<*>) ?: TODO()
-                addCommentsToCPG(tud, pyTokens)
+                addCommentsToCPG(tud, pyTokens, pyCommentCode)
             }
             return tud
         }
     }
 
-    private fun addCommentsToCPG(tud: TranslationUnitDeclaration, pyTokens: ArrayList<*>) {
+    private fun addCommentsToCPG(
+        tud: TranslationUnitDeclaration,
+        pyTokens: ArrayList<*>,
+        pyCommentCode: Long
+    ) {
         val commentMatcher = CommentMatcher()
         for (token in pyTokens) {
             if (token !is List<*> || token.size != 5) {
                 TODO()
             } else {
-                if (token[0] as Long != 60.toLong() && !(token[1].toString()).startsWith("#")) {
+                if (token[tokenTypeIndex] as Long != pyCommentCode) {
                     continue
                 } else {
                     val start = token[2] as List<*>
