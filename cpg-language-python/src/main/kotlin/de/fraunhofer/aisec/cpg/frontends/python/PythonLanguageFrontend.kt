@@ -83,7 +83,8 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 it.exec("reader = tokenize.open(filename).readline")
                 it.exec("tokens = tokenize.generate_tokens(reader)")
                 it.exec("tokenList = list(tokens)")
-                // This constant has to be retrieved from the system as it was changed in different Python versions
+                // This constant has to be retrieved from the system as it was changed in different
+                // Python versions
                 it.exec("commentCode = tokenize.COMMENT")
 
                 val pyCommentCode = (it.getValue("commentCode") as? Long) ?: TODO()
