@@ -622,13 +622,6 @@ class Application : Callable<Int> {
     }
 }
 
-class AstChildrenEventListener : EventListenerAdapter() {
-    override fun onPreSave(event: Event?) {
-        val node = event?.`object` as? Node ?: return
-        node.astChildren = SubgraphWalker.getAstChildren(node)
-    }
-}
-
 /**
  * Starts a command line application of the cpg-vis-neo4j.
  *
