@@ -65,7 +65,7 @@ dependencies {
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
 
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.16.1")
+    implementation(libs.jacksonyml)
 
     testImplementation(libs.junit.params)
 
