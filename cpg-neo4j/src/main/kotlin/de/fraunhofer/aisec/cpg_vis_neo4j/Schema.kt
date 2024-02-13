@@ -39,9 +39,7 @@ import org.neo4j.ogm.metadata.MetaData
 
 class Schema {
 
-    /**
-     * Schema definition for node entities that is persisted to the neo4j database
-     */
+    /** Schema definition for node entities that is persisted to the neo4j database */
     data class SchemaNode(
         val name: String,
         val labels: Set<String>,
@@ -51,8 +49,8 @@ class Schema {
     )
 
     /**
-     * Definition of a CPG relationship with relationship label, the targeted node and whether
-     * the node has multiple or a single relationship edge of the declared type.
+     * Definition of a CPG relationship with relationship label, the targeted node and whether the
+     * node has multiple or a single relationship edge of the declared type.
      */
     data class SchemaRelationship(
         val label: String,
@@ -70,10 +68,7 @@ class Schema {
         val inherited: Boolean,
     )
 
-
-    /**
-     * Output format of the CPG Schema description.
-     */
+    /** Output format of the CPG Schema description. */
     enum class Format {
         MARKDOWN,
         JSON
@@ -147,7 +142,8 @@ class Schema {
     private val relationshipFields: MutableMap<Pair<ClassInfo, String>, FieldInfo> = mutableMapOf()
 
     /**
-     * Extracts information on the nodes and edges that can be persisted to the neo4 database over the OGM.
+     * Extracts information on the nodes and edges that can be persisted to the neo4 database over
+     * the OGM.
      */
     fun extractSchema() {
         val meta = MetaData(Node.javaClass.packageName)
@@ -238,9 +234,7 @@ class Schema {
         println()
     }
 
-    /**
-     * Extracts the field information for every entity and relationship.
-     */
+    /** Extracts the field information for every entity and relationship. */
     private fun extractFieldInformationFromHierarchy(classInfo: ClassInfo) {
         val fields: MutableSet<Pair<String, String>> = mutableSetOf()
         inherentRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
@@ -257,7 +251,8 @@ class Schema {
     }
 
     /**
-     * Complements the hierarchy and relationship information for abstract classes to not have empty entities.
+     * Complements the hierarchy and relationship information for abstract classes to not have empty
+     * entities.
      */
     private fun completeSchema(
         relCanHave: MutableMap<String, Set<Pair<String, String>>>,
@@ -284,7 +279,8 @@ class Schema {
     }
 
     /**
-     * Depending on the specified output format the Neo4j Schema for the CPG is printed to the specified file.
+     * Depending on the specified output format the Neo4j Schema for the CPG is printed to the
+     * specified file.
      */
     fun printToFile(fileName: String, format: Format) {
         val fileExtension = if (Format.MARKDOWN == format) ".md" else ".json"
@@ -508,9 +504,7 @@ class Schema {
         return classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName
     }
 
-    /**
-     * Creates a unique markdown anchor to make navigation unambiguous.
-     */
+    /** Creates a unique markdown anchor to make navigation unambiguous. */
     private fun toAnchorLink(entityName: String): String {
         return toConcatName(entityName).lowercase(Locale.getDefault())
     }
@@ -540,8 +534,8 @@ class Schema {
     }
 
     /**
-     * By specifying a field that constitutes a relationship, this function returns information on the
-     * multiplicity and the target class entity.
+     * By specifying a field that constitutes a relationship, this function returns information on
+     * the multiplicity and the target class entity.
      */
     private fun getTargetInfo(fInfo: FieldInfo): Pair<Boolean, ClassInfo?> {
         val type = fInfo.field.genericType

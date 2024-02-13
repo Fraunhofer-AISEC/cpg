@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.net.ConnectException
@@ -49,8 +47,6 @@ import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.metadata.MetaData
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
-import org.neo4j.ogm.session.event.Event
-import org.neo4j.ogm.session.event.EventListenerAdapter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -550,7 +546,7 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
-    private fun printSchema(filenames: Collection<String>, format: Schema.Format) {
+    public fun printSchema(filenames: Collection<String>, format: Schema.Format) {
         val schema = Schema()
         schema.extractSchema()
         filenames.forEach { schema.printToFile(it, format) }
