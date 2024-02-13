@@ -41,6 +41,7 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Tag
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.config.ObjectMapperFactory.objectMapper
 import picocli.CommandLine
