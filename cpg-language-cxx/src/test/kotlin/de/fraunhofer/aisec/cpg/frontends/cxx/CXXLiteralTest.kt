@@ -197,8 +197,27 @@ internal class CXXLiteralTest : BaseTest() {
         )
     }
 
+    @Test
+    fun testCharLiteral() {
+        val file = File("src/test/resources/c/char_literal.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        with(tu) {
+            val main = tu.functions["main"]
+            assertNotNull(main)
+
+            assertLiteral('a', primitiveType("char"), main, "a")
+            assertLiteral('\u0000', primitiveType("char"), main, "zero")
+            assertLiteral('\n', primitiveType("char"), main, "newline")
+        }
+    }
+
     private fun assertLiteral(
-        expectedValue: Number,
+        expectedValue: Any,
         expectedType: Type,
         functionDeclaration: FunctionDeclaration,
         name: String
@@ -206,7 +225,7 @@ internal class CXXLiteralTest : BaseTest() {
         val variableDeclaration = functionDeclaration.variables[name]
         assertNotNull(variableDeclaration)
 
-        val literal = variableDeclaration.getInitializerAs(Literal::class.java)!!
+        val literal = variableDeclaration.initializer<Literal<*>>()
         assertNotNull(literal)
         assertEquals(expectedType, literal.type)
         assertEquals(expectedValue, literal.value)

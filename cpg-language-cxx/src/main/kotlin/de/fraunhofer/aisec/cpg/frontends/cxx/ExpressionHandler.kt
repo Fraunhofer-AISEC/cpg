@@ -560,7 +560,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return when (ctx.kind) {
             lk_integer_constant -> handleIntegerLiteral(ctx)
             lk_float_constant -> handleFloatLiteral(ctx)
-            lk_char_constant -> newLiteral(ctx.value[1], primitiveType("char"), rawNode = ctx)
+            lk_char_constant -> handleCharLiteral(ctx)
             lk_string_literal ->
                 newLiteral(
                     String(ctx.value.slice(IntRange(1, ctx.value.size - 2)).toCharArray()),
@@ -572,6 +572,71 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             lk_false -> newLiteral(false, primitiveType("bool"), rawNode = ctx)
             lk_nullptr -> newLiteral(null, objectType("nullptr_t"), rawNode = ctx)
             else -> newLiteral(String(ctx.value), unknownType(), rawNode = ctx)
+        }
+    }
+
+    var escapeMap =
+        mapOf<String, Char>(
+            "a" to Char(0x07),
+            "b" to Char(0x08),
+            "f" to Char(0x0c),
+            "n" to Char(0x0a),
+            "r" to Char(0x0d),
+            "t" to Char(0x09),
+            "v" to Char(0x0b),
+            "\\" to Char(0x5c),
+            "'" to Char(0x27),
+            "\"" to Char(0x22),
+            "?" to Char(0x3f),
+        )
+
+    private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
+        var value = String(ctx.value)
+        if (!value.startsWith("'") || !value.endsWith("'")) {
+            return newProblemExpression(
+                "character literal does not start or end with '",
+                rawNode = ctx
+            )
+        }
+
+        value = value.trim('\'')
+
+        // There are two major cases: Either it is a character, such as 'a' or an escaped value,
+        // such as '\0'
+        if (value.length == 1) {
+            return newLiteral(value[0], primitiveType("char"), rawNode = ctx)
+        }
+
+        if (value[0] == '\'') {
+            return newProblemExpression("expecting escaped char literal", rawNode = ctx)
+        }
+
+        val escape = value.substring(1)
+
+        // Look up special escape codes
+        val c = escapeMap[escape]
+        if (c != null) {
+            return newLiteral(c, primitiveType("char"), rawNode = ctx)
+        }
+
+        // Otherwise, we need to parse the digits
+        var radix = 10
+        var offset = 0
+        when {
+            value.startsWith("\\x") -> {
+                radix = 16 // hex
+                offset = 1
+            }
+        }
+
+        return try {
+            newLiteral(
+                Char(escape.substring(offset).toInt(radix)),
+                primitiveType("char"),
+                rawNode = ctx
+            )
+        } catch (ex: NumberFormatException) {
+            newProblemExpression("could not parse escape character: ${ex.message}", rawNode = ctx)
         }
     }
 
