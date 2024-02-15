@@ -36,6 +36,7 @@ import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
 import kotlin.math.max
+import kotlin.math.pow
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
@@ -576,67 +577,128 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     var escapeMap =
-        mapOf<String, Char>(
-            "a" to Char(0x07),
-            "b" to Char(0x08),
-            "f" to Char(0x0c),
-            "n" to Char(0x0a),
-            "r" to Char(0x0d),
-            "t" to Char(0x09),
-            "v" to Char(0x0b),
-            "\\" to Char(0x5c),
-            "'" to Char(0x27),
-            "\"" to Char(0x22),
-            "?" to Char(0x3f),
+        mapOf<Char, Char>(
+            'a' to Char(0x07),
+            'b' to Char(0x08),
+            'f' to Char(0x0c),
+            'n' to Char(0x0a),
+            'r' to Char(0x0d),
+            't' to Char(0x09),
+            'v' to Char(0x0b),
+            '\\' to Char(0x5c),
+            '\'' to Char(0x27),
+            '\"' to Char(0x22),
+            '?' to Char(0x3f),
         )
 
     private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
-        var value = String(ctx.value)
-        if (!value.startsWith("'") || !value.endsWith("'")) {
+        var raw = String(ctx.value)
+        if (!raw.startsWith("'") || !raw.endsWith("'")) {
             return newProblemExpression(
                 "character literal does not start or end with '",
                 rawNode = ctx
             )
         }
 
-        value = value.trim('\'')
+        raw = raw.trim('\'')
 
-        // There are two major cases: Either it is a character, such as 'a' or an escaped value,
-        // such as '\0'
-        if (value.length == 1) {
-            return newLiteral(value[0], primitiveType("char"), rawNode = ctx)
-        }
-
-        if (value[0] == '\'') {
-            return newProblemExpression("expecting escaped char literal", rawNode = ctx)
-        }
-
-        val escape = value.substring(1)
-
-        // Look up special escape codes
-        val c = escapeMap[escape]
-        if (c != null) {
-            return newLiteral(c, primitiveType("char"), rawNode = ctx)
-        }
-
-        // Otherwise, we need to parse the digits
+        // Since C/C++ for some reason allows multi-character, we need to parse character by
+        // character and then see what the final type is
+        var i = 0
+        val chars = mutableListOf<Char>()
+        var escapeChars = ""
         var radix = 10
-        var offset = 0
-        when {
-            value.startsWith("\\x") -> {
-                radix = 16 // hex
-                offset = 1
+        var inEscape = false
+        var maxChars: Int? = null
+        while (i < raw.length) {
+            // Check, if we are in escape mode, then we need to gather the escape chars
+            if (inEscape) {
+                // Check for radix specifier
+                if (escapeChars.isEmpty() && raw[i] == 'x') {
+                    radix = 16
+                    maxChars =
+                        2 // it seems like most compilers only allow two hex digits here, so do we
+                    i++
+                    continue
+                }
+
+                // Check, if new escape char. Then finish this one and start a new one
+                if (raw[i] == '\\') {
+                    try {
+                        chars += Char(escapeChars.toInt(radix))
+                        // Restart, assuming its octal and wait for a new radix specifier
+                        escapeChars = ""
+                        inEscape = true
+                        maxChars = 3
+                        radix = 8
+
+                        // Go to the next digit
+                        i++
+                        continue
+                    } catch (ex: NumberFormatException) {
+                        return newProblemExpression("invalid number: ${ex.message}", rawNode = ctx)
+                    }
+                }
+
+                // Check for special escape (they are only one digit and we NOT in hex mode)
+                if (escapeChars.isEmpty() && radix != 16 && escapeMap.contains(raw[i])) {
+                    chars += escapeMap[raw[i]]!!
+                    escapeChars = ""
+                    inEscape = false
+                    maxChars = null
+                } else {
+                    // Otherwise, we need to collect digits (up to a certain max)
+                    escapeChars += raw[i]
+
+                    // There are multiple ways to end the sequence:
+                    // - If this is the last char of the whole string
+                    // - If max digits are reached
+                    // - If another escape character is there
+                    if (
+                        i == raw.length - 1 || (maxChars != null && escapeChars.length >= maxChars)
+                    ) {
+                        try {
+                            chars += Char(escapeChars.toInt(radix))
+                            escapeChars = ""
+                            inEscape = false
+                            maxChars = 0
+                        } catch (ex: NumberFormatException) {
+                            return newProblemExpression(
+                                "invalid number: ${ex.message}",
+                                rawNode = ctx
+                            )
+                        }
+                    }
+                }
+            } else {
+                if (raw[i] == '\\') {
+                    // Switch into escape mode
+                    inEscape = true
+
+                    // If no other specifier is there, we can have a maximum of three digits
+                    maxChars = 3
+
+                    // Radix is octal
+                    radix = 8
+                } else {
+                    // Handle regular character
+                    chars += raw[i]
+                }
             }
+            i++
         }
 
-        return try {
-            newLiteral(
-                Char(escape.substring(offset).toInt(radix)),
-                primitiveType("char"),
-                rawNode = ctx
-            )
-        } catch (ex: NumberFormatException) {
-            newProblemExpression("could not parse escape character: ${ex.message}", rawNode = ctx)
+        val single = chars.singleOrNull()
+        if (single != null) {
+            return newLiteral(single, primitiveType("char"), rawNode = ctx)
+        } else {
+            // Somehow make an int out of, this is "implementation" specific. We follow the way
+            // clang does it
+            var i: Int = 0
+            for ((n, c) in chars.reversed().withIndex()) {
+                i += (c.code * 256.0f.pow(n)).toInt()
+            }
+            return newLiteral(i, primitiveType("int"), rawNode = ctx)
         }
     }
 

@@ -1,7 +1,14 @@
+#include <stdio.h>
+
 int main() {
   char a = 'a';
   char zero = '\0';
+  char eight = '\10';
+  char max_digits = '\377';
+  int hex = '\xff';
+
   char newline = '\n';
 
-  char invalid_too_many_digits = '\1234';
+  char multi = '\1\2'; // 258
+  char multi2 = '\1234'; // 21300
 }

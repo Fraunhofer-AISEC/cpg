@@ -212,7 +212,11 @@ internal class CXXLiteralTest : BaseTest() {
 
             assertLiteral('a', primitiveType("char"), main, "a")
             assertLiteral('\u0000', primitiveType("char"), main, "zero")
+            assertLiteral(Char(8), primitiveType("char"), main, "eight")
+            assertLiteral(Char(255), primitiveType("char"), main, "max_digits")
             assertLiteral('\n', primitiveType("char"), main, "newline")
+            assertLiteral(258, primitiveType("int"), main, "multi")
+            assertLiteral(21300, primitiveType("int"), main, "multi2")
         }
     }
 
