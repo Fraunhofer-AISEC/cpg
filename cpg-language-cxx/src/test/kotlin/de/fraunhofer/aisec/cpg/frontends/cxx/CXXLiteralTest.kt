@@ -31,14 +31,12 @@ import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.io.File
 import java.math.BigInteger
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -217,6 +215,12 @@ internal class CXXLiteralTest : BaseTest() {
             assertLiteral('\n', primitiveType("char"), main, "newline")
             assertLiteral(258, primitiveType("int"), main, "multi")
             assertLiteral(21300, primitiveType("int"), main, "multi2")
+
+            val invalid = tu.variables["invalid"]?.initializer
+            assertIs<ProblemExpression>(invalid)
+
+            val invalid2 = tu.variables["invalid2"]?.initializer
+            assertIs<ProblemExpression>(invalid2)
         }
     }
 
