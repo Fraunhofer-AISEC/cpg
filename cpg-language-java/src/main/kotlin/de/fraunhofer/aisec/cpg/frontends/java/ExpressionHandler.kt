@@ -792,7 +792,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         val thisType =
-            (frontend.scopeManager.currentFunction as MethodDeclaration?)?.receiver?.type
+            (frontend.scopeManager.currentFunction as? MethodDeclaration?)?.receiver?.type
                 ?: unknownType()
         base = newReference("this", thisType).implicit("this")
         return base
