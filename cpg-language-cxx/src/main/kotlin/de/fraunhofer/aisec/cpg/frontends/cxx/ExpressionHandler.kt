@@ -641,8 +641,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
 
                 // Check for special escape (they are only one digit and we NOT in hex mode)
-                if (escapeChars.isEmpty() && radix != 16 && escapeMap.contains(raw[i])) {
-                    chars += escapeMap[raw[i]]!!
+                val specialEscape = escapeMap[raw[i]]
+                if (escapeChars.isEmpty() && radix != 16 && specialEscape != null) {
+                    chars += specialEscape
                     escapeChars = ""
                     inEscape = false
                     maxChars = null
@@ -694,11 +695,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         } else {
             // Somehow make an int out of, this is "implementation" specific. We follow the way
             // clang does it
-            var i: Int = 0
+            var intValue = 0
             for ((n, c) in chars.reversed().withIndex()) {
-                i += (c.code * 256.0f.pow(n)).toInt()
+                intValue += (c.code * 256.0f.pow(n)).toInt()
             }
-            return newLiteral(i, primitiveType("int"), rawNode = ctx)
+            return newLiteral(intValue, primitiveType("int"), rawNode = ctx)
         }
     }
 
