@@ -31,14 +31,12 @@ import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.io.File
 import java.math.BigInteger
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -197,8 +195,38 @@ internal class CXXLiteralTest : BaseTest() {
         )
     }
 
+    @Test
+    fun testCharLiteral() {
+        val file = File("src/test/resources/c/char_literal.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        with(tu) {
+            val main = tu.functions["main"]
+            assertNotNull(main)
+
+            assertLiteral('a', primitiveType("char"), main, "a")
+            assertLiteral('\u0000', primitiveType("char"), main, "zero")
+            assertLiteral(Char(8), primitiveType("char"), main, "eight")
+            assertLiteral(Char(255), primitiveType("char"), main, "hex")
+            assertLiteral(Char(255), primitiveType("char"), main, "max_digits")
+            assertLiteral('\n', primitiveType("char"), main, "newline")
+            assertLiteral(258, primitiveType("int"), main, "multi")
+            assertLiteral(21300, primitiveType("int"), main, "multi2")
+
+            val invalid = tu.variables["invalid"]?.initializer
+            assertIs<ProblemExpression>(invalid)
+
+            val invalid2 = tu.variables["invalid2"]?.initializer
+            assertIs<ProblemExpression>(invalid2)
+        }
+    }
+
     private fun assertLiteral(
-        expectedValue: Number,
+        expectedValue: Any,
         expectedType: Type,
         functionDeclaration: FunctionDeclaration,
         name: String
@@ -206,7 +234,7 @@ internal class CXXLiteralTest : BaseTest() {
         val variableDeclaration = functionDeclaration.variables[name]
         assertNotNull(variableDeclaration)
 
-        val literal = variableDeclaration.getInitializerAs(Literal::class.java)!!
+        val literal = variableDeclaration.initializer<Literal<*>>()
         assertNotNull(literal)
         assertEquals(expectedType, literal.type)
         assertEquals(expectedValue, literal.value)
