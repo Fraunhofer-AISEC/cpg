@@ -27,12 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.graph.printDFG
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -143,74 +139,3 @@ class CDataflowTest {
         println(tu.variables["o"]!!.printDFG())
     }
 }
-
-private fun Node.printDFG(maxConnections: Int = 25): String {
-    val builder = StringBuilder()
-
-    builder.append("```mermaid\n")
-    builder.append("flowchart TD\n")
-
-    // We use a set with a defined ordering to hold our worklist to have a somewhat consistent
-    // ordering of statements in the mermaid file.
-    val worklist = LinkedHashSet<PropertyEdge<Node>>()
-    val alreadySeen = identitySetOf<PropertyEdge<Node>>()
-    var conns = 0
-
-    worklist.addAll(this.nextDFGEdges)
-
-    while (worklist.isNotEmpty() && conns < maxConnections) {
-        // Take one edge out of the work-list
-        val edge = worklist.first()
-        worklist.remove(edge)
-
-        // Add it to the seen-list
-        alreadySeen += edge
-
-        val start = edge.start
-        val end = edge.end
-        builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.dfgLabel}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
-        )
-        conns++
-
-        // Add next and prev edges to the work-list (if not already seen). We sort the entries by
-        // name to have this somewhat consistent across multiple invocations of this function
-        var next = end.nextDFGEdges.filter { it !in alreadySeen }.sortedBy { it.end.name }
-        worklist += next
-
-        var prev = end.prevDFGEdges.filter { it !in alreadySeen }.sortedBy { it.start.name }
-        worklist += prev
-
-        next = start.nextDFGEdges.filter { it !in alreadySeen }.sortedBy { it.end.name }
-        worklist += next
-
-        prev = start.prevDFGEdges.filter { it !in alreadySeen }.sortedBy { it.start.name }
-        worklist += prev
-    }
-
-    builder.append("```")
-
-    return builder.toString()
-}
-
-private val PropertyEdge<Node>.dfgLabel: String
-    get() {
-        val builder = StringBuilder()
-        builder.append("\"")
-        builder.append("DFG")
-
-        if (this.getProperty(Properties.DFG_GRANULARITY) == GranularityType.PARTIAL) {
-            builder.append(
-                " (partial, ${(this.getProperty(Properties.DFG_RECORD_MEMBER_FIELD) as? FieldDeclaration)?.name})"
-            )
-        } else {
-            builder.append(" (full)")
-        }
-
-        builder.append("\"")
-        return builder.toString()
-    }
-private val Node.nodeLabel: String
-    get() {
-        return "${this.name}\n(${this::class.simpleName})\n${this.location}"
-    }
