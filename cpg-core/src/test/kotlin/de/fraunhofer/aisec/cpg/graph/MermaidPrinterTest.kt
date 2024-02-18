@@ -23,31 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edge
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.GraphExamples
+import kotlin.test.Test
+import kotlin.test.assertNotNull
 
-/**
- * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
- * part of it, for example a record (class/struct) member. In the latter case, the part can be
- * specified using the [Dataflow.memberField], which contains the field declaration node.
- */
-enum class GranularityType {
-    FULL,
-    PARTIAL
-}
-
-/**
- * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
- * [granularity].
- */
-class Dataflow(
-    start: Node,
-    end: Node,
-    val granularity: GranularityType = GranularityType.FULL,
-    val memberField: FieldDeclaration? = null,
-    legacyProperties: MutableMap<Properties, Any?>
-) : PropertyEdge<Node>(start, end, legacyProperties) {
-    override val label: String = "DFG"
+class MermaidPrinterTest {
+    @Test
+    fun testPrintDFG() {
+        val graph = GraphExamples.getDataflowClass()
+        val sc = graph.functions["main"].variables["sc"]
+        assertNotNull(sc)
+        println(sc.printDFG())
+    }
 }

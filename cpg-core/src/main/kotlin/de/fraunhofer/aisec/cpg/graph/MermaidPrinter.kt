@@ -25,24 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
 /** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(maxConnections: Int = 25): String {
-    return this.printGraph("DFG", Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
+    return this.printGraph(Dataflow::class, Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
 }
-
+/*
 /** Utility function to print the EOG using [printGraph]. */
 fun Node.printEOG(maxConnections: Int = 25): String {
-    return this.printGraph("EOG", Node::nextEOGEdges, Node::prevEOGEdges, maxConnections)
+    return this.printGraph(PropertyEdge::class, Node::nextEOGEdges, Node::prevEOGEdges, maxConnections)
 }
-
+*/
 /**
  * This function prints a partial graph, limited to a particular [edgeType], starting with the
  * current [Node] as Markdown, with an embedded [Mermaid](https://mermaid.js.org) graph. The output
@@ -53,10 +52,10 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  * The edge type can be specified with the [nextEdgeGetter] and [prevEdgeGetter] functions, that
  * need to return a list of edges (as a [PropertyEdge]) beginning from this node.
  */
-fun Node.printGraph(
-    edgeType: String,
-    nextEdgeGetter: KProperty1<Node, MutableList<PropertyEdge<Node>>>,
-    prevEdgeGetter: KProperty1<Node, MutableList<PropertyEdge<Node>>>,
+fun <T : PropertyEdge<Node>> Node.printGraph(
+    edgeType: KClass<T>,
+    nextEdgeGetter: KProperty1<Node, MutableList<T>>,
+    prevEdgeGetter: KProperty1<Node, MutableList<T>>,
     maxConnections: Int = 25
 ): String {
     val builder = StringBuilder()
@@ -83,7 +82,7 @@ fun Node.printGraph(
         val start = edge.start
         val end = edge.end
         builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label(edgeType)}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
         )
         conns++
 
@@ -107,17 +106,15 @@ fun Node.printGraph(
     return builder.toString()
 }
 
-private fun PropertyEdge<Node>.label(type: String): String {
+private fun PropertyEdge<Node>.label(): String {
     val builder = StringBuilder()
     builder.append("\"")
-    builder.append(type)
+    builder.append(this.label)
 
     // TODO(oxisto): Once we have proper edge classes, we can directly do this to the edge class
     if (this is Dataflow) {
         if (this.granularity == GranularityType.PARTIAL) {
-            builder.append(
-                " (partial, ${this.memberField?.name})"
-            )
+            builder.append(" (partial, ${this.memberField?.name})")
         } else {
             builder.append(" (full)")
         }

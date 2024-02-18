@@ -30,8 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasAliases
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -147,8 +149,13 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         return super.hashCode()
     }
 
-    override fun addPrevDFG(prev: Node, properties: MutableMap<Properties, Any?>) {
-        super.addPrevDFG(prev, properties)
+    override fun addPrevDFG(
+        prev: Node,
+        granularity: GranularityType,
+        memberField: FieldDeclaration?,
+        legacyProperties: MutableMap<Properties, Any?>
+    ) {
+        super.addPrevDFG(prev, granularity, memberField, legacyProperties)
 
         // We want to propagate assigned types all through the previous DFG nodes. Therefore, we
         // override the DFG adding function here and add a type observer to the previous node (if it

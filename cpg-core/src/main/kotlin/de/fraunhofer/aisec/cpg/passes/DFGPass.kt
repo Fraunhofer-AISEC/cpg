@@ -134,7 +134,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
             node.elements.withIndex().forEach {
-                it.value.addPrevDFG(initializer, mutableMapOf(Properties.INDEX to it.index))
+                it.value.addPrevDFG(
+                    initializer,
+                    legacyProperties = mutableMapOf(Properties.INDEX to it.index)
+                )
             }
         }
     }
