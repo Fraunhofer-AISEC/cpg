@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -42,12 +43,13 @@ enum class GranularityType {
  * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
  * [granularity].
  */
+@RelationshipEntity
 class Dataflow(
     start: Node,
     end: Node,
     val granularity: GranularityType = GranularityType.FULL,
     val memberField: FieldDeclaration? = null,
-    legacyProperties: MutableMap<Properties, Any?>
+    legacyProperties: MutableMap<Properties, Any?> = mutableMapOf()
 ) : PropertyEdge<Node>(start, end, legacyProperties) {
     override val label: String = "DFG"
 }
