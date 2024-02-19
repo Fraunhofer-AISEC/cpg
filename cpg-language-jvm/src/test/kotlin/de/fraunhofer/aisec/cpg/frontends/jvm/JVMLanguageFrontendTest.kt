@@ -39,7 +39,6 @@ import kotlin.test.*
 import org.junit.jupiter.api.Disabled
 
 class JVMLanguageFrontendTest {
-    @Disabled
     @Test
     fun testHelloJimple() {
         val topLevel = Path.of("src", "test", "resources", "jimple", "helloworld")
@@ -59,8 +58,9 @@ class JVMLanguageFrontendTest {
         val constructor = helloWorld.constructors.firstOrNull()
         assertNotNull(constructor)
 
-        // All references should be resolved
-        val refs = constructor.refs
+        // All references should be resolved (except Object.<init>, which should be a construct
+        // expression anyway)
+        val refs = constructor.refs.filter { it.name.toString() != "java.lang.Object.<init>" }
         refs.forEach {
             val refersTo = it.refersTo
             assertNotNull(refersTo, "${it.name} could not be resolved")
@@ -113,13 +113,13 @@ class JVMLanguageFrontendTest {
 
         println(main.code)
 
-        // $r5 contains our adder
-        val r5 = main.variables["\$r5"]
+        // r5 contains our adder
+        val r5 = main.variables["r5"]
         assertNotNull(r5)
         assertFullName("mypackage.Adder", r5.type)
 
-        // $r3 should be the result of the add call
-        val r3 = main.variables["\$r3"]
+        // r3 should be the result of the add call
+        val r3 = main.variables["r3"]
         assertNotNull(r3)
 
         val r3ref = r3.usages.firstOrNull { it.access == AccessValues.WRITE }
@@ -244,7 +244,7 @@ class JVMLanguageFrontendTest {
         assertLocalName("ExtendedClass", doSomethingCall1.arguments.firstOrNull()?.type)
         assertInvokes(doSomethingCall1, appDoSomething)
 
-        val extended = appInit.variables["\$r4"]
+        val extended = appInit.variables["r4"]
         assertNotNull(extended)
 
         val getMyProperty =
@@ -354,7 +354,7 @@ class JVMLanguageFrontendTest {
         val create = tu.methods["create"]
         assertNotNull(create)
 
-        val r3 = create.variables["\$r3"]
+        val r3 = create.variables["r3"]
         assertNotNull(r3)
 
         var arrayType = r3.type
@@ -369,11 +369,11 @@ class JVMLanguageFrontendTest {
         assertIs<NewArrayExpression>(expr)
         assertLiteralValue(2, expr.dimensions.singleOrNull())
 
-        var r1 = create.variables["\$r1"]
+        var r1 = create.variables["r1"]
         assertNotNull(r1)
         assertEquals(arrayType.elementType, r1.type)
 
-        val r2 = create.variables["\$r2"]
+        val r2 = create.variables["r2"]
         assertNotNull(r2)
         assertEquals(arrayType.elementType, r2.type)
 
@@ -387,7 +387,7 @@ class JVMLanguageFrontendTest {
         val createMulti = tu.methods["createMulti"]
         assertNotNull(createMulti)
 
-        r1 = createMulti.variables["\$r1"]
+        r1 = createMulti.variables["r1"]
         assertNotNull(r1)
 
         arrayType = r1.type

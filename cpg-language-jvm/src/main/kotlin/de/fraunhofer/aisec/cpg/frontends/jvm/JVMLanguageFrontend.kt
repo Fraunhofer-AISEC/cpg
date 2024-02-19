@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import sootup.core.inputlocation.AnalysisInputLocation
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
@@ -44,9 +43,10 @@ import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.bytecode.interceptors.*
-import sootup.java.core.JavaSootClass
 import sootup.java.core.views.JavaView
 import sootup.java.sourcecode.inputlocation.JavaSourcePathAnalysisInputLocation
+import sootup.jimple.parser.JimpleAnalysisInputLocation
+import sootup.jimple.parser.JimpleView
 
 typealias SootType = sootup.core.types.Type
 
@@ -73,23 +73,10 @@ class JVMLanguageFrontend(
      * will contain not just the content of one file but the whole directory.
      */
     override fun parse(file: File): TranslationUnitDeclaration {
-        /*val view: AbstractView<*> =
-        if (file.extension == "jimple") {
-            val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                JimpleAnalysisInputLocation(ctx.config.topLevel!!.toPath())
-            val project = JimpleProject(inputLocation)
-            project.createView()
-        } else {
-            val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                JavaClassPathAnalysisInputLocation(ctx.config.topLevel!!.path)
-            val language = JavaLanguage(8)
-            val project = JavaProject.builder(language).addInputLocation(inputLocation).build()
-            project.createView()
-        }*/
-        view =
+        val view =
             when (file.extension) {
                 "class" -> {
-                    val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                    JavaView(
                         JavaClassPathAnalysisInputLocation(
                             ctx.config.topLevel!!.path,
                             SourceType.Library,
@@ -105,10 +92,10 @@ class JVMLanguageFrontend(
                                 LocalNameStandardizer()
                             )
                         )
-                    JavaView(inputLocation)
+                    )
                 }
                 "jar" -> {
-                    val inputLocation: AnalysisInputLocation<JavaSootClass> =
+                    JavaView(
                         JavaClassPathAnalysisInputLocation(
                             file.path,
                             SourceType.Library,
@@ -124,18 +111,18 @@ class JVMLanguageFrontend(
                                 LocalNameStandardizer()
                             )
                         )
-                    JavaView(inputLocation)
+                    )
                 }
                 "java" -> {
-                    val inputLocation: AnalysisInputLocation<JavaSootClass> =
-                        JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path)
-                    JavaView(inputLocation)
+                    JavaView(JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path))
+                }
+                "jimple" -> {
+                    JimpleView(JimpleAnalysisInputLocation(ctx.config.topLevel!!.toPath()))
                 }
                 else -> {
                     throw TranslationException("unsupported file")
                 }
             }
-
         // This contains the whole directory
         val tu = newTranslationUnitDeclaration(file.parent)
         scopeManager.resetToGlobal(tu)

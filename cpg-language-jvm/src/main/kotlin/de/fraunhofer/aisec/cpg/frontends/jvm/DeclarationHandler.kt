@@ -40,8 +40,8 @@ import sootup.java.core.jimple.basic.JavaLocal
 class DeclarationHandler(frontend: JVMLanguageFrontend) :
     Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
     init {
-        map.put(SootClass::class.java) { handleClass(it as SootClass<*>) }
-        map.put(JavaSootClass::class.java) { handleClass(it as SootClass<*>) }
+        map.put(SootClass::class.java) { handleClass(it as SootClass) }
+        map.put(JavaSootClass::class.java) { handleClass(it as SootClass) }
         map.put(SootMethod::class.java) { handleMethod(it as SootMethod) }
         map.put(JavaSootMethod::class.java) { handleMethod(it as SootMethod) }
         map.put(SootField::class.java) { handleField(it as SootField) }
@@ -50,7 +50,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         map.put(JavaLocal::class.java) { handleLocal(it as Local) }
     }
 
-    private fun handleClass(sootClass: SootClass<*>): RecordDeclaration {
+    private fun handleClass(sootClass: SootClass): RecordDeclaration {
         val record =
             newRecordDeclaration(
                 sootClass.getName(),
@@ -63,13 +63,13 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             )
 
         // Collect super class
-        val o = sootClass.getSuperclass()
+        val o = sootClass.superclass
         if (o.isPresent) {
             record.addSuperClass(frontend.typeOf(o.get()))
         }
 
         // Collect implemented interfaces
-        for (i in sootClass.getInterfaces()) {
+        for (i in sootClass.interfaces) {
             record.implementedInterfaces += frontend.typeOf(i)
         }
 
@@ -77,13 +77,13 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         frontend.scopeManager.enterScope(record)
 
         // Loop through all fields
-        for (sootField in sootClass.getFields()) {
+        for (sootField in sootClass.fields) {
             val field = handle(sootField)
             frontend.scopeManager.addDeclaration(field)
         }
 
         // Loop through all methods
-        for (sootMethod in sootClass.getMethods()) {
+        for (sootMethod in sootClass.methods) {
             val method = handle(sootMethod)
             frontend.scopeManager.addDeclaration(method)
         }

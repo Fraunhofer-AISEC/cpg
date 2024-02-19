@@ -6,7 +6,7 @@ sonarqube = "4.4.1.3373"
 spotless = "6.23.2"
 nexus-publish = "1.3.0"
 #sootup = "5f72ac96f3cb230c438d038975c88ba2acc86d23"
-sootup = "3dd6d09989fcf7acd68fcd3c224c27429df44265"
+sootup = "1.2.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -45,11 +45,11 @@ sonarqube-gradle = { module = "org.sonarsource.scanner.gradle:sonarqube-gradle-p
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 
-sootup-core = { module = "com.github.oxisto.SootUp:sootup.core", version.ref = "sootup" }
-sootup-java-core = { module = "com.github.oxisto.SootUp:sootup.java.core", version.ref = "sootup" }
-sootup-java-sourcecode = { module = "com.github.oxisto.SootUp:sootup.java.sourcecode", version.ref = "sootup" }
-sootup-java-bytecode = { module = "com.github.oxisto.SootUp:sootup.java.bytecode", version.ref = "sootup" }
-sootup-jimple-parser = { module = "com.github.oxisto.SootUp:sootup.jimple.parser", version.ref = "sootup" }
+sootup-core = { module = "org.soot-oss:sootup.core", version.ref = "sootup" }
+sootup-java-core = { module = "org.soot-oss:sootup.java.core", version.ref = "sootup" }
+sootup-java-sourcecode = { module = "org.soot-oss:sootup.java.sourcecode", version.ref = "sootup" }
+sootup-java-bytecode = { module = "org.soot-oss:sootup.java.bytecode", version.ref = "sootup" }
+sootup-jimple-parser = { module = "org.soot-oss:sootup.jimple.parser", version.ref = "sootup" }
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
