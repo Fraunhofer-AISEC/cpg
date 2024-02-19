@@ -35,12 +35,44 @@ import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
- * part of it, for example a record (class/struct) member. In the latter case, the part can be
- * specified using the [Dataflow.partialTarget], which contains the partial target node.
+ * part of it, for example a record (class/struct) member.
+ *
+ * The helper functions [full] and [partial] can be used to construct either full or partial
+ * dataflow granularity.
  */
-enum class GranularityType {
-    FULL,
-    PARTIAL
+sealed interface Granularity
+
+/**
+ * This dataflow granularity is the default. The "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end].
+ */
+data object FullDataflowGranularity : Granularity
+
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it. Common examples include [MemberExpression] nodes, where we
+ * model a dataflow to the base, but only partially scoped to a particular field.
+ */
+class PartialDataflowGranularity(
+    /** The target that is affected by this partial dataflow. */
+    val partialTarget: Declaration
+) : Granularity
+
+/** Creates a new [FullDataflowGranularity]. */
+fun full(): Granularity {
+    return FullDataflowGranularity
+}
+
+/** Creates a new default [Granularity]. Currently, this defaults to [FullDataflowGranularity]. */
+fun default() = full()
+
+/**
+ * Creates a new [PartialDataflowGranularity]. The [target] is the [Declaration] that is affected by
+ * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression] or a
+ * [VariableDeclaration] for a [TupleDeclaration].
+ */
+fun partial(target: Declaration): PartialDataflowGranularity {
+    return PartialDataflowGranularity(target)
 }
 
 /**
@@ -51,14 +83,8 @@ enum class GranularityType {
 class Dataflow(
     start: Node,
     end: Node,
-    /** The granularity of this dataflow. Must be of type [GranularityType]. */
-    val granularity: GranularityType = GranularityType.FULL,
-    /**
-     * If the granularity is [GranularityType.PARTIAL], this property can be used to store the
-     * [Declaration] that is affected by the partial dataflow. Examples include a [FieldDeclaration]
-     * for a [MemberExpression] or a [VariableDeclaration] for a [TupleDeclaration].
-     */
-    val partialTarget: Declaration? = null,
+    /** The granularity of this dataflow. */
+    val granularity: Granularity = default(),
 ) : PropertyEdge<Node>(start, end) {
     override val label: String = "DFG"
 }

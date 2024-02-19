@@ -247,12 +247,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         nextEOGEdges.clear()
     }
 
+    /** Adds a [Dataflow] edge from this node to [next], with the given [Granularity]. */
     fun addNextDFG(
         next: Node,
-        granularity: GranularityType = GranularityType.FULL,
-        memberField: FieldDeclaration? = null,
+        granularity: Granularity = default(),
     ) {
-        val edge = Dataflow(this, next, granularity, memberField)
+        val edge = Dataflow(this, next, granularity)
         nextDFGEdges.add(edge)
         next.prevDFGEdges.add(edge)
     }
@@ -269,12 +269,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
+    /** Adds a [Dataflow] edge from [prev] node to this node, with the given [Granularity]. */
     open fun addPrevDFG(
         prev: Node,
-        granularity: GranularityType = GranularityType.FULL,
-        partialTarget: Declaration? = null,
+        granularity: Granularity = default(),
     ) {
-        val edge = Dataflow(prev, this, granularity, partialTarget)
+        val edge = Dataflow(prev, this, granularity)
         prevDFGEdges.add(edge)
         prev.nextDFGEdges.add(edge)
     }
@@ -288,12 +288,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextCDGEdges.add(edge)
     }
 
+    /** Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [Granularity]. */
     fun addAllPrevDFG(
         prev: Collection<Node>,
-        granularity: GranularityType = GranularityType.FULL,
-        partialTarget: Declaration? = null,
+        granularity: Granularity = full(),
     ) {
-        prev.forEach { addPrevDFG(it, granularity, partialTarget) }
+        prev.forEach { addPrevDFG(it, granularity) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {

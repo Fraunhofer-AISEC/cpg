@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -113,11 +113,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // outer part (i.e., the tuple) here, but we generate the DFG edges to the
                 // elements. We have the indices here, so it's amazingly easy to find the partial
                 // target.
-                key.elements.forEachIndexed { i, element ->
+                key.elements.forEach { element ->
                     element.addAllPrevDFG(
                         value.elements.filterNot { it is VariableDeclaration && key == it },
-                        granularity = GranularityType.PARTIAL,
-                        partialTarget = element
+                        granularity = partial(element)
                     )
                 }
             } else {
