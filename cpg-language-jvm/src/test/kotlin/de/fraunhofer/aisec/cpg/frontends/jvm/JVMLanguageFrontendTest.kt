@@ -402,4 +402,22 @@ class JVMLanguageFrontendTest {
         assertIs<NewArrayExpression>(expr)
         listOf(2, 10).forEachIndexed { index, i -> assertLiteralValue(i, expr.dimensions[index]) }
     }
+
+    @Test
+    fun testExceptional() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "exception")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                // We just need to specify one file to trigger the class byte loader
+                listOf(topLevel.resolve("mypackage/Exceptional.class").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerPass<EdgeCachePass>()
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+        tu.methods.forEach { println(it.code) }
+    }
 }
