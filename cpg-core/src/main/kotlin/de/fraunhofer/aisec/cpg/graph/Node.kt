@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -254,9 +251,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         next: Node,
         granularity: GranularityType = GranularityType.FULL,
         memberField: FieldDeclaration? = null,
-        legacyProperties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
     ) {
-        val edge = Dataflow(this, next, granularity, memberField, legacyProperties)
+        val edge = Dataflow(this, next, granularity, memberField)
         nextDFGEdges.add(edge)
         next.prevDFGEdges.add(edge)
     }
@@ -276,10 +272,9 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     open fun addPrevDFG(
         prev: Node,
         granularity: GranularityType = GranularityType.FULL,
-        memberField: FieldDeclaration? = null,
-        legacyProperties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+        partialTarget: Declaration? = null,
     ) {
-        val edge = Dataflow(prev, this, granularity, memberField, legacyProperties)
+        val edge = Dataflow(prev, this, granularity, partialTarget)
         prevDFGEdges.add(edge)
         prev.nextDFGEdges.add(edge)
     }
@@ -295,9 +290,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     fun addAllPrevDFG(
         prev: Collection<Node>,
-        legacyProperties: Map<Properties, Any?> = EnumMap(Properties::class.java)
+        granularity: GranularityType = GranularityType.FULL,
+        partialTarget: Declaration? = null,
     ) {
-        prev.forEach { addPrevDFG(it, legacyProperties = legacyProperties.toMutableMap()) }
+        prev.forEach { addPrevDFG(it, granularity, partialTarget) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {
@@ -305,7 +301,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     }
 
     fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>, dependenceType: DependenceType) {
-
         prev.forEach {
             val edge = PropertyEdge(it).apply { addProperty(Properties.DEPENDENCE, dependenceType) }
             this.prevPDGEdges.add(edge)
