@@ -54,6 +54,20 @@ class OpenQASMFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testPlaquette() {
+        val topLevel = Path.of("..", "test-files")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("plaquette_check.qasm").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<OpenQasmLanguage>()
+            }
+        assertNotNull(tu)
+    }
+
+    @Test
     fun testParserTutorial1() {
         val topLevel = Path.of("src", "test", "resources", "openqasm")
 

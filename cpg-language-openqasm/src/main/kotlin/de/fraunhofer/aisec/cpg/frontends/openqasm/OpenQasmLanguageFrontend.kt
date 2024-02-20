@@ -117,7 +117,10 @@ class OpenQasmLanguageFrontend(
             is IfStatementNode -> handleIfStatement(stmt)
             is MeasureArrowAssignmentStatementNode -> handleMeasure(stmt)
             is OldStyleDeclarationStatementNode -> handleOldStylDeclStmt(stmt)
-            else -> TODO()
+            is BarrierStatement ->
+                newEmptyStatement() // TODO: Does nothing really useful. Maybe use "BlockStmt"
+            // instead?
+            else -> newProblemExpression("Expression $stmt is not supported yet")
         }
     }
 

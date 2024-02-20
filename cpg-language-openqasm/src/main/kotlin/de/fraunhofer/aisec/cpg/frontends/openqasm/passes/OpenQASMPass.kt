@@ -83,6 +83,13 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                     newOperation =
                         QuantumNodeBuilder.newQuantumGateH(expr, quantumCircuit, quBitRef)
                 }
+                "x" -> {
+                    val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                    newOperation =
+                        QuantumNodeBuilder.newQuantumGateX(expr, quantumCircuit, quBitRef)
+                }
                 "cx" -> {
                     val quBit0 = getArgAsQubit(quantumCircuit, expr.arguments[0])
                     val quBit1 = getArgAsQubit(quantumCircuit, expr.arguments[1])

@@ -494,7 +494,9 @@ class OpenQASMParser(private val tokens: List<Token>) {
     }
 
     private fun handleBarrierStatement(): StatementNode {
-        TODO()
+        val barrierStmt = tokens[idx]
+        idx++
+        return BarrierStatement(barrierStmt.location)
     }
 
     private fun handleAliasDeclarationStatement(): StatementNode {
