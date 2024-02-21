@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -110,11 +111,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             if (key is TupleDeclaration) {
                 // We need a little hack for tuple statements to set the index. We have the
                 // outer part (i.e., the tuple) here, but we generate the DFG edges to the
-                // elements. We have the indices here, so it's amazing.
-                key.elements.forEachIndexed { i, element ->
+                // elements. We have the indices here, so it's amazingly easy to find the partial
+                // target.
+                key.elements.forEach { element ->
                     element.addAllPrevDFG(
                         value.elements.filterNot { it is VariableDeclaration && key == it },
-                        mutableMapOf(Properties.INDEX to i)
+                        granularity = partial(element)
                     )
                 }
             } else {

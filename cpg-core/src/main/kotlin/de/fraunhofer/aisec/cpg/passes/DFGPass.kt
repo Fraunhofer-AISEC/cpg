@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -134,7 +134,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
             node.elements.withIndex().forEach {
-                it.value.addPrevDFG(initializer, mutableMapOf(Properties.INDEX to it.index))
+                it.value.addPrevDFG(
+                    initializer,
+                    granularity = partial(it.value),
+                )
             }
         }
     }
