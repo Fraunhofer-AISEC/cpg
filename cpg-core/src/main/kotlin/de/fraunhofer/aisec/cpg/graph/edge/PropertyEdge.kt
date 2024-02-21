@@ -83,6 +83,8 @@ open class PropertyEdge<T : Node> : Persistable {
         this.properties = properties
     }
 
+    open val label: String = "EDGE"
+
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
 

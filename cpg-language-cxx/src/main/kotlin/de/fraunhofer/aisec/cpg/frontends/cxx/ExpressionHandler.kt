@@ -36,6 +36,7 @@ import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
 import kotlin.math.max
+import kotlin.math.pow
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
@@ -560,7 +561,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return when (ctx.kind) {
             lk_integer_constant -> handleIntegerLiteral(ctx)
             lk_float_constant -> handleFloatLiteral(ctx)
-            lk_char_constant -> newLiteral(ctx.value[1], primitiveType("char"), rawNode = ctx)
+            lk_char_constant -> handleCharLiteral(ctx)
             lk_string_literal ->
                 newLiteral(
                     String(ctx.value.slice(IntRange(1, ctx.value.size - 2)).toCharArray()),
@@ -572,6 +573,133 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             lk_false -> newLiteral(false, primitiveType("bool"), rawNode = ctx)
             lk_nullptr -> newLiteral(null, objectType("nullptr_t"), rawNode = ctx)
             else -> newLiteral(String(ctx.value), unknownType(), rawNode = ctx)
+        }
+    }
+
+    var escapeMap =
+        mapOf<Char, Char>(
+            'a' to Char(0x07),
+            'b' to Char(0x08),
+            'f' to Char(0x0c),
+            'n' to Char(0x0a),
+            'r' to Char(0x0d),
+            't' to Char(0x09),
+            'v' to Char(0x0b),
+            '\\' to Char(0x5c),
+            '\'' to Char(0x27),
+            '\"' to Char(0x22),
+            '?' to Char(0x3f),
+        )
+
+    private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
+        var raw = String(ctx.value)
+        if (!raw.startsWith("'") || !raw.endsWith("'")) {
+            return newProblemExpression(
+                "character literal does not start or end with '",
+                rawNode = ctx
+            )
+        }
+
+        raw = raw.trim('\'')
+
+        // Since C/C++ for some reason allows multi-character, we need to parse character by
+        // character and then see what the final type is
+        var i = 0
+        val chars = mutableListOf<Char>()
+        var escapeChars = ""
+        var radix = 10
+        var inEscape = false
+        var maxChars: Int? = null
+        while (i < raw.length) {
+            // Check, if we are in escape mode, then we need to gather the escape chars
+            if (inEscape) {
+                // Check for radix specifier
+                if (escapeChars.isEmpty() && raw[i] == 'x') {
+                    radix = 16
+                    maxChars =
+                        2 // it seems like most compilers only allow two hex digits here, so do we
+                    i++
+                    continue
+                }
+
+                // Check, if new escape char. Then finish this one and start a new one
+                if (raw[i] == '\\') {
+                    try {
+                        chars += Char(escapeChars.toInt(radix))
+                        // Restart, assuming its octal and wait for a new radix specifier
+                        escapeChars = ""
+                        inEscape = true
+                        maxChars = 3
+                        radix = 8
+
+                        // Go to the next digit
+                        i++
+                        continue
+                    } catch (ex: NumberFormatException) {
+                        return newProblemExpression("invalid number: ${ex.message}", rawNode = ctx)
+                    }
+                }
+
+                // Check for special escape (they are only one digit and we NOT in hex mode)
+                val specialEscape = escapeMap[raw[i]]
+                if (escapeChars.isEmpty() && radix != 16 && specialEscape != null) {
+                    chars += specialEscape
+                    escapeChars = ""
+                    inEscape = false
+                    maxChars = null
+                } else {
+                    // Otherwise, we need to collect digits (up to a certain max)
+                    escapeChars += raw[i]
+
+                    // There are multiple ways to end the sequence:
+                    // - If this is the last char of the whole string
+                    // - If max digits are reached
+                    // - If another escape character is there
+                    if (
+                        i == raw.length - 1 || (maxChars != null && escapeChars.length >= maxChars)
+                    ) {
+                        try {
+                            chars += Char(escapeChars.toInt(radix))
+                            escapeChars = ""
+                            inEscape = false
+                            maxChars = 0
+                        } catch (ex: NumberFormatException) {
+                            return newProblemExpression(
+                                "invalid number: ${ex.message}",
+                                rawNode = ctx
+                            )
+                        }
+                    }
+                }
+            } else {
+                if (raw[i] == '\\') {
+                    // Switch into escape mode
+                    inEscape = true
+
+                    // If no other specifier is there, we can have a maximum of three digits
+                    maxChars = 3
+
+                    // Radix is octal
+                    radix = 8
+                } else {
+                    // Handle regular character
+                    chars += raw[i]
+                }
+            }
+            i++
+        }
+
+        val single = chars.singleOrNull()
+        if (single != null) {
+            return newLiteral(single, primitiveType("char"), rawNode = ctx)
+        } else {
+            // Somehow make an int out of, this is "implementation" specific. We follow the way
+            // clang does it
+            var intValue = 0
+            for ((n, c) in chars.reversed().withIndex()) {
+                intValue += (c.code * 256.0f.pow(n)).toInt()
+            }
+            return newLiteral(intValue, primitiveType("int"), rawNode = ctx)
         }
     }
 

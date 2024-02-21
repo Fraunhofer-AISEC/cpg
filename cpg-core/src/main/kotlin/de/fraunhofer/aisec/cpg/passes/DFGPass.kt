@@ -28,8 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -122,19 +121,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             AccessValues.WRITE -> {
                 node.addNextDFG(
                     node.base,
-                    mutableMapOf(
-                        Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
-                        Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
-                    )
+                    granularity = partial(node.refersTo)
                 )
             }
             AccessValues.READWRITE -> {
                 node.addNextDFG(
                     node.base,
-                    mutableMapOf(
-                        Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
-                        Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
-                    )
+                    granularity = partial(node.refersTo)
                 )
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
@@ -142,10 +135,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             else -> {
                 node.addPrevDFG(
                     node.base,
-                    mutableMapOf(
-                        Properties.DFG_GRANULARITY to GranularityType.PARTIAL,
-                        Properties.DFG_RECORD_MEMBER_FIELD to node.refersTo
-                    )
+                    granularity = partial(node.refersTo)
                 )
             }
         }
@@ -158,7 +148,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
             node.elements.withIndex().forEach {
-                it.value.addPrevDFG(initializer, mutableMapOf(Properties.INDEX to it.index))
+                it.value.addPrevDFG(
+                    initializer,
+                    granularity = partial(it.value),
+                )
             }
         }
     }

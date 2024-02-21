@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edge.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import kotlin.reflect.KProperty1
@@ -37,13 +36,15 @@ fun Node.printDFG(maxConnections: Int = 25): String {
     return this.printGraph(Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
 }
 
+/*
 /** Utility function to print the EOG using [printGraph]. */
 fun Node.printEOG(maxConnections: Int = 25): String {
-    return this.printGraph(Node::nextEOGEdges, Node::prevEOGEdges, maxConnections)
+    return this.printGraph(PropertyEdge::class, Node::nextEOGEdges, Node::prevEOGEdges, maxConnections)
 }
+*/
 
 /**
- * This function prints a partial graph, limited to a particular edge type, starting with the
+ * This function prints a partial graph, limited to a particular [edgeType], starting with the
  * current [Node] as Markdown, with an embedded [Mermaid](https://mermaid.js.org) graph. The output
  * can either be pasted into a Markdown document (and then rendered) or directly pasted into GitHub
  * issues, discussions or pull requests (see
@@ -52,9 +53,9 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  * The edge type can be specified with the [nextEdgeGetter] and [prevEdgeGetter] functions, that
  * need to return a list of edges (as a [PropertyEdge]) beginning from this node.
  */
-fun Node.printGraph(
-    nextEdgeGetter: KProperty1<Node, MutableList<PropertyEdge<Node>>>,
-    prevEdgeGetter: KProperty1<Node, MutableList<PropertyEdge<Node>>>,
+fun <T : PropertyEdge<Node>> Node.printGraph(
+    nextEdgeGetter: KProperty1<Node, MutableList<T>>,
+    prevEdgeGetter: KProperty1<Node, MutableList<T>>,
     maxConnections: Int = 25
 ): String {
     val builder = StringBuilder()
@@ -62,7 +63,7 @@ fun Node.printGraph(
     builder.append("```mermaid\n")
     builder.append("flowchart TD\n")
 
-    // We use a set with a defined ordering to hold our worklist to have a somewhat consistent
+    // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
     // ordering of statements in the mermaid file.
     val worklist = LinkedHashSet<PropertyEdge<Node>>()
     val alreadySeen = identitySetOf<PropertyEdge<Node>>()
@@ -81,7 +82,7 @@ fun Node.printGraph(
         val start = edge.start
         val end = edge.end
         builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.dfgLabel}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
         )
         conns++
 
@@ -105,23 +106,23 @@ fun Node.printGraph(
     return builder.toString()
 }
 
-private val PropertyEdge<Node>.dfgLabel: String
-    get() {
-        val builder = StringBuilder()
-        builder.append("\"")
-        builder.append("DFG")
+private fun PropertyEdge<Node>.label(): String {
+    val builder = StringBuilder()
+    builder.append("\"")
+    builder.append(this.label)
 
-        if (this.getProperty(Properties.DFG_GRANULARITY) == GranularityType.PARTIAL) {
-            builder.append(
-                " (partial, ${(this.getProperty(Properties.DFG_RECORD_MEMBER_FIELD) as? FieldDeclaration)?.name})"
-            )
+    if (this is Dataflow) {
+        if (this.granularity is PartialDataflowGranularity) {
+            builder.append(" (partial, ${this.granularity.partialTarget.name})")
         } else {
             builder.append(" (full)")
         }
-
-        builder.append("\"")
-        return builder.toString()
     }
+
+    builder.append("\"")
+    return builder.toString()
+}
+
 private val Node.nodeLabel: String
     get() {
         return "${this.name}\n(${this::class.simpleName})\n${this.location}"

@@ -609,7 +609,7 @@ inline operator fun <reified T> List<Node>.invoke(i: Int = 0): T? {
     return this.getOrNull(i) as? T
 }
 
-operator fun <N : Expression> Expression.invoke(): N? {
+operator fun <N : Expression> Expression?.invoke(): N? {
     return this as? N
 }
 

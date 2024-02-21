@@ -56,25 +56,12 @@ enum class Properties {
     SENSITIVITY,
     CALLING_CONTEXT_IN,
     CALLING_CONTEXT_OUT,
-    DFG_GRANULARITY,
-    DFG_RECORD_MEMBER_FIELD,
 }
 
 /** The types of dependencies that might be represented in the CPG */
 enum class DependenceType {
     CONTROL,
     DATA
-}
-
-/**
- * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
- * part of it, for example a record (class/struct) member. In the latter case, the part can be
- * specified using the [Properties.DFG_RECORD_MEMBER_FIELD], which contains the field declaration
- * node.
- */
-enum class GranularityType {
-    FULL,
-    PARTIAL
 }
 
 /** Sensitivity options (of DFG edges). */
