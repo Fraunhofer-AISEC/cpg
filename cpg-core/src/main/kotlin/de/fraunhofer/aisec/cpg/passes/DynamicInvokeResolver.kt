@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
+import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -156,9 +156,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // the member (e.g. field).
             val prevDFGToPush =
                 curr.prevDFGEdges
-                    .filter {
-                        it.getProperty(Properties.DFG_GRANULARITY) != GranularityType.PARTIAL
-                    }
+                    .filter { it.granularity is FullDataflowGranularity }
                     .map { it.start }
                     .toMutableList()
             if (curr is MemberExpression && prevDFGToPush.isEmpty()) {

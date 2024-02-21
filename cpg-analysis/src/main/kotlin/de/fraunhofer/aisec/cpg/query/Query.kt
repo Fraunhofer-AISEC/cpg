@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.GranularityType
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -384,9 +383,7 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
             // to from happens in the paths between from and to
             val prevQTs =
                 from.prevDFGEdges
-                    .filter {
-                        it.getProperty(Properties.DFG_GRANULARITY) != GranularityType.PARTIAL
-                    }
+                    .filter { it.granularity is FullDataflowGranularity }
                     .map { it.start }
                     .map { dataFlow(it, to) }
                     .toMutableSet()
