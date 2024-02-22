@@ -37,6 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 
 fun LanguageFrontend<*, *>.translationResult(
     init: TranslationResult.() -> Unit
@@ -941,6 +944,23 @@ fun LanguageFrontend<*, *>.ref(
     }
 
     return node
+}
+
+/**
+ * This utility function tries to create a fake [PhysicalLocation] in order to somewhat
+ * differentiate the different nodes
+ */
+context(TranslationUnitDeclaration)
+fun Expression.line(i: Int): Expression {
+    // We just stupidly assume that the name of node is also its code
+    val code = this.name
+
+    // This is really fake, but it is ok-ish for now
+    val region = Region(i, 0, i, code.length)
+
+    this.location = PhysicalLocation(URI((this@TranslationUnitDeclaration).name.toString()), region)
+
+    return this
 }
 
 /**
