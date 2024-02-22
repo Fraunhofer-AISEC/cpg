@@ -129,12 +129,14 @@ context(DeclarationHolder)
 fun LanguageFrontend<*, *>.field(
     name: CharSequence,
     type: Type = unknownType(),
-    init: FieldDeclaration.() -> Unit
+    init: (FieldDeclaration.() -> Unit)? = null
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
     node.type = type
 
-    init(node)
+    if (init != null) {
+        init(node)
+    }
 
     scopeManager.addDeclaration(node)
 
@@ -342,11 +344,15 @@ fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): Decla
 fun LanguageFrontend<*, *>.declareVar(
     name: String,
     type: Type,
-    init: VariableDeclaration.() -> Unit
+    init: (VariableDeclaration.() -> Unit)? = null
 ): DeclarationStatement {
     val node = (this@LanguageFrontend).newDeclarationStatement()
     val variableDecl = newVariableDeclaration(name, type)
-    init(variableDecl)
+
+    if (init != null) {
+        init(variableDecl)
+    }
+
     node.singleDeclaration = variableDecl
 
     return node
