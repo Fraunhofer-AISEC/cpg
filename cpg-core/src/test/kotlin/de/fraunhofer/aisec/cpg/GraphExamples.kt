@@ -1034,4 +1034,59 @@ class GraphExamples {
                 }
             }
     }
+
+    /**
+     * This roughly represents the following C code:
+     * ```c
+     * struct myStruct {
+     *   int field1;
+     * };
+     *
+     * void doSomething(int i) {}
+     *
+     * int main() {
+     *   struct myStruct s1;
+     *   struct myStruct s2;
+     *
+     *   doSomething(s1.field1);
+     *
+     *   s1.field1 = 1;
+     *   s2.field1 = 2;
+     *
+     *   doSomething(s1.field1);
+     *   doSomething(s2.field1);
+     * }
+     * ```
+     */
+    fun getFieldDataflow(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("dataflow_field.c") {
+                    record("myStruct") { field("field", t("int")) }
+                    function("doSomething") { param("i", t("int")) }
+                    function("main", t("int")) {
+                        // Declare s1 and s2 of the same type
+                        declareVar("s1", t("myStruct"))
+                        declareVar("s2", t("myStruct"))
+
+                        // Call doSomething on field1 of s1
+                        call("doSomething") { member("field1", ref("s1")) }
+
+                        // Set field1 of both s1 and s2, to literal 1 and 2 respectively
+                        member("field1", ref("s1")) assign literal(1)
+                        member("field1", ref("s2")) assign literal(2)
+
+                        // Call doSomething on field1 of s1 and s2
+                        call("doSomething") { member("field1", ref("s1")) }
+                        call("doSomething") { member("field1", ref("s2")) }
+                    }
+                }
+            }
+        }
 }
