@@ -575,6 +575,10 @@ val Node?.literals: List<Literal<*>>
 val Node?.refs: List<Reference>
     get() = this.allChildren()
 
+/** Returns all [ProblemNode] children in this graph, starting with this [Node]. */
+val Node?.problems: List<ProblemNode>
+    get() = this.allChildren()
+
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
     get() {
