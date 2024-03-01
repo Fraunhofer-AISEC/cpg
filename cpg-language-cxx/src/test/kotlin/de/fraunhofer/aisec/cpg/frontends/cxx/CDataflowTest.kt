@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.printDFG
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class CDataflowTest {
@@ -53,52 +53,17 @@ class CDataflowTest {
         var startFunction = renegotiate
         var startVariable = renegotiate.parameters["ctx"]!!
 
-        // In this first, very basic example we want to have the list of all fields of "ctx" that
-        // are written to in the renegotiate function itself (independent of the order). This
-        // excludes writes that happen in functions that are called by renegotiate.
-        var writtenFields =
-            renegotiate
-                .memberExpressions {
-                    it.access == AccessValues.WRITE &&
-                        it.base.unwrapReference()?.refersTo == startVariable
-                }
-                .toMutableList()
-        println(
-            "renegotiate itself writes to the following fields: " + writtenFields.map { it.name }
-        )
+        // In this example we want to have the list of all fields of "ctx" that
+        // are written to in the renegotiate function itself. For this to achieve we can follow the
+        // "FULL" dfg flow until the end and collect partial writes on the way.
+        var flow = startVariable.followNextDFGEdgesUntilHit { it.nextDFG.isEmpty() }
+        // We should end up with two flows, one is limited only to the function itself and the other
+        // one is going into the inner_renegotiate
+        assertEquals(2, flow.fulfilled.size)
+        // TODO(oxisto): Shouldn't the ctx in line 15 connected to the one in line 13?!
 
-        // In the second example, we want to extend this
-        writtenFields =
-            startFunction
-                .memberExpressions {
-                    it.access == AccessValues.WRITE &&
-                        it.base.unwrapReference()?.refersTo == startVariable
-                }
-                .toMutableList()
-        // Loop through functions within renegotiate. only one level for now. need to make that
-        // recursive
-        for (call in renegotiate.calls) {
-            // We need to see, if the call connects our ctx with a ctx of the function
-            val ctxArg =
-                call.arguments.firstOrNull { it.unwrapReference()?.refersTo == startVariable }
-                    ?: continue // function call does not forward our context
-
-            // update our start function and variable
-            startFunction = call.invokes.first()
-            startVariable = ctxArg.nextDFG.filterIsInstance<ParameterDeclaration>().first()
-
-            // Add the appropriate fields
-            writtenFields +=
-                startFunction.memberExpressions {
-                    it.access == AccessValues.WRITE &&
-                        it.base.unwrapReference()?.refersTo == startVariable
-                }
-        }
-
-        println(
-            "renegotiate and its direct callees writes to the following fields: " +
-                writtenFields.map { it.name }
-        )
+        println(flow)
+        println("renegotiate and its direct callees writes to the following fields: ")
 
         println(main.variables["ctx"]?.printDFG(100))
     }
