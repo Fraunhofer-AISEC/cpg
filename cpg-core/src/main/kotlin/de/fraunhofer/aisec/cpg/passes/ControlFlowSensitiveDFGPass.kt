@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.partial
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -122,11 +120,15 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     )
                 }
             } else {
-                key.addAllPrevDFG(
-                    value.elements.filterNot {
-                        (it is VariableDeclaration || it is ParameterDeclaration) && key == it
+                value.elements.forEach {
+                    if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
+                        // Nothing to do
+                    } else if (it in edgePropertiesMap && edgePropertiesMap[it] is CallingContext) {
+                        key.addPrevDFGContext(it, (edgePropertiesMap[it] as CallingContext))
+                    } else {
+                        key.addPrevDFG(it)
                     }
-                )
+                }
             }
         }
     }
@@ -388,6 +390,26 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 currentNode,
                 PowersetLattice(identitySetOf(currentNode))
             )
+        } else if (currentNode is CallExpression) {
+            for (invoked in
+                currentNode.invokes.filter {
+                    it in ctx.config.functionSummaries.functionToChangedParameters
+                }) {
+                val changedParams =
+                    ctx.config.functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                for ((param, _) in changedParams) {
+                    if (param == (invoked as? MethodDeclaration)?.receiver) {
+                        doubleState.declarationsState[
+                                ((currentNode as? MemberCallExpression)?.base as? Reference)
+                                    ?.refersTo] = PowersetLattice(identitySetOf(param))
+                    } else if (param is ParameterDeclaration) {
+                        val arg = currentNode.arguments[param.argumentIndex]
+                        doubleState.declarationsState[(arg as? Reference)?.refersTo] =
+                            PowersetLattice(identitySetOf(param))
+                    }
+                    edgePropertiesMap[param] = CallingContextOut(currentNode)
+                }
+            }
         } else {
             doubleState.declarationsState.push(
                 currentNode,
@@ -396,6 +418,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         }
         return state
     }
+
+    val edgePropertiesMap = mutableMapOf<Node, Any>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the

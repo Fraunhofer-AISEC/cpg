@@ -52,7 +52,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             walker.iterate(tu)
         }
 
-        connectInferredCallArguments(config.functionSummaries)
+        // connectInferredCallArguments(config.functionSummaries)
     }
 
     /**

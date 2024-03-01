@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edge.ContextsensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import java.io.File
 import kotlin.test.Test
@@ -78,13 +80,13 @@ class DFGFunctionSummariesTest {
 
         val argA = call.arguments[0]
         assertNotNull(argA)
-
-        assertEquals(1, argA.nextDFG.size)
-        assertEquals(2, argA.prevDFG.size)
         /*
         The flows should be as follows:
         VariableDeclaration["a"] -> Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (return)]
          */
+
+        assertEquals(1, argA.nextDFG.size)
+        assertEquals(1, argA.prevDFG.size)
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
@@ -94,26 +96,26 @@ class DFGFunctionSummariesTest {
         )
         assertEquals(param0, nextDfg.end)
 
-        val prevDfgThroughFunction =
-            argA.prevDFGEdges.singleOrNull {
+        val variableA = main.variables["a"]
+        assertNotNull(variableA)
+        assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
+
+        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextsensitiveDataflow }
+        assertNotNull(prevDfgOfParam0)
+        assertEquals(param1, prevDfgOfParam0.start)
+
+        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        assertNotNull(returnA)
+
+        assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
+
+        // Check that also the CallingContext property is set correctly
+        val nextDfgOfParam0 =
+            param0.nextDFGEdges.singleOrNull {
                 ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
-                    ?.callExpression != call
+                    ?.callExpression == call
             }
-        assertNotNull(prevDfgThroughFunction)
-        assertEquals(param0, prevDfgThroughFunction.start)
-
-        val variableDeclA = main.variables["a"]
-        assertNotNull(variableDeclA)
-
-        val prevDfgNotThroughFunction =
-            argA.prevDFGEdges.singleOrNull {
-                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
-                    ?.callExpression != call
-            }
-        assertNotNull(prevDfgNotThroughFunction)
-        assertEquals(variableDeclA, prevDfgNotThroughFunction.start)
-
-        assertEquals(setOf<Node>(argA, param1), param0.prevDFG)
+        assertEquals(returnA, nextDfgOfParam0?.end)
     }
 
     companion object {
