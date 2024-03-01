@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.printDFG
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edge.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edge.PartialDataflowGranularity
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,25 +48,33 @@ class CDataflowTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
+        val i = assertNotNull(tu.fields["tls_context::i"])
+        val j = assertNotNull(tu.fields["tls_context::j"])
+        val k = assertNotNull(tu.fields["tls_context::k"])
+
         val renegotiate = tu.functions["renegotiate"]
         assertNotNull(renegotiate)
 
         // Our start function and variable/parameter
-        var startFunction = renegotiate
-        var startVariable = renegotiate.parameters["ctx"]!!
+        val startFunction = renegotiate
+        val startVariable = startFunction.parameters["ctx"]!!
 
         // In this example we want to have the list of all fields of "ctx" that
-        // are written to in the renegotiate function itself. For this to achieve we can follow the
+        // are written to in the start function itself. For this to achieve we can follow the
         // "FULL" dfg flow until the end and collect partial writes on the way.
-        var flow = startVariable.followNextDFGEdgesUntilHit { it.nextDFG.isEmpty() }
-        // We should end up with two flows, one is limited only to the function itself and the other
-        // one is going into the inner_renegotiate
-        assertEquals(1, flow.fulfilled.size)
-        // The ctx in line 15 is only connected to the one in line 13
+        val result = startVariable.followNextDFGEdgesUntilHit { it.nextDFG.isEmpty() }
+        val flow = result.fulfilled.singleOrNull()
+        assertNotNull(flow)
+        val fields =
+            flow
+                .flatMap {
+                    it.prevDFGEdges
+                        .map(Dataflow::granularity)
+                        .filterIsInstance<PartialDataflowGranularity>()
+                }
+                .mapNotNull(PartialDataflowGranularity::partialTarget)
+                .toSet()
 
-        println(flow)
-        println("renegotiate and its direct callees writes to the following fields: ")
-
-        println(main.variables["ctx"]?.printDFG(100))
+        assertEquals(setOf<Declaration>(i, j), fields)
     }
 }
