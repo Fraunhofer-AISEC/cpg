@@ -207,10 +207,46 @@ class ControlFlowSensitiveDFGPassTest {
         val o = main.variables["o"]
         assertNotNull(o)
 
-        val me = main.memberExpressions.firstOrNull()
-        assertNotNull(me)
+        val meFields = main.memberExpressions("field")
+        assertEquals(2, meFields.size)
 
-        println(me.printDFG())
+        val meIn = main.memberExpressions("in")
+        assertEquals(2, meIn.size)
+
+        val refO = main.refs("o")
+        assertEquals(2, refO.size)
+
+        // There should be a full flow from each first individual ref and member expression (line
+        // 13) to the second one (line 15)
+        assertFullEdgeBetween(meFields[0], meFields[1])
+        assertFullEdgeBetween(meIn[0], meIn[1])
+        assertFullEdgeBetween(refO[0], refO[1])
+
+        // There should be a partial flow from the first '.field' which writes to the first '.in'
+        assertPartialEdgeBetween(meFields[0], meIn[0], field)
+        // And also a partial flow from '.in' to 'o'
+        assertPartialEdgeBetween(meIn[0], refO[0], `in`)
+    }
+
+    private fun assertPartialEdgeBetween(from: Node, to: Node, partialTarget: Declaration?) {
+        val edge =
+            from.nextDFGEdges
+                .filter { it.granularity is PartialDataflowGranularity }
+                .firstOrNull { it.end == to }
+        assertNotNull(edge)
+        assertEquals(
+            partialTarget,
+            (edge.granularity as? PartialDataflowGranularity)?.partialTarget
+        )
+    }
+
+    private fun assertFullEdgeBetween(from: Node, to: Node) {
+        assertContains(
+            from.nextDFGEdges
+                .filter { it.granularity is FullDataflowGranularity }
+                .map(Dataflow::end),
+            to
+        )
     }
 
     private inline fun <reified T : Node> assertSinglePartialEdgeFrom(
