@@ -192,7 +192,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
                 // Update the state identifier of this node, so that the data flows to later member
                 // expressions accessing the same object/field combination.
-                doubleState.declarationsState[currentNode.stateIdentifier()] =
+                doubleState.declarationsState[currentNode.objectIdentifier()] =
                     PowersetLattice(identitySetOf(currentNode))
             }
         } else if (currentNode is MemberExpression && currentNode.access == AccessValues.READ) {
@@ -203,7 +203,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We do an ugly hack here: We store a (unique) hash out of field declaration and
                 // the variable declaration in the declaration state so that we can retrieve it
                 // later for READ accesses.
-                val declState = doubleState.declarationsState[currentNode.stateIdentifier()]
+                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
                     state.push(currentNode, declState)
                 } else {
@@ -223,7 +223,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We do an ugly hack here: We store a (unique) hash out of field declaration and
                 // the variable declaration in the declaration state so that we can retrieve it
                 // later for READ accesses.
-                val declState = doubleState.declarationsState[currentNode.stateIdentifier()]
+                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
                     state.push(currentNode, declState)
                 } else {
@@ -241,7 +241,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
                 // Update the state identifier of this node, so that the data flows to later member
                 // expressions accessing the same object/field combination.
-                doubleState.declarationsState[currentNode.stateIdentifier()] =
+                doubleState.declarationsState[currentNode.objectIdentifier()] =
                     PowersetLattice(identitySetOf(currentNode))
             }
         } else if (isSimpleAssignment(currentNode)) {
@@ -480,12 +480,61 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 }
 
-private fun MemberExpression.stateIdentifier(): Int? {
+/**
+ * The "object identifier" of a node can be used to differentiate different "objects" that a node
+ * (most likely a [Reference]) refers to.
+ *
+ * In the most basic use-case the [objectIdentifier] of a simple variable reference is the hash-code
+ * of its [VariableDeclaration]. Consider the following code:
+ * ```c
+ * int a = 1;
+ * printf(a);
+ * ```
+ *
+ * In this case, the "object identifier" of the [Reference] `a` in the second line is the hash-code
+ * of the [VariableDeclaration] `a` in the first line.
+ *
+ * However, we also need to differentiate between different objects that are used as fields as well
+ * as different instances of the fields. Consider the second example:
+ * ```c
+ * struct myStruct {
+ *   int field;
+ * };
+ *
+ * struct myStruct a;
+ * a.field = 1;
+ *
+ * struct myStruct b;
+ * b.field = 2;
+ * ```
+ *
+ * In this case, the [objectIdentifier] of the [MemberExpression] `a` is a combination of the
+ * hash-code of the [VariableDeclaration] `a` as well as the [FieldDeclaration] of `field`. The same
+ * applies for `b`. If we would only rely on the [VariableDeclaration], we would not be sensitive to
+ * fields, if we would only rely on the [FieldDeclaration], we would not be sensitive to different
+ * object instances. Therefore, we consider both.
+ *
+ * Please note however, that this current, very basic implementation does not consider perform any
+ * kind of pointer or alias analysis. This means that even though the "contents" of two variables
+ * that are the same (for example, because one is assigned into the other), they will be considered
+ * different "objects".
+ */
+private fun Node.objectIdentifier(): Int? {
+    return when (this) {
+        is MemberExpression -> this.objectIdentifier()
+        is Reference -> this.objectIdentifier()
+        is Declaration -> this.hashCode()
+        else -> null
+    }
+}
+
+/** Implements [Node.objectIdentifier] for a [MemberExpression]. */
+private fun MemberExpression.objectIdentifier(): Int? {
     val ref = this.refersTo
     return if (ref == null) {
         null
     } else {
-        val baseIdentifier = base.stateIdentifier()
+        val baseIdentifier = base.objectIdentifier()
         if (baseIdentifier != null) {
             ref.hashCode() + baseIdentifier
         } else {
@@ -494,15 +543,7 @@ private fun MemberExpression.stateIdentifier(): Int? {
     }
 }
 
-private fun Reference.stateIdentifier(): Int? {
+/** Implements [Node.objectIdentifier] for a [Reference]. */
+private fun Reference.objectIdentifier(): Int? {
     return this.refersTo?.hashCode()
-}
-
-private fun Node.stateIdentifier(): Int? {
-    return when (this) {
-        is MemberExpression -> this.stateIdentifier()
-        is Reference -> this.stateIdentifier()
-        is Declaration -> this.hashCode()
-        else -> null
-    }
 }

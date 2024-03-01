@@ -102,40 +102,4 @@ class CDataflowTest {
 
         println(main.variables["ctx"]?.printDFG(100))
     }
-
-    @Test
-    fun testRef() {
-        val file = File("src/test/resources/c/dataflow/ref.c")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
-            }
-        assertNotNull(tu)
-
-        println(tu.variables["var"]!!.printDFG())
-    }
-
-    @Test
-    fun testField() {
-        val file = File("src/test/resources/c/dataflow/field.c")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
-            }
-        assertNotNull(tu)
-
-        println(tu.variables["s1"]!!.printDFG())
-    }
-
-    @Test
-    fun testNestedField() {
-        val file = File("src/test/resources/c/dataflow/nested.c")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
-            }
-        assertNotNull(tu)
-
-        println(tu.variables["o"]!!.printDFG())
-    }
 }

@@ -948,7 +948,8 @@ fun LanguageFrontend<*, *>.ref(
 
 /**
  * This utility function tries to create a fake [PhysicalLocation] in order to somewhat
- * differentiate the different nodes
+ * differentiate the different nodes. This is primarily needed for the mermaid graph printer, which
+ * relies on [Node.hashCode], which in turn relies on [Node.location].
  */
 context(TranslationUnitDeclaration)
 fun Expression.line(i: Int): Expression {
