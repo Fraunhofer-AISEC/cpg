@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -38,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import kotlin.collections.set
@@ -97,6 +94,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
+        node.parameters.forEach {
+            startState.declarationsState.push(it, PowersetLattice(identitySetOf(it)))
+        }
         val finalState =
             iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
 
@@ -115,13 +115,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // target.
                 key.elements.forEach { element ->
                     element.addAllPrevDFG(
-                        value.elements.filterNot { it is VariableDeclaration && key == it },
+                        value.elements.filterNot {
+                            (it is VariableDeclaration || it is ParameterDeclaration) && key == it
+                        },
                         granularity = partial(element)
                     )
                 }
             } else {
                 key.addAllPrevDFG(
-                    value.elements.filterNot { it is VariableDeclaration && key == it }
+                    value.elements.filterNot {
+                        (it is VariableDeclaration || it is ParameterDeclaration) && key == it
+                    }
                 )
             }
         }
@@ -135,6 +139,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         for (varDecl in node.variables /*.filter { it !is FieldDeclaration }*/) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()
+        }
+        val allChildrenOfFunction = node.allChildren<Node>()
+        for (varDecl in node.parameters) {
+            // Clear only prev and next inside this function!
+            varDecl.nextDFG
+                .filter { it in allChildrenOfFunction }
+                .forEach { varDecl.removeNextDFG(it) }
+            varDecl.prevDFG
+                .filter { it in allChildrenOfFunction }
+                .forEach { varDecl.removePrevDFG(it) }
         }
     }
 
@@ -287,7 +301,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
-                currentNode.refersTo is VariableDeclaration &&
+                (currentNode.refersTo is VariableDeclaration ||
+                    currentNode.refersTo is ParameterDeclaration) &&
+                currentNode.refersTo !is FieldDeclaration
+        ) {
+            // We can only find a change if there's a state for the variable
+            doubleState.declarationsState[currentNode.refersTo]?.let {
+                // We only read the variable => Get previous write which have been collected in
+                // the other steps
+                state.push(currentNode, it)
+            }
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.READWRITE &&
+                (currentNode.refersTo is VariableDeclaration ||
+                    currentNode.refersTo is ParameterDeclaration) &&
                 currentNode.refersTo !is FieldDeclaration
         ) {
             // We can only find a change if there's a state for the variable

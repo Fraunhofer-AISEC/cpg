@@ -59,8 +59,8 @@ class CDataflowTest {
         var flow = startVariable.followNextDFGEdgesUntilHit { it.nextDFG.isEmpty() }
         // We should end up with two flows, one is limited only to the function itself and the other
         // one is going into the inner_renegotiate
-        assertEquals(2, flow.fulfilled.size)
-        // TODO(oxisto): Shouldn't the ctx in line 15 connected to the one in line 13?!
+        assertEquals(1, flow.fulfilled.size)
+        // The ctx in line 15 is only connected to the one in line 13
 
         println(flow)
         println("renegotiate and its direct callees writes to the following fields: ")
