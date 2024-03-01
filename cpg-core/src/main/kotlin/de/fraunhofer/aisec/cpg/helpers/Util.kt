@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -356,10 +357,7 @@ object Util {
         // Add an incoming DFG edge from a member call's base to the method's receiver
         if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
             target.receiver?.let { receiver ->
-                call.base?.addNextDFG(
-                    receiver,
-                    mutableMapOf(Pair(Properties.CALLING_CONTEXT_IN, call))
-                )
+                call.base?.addNextDFGContext(receiver, CallingContextIn(call))
             }
         }
 
@@ -375,18 +373,12 @@ object Util {
                 if (param.isVariadic) {
                     while (j < arguments.size) {
                         // map all the following arguments to this variadic param
-                        param.addPrevDFG(
-                            arguments[j],
-                            mutableMapOf(Pair(Properties.CALLING_CONTEXT_IN, call))
-                        )
+                        param.addPrevDFGContext(arguments[j], CallingContextIn(call))
                         j++
                     }
                     break
                 } else {
-                    param.addPrevDFG(
-                        arguments[j],
-                        mutableMapOf(Pair(Properties.CALLING_CONTEXT_IN, call))
-                    )
+                    param.addPrevDFGContext(arguments[j], CallingContextIn(call))
                 }
             }
             j++

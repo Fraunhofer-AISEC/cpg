@@ -257,6 +257,20 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         next.prevDFGEdges.add(edge)
     }
 
+    /**
+     * Adds a [Dataflow] edge from this node to [next], with the given [CallingContext] and
+     * [Granularity].
+     */
+    fun addNextDFGContext(
+        next: Node,
+        callingContext: CallingContext,
+        granularity: Granularity = default(),
+    ) {
+        val edge = ContextsensitiveDataflow(this, next, callingContext, granularity)
+        nextDFGEdges.add(edge)
+        next.prevDFGEdges.add(edge)
+    }
+
     fun removeNextDFG(next: Node?) {
         if (next != null) {
             val thisRemove =
@@ -279,6 +293,20 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextDFGEdges.add(edge)
     }
 
+    /**
+     * Adds a [Dataflow] edge from [prev] node to this node, with the given [CallingContext] and
+     * [Granularity].
+     */
+    open fun addPrevDFGContext(
+        prev: Node,
+        callingContext: CallingContext,
+        granularity: Granularity = default(),
+    ) {
+        val edge = ContextsensitiveDataflow(prev, this, callingContext, granularity)
+        prevDFGEdges.add(edge)
+        prev.nextDFGEdges.add(edge)
+    }
+
     fun addPrevCDG(
         prev: Node,
         properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
@@ -294,6 +322,18 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         granularity: Granularity = full(),
     ) {
         prev.forEach { addPrevDFG(it, granularity) }
+    }
+
+    /**
+     * Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [CallingContext]
+     * and [Granularity].
+     */
+    fun addAllPrevDFGContext(
+        prev: Collection<Node>,
+        callingContext: CallingContext,
+        granularity: Granularity = full(),
+    ) {
+        prev.forEach { addPrevDFGContext(it, callingContext, granularity) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {

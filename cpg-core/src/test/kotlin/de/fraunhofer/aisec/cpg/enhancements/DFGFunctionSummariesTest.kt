@@ -32,7 +32,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edge.ContextsensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
@@ -79,14 +81,23 @@ class DFGFunctionSummariesTest {
 
         assertEquals(1, argA.nextDFG.size)
         assertEquals(2, argA.prevDFG.size)
+        /*
+        The flows should be as follows:
+        VariableDeclaration["a"] -> Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (return)]
+         */
 
         val nextDfg = argA.nextDFGEdges.single()
-        assertEquals(call, nextDfg.getProperty(Properties.CALLING_CONTEXT_IN))
+        assertEquals(
+            call,
+            ((nextDfg as? ContextsensitiveDataflow)?.callingContext as? CallingContextIn)
+                ?.callExpression
+        )
         assertEquals(param0, nextDfg.end)
 
         val prevDfgThroughFunction =
             argA.prevDFGEdges.singleOrNull {
-                it.containsProperties(mapOf(Pair(Properties.CALLING_CONTEXT_OUT, call)))
+                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
+                    ?.callExpression != call
             }
         assertNotNull(prevDfgThroughFunction)
         assertEquals(param0, prevDfgThroughFunction.start)
@@ -96,7 +107,8 @@ class DFGFunctionSummariesTest {
 
         val prevDfgNotThroughFunction =
             argA.prevDFGEdges.singleOrNull {
-                !it.containsProperties(mapOf(Pair(Properties.CALLING_CONTEXT_OUT, call)))
+                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
+                    ?.callExpression != call
             }
         assertNotNull(prevDfgNotThroughFunction)
         assertEquals(variableDeclA, prevDfgNotThroughFunction.start)

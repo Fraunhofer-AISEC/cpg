@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import org.neo4j.ogm.annotation.RelationshipEntity
 
@@ -80,11 +81,43 @@ fun partial(target: Declaration?): PartialDataflowGranularity {
  * [granularity].
  */
 @RelationshipEntity
-class Dataflow(
+open class Dataflow(
     start: Node,
     end: Node,
     /** The granularity of this dataflow. */
-    val granularity: Granularity = default(),
+    val granularity: Granularity = default()
 ) : PropertyEdge<Node>(start, end) {
+    override val label: String = "DFG"
+}
+
+sealed interface CallingContext
+
+class CallingContextIn(
+    /** The call expression that affects this dataflow edge. */
+    val callExpression: CallExpression
+) : CallingContext
+
+class CallingContextOut(
+    /** The call expression that affects this dataflow edge. */
+    val callExpression: CallExpression
+) : CallingContext
+
+fun callIn(callExpression: CallExpression): CallingContext {
+    return CallingContextIn(callExpression)
+}
+
+/**
+ * This edge class defines a flow of data between [start] and [end]. The flow must have a
+ * [callingContext] and can have a certain [granularity].
+ */
+@RelationshipEntity
+class ContextsensitiveDataflow(
+    start: Node,
+    end: Node,
+    /** The calling context affecting this dataflow. */
+    val callingContext: CallingContext,
+    /** The granularity of this dataflow. */
+    granularity: Granularity,
+) : Dataflow(start, end, granularity) {
     override val label: String = "DFG"
 }

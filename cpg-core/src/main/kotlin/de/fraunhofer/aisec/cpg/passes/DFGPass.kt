@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -66,19 +67,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
                 for ((param, _) in changedParams) {
                     if (param == (invoked as? MethodDeclaration)?.receiver) {
-                        (call as? MemberCallExpression)?.base?.let { base ->
-                            base.addPrevDFG(
-                                param,
-                                mutableMapOf(Pair(Properties.CALLING_CONTEXT_OUT, call))
-                            )
-                            // (base as? Reference)?.access = AccessValues.READWRITE
-                        }
+                        (call as? MemberCallExpression)
+                            ?.base
+                            ?.addPrevDFGContext(param, CallingContextOut(call))
                     } else if (param is ParameterDeclaration) {
                         val arg = call.arguments[param.argumentIndex]
-                        arg.addPrevDFG(
-                            param,
-                            mutableMapOf(Pair(Properties.CALLING_CONTEXT_OUT, call))
-                        )
+                        arg.addPrevDFGContext(param, CallingContextOut(call))
                         // (arg as? Reference)?.access = AccessValues.READWRITE
                     }
                 }
@@ -465,7 +459,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
                 Util.attachCallParameters(it, call)
-                call.addPrevDFG(it)
+                call.addPrevDFGContext(it, CallingContextOut(call))
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)
                 }
