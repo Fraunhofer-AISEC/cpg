@@ -187,6 +187,32 @@ class ControlFlowSensitiveDFGPassTest {
         }
     }
 
+    @Test
+    fun testNestedFieldFlow() {
+        val test = GraphExamples.getNestedFieldDataflow()
+        assertNotNull(test)
+
+        val `in` = test.records["outer"].fields["in"]
+        assertNotNull(`in`)
+
+        val field = test.records["inner"].fields["field"]
+        assertNotNull(field)
+
+        val i = test.functions["doSomething"].parameters["i"]
+        assertNotNull(i)
+
+        val main = test.functions["main"]
+        assertNotNull(main)
+
+        val o = main.variables["o"]
+        assertNotNull(o)
+
+        val me = main.memberExpressions.firstOrNull()
+        assertNotNull(me)
+
+        println(me.printDFG())
+    }
+
     private inline fun <reified T : Node> assertSinglePartialEdgeFrom(
         from: Node,
         partialTarget: Declaration?

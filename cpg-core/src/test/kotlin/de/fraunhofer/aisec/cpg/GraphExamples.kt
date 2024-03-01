@@ -1108,5 +1108,65 @@ class GraphExamples {
                     }
                 }
             }
+
+        /**
+         * This roughly represents the following C code:
+         * ```c
+         * struct inner {
+         *   int field;
+         * };
+         *
+         * struct outer {
+         *   struct inner in;
+         * };
+         *
+         * void doSomething(int i) {}
+         *
+         * int main() {
+         *   struct outer o;
+         *   o.in.field = 1;
+         *
+         *   doSomething(o.in.field);
+         * }
+         * ```
+         */
+        fun getNestedFieldDataflow(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerPass<EdgeCachePass>()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("dataflow_field.c") {
+                        record("inner") { field("field", t("int")) }
+                        record("outer") { field("in", t("inner")) }
+                        function("doSomething") { param("i", t("int")) }
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("o", t("outer")) }
+
+                                member(
+                                        "field",
+                                        member("in", ref("o", makeMagic = false).line(13)).line(13)
+                                    )
+                                    .line(13) assign literal(1)
+
+                                call("doSomething") {
+                                        member(
+                                                "field",
+                                                member("in", ref("o", makeMagic = false).line(15))
+                                                    .line(15)
+                                            )
+                                            .line(15)
+                                    }
+                                    .line(15)
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
