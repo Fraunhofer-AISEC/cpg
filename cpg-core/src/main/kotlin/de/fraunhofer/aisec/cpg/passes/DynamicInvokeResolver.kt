@@ -26,11 +26,14 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -149,7 +152,29 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     continue
                 }
             }
-            curr.prevDFG.forEach(Consumer(work::push))
+            // Do not consider the base for member expressions, we have to know possible values of
+            // the member (e.g. field).
+            val prevDFGToPush =
+                curr.prevDFGEdges
+                    .filter { it.granularity is FullDataflowGranularity }
+                    .map { it.start }
+                    .toMutableList()
+            if (curr is MemberExpression && prevDFGToPush.isEmpty()) {
+                // TODO: This is only a workaround!
+                //   If there is nothing found for MemberExpressions, we may have set the field
+                //   somewhere else but do not yet propagate this to this location (e.g. because it
+                //   happens in another function). In this case, we look at write-usages to the
+                //   field and use all of those. This is only a temporary workaround until someone
+                //   implements an interprocedural analysis (for example).
+                (curr.refersTo as? FieldDeclaration)
+                    ?.usages
+                    ?.filter { it.access == AccessValues.WRITE }
+                    ?.let { prevDFGToPush.addAll(it) }
+                // Also add the initializer of the field (if it exists)
+                (curr.refersTo as? FieldDeclaration)?.initializer?.let { prevDFGToPush.add(it) }
+            }
+
+            prevDFGToPush.forEach(Consumer(work::push))
         }
 
         call.invokes = invocationCandidates

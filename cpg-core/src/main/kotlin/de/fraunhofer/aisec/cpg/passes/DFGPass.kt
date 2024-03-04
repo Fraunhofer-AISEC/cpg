@@ -63,7 +63,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is NewArrayExpression -> handleNewArrayExpression(node)
             is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
-            is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
+            is MemberExpression -> handleMemberExpression(node)
             is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
@@ -113,17 +113,22 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * For a [MemberExpression], the base flows to the expression if the field is not implemented in
-     * the code under analysis. Otherwise, it's handled as a [Reference].
+     * For a [MemberExpression], the base flows from/to the expression, depending on the
+     * [MemberExpression.access].
      */
-    protected fun handleMemberExpression(
-        node: MemberExpression,
-        inferDfgForUnresolvedCalls: Boolean
-    ) {
-        if (node.refersTo == null && inferDfgForUnresolvedCalls) {
-            node.addPrevDFG(node.base)
-        } else {
-            handleReference(node)
+    protected fun handleMemberExpression(node: MemberExpression) {
+        when (node.access) {
+            AccessValues.WRITE -> {
+                node.addNextDFG(node.base, granularity = partial(node.refersTo))
+            }
+            AccessValues.READWRITE -> {
+                node.addNextDFG(node.base, granularity = partial(node.refersTo))
+                // We do not make an edge in the other direction on purpose as a workaround for
+                // nested field accesses on the lhs of an assignment.
+            }
+            else -> {
+                node.addPrevDFG(node.base, granularity = partial(node.refersTo))
+            }
         }
     }
 

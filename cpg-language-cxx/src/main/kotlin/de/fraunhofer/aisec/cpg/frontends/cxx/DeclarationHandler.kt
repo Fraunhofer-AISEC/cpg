@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
@@ -107,6 +108,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
+        Util.errorWithFileLocation(frontend, ctx, log, ctx.problem.message)
+
         val problem = newProblemDeclaration(ctx.problem.message)
 
         frontend.scopeManager.addDeclaration(problem)

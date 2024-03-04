@@ -37,6 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 
 fun LanguageFrontend<*, *>.translationResult(
     init: TranslationResult.() -> Unit
@@ -129,12 +132,14 @@ context(DeclarationHolder)
 fun LanguageFrontend<*, *>.field(
     name: CharSequence,
     type: Type = unknownType(),
-    init: FieldDeclaration.() -> Unit
+    init: (FieldDeclaration.() -> Unit)? = null
 ): FieldDeclaration {
     val node = newFieldDeclaration(name)
     node.type = type
 
-    init(node)
+    if (init != null) {
+        init(node)
+    }
 
     scopeManager.addDeclaration(node)
 
@@ -342,11 +347,15 @@ fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): Decla
 fun LanguageFrontend<*, *>.declareVar(
     name: String,
     type: Type,
-    init: VariableDeclaration.() -> Unit
+    init: (VariableDeclaration.() -> Unit)? = null
 ): DeclarationStatement {
     val node = (this@LanguageFrontend).newDeclarationStatement()
     val variableDecl = newVariableDeclaration(name, type)
-    init(variableDecl)
+
+    if (init != null) {
+        init(variableDecl)
+    }
+
     node.singleDeclaration = variableDecl
 
     return node
@@ -935,6 +944,24 @@ fun LanguageFrontend<*, *>.ref(
     }
 
     return node
+}
+
+/**
+ * This utility function tries to create a fake [PhysicalLocation] in order to somewhat
+ * differentiate the different nodes. This is primarily needed for the mermaid graph printer, which
+ * relies on [Node.hashCode], which in turn relies on [Node.location].
+ */
+context(TranslationUnitDeclaration)
+fun Expression.line(i: Int): Expression {
+    // We just stupidly assume that the name of node is also its code
+    val code = this.name
+
+    // This is really fake, but it is ok-ish for now
+    val region = Region(i, 0, i, code.length)
+
+    this.location = PhysicalLocation(URI((this@TranslationUnitDeclaration).name.toString()), region)
+
+    return this
 }
 
 /**

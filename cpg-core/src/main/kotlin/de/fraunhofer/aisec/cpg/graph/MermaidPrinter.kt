@@ -44,7 +44,7 @@ fun Node.printEOG(maxConnections: Int = 25): String {
 */
 
 /**
- * This function prints a partial graph, limited to a particular [edgeType], starting with the
+ * This function prints a partial graph, limited to a particular set of edges, starting with the
  * current [Node] as Markdown, with an embedded [Mermaid](https://mermaid.js.org) graph. The output
  * can either be pasted into a Markdown document (and then rendered) or directly pasted into GitHub
  * issues, discussions or pull requests (see
@@ -113,7 +113,7 @@ private fun PropertyEdge<Node>.label(): String {
 
     if (this is Dataflow) {
         if (this.granularity is PartialDataflowGranularity) {
-            builder.append(" (partial, ${this.granularity.partialTarget.name})")
+            builder.append(" (partial, ${this.granularity.partialTarget?.name})")
         } else {
             builder.append(" (full)")
         }

@@ -55,7 +55,7 @@ data object FullDataflowGranularity : Granularity
  */
 class PartialDataflowGranularity(
     /** The target that is affected by this partial dataflow. */
-    val partialTarget: Declaration
+    val partialTarget: Declaration?
 ) : Granularity
 
 /** Creates a new [FullDataflowGranularity]. */
@@ -71,7 +71,7 @@ fun default() = full()
  * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression] or a
  * [VariableDeclaration] for a [TupleDeclaration].
  */
-fun partial(target: Declaration): PartialDataflowGranularity {
+fun partial(target: Declaration?): PartialDataflowGranularity {
     return PartialDataflowGranularity(target)
 }
 
