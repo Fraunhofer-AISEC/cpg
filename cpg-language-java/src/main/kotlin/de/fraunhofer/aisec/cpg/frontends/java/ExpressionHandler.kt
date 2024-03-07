@@ -58,8 +58,7 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
@@ -123,7 +122,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     /**
      * Creates a new [NewArrayExpression], which is usually used as an initializer of a
-     * [de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration].
+     * [VariableDeclaration].
      *
      * @param expr the expression
      * @return the [NewArrayExpression]
