@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.analysis.MultiLineToStringStyle
 import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
+import kotlin.script.experimental.api.compilerOptions
 import kotlin.script.experimental.jvm.baseClassLoader
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvm.dependenciesFromClassloader
 import kotlin.script.experimental.jvm.jvm
-import org.jetbrains.kotlinx.ki.shell.KotlinShell
 import org.jetbrains.kotlinx.ki.shell.Plugin
 import org.jetbrains.kotlinx.ki.shell.Shell
 import org.jetbrains.kotlinx.ki.shell.configuration.CachedInstance
@@ -52,13 +52,14 @@ object CpgConsole {
                 ScriptCompilationConfiguration {
                     jvm {
                         dependenciesFromClassloader(
-                            classLoader = KotlinShell::class.java.classLoader,
+                            classLoader = CpgConsole::class.java.classLoader,
                             wholeClasspath = true
                         )
                     }
+                    compilerOptions("-jvm-target=17") // this needs to match the JVM toolchain target in the CPG
                 },
                 ScriptEvaluationConfiguration {
-                    jvm { baseClassLoader(Shell::class.java.classLoader) }
+                    jvm { baseClassLoader(CpgConsole::class.java.classLoader) }
                 }
             )
 
