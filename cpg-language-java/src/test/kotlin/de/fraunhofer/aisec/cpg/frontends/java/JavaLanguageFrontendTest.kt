@@ -619,10 +619,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 it.registerLanguage(JavaLanguage())
             }
         val tu =
-            findByUniqueName(
-                result.components.flatMap { it.translationUnits },
-                "src/test/resources/fix-328/Cat.java"
-            )
+            findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
 
@@ -799,5 +796,66 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val jArg = forIterator.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(jArg)
         assertContains(jArg.prevDFG, loopVariable)
+    }
+
+    @Test
+    fun testBinaryOperator() {
+        val file = File("src/test/resources/Issue1444.java")
+
+        val language = JavaLanguage()
+        val result =
+            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(language)
+            }
+        val tu =
+            findByUniqueName(result.components.flatMap { it.translationUnits }, file.toString())
+
+        val record = tu.getDeclarationAs(0, RecordDeclaration::class.java)
+        assertNotNull(record)
+
+        val mainMethod = record.methods[0]
+
+        val intOperationsList = mainMethod.getBodyStatementAs(0, MemberCallExpression::class.java)
+        assertNotNull(intOperationsList)
+        assertEquals(13, intOperationsList.arguments.size)
+        assertTrue { intOperationsList.arguments.all { language.builtInTypes["int"]!! == it.type } }
+
+        val longOperationsList = mainMethod.getBodyStatementAs(1, MemberCallExpression::class.java)
+        assertNotNull(longOperationsList)
+        assertEquals(13, longOperationsList.arguments.size)
+        assertTrue {
+            longOperationsList.arguments.all { language.builtInTypes["long"]!! == it.type }
+        }
+
+        val floatOperationsList = mainMethod.getBodyStatementAs(2, MemberCallExpression::class.java)
+        assertNotNull(floatOperationsList)
+        assertEquals(7, floatOperationsList.arguments.size)
+        assertTrue {
+            floatOperationsList.arguments.all { language.builtInTypes["float"]!! == it.type }
+        }
+
+        val doubleOperationsList =
+            mainMethod.getBodyStatementAs(3, MemberCallExpression::class.java)
+        assertNotNull(doubleOperationsList)
+        assertEquals(7, doubleOperationsList.arguments.size)
+        assertTrue {
+            doubleOperationsList.arguments.all { language.builtInTypes["double"]!! == it.type }
+        }
+
+        val booleanOperationsList =
+            mainMethod.getBodyStatementAs(4, MemberCallExpression::class.java)
+        assertNotNull(booleanOperationsList)
+        assertEquals(6, booleanOperationsList.arguments.size)
+        assertTrue {
+            booleanOperationsList.arguments.all { language.builtInTypes["boolean"]!! == it.type }
+        }
+
+        val stringOperationsList =
+            mainMethod.getBodyStatementAs(5, MemberCallExpression::class.java)
+        assertNotNull(stringOperationsList)
+        assertEquals(6, stringOperationsList.arguments.size)
+        assertTrue {
+            stringOperationsList.arguments.all { language.builtInTypes["String"]!! == it.type }
+        }
     }
 }

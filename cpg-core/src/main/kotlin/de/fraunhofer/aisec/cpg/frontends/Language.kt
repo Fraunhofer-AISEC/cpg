@@ -138,6 +138,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 } else {
                     rhs
                 }
+            lhs is BooleanType && rhs is BooleanType -> lhs
             else -> unknownType()
         }
     }
@@ -167,10 +168,12 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             "-",
             "*",
             "/",
-            "%" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "%",
             "&",
+            "&&",
             "|",
-            "^",
+            "||",
+            "^" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
             "<<",
             ">>" ->
                 if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {

@@ -123,7 +123,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     /**
      * Creates a new [NewArrayExpression], which is usually used as an initializer of a
-     * [VariableDeclaration].
+     * [de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration].
      *
      * @param expr the expression
      * @return the [NewArrayExpression]
@@ -462,7 +462,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             is DoubleLiteralExpr ->
                 newLiteral(
                     literalExpr.asDoubleLiteralExpr().asDouble(),
-                    this.primitiveType("double"),
+                    if (literalExpr.value.endsWith("f", true)) this.primitiveType("float")
+                    else this.primitiveType("double"),
                     rawNode = expr
                 )
             is LongLiteralExpr ->
