@@ -175,7 +175,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             "||",
             "^" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
             "<<",
-            ">>" ->
+            ">>",
+            ">>>" ->
                 if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
                     operation.lhs.type

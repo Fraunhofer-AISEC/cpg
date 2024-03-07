@@ -799,7 +799,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testBinaryOperator() {
+    fun testArithmeticOperators() {
         val file = File("src/test/resources/Issue1444.java")
 
         val language = JavaLanguage()
@@ -817,12 +817,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val intOperationsList = mainMethod.getBodyStatementAs(0, MemberCallExpression::class.java)
         assertNotNull(intOperationsList)
-        assertEquals(13, intOperationsList.arguments.size)
+        assertEquals(14, intOperationsList.arguments.size)
         assertTrue { intOperationsList.arguments.all { language.builtInTypes["int"]!! == it.type } }
 
         val longOperationsList = mainMethod.getBodyStatementAs(1, MemberCallExpression::class.java)
         assertNotNull(longOperationsList)
-        assertEquals(13, longOperationsList.arguments.size)
+        assertEquals(14, longOperationsList.arguments.size)
         assertTrue {
             longOperationsList.arguments.all { language.builtInTypes["long"]!! == it.type }
         }
