@@ -177,7 +177,9 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 //   implements an interprocedural analysis (for example).
                 (curr.refersTo as? FieldDeclaration)
                     ?.usages
-                    ?.filter { it.access == AccessValues.WRITE }
+                    ?.filter {
+                        it.access == AccessValues.WRITE || it.access == AccessValues.READWRITE
+                    }
                     ?.let { prevDFGToPush.addAll(it) }
                 // Also add the initializer of the field (if it exists)
                 (curr.refersTo as? FieldDeclaration)?.initializer?.let { prevDFGToPush.add(it) }
