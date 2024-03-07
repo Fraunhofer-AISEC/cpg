@@ -527,6 +527,10 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
     return null
 }
 
+/** Returns all [Node] children in this graph, starting with this [Node]. */
+val Node?.nodes: List<Node>
+    get() = this.allChildren()
+
 /** Returns all [CallExpression] children in this graph, starting with this [Node]. */
 val Node?.calls: List<CallExpression>
     get() = this.allChildren()

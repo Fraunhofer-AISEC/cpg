@@ -97,9 +97,7 @@ signing {
 //
 // specify Java & Kotlin JVM version
 kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
+    jvmToolchain(17)
 }
 
 tasks.withType<KotlinCompile> {
