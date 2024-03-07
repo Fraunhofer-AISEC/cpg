@@ -1,0 +1,548 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>UnreachabilityState</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../../../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+<nav class="navigation" id="navigation-wrapper">
+    <div class="navigation--inner">
+        <div class="navigation-title">
+            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
+            <div class="library-name">
+<a class="library-name--link" href="../../../index.html">
+                            cpg
+                    </a>            </div>
+            <div class="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-unreachability-state/index.html&quot;}"><div class="versions-dropdown">
+  <div class="versions-dropdown-button">8.1.0</div>
+  <div class="versions-dropdown-data"><a href="index.html">8.1.0</a><a href="../../../older/main/cpg-analysis/de.fraunhofer.aisec.cpg.passes/-unreachability-state/index.html">main</a></div>
+</div>
+</dokka-template-command>            </div>
+        </div>
+        <div class="filter-section" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-analysis:dokkaHtmlPartial/main">jvm</button>
+        </div>
+    </div>
+    <div class="navigation-controls">
+        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
+        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
+    </div>
+</nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="sidebar--inner" id="sideMenu"></div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-analysis::de.fraunhofer.aisec.cpg.passes/UnreachabilityState///PointingToDeclaration//439033401">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-analysis</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes</a><span class="delimiter">/</span><span class="current">UnreachabilityState</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Unreachability</span><wbr><span><span>State</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">UnreachabilityState</a> : <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-state/index.html">State</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt; </span></div><p class="paragraph">A state which actually holds a state for all <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a>s, one only for declarations and one for ReturnStatements.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="">Constructors</h2>
+        <div class="table"><a data-name="1183020094%2FConstructors%2F439033401" anchor-label="UnreachabilityState" id="1183020094%2FConstructors%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-unreachability-state.html"><span>Unreachability</span><wbr><span><span>State</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1183020094%2FConstructors%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="2111837807%2FProperties%2F439033401" anchor-label="entries" id="2111837807%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#2111837807%2FProperties%2F439033401"><span><span>entries</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2111837807%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#2111837807%2FProperties%2F439033401">entries</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-map/-mutable-entry/index.html">MutableMap.MutableEntry</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1479970233%2FProperties%2F439033401" anchor-label="keys" id="-1479970233%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1479970233%2FProperties%2F439033401"><span><span>keys</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1479970233%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#-1479970233%2FProperties%2F439033401">keys</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-721733414%2FProperties%2F439033401" anchor-label="size" id="-721733414%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-721733414%2FProperties%2F439033401"><span><span>size</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-721733414%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#-721733414%2FProperties%2F439033401">size</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="269306713%2FProperties%2F439033401" anchor-label="values" id="269306713%2FProperties%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#269306713%2FProperties%2F439033401"><span><span>values</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="269306713%2FProperties%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#269306713%2FProperties%2F439033401">values</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-collection/index.html">MutableCollection</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="-257373230%2FFunctions%2F439033401" anchor-label="clear" id="-257373230%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-257373230%2FFunctions%2F439033401"><span><span>clear</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-257373230%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-257373230%2FFunctions%2F439033401"><span class="token function">clear</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="703051458%2FFunctions%2F439033401" anchor-label="clone" id="703051458%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#703051458%2FFunctions%2F439033401"><span><span>clone</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="703051458%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#703051458%2FFunctions%2F439033401"><span class="token function">clone</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1224372328%2FFunctions%2F439033401" anchor-label="compute" id="-1224372328%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1224372328%2FFunctions%2F439033401"><span><span>compute</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1224372328%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-1224372328%2FFunctions%2F439033401"><span class="token function">compute</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiFunction.html">BiFunction</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span><span class="token punctuation">, </span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1993368078%2FFunctions%2F439033401" anchor-label="computeIfAbsent" id="-1993368078%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1993368078%2FFunctions%2F439033401"><span>compute</span><wbr><span>If</span><wbr><span><span>Absent</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1993368078%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-1993368078%2FFunctions%2F439033401"><span class="token function">computeIfAbsent</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Function.html">Function</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2126253653%2FFunctions%2F439033401" anchor-label="computeIfPresent" id="2126253653%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#2126253653%2FFunctions%2F439033401"><span>compute</span><wbr><span>If</span><wbr><span><span>Present</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2126253653%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#2126253653%2FFunctions%2F439033401"><span class="token function">computeIfPresent</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiFunction.html">BiFunction</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1262293208%2FFunctions%2F439033401" anchor-label="containsKey" id="1262293208%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1262293208%2FFunctions%2F439033401"><span>contains</span><wbr><span><span>Key</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1262293208%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#1262293208%2FFunctions%2F439033401"><span class="token function">containsKey</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1849695954%2FFunctions%2F439033401" anchor-label="containsValue" id="1849695954%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1849695954%2FFunctions%2F439033401"><span>contains</span><wbr><span><span>Value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1849695954%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#1849695954%2FFunctions%2F439033401"><span class="token function">containsValue</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">value<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1456794634%2FFunctions%2F439033401" anchor-label="duplicate" id="-1456794634%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1456794634%2FFunctions%2F439033401"><span><span>duplicate</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1456794634%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-1456794634%2FFunctions%2F439033401"><span class="token function">duplicate</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-state/index.html">State</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="208304826%2FFunctions%2F439033401" anchor-label="equals" id="208304826%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#208304826%2FFunctions%2F439033401"><span><span>equals</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="208304826%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="index.html#208304826%2FFunctions%2F439033401"><span class="token function">equals</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2121535698%2FFunctions%2F439033401" anchor-label="forEach" id="2121535698%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#2121535698%2FFunctions%2F439033401"><span>for</span><wbr><span><span>Each</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2121535698%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#2121535698%2FFunctions%2F439033401"><span class="token function">forEach</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html">BiConsumer</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-394543762%2FFunctions%2F439033401" anchor-label="get" id="-394543762%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-394543762%2FFunctions%2F439033401"><span><span>get</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-394543762%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="index.html#-394543762%2FFunctions%2F439033401"><span class="token function">get</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-3571644%2FFunctions%2F439033401" anchor-label="getOrDefault" id="-3571644%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-3571644%2FFunctions%2F439033401"><span>get</span><wbr><span>Or</span><wbr><span><span>Default</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-3571644%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-3571644%2FFunctions%2F439033401"><span class="token function">getOrDefault</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">defaultValue<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="612619500%2FFunctions%2F439033401" anchor-label="hashCode" id="612619500%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#612619500%2FFunctions%2F439033401"><span>hash</span><wbr><span><span>Code</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="612619500%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#612619500%2FFunctions%2F439033401"><span class="token function">hashCode</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="360261660%2FFunctions%2F439033401" anchor-label="isEmpty" id="360261660%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#360261660%2FFunctions%2F439033401"><span>is</span><wbr><span><span>Empty</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="360261660%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#360261660%2FFunctions%2F439033401"><span class="token function">isEmpty</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1467128731%2FFunctions%2F439033401" anchor-label="lub" id="-1467128731%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1467128731%2FFunctions%2F439033401"><span><span>lub</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1467128731%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-1467128731%2FFunctions%2F439033401"><span class="token function">lub</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-state/index.html">State</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-state/index.html">State</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="277004746%2FFunctions%2F439033401" anchor-label="merge" id="277004746%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#277004746%2FFunctions%2F439033401"><span><span>merge</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="277004746%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#277004746%2FFunctions%2F439033401"><span class="token function">merge</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p2<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiFunction.html">BiFunction</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="553527544%2FFunctions%2F439033401" anchor-label="needsUpdate" id="553527544%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#553527544%2FFunctions%2F439033401"><span>needs</span><wbr><span><span>Update</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="553527544%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#553527544%2FFunctions%2F439033401"><span class="token function">needsUpdate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-state/index.html">State</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1294931189%2FFunctions%2F439033401" anchor-label="push" id="-1294931189%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1294931189%2FFunctions%2F439033401"><span><span>push</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1294931189%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-1294931189%2FFunctions%2F439033401"><span class="token function">push</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">newNode<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">newLatticeElement<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-382413465%2FFunctions%2F439033401" anchor-label="put" id="-382413465%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-382413465%2FFunctions%2F439033401"><span><span>put</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-382413465%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-382413465%2FFunctions%2F439033401"><span class="token function">put</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1124364409%2FFunctions%2F439033401" anchor-label="putAll" id="1124364409%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1124364409%2FFunctions%2F439033401"><span>put</span><wbr><span><span>All</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1124364409%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#1124364409%2FFunctions%2F439033401"><span class="token function">putAll</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-548017859%2FFunctions%2F439033401" anchor-label="putIfAbsent" id="-548017859%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-548017859%2FFunctions%2F439033401"><span>put</span><wbr><span>If</span><wbr><span><span>Absent</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-548017859%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-548017859%2FFunctions%2F439033401"><span class="token function">putIfAbsent</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="891896180%2FFunctions%2F439033401" anchor-label="remove" id="891896180%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-934226976%2FFunctions%2F439033401"><span><span>remove</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="891896180%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-934226976%2FFunctions%2F439033401"><span class="token function">remove</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-1245603296%2FFunctions%2F439033401"><span class="token function">remove</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1112205644%2FFunctions%2F439033401" anchor-label="replace" id="1112205644%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-523077364%2FFunctions%2F439033401"><span><span>replace</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1112205644%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-523077364%2FFunctions%2F439033401"><span class="token function">replace</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">?</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#1456842060%2FFunctions%2F439033401"><span class="token function">replace</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p1<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">p2<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-710616636%2FFunctions%2F439033401" anchor-label="replaceAll" id="-710616636%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-710616636%2FFunctions%2F439033401"><span>replace</span><wbr><span><span>All</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-710616636%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-710616636%2FFunctions%2F439033401"><span class="token function">replaceAll</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiFunction.html">BiFunction</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edge/-property-edge/index.html">PropertyEdge</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers/-lattice-element/index.html">LatticeElement</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-reachability/index.html">Reachability</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="434453435%2FFunctions%2F439033401" anchor-label="toString" id="434453435%2FFunctions%2F439033401" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-analysis:dokkaHtmlPartial/main" data-filterable-set=":cpg-analysis:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#434453435%2FFunctions%2F439033401"><span>to</span><wbr><span><span>String</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="434453435%2FFunctions%2F439033401"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-analysis:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#434453435%2FFunctions%2F439033401"><span class="token function">toString</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
