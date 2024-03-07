@@ -182,7 +182,7 @@ internal class Project {
             val topLevel = File(modulePath)
 
             val goModFile = topLevel.resolve("go.mod")
-            var module =
+            val module =
                 GoStandardLibrary.Modfile.parse(goModFile.absolutePath, goModFile.readText())
 
             val pb =
@@ -201,7 +201,7 @@ internal class Project {
             }
 
             // Read deps from standard input
-            var deps = proc.inputStream.bufferedReader().readLines()
+            val deps = proc.inputStream.bufferedReader().readLines()
 
             log.debug("Identified {} package dependencies (stdlib only)", deps.size)
 
@@ -225,13 +225,17 @@ internal class Project {
                         // without a dot, it is a stdlib package
                         stdLib.resolve(it)
                     } else if (it.startsWith("vendor")) {
-                        // if it already starts with vendor, it is a vendored stdlib package, we
-                        // don't really include these for now since they blow up the stdlib
+                        // if the dependency path starts with "vendor", then it is a dependency that
+                        // is vendored within the standard library (and not in the project). we
+                        // don't really include these
+                        // for now since they blow up the stdlib
                         null
                     } else if (it.startsWith(module.module.mod.path)) {
                         topLevel.resolve(it.substringAfter(module.module.mod.path))
                     } else {
-                        // for all other dependencies, we try whether they are vendored
+                        // for all other dependencies, we try whether they are vendored within the
+                        // current project. Note, this differs from the above case, where a
+                        // dependency is vendored in the stdlib.
                         topLevel.resolve("vendor").resolve(it)
                     }
                 }
