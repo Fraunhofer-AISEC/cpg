@@ -194,6 +194,9 @@ class ScopeManager : ScopeProvider {
             // scope.
             scopeMap.putAll(manager.scopeMap.filter { it.key != null })
 
+            // Merge aliases
+            aliases.putAll(manager.aliases)
+
             // free the maps, just to clear up some things. this scope manager will not be used
             // anymore
             manager.fqnScopeMap.clear()

@@ -1,6 +1,6 @@
 package p
 
-// Funcy is a function type
+// Funcy has function type as its underlying type
 type Funcy func() error
 
 // newType is a new distinct type, it has string as the "underlying" type.
