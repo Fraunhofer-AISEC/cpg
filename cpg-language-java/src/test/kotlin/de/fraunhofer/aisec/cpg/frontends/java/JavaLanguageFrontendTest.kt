@@ -802,10 +802,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     fun testArithmeticOperators() {
         val file = File("src/test/resources/Issue1444.java")
 
-        val language = JavaLanguage()
         val result =
             TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(language)
+                it.registerLanguage(JavaLanguage())
             }
         val record = result.records["Operators"]
         assertNotNull(record)
@@ -816,38 +815,30 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val expressionLists = mainMethod.mcalls
         assertEquals(6, expressionLists.size)
 
+        val primitiveType = { name: String -> record.language?.primitiveType(name) }
+
         val intOperationsList = expressionLists[0]
         assertEquals(14, intOperationsList.arguments.size)
-        assertTrue { intOperationsList.arguments.all { language.builtInTypes["int"]!! == it.type } }
+        assertTrue { intOperationsList.arguments.all { it.type == primitiveType("int") } }
 
         val longOperationsList = expressionLists[1]
         assertEquals(14, longOperationsList.arguments.size)
-        assertTrue {
-            longOperationsList.arguments.all { language.builtInTypes["long"]!! == it.type }
-        }
+        assertTrue { longOperationsList.arguments.all { it.type == primitiveType("long") } }
 
         val floatOperationsList = expressionLists[2]
         assertEquals(7, floatOperationsList.arguments.size)
-        assertTrue {
-            floatOperationsList.arguments.all { language.builtInTypes["float"]!! == it.type }
-        }
+        assertTrue { floatOperationsList.arguments.all { it.type == primitiveType("float") } }
 
         val doubleOperationsList = expressionLists[3]
         assertEquals(7, doubleOperationsList.arguments.size)
-        assertTrue {
-            doubleOperationsList.arguments.all { language.builtInTypes["double"]!! == it.type }
-        }
+        assertTrue { doubleOperationsList.arguments.all { it.type == primitiveType("double") } }
 
         val booleanOperationsList = expressionLists[4]
         assertEquals(6, booleanOperationsList.arguments.size)
-        assertTrue {
-            booleanOperationsList.arguments.all { language.builtInTypes["boolean"]!! == it.type }
-        }
+        assertTrue { booleanOperationsList.arguments.all { it.type == primitiveType("boolean") } }
 
         val stringOperationsList = expressionLists[5]
         assertEquals(6, stringOperationsList.arguments.size)
-        assertTrue {
-            stringOperationsList.arguments.all { language.builtInTypes["String"]!! == it.type }
-        }
+        assertTrue { stringOperationsList.arguments.all { it.type == primitiveType("String") } }
     }
 }
