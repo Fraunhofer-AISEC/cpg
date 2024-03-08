@@ -386,7 +386,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // this in the call resolver instead
             return null
         }
-        var member: FieldDeclaration? = null
+        var member: ValueDeclaration? = null
         val record = containingClass.recordDeclaration
         if (record != null) {
             member =
@@ -402,6 +402,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     .filter { it.name.lastPartsMatch(reference.name) }
                     .map { it.definition }
                     .firstOrNull()
+        }
+        if (member == null && record is EnumDeclaration) {
+            member = record.entries[reference.name.localName]
         }
         return member ?: handleUnknownField(containingClass, reference)
     }
