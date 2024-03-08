@@ -56,7 +56,9 @@ object CpgConsole {
                             wholeClasspath = true
                         )
                     }
-                    compilerOptions("-jvm-target=17") // this needs to match the JVM toolchain target in the CPG
+                    compilerOptions(
+                        "-jvm-target=17"
+                    ) // this needs to match the JVM toolchain target in the CPG
                 },
                 ScriptEvaluationConfiguration {
                     jvm { baseClassLoader(CpgConsole::class.java.classLoader) }
