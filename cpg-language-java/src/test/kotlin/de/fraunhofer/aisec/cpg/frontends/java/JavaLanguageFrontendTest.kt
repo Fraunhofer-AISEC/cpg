@@ -646,7 +646,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 this.declarationHandler =
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
-                            classInterDecl: ClassOrInterfaceDeclaration
+                            classInterDecl: ClassOrInterfaceDeclaration,
                         ): RecordDeclaration {
                             // take the original class and replace the name
                             val declaration =
@@ -815,30 +815,34 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val expressionLists = mainMethod.mcalls
         assertEquals(6, expressionLists.size)
 
-        val primitiveType = { name: String -> record.language?.primitiveType(name) }
+        assertNotNull(mainMethod)
 
-        val intOperationsList = expressionLists[0]
-        assertEquals(14, intOperationsList.arguments.size)
-        assertTrue { intOperationsList.arguments.all { it.type == primitiveType("int") } }
+        with(mainMethod) {
+            val intOperationsList = expressionLists[0]
+            assertEquals(14, intOperationsList.arguments.size)
+            assertTrue { intOperationsList.arguments.all { it.type == primitiveType("int") } }
 
-        val longOperationsList = expressionLists[1]
-        assertEquals(14, longOperationsList.arguments.size)
-        assertTrue { longOperationsList.arguments.all { it.type == primitiveType("long") } }
+            val longOperationsList = expressionLists[1]
+            assertEquals(14, longOperationsList.arguments.size)
+            assertTrue { longOperationsList.arguments.all { it.type == primitiveType("long") } }
 
-        val floatOperationsList = expressionLists[2]
-        assertEquals(7, floatOperationsList.arguments.size)
-        assertTrue { floatOperationsList.arguments.all { it.type == primitiveType("float") } }
+            val floatOperationsList = expressionLists[2]
+            assertEquals(7, floatOperationsList.arguments.size)
+            assertTrue { floatOperationsList.arguments.all { it.type == primitiveType("float") } }
 
-        val doubleOperationsList = expressionLists[3]
-        assertEquals(7, doubleOperationsList.arguments.size)
-        assertTrue { doubleOperationsList.arguments.all { it.type == primitiveType("double") } }
+            val doubleOperationsList = expressionLists[3]
+            assertEquals(7, doubleOperationsList.arguments.size)
+            assertTrue { doubleOperationsList.arguments.all { it.type == primitiveType("double") } }
 
-        val booleanOperationsList = expressionLists[4]
-        assertEquals(6, booleanOperationsList.arguments.size)
-        assertTrue { booleanOperationsList.arguments.all { it.type == primitiveType("boolean") } }
+            val booleanOperationsList = expressionLists[4]
+            assertEquals(6, booleanOperationsList.arguments.size)
+            assertTrue {
+                booleanOperationsList.arguments.all { it.type == primitiveType("boolean") }
+            }
 
-        val stringOperationsList = expressionLists[5]
-        assertEquals(6, stringOperationsList.arguments.size)
-        assertTrue { stringOperationsList.arguments.all { it.type == primitiveType("String") } }
+            val stringOperationsList = expressionLists[5]
+            assertEquals(6, stringOperationsList.arguments.size)
+            assertTrue { stringOperationsList.arguments.all { it.type == primitiveType("String") } }
+        }
     }
 }
