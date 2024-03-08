@@ -198,97 +198,40 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
         )
 
-        val allImports =
-            frontend.context
-                ?.imports
-                ?.map {
-                    var iName: String = it.nameAsString
-                    // we need to ensure that x.* imports really preserve the asterisk!
-                    if (it.isAsterisk && !iName.endsWith(".*")) {
-                        iName += ".*"
-                    }
-                    Pair(it, iName)
-                }
-                ?.groupBy({ it.first.isStatic }, { it.second })
+        handleImportDeclarations(recordDeclaration)
 
-        recordDeclaration.staticImportStatements = allImports?.get(true) ?: listOf()
-        recordDeclaration.importStatements = allImports?.get(false) ?: listOf()
         frontend.scopeManager.enterScope(recordDeclaration)
-
-        // TODO: 'this' identifier for multiple instances?
-        for (decl in classInterDecl.members) {
-            (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
-                handle(it) // will be added via the scopemanager
-            }
-                ?: when (decl) {
-                    is MethodDeclaration -> {
-                        val md =
-                            handle(decl)
-                                as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration?
-                        frontend.scopeManager.addDeclaration(md)
-                    }
-                    is ConstructorDeclaration -> {
-                        val c =
-                            handle(decl)
-                                as
-                                de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration?
-                        frontend.scopeManager.addDeclaration(c)
-                    }
-                    is ClassOrInterfaceDeclaration -> {
-                        frontend.scopeManager.addDeclaration(handle(decl))
-                    }
-                    is InitializerDeclaration -> {
-                        val initializerBlock =
-                            frontend.statementHandler.handleBlockStatement(decl.body)
-                        initializerBlock.isStaticBlock = decl.isStatic
-                        recordDeclaration.addStatement(initializerBlock)
-                    }
-                    else -> {
-                        log.debug(
-                            "Member {} of type {} is something that we do not parse yet: {}",
-                            decl,
-                            recordDeclaration.name,
-                            decl.javaClass.simpleName
-                        )
-                    }
-                }
-        }
-        if (recordDeclaration.constructors.isEmpty()) {
-            val constructorDeclaration =
-                this.newConstructorDeclaration(
-                        recordDeclaration.name.localName,
-                        recordDeclaration,
-                    )
-                    .implicit(recordDeclaration.name.localName)
-            recordDeclaration.addConstructor(constructorDeclaration)
-            frontend.scopeManager.addDeclaration(constructorDeclaration)
-        }
-        frontend.processAnnotations(recordDeclaration, classInterDecl)
+        handleRecordMembers(classInterDecl, recordDeclaration)
         frontend.scopeManager.leaveScope(recordDeclaration)
 
-        // We need special handling if this is a so called "inner class". In this case we need to
-        // store
-        // a "this" reference to the outer class, so methods can use a "qualified this"
-        // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
-        // reference
-        // is stored as an implicit field.
         if (frontend.scopeManager.currentScope is RecordScope) {
-            // Get all the information of the outer class (its name and the respective type). We
-            // need this to generate the field.
-            val scope = frontend.scopeManager.currentScope as RecordScope?
-            if (scope?.name != null) {
-                val fieldType = scope.name?.let { this.objectType(it) } ?: unknownType()
-
-                // Enter the scope of the inner class because the new field belongs there.
-                frontend.scopeManager.enterScope(recordDeclaration)
-                val field =
-                    this.newFieldDeclaration("this$" + scope.name?.localName, fieldType, listOf())
-                        .implicit("this$" + scope.name?.localName)
-                frontend.scopeManager.addDeclaration(field)
-                frontend.scopeManager.leaveScope(recordDeclaration)
-            }
+            // We need special handling if this is a so called "inner class". In this case we need
+            // to
+            // store
+            // a "this" reference to the outer class, so methods can use a "qualified this"
+            // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
+            // reference
+            // is stored as an implicit field.
+            handleInnerRecord(recordDeclaration)
         }
         return recordDeclaration
+    }
+
+    private fun handleInnerRecord(recordDeclaration: RecordDeclaration) {
+        // Get all the information of the outer class (its name and the respective type). We
+        // need this to generate the field.
+        val scope = frontend.scopeManager.currentScope as RecordScope?
+        if (scope?.name != null) {
+            val fieldType = scope.name?.let { this.objectType(it) } ?: unknownType()
+
+            // Enter the scope of the inner class because the new field belongs there.
+            frontend.scopeManager.enterScope(recordDeclaration)
+            val field =
+                this.newFieldDeclaration("this$" + scope.name?.localName, fieldType, listOf())
+                    .implicit("this$" + scope.name?.localName)
+            frontend.scopeManager.addDeclaration(field)
+            frontend.scopeManager.leaveScope(recordDeclaration)
+        }
     }
 
     fun handleFieldDeclaration(
@@ -351,30 +294,37 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
 
-        val allImports =
-            frontend.context
-                ?.imports
-                ?.map {
-                    var iName: String = it.nameAsString
-                    // we need to ensure that x.* imports really preserve the asterisk!
-                    if (it.isAsterisk && !iName.endsWith(".*")) {
-                        iName += ".*"
-                    }
-                    Pair(it, iName)
-                }
-                ?.groupBy({ it.first.isStatic }, { it.second })
+        handleImportDeclarations(enumDeclaration)
 
-        enumDeclaration.staticImportStatements = allImports?.get(true) ?: listOf()
-        enumDeclaration.importStatements = allImports?.get(false) ?: listOf()
         frontend.scopeManager.enterScope(enumDeclaration)
 
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
-
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
 
+        handleRecordMembers(enumDecl, enumDeclaration)
+
+        frontend.scopeManager.leaveScope(enumDeclaration)
+
+        if (frontend.scopeManager.currentScope is RecordScope) {
+            // We need special handling if this is a so called "inner class". In this case we need
+            // to
+            // store
+            // a "this" reference to the outer class, so methods can use a "qualified this"
+            // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
+            // reference
+            // is stored as an implicit field.
+            handleInnerRecord(enumDeclaration)
+        }
+        return enumDeclaration
+    }
+
+    private fun <T : TypeDeclaration<T>> handleRecordMembers(
+        typeDecl: T,
+        recordDeclaration: RecordDeclaration,
+    ) {
         // TODO: 'this' identifier for multiple instances?
-        for (decl in enumDecl.members) {
+        for (decl in typeDecl.members) {
             (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
                 handle(it) // will be added via the scopemanager
             }
@@ -399,54 +349,47 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                         val initializerBlock =
                             frontend.statementHandler.handleBlockStatement(decl.body)
                         initializerBlock.isStaticBlock = decl.isStatic
-                        enumDeclaration.addStatement(initializerBlock)
+                        recordDeclaration.addStatement(initializerBlock)
                     }
                     else -> {
                         log.debug(
                             "Member {} of type {} is something that we do not parse yet: {}",
                             decl,
-                            enumDeclaration.name,
+                            recordDeclaration.name,
                             decl.javaClass.simpleName
                         )
                     }
                 }
         }
-        if (enumDeclaration.constructors.isEmpty()) {
+        if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
                 this.newConstructorDeclaration(
-                        enumDeclaration.name.localName,
-                        enumDeclaration,
+                        recordDeclaration.name.localName,
+                        recordDeclaration,
                     )
-                    .implicit(enumDeclaration.name.localName)
-            enumDeclaration.addConstructor(constructorDeclaration)
+                    .implicit(recordDeclaration.name.localName)
+            recordDeclaration.addConstructor(constructorDeclaration)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
         }
-        frontend.processAnnotations(enumDeclaration, enumDecl)
-        frontend.scopeManager.leaveScope(enumDeclaration)
+        frontend.processAnnotations(recordDeclaration, typeDecl)
+    }
 
-        // We need special handling if this is a so called "inner class". In this case we need to
-        // store
-        // a "this" reference to the outer class, so methods can use a "qualified this"
-        // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
-        // reference
-        // is stored as an implicit field.
-        if (frontend.scopeManager.currentScope is RecordScope) {
-            // Get all the information of the outer class (its name and the respective type). We
-            // need this to generate the field.
-            val scope = frontend.scopeManager.currentScope as RecordScope?
-            if (scope?.name != null) {
-                val fieldType = scope.name?.let { this.objectType(it) } ?: unknownType()
+    private fun handleImportDeclarations(recordDeclaration: RecordDeclaration) {
+        val allImports =
+            frontend.context
+                ?.imports
+                ?.map {
+                    var iName: String = it.nameAsString
+                    // we need to ensure that x.* imports really preserve the asterisk!
+                    if (it.isAsterisk && !iName.endsWith(".*")) {
+                        iName += ".*"
+                    }
+                    Pair(it, iName)
+                }
+                ?.groupBy({ it.first.isStatic }, { it.second })
 
-                // Enter the scope of the inner class because the new field belongs there.
-                frontend.scopeManager.enterScope(enumDeclaration)
-                val field =
-                    this.newFieldDeclaration("this$" + scope.name?.localName, fieldType, listOf())
-                        .implicit("this$" + scope.name?.localName)
-                frontend.scopeManager.addDeclaration(field)
-                frontend.scopeManager.leaveScope(enumDeclaration)
-            }
-        }
-        return enumDeclaration
+        recordDeclaration.staticImportStatements = allImports?.get(true) ?: listOf()
+        recordDeclaration.importStatements = allImports?.get(false) ?: listOf()
     }
 
     /* Not so sure about the place of Annotations in the CPG currently */
