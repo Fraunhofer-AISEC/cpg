@@ -616,7 +616,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file1 = File("src/test/resources/fix-328/Cat.java")
         val file2 = File("src/test/resources/fix-328/Animal.java")
         val result =
-            TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
+            analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
         val tu =
@@ -741,7 +741,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     fun testQualifiedThis() {
         val file = File("src/test/resources/compiling/OuterClass.java")
         val result =
-            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+            analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
         val tu = result.components.flatMap { it.translationUnits }.firstOrNull()

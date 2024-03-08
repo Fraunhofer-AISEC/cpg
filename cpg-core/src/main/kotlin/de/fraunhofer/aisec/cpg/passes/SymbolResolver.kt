@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
