@@ -52,12 +52,25 @@ tasks.withType<Test> {
     }
 }
 
+
+repositories {
+    maven {
+        setUrl("https://jitpack.io")
+    }
+}
+
 dependencies {
     // CPG
     api(projects.cpgAnalysis)
     api(projects.cpgNeo4j)
 
-    implementation(libs.kotlin.script.runtime)
-    implementation(libs.kotlin.coroutines.core)
     implementation(libs.kotlin.ki.shell)
+
+    // ki-shell dependencies, that we need to specify manually because we are using the JitPack "release"
+    implementation(libs.kotlin.script.runtime)
+    implementation(libs.bundles.kotlin.scripting)
+    implementation(libs.antlr.runtime)
+    implementation(libs.kotlin.coroutines.core)
+    implementation(libs.jline)
+
 }

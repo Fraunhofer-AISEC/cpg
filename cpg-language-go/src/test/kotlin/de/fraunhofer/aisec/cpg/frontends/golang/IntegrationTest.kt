@@ -63,7 +63,7 @@ class IntegrationTest {
             )
         assertNotNull(tus)
 
-        val printTU = tus.firstOrNull { it.name.endsWith("print.go") }
+        val printTU = tus.firstOrNull { it.name.endsWith("fmt/print.go") }
         assertNotNull(printTU)
 
         val printf = printTU.functions["Printf"]
