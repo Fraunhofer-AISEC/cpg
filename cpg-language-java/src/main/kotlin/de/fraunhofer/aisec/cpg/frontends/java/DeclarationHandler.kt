@@ -198,10 +198,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
         )
 
-        handleImportDeclarations(recordDeclaration)
+        processImportDeclarations(recordDeclaration)
 
         frontend.scopeManager.enterScope(recordDeclaration)
-        handleRecordMembers(classInterDecl, recordDeclaration)
+        processRecordMembers(classInterDecl, recordDeclaration)
         frontend.scopeManager.leaveScope(recordDeclaration)
 
         if (frontend.scopeManager.currentScope is RecordScope) {
@@ -212,12 +212,12 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
             // reference
             // is stored as an implicit field.
-            handleInnerRecord(recordDeclaration)
+            processInnerRecord(recordDeclaration)
         }
         return recordDeclaration
     }
 
-    private fun handleInnerRecord(recordDeclaration: RecordDeclaration) {
+    private fun processInnerRecord(recordDeclaration: RecordDeclaration) {
         // Get all the information of the outer class (its name and the respective type). We
         // need this to generate the field.
         val scope = frontend.scopeManager.currentScope as RecordScope?
@@ -294,7 +294,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
 
-        handleImportDeclarations(enumDeclaration)
+        processImportDeclarations(enumDeclaration)
 
         frontend.scopeManager.enterScope(enumDeclaration)
 
@@ -302,7 +302,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
 
-        handleRecordMembers(enumDecl, enumDeclaration)
+        processRecordMembers(enumDecl, enumDeclaration)
 
         frontend.scopeManager.leaveScope(enumDeclaration)
 
@@ -314,12 +314,12 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
             // reference
             // is stored as an implicit field.
-            handleInnerRecord(enumDeclaration)
+            processInnerRecord(enumDeclaration)
         }
         return enumDeclaration
     }
 
-    private fun <T : TypeDeclaration<T>> handleRecordMembers(
+    private fun <T : TypeDeclaration<T>> processRecordMembers(
         typeDecl: T,
         recordDeclaration: RecordDeclaration,
     ) {
@@ -374,7 +374,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         frontend.processAnnotations(recordDeclaration, typeDecl)
     }
 
-    private fun handleImportDeclarations(recordDeclaration: RecordDeclaration) {
+    private fun processImportDeclarations(recordDeclaration: RecordDeclaration) {
         val allImports =
             frontend.context
                 ?.imports

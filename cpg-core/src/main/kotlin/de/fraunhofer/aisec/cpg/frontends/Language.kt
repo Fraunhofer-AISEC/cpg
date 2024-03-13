@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.io.File
@@ -138,6 +137,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 } else {
                     rhs
                 }
+            lhs is BooleanType && rhs is BooleanType -> lhs
             else -> unknownType()
         }
     }
@@ -147,14 +147,13 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * programming languages.
      */
     open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        if (operation.operatorCode == "==" || operation.operatorCode == "===") {
-            // A comparison, so we return the type "boolean"
-            return this.builtInTypes.values.firstOrNull { it is BooleanType }
-                ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
-                ?: unknownType()
-        }
-
         return when (operation.operatorCode) {
+            "==",
+            "===" ->
+                // A comparison, so we return the type "boolean"
+                this.builtInTypes.values.firstOrNull { it is BooleanType }
+                    ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
+                    ?: unknownType()
             "+" ->
                 if (operation.lhs.type is StringType) {
                     // string + anything => string
@@ -167,12 +166,16 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 }
             "-",
             "*",
-            "/" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "/",
+            "%",
             "&",
+            "&&",
             "|",
-            "^",
+            "||",
+            "^" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
             "<<",
-            ">>" ->
+            ">>",
+            ">>>" ->
                 if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
                     operation.lhs.type

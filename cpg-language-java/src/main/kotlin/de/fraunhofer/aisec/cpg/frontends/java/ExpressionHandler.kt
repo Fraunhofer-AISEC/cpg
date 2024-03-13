@@ -29,46 +29,21 @@ import com.github.javaparser.Range
 import com.github.javaparser.TokenRange
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.body.VariableDeclarator
-import com.github.javaparser.ast.expr.ArrayAccessExpr
-import com.github.javaparser.ast.expr.ArrayCreationExpr
-import com.github.javaparser.ast.expr.ArrayInitializerExpr
-import com.github.javaparser.ast.expr.BinaryExpr
-import com.github.javaparser.ast.expr.BooleanLiteralExpr
-import com.github.javaparser.ast.expr.CharLiteralExpr
-import com.github.javaparser.ast.expr.ClassExpr
-import com.github.javaparser.ast.expr.DoubleLiteralExpr
-import com.github.javaparser.ast.expr.EnclosedExpr
+import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression
-import com.github.javaparser.ast.expr.FieldAccessExpr
-import com.github.javaparser.ast.expr.InstanceOfExpr
-import com.github.javaparser.ast.expr.IntegerLiteralExpr
-import com.github.javaparser.ast.expr.LiteralExpr
-import com.github.javaparser.ast.expr.LongLiteralExpr
-import com.github.javaparser.ast.expr.MethodCallExpr
-import com.github.javaparser.ast.expr.NameExpr
-import com.github.javaparser.ast.expr.NullLiteralExpr
-import com.github.javaparser.ast.expr.ObjectCreationExpr
-import com.github.javaparser.ast.expr.StringLiteralExpr
-import com.github.javaparser.ast.expr.SuperExpr
-import com.github.javaparser.ast.expr.ThisExpr
-import com.github.javaparser.ast.expr.UnaryExpr
-import com.github.javaparser.ast.expr.VariableDeclarationExpr
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import org.slf4j.LoggerFactory
 import java.util.function.Supplier
 import kotlin.collections.set
 import kotlin.jvm.optionals.getOrNull
-import org.slf4j.LoggerFactory
 
 class ExpressionHandler(lang: JavaLanguageFrontend) :
     Handler<Statement, Expression, JavaLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
@@ -462,7 +437,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             is DoubleLiteralExpr ->
                 newLiteral(
                     literalExpr.asDoubleLiteralExpr().asDouble(),
-                    this.primitiveType("double"),
+                    if (literalExpr.value.endsWith("f", true)) this.primitiveType("float")
+                    else this.primitiveType("double"),
                     rawNode = expr
                 )
             is LongLiteralExpr ->
