@@ -42,6 +42,7 @@ class Schema {
     /** Schema definition for node entities that is persisted to the neo4j database */
     data class SchemaNode(
         val name: String,
+        val isAbstract: Boolean,
         val labels: Set<String>,
         val childLabels: Set<String>,
         val relationships: Set<SchemaRelationship>,
@@ -55,7 +56,8 @@ class Schema {
     data class SchemaRelationship(
         val label: String,
         val targetNode: String,
-        val multiplicity: Char
+        val multiplicity: Char,
+        val inherited: Boolean,
     )
 
     /**
@@ -424,13 +426,11 @@ class Schema {
     private fun entitiesToJson(classInfo: ClassInfo): MutableList<SchemaNode> {
         val entityLabel = toLabel(classInfo)
 
-        val labels: MutableSet<String> = mutableSetOf()
+        val labels: MutableSet<String> = mutableSetOf(entityLabel)
         if (hierarchy[classInfo]?.first != null) {
-
             hierarchy[classInfo]?.first?.let {
                 getHierarchy(it).forEach { labels.add(toLabel(it)) }
             }
-            labels.add(entityLabel)
         }
         val childLabels: MutableSet<String> = mutableSetOf()
         if (hierarchy[classInfo]?.second?.isNotEmpty() == true) {
@@ -446,23 +446,23 @@ class Schema {
         if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
 
             if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
-                removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inherited ->
+                removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inheritedRel ->
                     var current = classInfo
                     var baseClass: ClassInfo? = null
                     while (baseClass == null) {
                         inherentRels[toLabel(current)]?.let { rels ->
-                            if (rels.any { it.second == inherited.second }) {
+                            if (rels.any { it.second == inheritedRel.second }) {
                                 baseClass = current
                             }
                         }
                         hierarchy[current]?.first?.let { current = it }
                     }
-                    baseClass?.let { relationshipsToJson(it, inherited) }
+                    baseClass?.let { relationships.add(relationshipToJson(it, inheritedRel, true)) }
                 }
             }
 
             removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
-                relationships.add(relationshipsToJson(classInfo, it))
+                relationships.add(relationshipToJson(classInfo, it, false))
             }
         }
 
@@ -481,7 +481,17 @@ class Schema {
         val entityNodes =
             hierarchy[classInfo]?.second?.flatMap { entitiesToJson(it) }?.toMutableList()
                 ?: mutableListOf<Schema.SchemaNode>()
-        entityNodes.add(0, SchemaNode(entityLabel, labels, childLabels, relationships, properties))
+        entityNodes.add(
+            0,
+            SchemaNode(
+                entityLabel,
+                classInfo.isAbstract,
+                labels,
+                childLabels,
+                relationships,
+                properties
+            )
+        )
 
         return entityNodes
     }
@@ -599,13 +609,19 @@ class Schema {
         closeMermaid(out)
     }
 
-    private fun relationshipsToJson(
+    private fun relationshipToJson(
         classInfo: ClassInfo,
-        relationshipLabel: Pair<String, String>
+        relationshipLabel: Pair<String, String>,
+        inherited: Boolean
     ): SchemaRelationship {
         val fieldInfo: FieldInfo = classInfo.getFieldInfo(relationshipLabel.first)
         val targetInfo = getTargetInfo(fieldInfo)
         val multiplicity = if (targetInfo.first) '*' else '1'
-        return SchemaRelationship(relationshipLabel.second, toLabel(classInfo), multiplicity)
+        return SchemaRelationship(
+            relationshipLabel.second,
+            toLabel(classInfo),
+            multiplicity,
+            inherited
+        )
     }
 }
