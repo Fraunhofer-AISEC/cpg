@@ -619,10 +619,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 it.registerLanguage(JavaLanguage())
             }
         val tu =
-            findByUniqueName(
-                result.components.flatMap { it.translationUnits },
-                "src/test/resources/fix-328/Cat.java"
-            )
+            findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
 
@@ -649,7 +646,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 this.declarationHandler =
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
-                            classInterDecl: ClassOrInterfaceDeclaration
+                            classInterDecl: ClassOrInterfaceDeclaration,
                         ): RecordDeclaration {
                             // take the original class and replace the name
                             val declaration =
@@ -799,5 +796,53 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val jArg = forIterator.calls["println"]?.arguments?.firstOrNull()
         assertNotNull(jArg)
         assertContains(jArg.prevDFG, loopVariable)
+    }
+
+    @Test
+    fun testArithmeticOperators() {
+        val file = File("src/test/resources/Issue1444.java")
+
+        val result =
+            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage(JavaLanguage())
+            }
+        val record = result.records["Operators"]
+        assertNotNull(record)
+        assertFalse { record.methods.isEmpty() }
+
+        val mainMethod = record.methods["main"]
+
+        val expressionLists = mainMethod.mcalls
+        assertEquals(6, expressionLists.size)
+
+        assertNotNull(mainMethod)
+
+        with(mainMethod) {
+            val intOperationsList = expressionLists[0]
+            assertEquals(14, intOperationsList.arguments.size)
+            assertTrue { intOperationsList.arguments.all { it.type == primitiveType("int") } }
+
+            val longOperationsList = expressionLists[1]
+            assertEquals(14, longOperationsList.arguments.size)
+            assertTrue { longOperationsList.arguments.all { it.type == primitiveType("long") } }
+
+            val floatOperationsList = expressionLists[2]
+            assertEquals(7, floatOperationsList.arguments.size)
+            assertTrue { floatOperationsList.arguments.all { it.type == primitiveType("float") } }
+
+            val doubleOperationsList = expressionLists[3]
+            assertEquals(7, doubleOperationsList.arguments.size)
+            assertTrue { doubleOperationsList.arguments.all { it.type == primitiveType("double") } }
+
+            val booleanOperationsList = expressionLists[4]
+            assertEquals(6, booleanOperationsList.arguments.size)
+            assertTrue {
+                booleanOperationsList.arguments.all { it.type == primitiveType("boolean") }
+            }
+
+            val stringOperationsList = expressionLists[5]
+            assertEquals(6, stringOperationsList.arguments.size)
+            assertTrue { stringOperationsList.arguments.all { it.type == primitiveType("String") } }
+        }
     }
 }
