@@ -64,6 +64,51 @@ class DFGFunctionSummariesTest {
     }
 
     @Test
+    fun testMatching() {
+        val code =
+            GraphExamples.testFrontend(
+                    TranslationConfiguration.builder()
+                        .defaultPasses()
+                        .registerLanguage(TestLanguage("."))
+                        .registerFunctionSummary(File("src/test/resources/function-dfg2.yml"))
+                        .inferenceConfiguration(
+                            InferenceConfiguration.builder()
+                                .inferDfgForUnresolvedCalls(true)
+                                .inferFunctions(true)
+                                .build()
+                        )
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("DfgInferredCall.c") {
+                            function("main", t("int")) {
+                                body {
+                                    declare {
+                                        variable("a", t("test.List")) { construct("test.List") }
+                                    }
+                                    memberCall("addAll", ref("a", t("test.List"))) {
+                                        literal(1, t("int"))
+                                        construct("test.Object")
+                                    }
+
+                                    returnStmt { ref("a") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        val methodAddAllTwoArgs = code.methods["addAll"]
+        assertNotNull(methodAddAllTwoArgs)
+        assertEquals(2, methodAddAllTwoArgs.parameters.size)
+        assertEquals(
+            setOf<Node>(methodAddAllTwoArgs.receiver!!),
+            methodAddAllTwoArgs.parameters[1].nextDFG
+        )
+    }
+
+    @Test
     fun testPropagateArguments() {
         val dfgTest = getDfgInferredCall()
         assertNotNull(dfgTest)
