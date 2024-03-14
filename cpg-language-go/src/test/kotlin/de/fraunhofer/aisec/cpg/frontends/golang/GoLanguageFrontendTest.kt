@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -44,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
@@ -149,7 +148,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertTrue(make is NewArrayExpression)
 
-        val dimension = make.dimensions.first() as? Literal<*>
+        val dimension = make.dimensions.firstOrNull() as? Literal<*>
         assertNotNull(dimension)
         assertEquals(5, dimension.value)
 
@@ -382,7 +381,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertFullName("fmt.Printf", callExpression)
         assertLocalName("Printf", callExpression)
 
-        val literal = callExpression.arguments.first() as? Literal<*>
+        val literal = callExpression.arguments.firstOrNull() as? Literal<*>
         assertNotNull(literal)
 
         assertEquals("%s", literal.value)
@@ -1170,5 +1169,23 @@ class GoLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(result)
+    }
+
+    @Test
+    fun testMultiValueEvaluate() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("eval.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+                it.registerPass<EdgeCachePass>()
+            }
+        assertNotNull(tu)
+
+        val f = tu.refs("f").lastOrNull()
+        assertNotNull(f)
+
+        val values = f.evaluate(MultiValueEvaluator())
+        assertEquals(setOf("GPT", "GTP"), values)
+        println(f.printDFG())
     }
 }

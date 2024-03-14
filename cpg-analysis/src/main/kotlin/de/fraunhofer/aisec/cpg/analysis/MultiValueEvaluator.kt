@@ -74,7 +74,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 return evaluateInternal(node.initializer, depth + 1)
             }
             is NewArrayExpression -> return evaluateInternal(node.initializer, depth + 1)
-            is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
+            is VariableDeclaration -> return handleVariableDeclaration(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is Reference -> return handleReference(node, depth)
