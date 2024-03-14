@@ -401,6 +401,17 @@ private constructor(
             return this
         }
 
+        inline fun <reified P : Pass<*>> unregisterPass(): Builder {
+            unregisterPass(P::class)
+            return this
+        }
+
+        /** Unregister a [Pass]. */
+        fun unregisterPass(passType: KClass<out Pass<*>>): Builder {
+            passes.remove(passType)
+            return this
+        }
+
         /** Register an additional [Pass]. */
         fun registerPass(passType: KClass<out Pass<*>>): Builder {
             passes.add(passType)

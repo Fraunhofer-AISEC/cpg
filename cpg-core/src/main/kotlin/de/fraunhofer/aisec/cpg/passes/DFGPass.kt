@@ -74,7 +74,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     } else if (param is ParameterDeclaration) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.addPrevDFGContext(param, CallingContextOut(call))
-                        // (arg as? Reference)?.access = AccessValues.READWRITE
+                        (arg as? Reference)?.let {
+                            it.access = AccessValues.READWRITE
+                            it.refersTo?.let { it1 -> it.addNextDFG(it1) }
+                        }
                     }
                 }
             }

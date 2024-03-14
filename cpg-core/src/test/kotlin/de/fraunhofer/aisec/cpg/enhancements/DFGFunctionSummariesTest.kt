@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import java.io.File
 import kotlin.test.Test
@@ -118,8 +119,72 @@ class DFGFunctionSummariesTest {
         assertEquals(returnA, nextDfgOfParam0?.end)
     }
 
+    @Test
+    fun testPropagateArgumentsControlFlowInsensitive() {
+        val dfgTest = getDfgInferredCall { unregisterPass<ControlFlowSensitiveDFGPass>() }
+        assertNotNull(dfgTest)
+
+        val main = dfgTest.functions["main"]
+        assertNotNull(main)
+
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        val param0 = memcpy.parameters[0]
+        val param1 = memcpy.parameters[1]
+
+        val call = main.calls["memcpy"]
+        assertNotNull(call)
+
+        val argA = call.arguments[0]
+        assertNotNull(argA)
+        /*
+        The flows should be as follows:
+        VariableDeclaration["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
+        Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (argument of call)] -> VariableDeclaration["a"]
+         */
+
+        assertEquals(2, argA.nextDFG.size)
+        assertEquals(2, argA.prevDFG.size)
+
+        val nextDfg =
+            argA.nextDFGEdges.singleOrNull {
+                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextIn)
+                    ?.callExpression == call
+            }
+        assertNotNull(nextDfg)
+        assertEquals(param0, nextDfg.end)
+
+        val variableA = main.variables["a"]
+        assertNotNull(variableA)
+        assertEquals(mutableSetOf<Node>(variableA, param0), argA.prevDFG)
+
+        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextsensitiveDataflow }
+        assertNotNull(prevDfgOfParam0)
+        assertEquals(param1, prevDfgOfParam0.start)
+
+        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        assertNotNull(returnA)
+
+        assertEquals(mutableSetOf<Node>(argA), param0.nextDFG)
+
+        assertEquals(mutableSetOf<Node>(returnA, argA), variableA.nextDFG)
+
+        // Check that also the CallingContext property is set correctly
+        val nextDfgOfParam0 =
+            param0.nextDFGEdges.singleOrNull {
+                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
+                    ?.callExpression == call
+            }
+        assertEquals(argA, nextDfgOfParam0?.end)
+    }
+
     companion object {
-        fun getDfgInferredCall(): TranslationResult {
+        fun getDfgInferredCall(
+            customConfig: TranslationConfiguration.Builder.() -> TranslationConfiguration.Builder =
+                {
+                    this
+                }
+        ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
                     .defaultPasses()
@@ -131,7 +196,16 @@ class DFGFunctionSummariesTest {
                             .inferFunctions(true)
                             .build()
                     )
+                    .customConfig()
                     .build()
+            /*
+            int main() {
+              char *a = 7;
+              char *b = 5;
+              memcpy(a, b, 1);
+              return a;
+            }
+             */
             return GraphExamples.testFrontend(config).build {
                 translationResult {
                     translationUnit("DfgInferredCall.c") {
