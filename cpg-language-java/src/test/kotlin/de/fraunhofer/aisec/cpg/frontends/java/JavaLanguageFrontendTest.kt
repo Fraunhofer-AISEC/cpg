@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
@@ -615,7 +616,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file1 = File("src/test/resources/fix-328/Cat.java")
         val file2 = File("src/test/resources/fix-328/Animal.java")
         val result =
-            TestUtils.analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
+            analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
         val tu =
@@ -646,7 +647,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 this.declarationHandler =
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
-                            classInterDecl: ClassOrInterfaceDeclaration,
+                            classInterDecl: ClassOrInterfaceDeclaration
                         ): RecordDeclaration {
                             // take the original class and replace the name
                             val declaration =
@@ -740,7 +741,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     fun testQualifiedThis() {
         val file = File("src/test/resources/compiling/OuterClass.java")
         val result =
-            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+            analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
         val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
@@ -844,5 +845,38 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             assertEquals(6, stringOperationsList.arguments.size)
             assertTrue { stringOperationsList.arguments.all { it.type == primitiveType("String") } }
         }
+    }
+
+    @Test
+    fun testEnums() {
+        val parentFile = File("src/test/resources/compiling/enums/")
+        val result =
+            analyze(".java", parentFile.toPath(), true) { it.registerLanguage(JavaLanguage()) }
+
+        val enum = result.records["Enums"] as EnumDeclaration
+        assertNotNull(enum)
+
+        assertNotNull(enum.imports["EnumsImport"])
+        assertNotNull(enum.staticImports["CONSTANT"])
+        assertNotNull(enum.staticImports["getConstant"])
+
+        assertEquals(2, enum.entries.size)
+
+        val valueField = enum.fields["value"]
+        assertTrue { valueField?.modifiers?.contains("private") ?: false }
+
+        val nameField = enum.fields["NAME"]
+        assertTrue { nameField?.modifiers?.containsAll(listOf("public", "static")) ?: false }
+
+        assertEquals(1, enum.constructors.size)
+        val constructor = enum.constructors.first()
+        assertNotNull(constructor.parameters["value"])
+        assertNotNull(constructor.bodyOrNull<AssignExpression>(0))
+
+        val mainMethod = enum.methods["main"]
+        assertNotNull(mainMethod)
+        assertNotNull(mainMethod.parameters["args"])
+        assertNotNull(mainMethod.bodyOrNull<DeclarationStatement>(0))
+        assertNotNull(mainMethod.bodyOrNull<DeclarationStatement>(1))
     }
 }

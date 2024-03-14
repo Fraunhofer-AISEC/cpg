@@ -73,9 +73,7 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
             val base = importables[matcher.group("base")]
             var members = setOf<ValueDeclaration>()
-            if (base is EnumDeclaration) {
-                members = getOrCreateMembers(base, matcher.group("member"))
-            } else if (base is RecordDeclaration) {
+            if (base is RecordDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
             }
             staticImports.addAll(members)
@@ -104,10 +102,6 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return targetTypes.mapNotNull { importables[it] }.toMutableSet()
     }
 
-    protected fun getOrCreateMembers(base: EnumDeclaration, name: String): Set<ValueDeclaration> {
-        return base.entries.filter { it.name.localName == name }.toSet()
-    }
-
     protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
         val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
 
@@ -123,12 +117,18 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
         )
 
+        val memberEntries = mutableSetOf<EnumConstantDeclaration>()
+        if (base is EnumDeclaration) {
+            base.entries[name]?.let { memberEntries.add(it) }
+        }
+
         // now it gets weird: you can import a field and a number of methods that have the same
         // name, all with a *single* static import...
         // TODO(oxisto): Move all of the following code to the [Inference] class
         val result = mutableSetOf<ValueDeclaration>()
         result.addAll(memberMethods)
         result.addAll(memberFields)
+        result.addAll(memberEntries)
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
@@ -160,9 +160,7 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(t: Node) {
-                    if (t is EnumDeclaration) {
-                        importables.putIfAbsent(t.name.toString(), t)
-                    } else if (t is RecordDeclaration) {
+                    if (t is RecordDeclaration) {
                         records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)
                     }
