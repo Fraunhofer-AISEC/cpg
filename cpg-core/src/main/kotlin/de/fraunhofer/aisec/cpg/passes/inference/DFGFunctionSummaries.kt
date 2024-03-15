@@ -153,7 +153,9 @@ class DFGFunctionSummaries {
             /* There are multiple matching entries. We use the following routine:
              * First, we filter for existing signatures.
              * Second, we filter for the most precise class.
-             * If there are still multiple options, we take the longest signature and hope it's the most precise one.
+             * If there are still multiple options, we take the longest signature.
+             * If this also didn't help to get a precise result, we iterate through the parameters and take the most precise one. We start with index 0 and count upwards, so if param0 leads to a single result, we're done and other entries won't be considered even if all the remaining parameters are more precise or whatever.
+             * If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one.
              */
             val typeEntryList =
                 matchingEntries
@@ -161,12 +163,12 @@ class DFGFunctionSummaries {
                     .map {
                         Pair(
                             language.parseName(it.methodName).parent?.let { it1 ->
-                                language?.objectType(it1)
+                                functionDecl.objectType(it1)
                             },
                             it
                         )
                     }
-            val mostPreciseClassEntries = mutableListOf<FunctionDeclarationEntry>()
+            var mostPreciseClassEntries = mutableListOf<FunctionDeclarationEntry>()
             var mostPreciseType = typeEntryList.first().first
             var superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
             for (typeEntry in typeEntryList) {
@@ -179,10 +181,39 @@ class DFGFunctionSummaries {
                     superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
                 }
             }
+            val maxSignature = mostPreciseClassEntries.mapNotNull { it.signature?.size }.max()
             if (mostPreciseClassEntries.size > 1) {
-                mostPreciseClassEntries.sortByDescending { it.signature?.size ?: 0 }
+                mostPreciseClassEntries =
+                    mostPreciseClassEntries
+                        .filter { it.signature?.size == maxSignature }
+                        .toMutableList()
             }
-            functionToDFGEntryMap[matchingEntries.first()]
+            // Filter parameter types. We start with parameter 0 and continue. Let's hope we remove
+            // some entries here.
+            var argIndex = 0
+            while (mostPreciseClassEntries.size > 1 && argIndex < maxSignature) {
+                mostPreciseType =
+                    mostPreciseClassEntries.first().signature?.get(argIndex)?.let {
+                        functionDecl.objectType(it)
+                    }
+                superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
+                val newMostPrecise = mutableListOf<FunctionDeclarationEntry>()
+                for (entry in mostPreciseClassEntries) {
+                    val currentType =
+                        entry.signature?.get(argIndex)?.let { functionDecl.objectType(it) }
+                    if (currentType == mostPreciseType) {
+                        newMostPrecise.add(entry)
+                    } else if (currentType in superTypes) {
+                        newMostPrecise.clear()
+                        newMostPrecise.add(entry)
+                        mostPreciseType = currentType
+                        superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
+                    }
+                }
+                argIndex++
+                mostPreciseClassEntries = newMostPrecise
+            }
+            functionToDFGEntryMap[mostPreciseClassEntries.first()]
         } else {
             null
         }

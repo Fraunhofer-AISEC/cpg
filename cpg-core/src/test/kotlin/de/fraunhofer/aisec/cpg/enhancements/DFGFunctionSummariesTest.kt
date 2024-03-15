@@ -86,13 +86,22 @@ class DFGFunctionSummariesTest {
                         translationUnit("DfgInferredCall.c") {
                             function("main", t("int")) {
                                 body {
-                                    declare {
-                                        variable("a", t("test.List")) { construct("test.List") }
+                                    // We need three types with a type hierarchy.
+                                    val objectType = t("test.Object")
+                                    val listType = t("test.List")
+                                    ctx?.let {
+                                        val recordDecl =
+                                            listType
+                                                .startInference(it)
+                                                ?.inferRecordDeclaration(
+                                                    listType,
+                                                    this@translationUnit
+                                                )
+                                        listType.recordDeclaration = recordDecl
+                                        recordDecl?.addSuperClass(objectType)
+                                        listType.superTypes.add(objectType)
                                     }
-                                    memberCall("addAll", ref("a", t("test.List"))) {
-                                        literal(1, t("int"))
-                                        construct("test.Object")
-                                    }
+
                                     val specialListType = t("test.SpecialList")
                                     ctx?.let {
                                         val recordDecl =
@@ -103,22 +112,50 @@ class DFGFunctionSummariesTest {
                                                     this@translationUnit
                                                 )
                                         specialListType.recordDeclaration = recordDecl
-                                        val listType = t("test.List")
                                         recordDecl?.addSuperClass(listType)
                                         specialListType.superTypes.add(listType)
                                     }
 
-                                    memberCall("addAll", ref("a", specialListType)) {
+                                    val verySpecialListType = t("test.VerySpecialList")
+                                    ctx?.let {
+                                        val recordDecl =
+                                            specialListType
+                                                .startInference(it)
+                                                ?.inferRecordDeclaration(
+                                                    specialListType,
+                                                    this@translationUnit
+                                                )
+                                        specialListType.recordDeclaration = recordDecl
+                                        recordDecl?.addSuperClass(listType)
+                                        specialListType.superTypes.add(listType)
+                                    }
+
+                                    memberCall("addAll", construct("test.VerySpecialList")) {
                                         literal(1, t("int"))
                                         construct("test.Object")
                                     }
 
-                                    memberCall("addAll", ref("a", t("random.Type"))) {
+                                    memberCall("addAll", construct("test.SpecialList")) {
+                                        literal(1, t("int"))
+                                        construct("test.List")
+                                    }
+
+                                    memberCall("addAll", construct("test.SpecialList")) {
                                         literal(1, t("int"))
                                         construct("test.Object")
                                     }
 
-                                    returnStmt { ref("a") }
+                                    memberCall("addAll", construct("test.List")) {
+                                        literal(1, t("int"))
+                                        construct("test.Object")
+                                    }
+
+                                    memberCall("addAll", construct("random.Type")) {
+                                        literal(1, t("int"))
+                                        construct("test.Object")
+                                    }
+
+                                    returnStmt { literal(0, t("int")) }
                                 }
                             }
                         }
@@ -138,8 +175,11 @@ class DFGFunctionSummariesTest {
         assertEquals(setOf(), listAddAllTwoArgs.parameters[0].nextDFG)
         assertEquals(setOf(), listAddAllTwoArgs.prevDFG)
 
-        // Specified by parent class' method List.addAll
-        val specialListAddAllTwoArgs = code.methods["test.SpecialList.addAll"]
+        // Specified by parent class' method List.addAll(int, Object)
+        val specialListAddAllTwoArgs =
+            code.methods("test.SpecialList.addAll").first {
+                it.parameters[1].type.name.lastPartsMatch("test.Object")
+            }
         assertNotNull(specialListAddAllTwoArgs)
         assertEquals(2, specialListAddAllTwoArgs.parameters.size)
         assertEquals(
@@ -150,6 +190,37 @@ class DFGFunctionSummariesTest {
         // behavior
         assertEquals(setOf(), specialListAddAllTwoArgs.parameters[0].nextDFG)
         assertEquals(setOf(), specialListAddAllTwoArgs.prevDFG)
+
+        // Specified by parent class' method List.addAll(int, List)
+        val specialListAddAllSpecializedArgs =
+            code.methods("test.SpecialList.addAll").first {
+                it.parameters[1].type.name.lastPartsMatch("test.List")
+            }
+        assertNotNull(specialListAddAllSpecializedArgs)
+        assertEquals(2, specialListAddAllSpecializedArgs.parameters.size)
+        // Very weird data flow specified: receiver to param0 and param1 to return.
+        assertEquals(
+            setOf<Node>(specialListAddAllSpecializedArgs.parameters[0]),
+            specialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf()
+        )
+        assertEquals(
+            setOf<Node>(specialListAddAllSpecializedArgs),
+            specialListAddAllSpecializedArgs.parameters[1].nextDFG
+        )
+
+        // Specified by parent class' method List.addAll(int, List)
+        val verySpecialListAddAllSpecializedArgs = code.methods["test.VerySpecialList.addAll"]
+        assertNotNull(verySpecialListAddAllSpecializedArgs)
+        assertEquals(2, verySpecialListAddAllSpecializedArgs.parameters.size)
+        // Very weird data flow specified: receiver to param0 and param1 to return.
+        assertEquals(
+            setOf<Node>(verySpecialListAddAllSpecializedArgs.parameters[0]),
+            verySpecialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf()
+        )
+        assertEquals(
+            setOf<Node>(verySpecialListAddAllSpecializedArgs),
+            verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG
+        )
 
         // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
         val randomTypeAddAllTwoArgs = code.methods["random.Type.addAll"]
