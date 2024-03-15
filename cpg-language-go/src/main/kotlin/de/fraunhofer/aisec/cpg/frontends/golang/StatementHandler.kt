@@ -71,7 +71,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             if (assignStmt.tok == 47) {
                 ":="
             } else {
-                ""
+                "="
             }
 
         return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
