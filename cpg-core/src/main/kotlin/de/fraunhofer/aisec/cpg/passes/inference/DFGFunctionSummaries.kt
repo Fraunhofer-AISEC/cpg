@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.isDerivedFrom
 import java.io.File
 
 /**
@@ -111,14 +112,36 @@ class DFGFunctionSummaries {
         // to match to the one of the FunctionDeclaration, null indicates that we accept everything.
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
-                it.language == languageName &&
-                    methodName.lastPartsMatch(it.methodName) &&
-                    (it.signature == null ||
-                        functionDecl.hasSignature(
-                            it.signature.map { signatureType ->
-                                functionDecl.objectType(signatureType)
-                            }
-                        ))
+                // The language has to match otherwise the remaining comparison is useless
+                if (it.language == languageName) {
+                    // Split the name if we have a FQN
+                    val entryMethodName = language.parseName(it.methodName)
+                    val entryRecord =
+                        entryMethodName.parent?.let {
+                            functionDecl.objectType(entryMethodName.parent)
+                        }
+                    methodName.lastPartsMatch(
+                        entryMethodName.localName
+                    ) && // The local name has to match
+                        // If it's a method, the record declaration has to be compatible with the
+                        // type of the entry's record declaration. We take the type of the method
+                        // name's parent and generate a type from it. We then check if this type is
+                        // a supertype
+                        (entryRecord == null ||
+                            (functionDecl as? MethodDeclaration)
+                                ?.recordDeclaration
+                                ?.toType()
+                                ?.isDerivedFrom(entryRecord) == true) &&
+                        // The parameter types have to match
+                        (it.signature == null ||
+                            functionDecl.hasSignature(
+                                it.signature.map { signatureType ->
+                                    functionDecl.objectType(signatureType)
+                                }
+                            ))
+                } else {
+                    false
+                }
             }
         return if (matchingEntries.size == 1) {
             // Only one entry => We take this one.

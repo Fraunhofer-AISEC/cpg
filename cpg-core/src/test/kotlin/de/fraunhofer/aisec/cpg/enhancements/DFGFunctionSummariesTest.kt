@@ -39,8 +39,10 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -91,6 +93,30 @@ class DFGFunctionSummariesTest {
                                         literal(1, t("int"))
                                         construct("test.Object")
                                     }
+                                    val specialListType = t("test.SpecialList")
+                                    ctx?.let {
+                                        val recordDecl =
+                                            specialListType
+                                                .startInference(it)
+                                                ?.inferRecordDeclaration(
+                                                    specialListType,
+                                                    this@translationUnit
+                                                )
+                                        specialListType.recordDeclaration = recordDecl
+                                        val listType = t("test.List")
+                                        recordDecl?.addSuperClass(listType)
+                                        specialListType.superTypes.add(listType)
+                                    }
+
+                                    memberCall("addAll", ref("a", specialListType)) {
+                                        literal(1, t("int"))
+                                        construct("test.Object")
+                                    }
+
+                                    memberCall("addAll", ref("a", t("random.Type"))) {
+                                        literal(1, t("int"))
+                                        construct("test.Object")
+                                    }
 
                                     returnStmt { ref("a") }
                                 }
@@ -99,12 +125,43 @@ class DFGFunctionSummariesTest {
                     }
                 }
 
-        val methodAddAllTwoArgs = code.methods["addAll"]
-        assertNotNull(methodAddAllTwoArgs)
-        assertEquals(2, methodAddAllTwoArgs.parameters.size)
+        // Explicitly specified
+        val listAddAllTwoArgs = code.methods["test.List.addAll"]
+        assertNotNull(listAddAllTwoArgs)
+        assertEquals(2, listAddAllTwoArgs.parameters.size)
         assertEquals(
-            setOf<Node>(methodAddAllTwoArgs.receiver!!),
-            methodAddAllTwoArgs.parameters[1].nextDFG
+            setOf<Node>(listAddAllTwoArgs.receiver!!),
+            listAddAllTwoArgs.parameters[1].nextDFG
+        )
+        // No flow from param0 or receiver specified => Should be empty and differ from default
+        // behavior
+        assertEquals(setOf(), listAddAllTwoArgs.parameters[0].nextDFG)
+        assertEquals(setOf(), listAddAllTwoArgs.prevDFG)
+
+        // Specified by parent class' method List.addAll
+        val specialListAddAllTwoArgs = code.methods["test.SpecialList.addAll"]
+        assertNotNull(specialListAddAllTwoArgs)
+        assertEquals(2, specialListAddAllTwoArgs.parameters.size)
+        assertEquals(
+            setOf<Node>(specialListAddAllTwoArgs.receiver!!),
+            specialListAddAllTwoArgs.parameters[1].nextDFG
+        )
+        // No flow from param0 or receiver specified => Should be empty and differ from default
+        // behavior
+        assertEquals(setOf(), specialListAddAllTwoArgs.parameters[0].nextDFG)
+        assertEquals(setOf(), specialListAddAllTwoArgs.prevDFG)
+
+        // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
+        val randomTypeAddAllTwoArgs = code.methods["random.Type.addAll"]
+        assertNotNull(randomTypeAddAllTwoArgs)
+        assertEquals(2, randomTypeAddAllTwoArgs.parameters.size)
+        assertEquals(
+            setOf<Node>(
+                randomTypeAddAllTwoArgs.parameters[1],
+                randomTypeAddAllTwoArgs.parameters[0],
+                randomTypeAddAllTwoArgs.receiver!!
+            ),
+            randomTypeAddAllTwoArgs.prevDFG
         )
     }
 
