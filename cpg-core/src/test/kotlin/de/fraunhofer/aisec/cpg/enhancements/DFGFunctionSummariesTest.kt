@@ -162,7 +162,8 @@ class DFGFunctionSummariesTest {
                     }
                 }
 
-        // Explicitly specified
+        // Explicitly specified. Easiest case. Base class, directly specified. Overloaded things
+        // don't match. Child entries don't match.
         val listAddAllTwoArgs = code.methods["test.List.addAll"]
         assertNotNull(listAddAllTwoArgs)
         assertEquals(2, listAddAllTwoArgs.parameters.size)
@@ -175,7 +176,8 @@ class DFGFunctionSummariesTest {
         assertEquals(setOf(), listAddAllTwoArgs.parameters[0].nextDFG)
         assertEquals(setOf(), listAddAllTwoArgs.prevDFG)
 
-        // Specified by parent class' method List.addAll(int, Object)
+        // Specified by parent class' method List.addAll(int, Object). Test that parent of base is
+        // also taken into account.
         val specialListAddAllTwoArgs =
             code.methods("test.SpecialList.addAll").first {
                 it.parameters[1].type.name.lastPartsMatch("test.Object")
@@ -191,7 +193,8 @@ class DFGFunctionSummariesTest {
         assertEquals(setOf(), specialListAddAllTwoArgs.parameters[0].nextDFG)
         assertEquals(setOf(), specialListAddAllTwoArgs.prevDFG)
 
-        // Specified by parent class' method List.addAll(int, List)
+        // Specified by parent class' method List.addAll(int, List). Tests the most precise
+        // signature matching in case of function overloading.
         val specialListAddAllSpecializedArgs =
             code.methods("test.SpecialList.addAll").first {
                 it.parameters[1].type.name.lastPartsMatch("test.List")
@@ -208,7 +211,9 @@ class DFGFunctionSummariesTest {
             specialListAddAllSpecializedArgs.parameters[1].nextDFG
         )
 
-        // Specified by parent class' method List.addAll(int, List)
+        // Specified by VerySpecialList.addAll(int, Object), overrides List.addAll(int, Object).
+        // Tests that we take the most precise base class. The entry of List.addAll(int, Object) is
+        // also applicable but isn't the most precise one (due to the base)
         val verySpecialListAddAllSpecializedArgs = code.methods["test.VerySpecialList.addAll"]
         assertNotNull(verySpecialListAddAllSpecializedArgs)
         assertEquals(2, verySpecialListAddAllSpecializedArgs.parameters.size)
