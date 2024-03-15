@@ -115,7 +115,9 @@ class DFGFunctionSummaries {
                     methodName.lastPartsMatch(it.methodName) &&
                     (it.signature == null ||
                         functionDecl.hasSignature(
-                            it.signature.map { signatureType -> language.objectType(signatureType) }
+                            it.signature.map { signatureType ->
+                                functionDecl.objectType(signatureType)
+                            }
                         ))
             }
         return if (matchingEntries.size == 1) {
