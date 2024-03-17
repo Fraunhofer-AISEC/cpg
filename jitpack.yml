@@ -6,4 +6,4 @@ before_install:
 install:
   - export PATH="$PATH:$HOME/go/bin"
   - cp gradle.properties.example gradle.properties
-  - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PenableJavaFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true publishToMavenLocal
+  - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PenableJavaFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=false publishToMavenLocal
