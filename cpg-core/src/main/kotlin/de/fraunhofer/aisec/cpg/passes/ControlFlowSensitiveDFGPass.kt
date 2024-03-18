@@ -391,24 +391,32 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 PowersetLattice(identitySetOf(currentNode))
             )
         } else if (currentNode is CallExpression) {
-            for (invoked in
+            val functionsWithSummaries =
                 currentNode.invokes.filter {
                     it in ctx.config.functionSummaries.functionToChangedParameters
-                }) {
-                val changedParams =
-                    ctx.config.functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
-                for ((param, _) in changedParams) {
-                    if (param == (invoked as? MethodDeclaration)?.receiver) {
-                        doubleState.declarationsState[
-                                ((currentNode as? MemberCallExpression)?.base as? Reference)
-                                    ?.refersTo] = PowersetLattice(identitySetOf(param))
-                    } else if (param is ParameterDeclaration) {
-                        val arg = currentNode.arguments[param.argumentIndex]
-                        doubleState.declarationsState[(arg as? Reference)?.refersTo] =
-                            PowersetLattice(identitySetOf(param))
-                    }
-                    edgePropertiesMap[param] = CallingContextOut(currentNode)
                 }
+            if (functionsWithSummaries.isNotEmpty()) {
+                for (invoked in functionsWithSummaries) {
+                    val changedParams =
+                        ctx.config.functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                    for ((param, _) in changedParams) {
+                        if (param == (invoked as? MethodDeclaration)?.receiver) {
+                            doubleState.declarationsState[
+                                    ((currentNode as? MemberCallExpression)?.base as? Reference)
+                                        ?.refersTo] = PowersetLattice(identitySetOf(param))
+                        } else if (param is ParameterDeclaration) {
+                            val arg = currentNode.arguments[param.argumentIndex]
+                            doubleState.declarationsState[(arg as? Reference)?.refersTo] =
+                                PowersetLattice(identitySetOf(param))
+                        }
+                        edgePropertiesMap[param] = CallingContextOut(currentNode)
+                    }
+                }
+            } else {
+                doubleState.declarationsState.push(
+                    currentNode,
+                    doubleState.declarationsState[currentEdge.start]
+                )
             }
         } else {
             doubleState.declarationsState.push(

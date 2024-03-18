@@ -145,10 +145,15 @@ class DFGFunctionSummariesTest {
                                         construct("test.Object")
                                     }
 
-                                    memberCall("addAll", construct("test.List")) {
+                                    declare {
+                                        variable("a", t("test.List")) { construct("test.List") }
+                                    }
+
+                                    memberCall("addAll", ref("a", t("test.List"))) {
                                         literal(1, t("int"))
                                         construct("test.Object")
                                     }
+                                    call("print") { ref("a", t("test.List")) }
 
                                     memberCall("addAll", construct("random.Type")) {
                                         literal(1, t("int"))
