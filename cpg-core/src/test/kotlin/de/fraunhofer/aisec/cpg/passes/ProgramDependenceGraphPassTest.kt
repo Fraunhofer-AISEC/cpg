@@ -64,8 +64,8 @@ class ProgramDependenceGraphPassTest {
                         } +
                             t.prevDFG.mapNotNull {
                                 if (
-                                    "remove next" in it.comment ?: "" &&
-                                        "remove prev" in t.comment ?: ""
+                                    "remove next" in (it.comment ?: "") &&
+                                        "remove prev" in (t.comment ?: "")
                                 ) {
                                     null
                                 } else {
@@ -88,8 +88,8 @@ class ProgramDependenceGraphPassTest {
                         } +
                             t.nextDFG.mapNotNull {
                                 if (
-                                    "remove next" in t.comment ?: "" &&
-                                        "remove prev" in it.comment ?: ""
+                                    "remove next" in (t.comment ?: "") &&
+                                        "remove prev" in (it.comment ?: "")
                                 ) {
                                     null
                                 } else {

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -264,8 +263,7 @@ fun applyTemplateInstantiation(
     function: FunctionDeclaration,
     initializationSignature: Map<Declaration?, Node?>,
     initializationType: Map<Node?, TemplateDeclaration.TemplateInitialization?>,
-    orderedInitializationSignature: Map<Declaration, Int>,
-    ctx: TranslationContext
+    orderedInitializationSignature: Map<Declaration, Int>
 ): List<FunctionDeclaration> {
     val templateInstantiationParameters =
         mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
@@ -414,8 +412,7 @@ fun getTemplateInitializationSignature(
             instantiationType,
             orderedInitializationSignature,
             explicitInstantiated
-        )
-            ?: return null
+        ) ?: return null
     val parameterizedTypeResolution = getParameterizedSignaturesFromInitialization(signature)
 
     // Check for unresolved Parameters and try to deduce Type by looking at call arguments

@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
+import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -44,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
@@ -149,7 +148,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertTrue(make is NewArrayExpression)
 
-        val dimension = make.dimensions.first() as? Literal<*>
+        val dimension = make.dimensions.firstOrNull() as? Literal<*>
         assertNotNull(dimension)
         assertEquals(5, dimension.value)
 
@@ -382,7 +381,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertFullName("fmt.Printf", callExpression)
         assertLocalName("Printf", callExpression)
 
-        val literal = callExpression.arguments.first() as? Literal<*>
+        val literal = callExpression.arguments.firstOrNull() as? Literal<*>
         assertNotNull(literal)
 
         assertEquals("%s", literal.value)
@@ -941,7 +940,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val f = tu.variables["f"]
         assertNotNull(f)
-        assertIs<FunctionType>(f.type)
+        assertIs<FunctionType>(f.type.underlyingType)
 
         val g = tu.variables["g"]
         assertNotNull(g)
@@ -1145,7 +1144,48 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(funcy)
         funcy.invokeEdges.all { it.getProperty(Properties.DYNAMIC_INVOKE) == true }
 
+        // We should be able to resolve the call from our stored "do" function to funcy
+        assertInvokes(funcy, result.functions["do"])
+
         val refs = result.refs.filter { it.name.localName != GoLanguage().anonymousIdentifier }
         refs.forEach { assertNotNull(it.refersTo) }
+    }
+
+    @Test
+    fun testPackages() {
+        val topLevel = Path.of("src", "test", "resources", "golang", "packages")
+        val result =
+            analyze(
+                listOf(
+                    // We need to keep them in this particular order, otherwise we will not resolve
+                    // cross-package correctly yet
+                    topLevel.resolve("api/apiv1.go").toFile(),
+                    topLevel.resolve("packages.go").toFile(),
+                    topLevel.resolve("cmd/packages/packages.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
+    }
+
+    @Test
+    fun testMultiValueEvaluate() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("eval.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+                it.registerPass<EdgeCachePass>()
+            }
+        assertNotNull(tu)
+
+        val f = tu.refs("f").lastOrNull()
+        assertNotNull(f)
+
+        val values = f.evaluate(MultiValueEvaluator())
+        assertEquals(setOf("GPT", "GTP"), values)
+        println(f.printDFG())
     }
 }

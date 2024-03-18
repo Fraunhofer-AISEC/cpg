@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -46,7 +47,8 @@ open class CLanguage :
     HasFunctionPointers,
     HasQualifier,
     HasElaboratedTypeSpecifier,
-    HasShortCircuitOperators {
+    HasShortCircuitOperators,
+    HasGlobalVariables {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @Transient override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
@@ -56,6 +58,9 @@ open class CLanguage :
     override val disjunctiveOperators = listOf("||")
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
+
+    override val globalVariableScopeClass: Class<out Node>
+        get() = TranslationUnitDeclaration::class.java
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See

@@ -265,24 +265,24 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Throws(Exception::class)
     fun testFunctionDeclaration() {
         val file = File("src/test/resources/cxx/functiondecl.cpp")
-        val declaration =
+        val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        // should be seven function nodes
-        assertEquals(8, declaration.declarations.size)
+        // should be eight function nodes
+        assertEquals(8, tu.functions.size)
 
-        var method = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
+        var method = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
         assertEquals("function0(int)void", method!!.signature)
 
-        method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(1, FunctionDeclaration::class.java)
         assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
         val args = method.parameters.map { it.name.localName }
         assertEquals(listOf("arg0", "arg1", "arg2", "arg3"), args)
 
-        method = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(2, FunctionDeclaration::class.java)
         assertEquals("function0(int)void", method!!.signature)
 
         var statements = (method.body as Block).statements
@@ -294,7 +294,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 
-        method = declaration.getDeclarationAs(3, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
         assertEquals("function2()void*", method!!.signature)
 
         statements = (method.body as Block).statements
@@ -306,20 +306,20 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 
-        method = declaration.getDeclarationAs(4, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(4, FunctionDeclaration::class.java)
         assertNotNull(method)
         assertEquals("function3()UnknownType*", method.signature)
 
-        method = declaration.getDeclarationAs(5, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(5, FunctionDeclaration::class.java)
         assertNotNull(method)
         assertEquals("function4(int)void", method.signature)
 
-        method = declaration.getDeclarationAs(6, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(6, FunctionDeclaration::class.java)
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
 
-        method = declaration.getDeclarationAs(7, FunctionDeclaration::class.java)
+        method = tu.getDeclarationAs(7, FunctionDeclaration::class.java)
         assertNotNull(method)
         assertEquals(1, method.parameters.size)
 
@@ -512,7 +512,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 )
             assertEquals(incompleteType().reference(POINTER), pointerWithAssign.type)
             assertLocalName("ptr2", pointerWithAssign)
-            assertLocalName("NULL", pointerWithAssign.initializer)
+            assertLiteralValue(null, pointerWithAssign.initializer)
 
             val classWithVariable = statements[6].declarations
             assertEquals(2, classWithVariable.size)

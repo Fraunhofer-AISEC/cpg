@@ -41,7 +41,7 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val nodeNameField =
         Node::class
             .memberProperties
-            .first() { it.name == "name" }
+            .first { it.name == "name" }
             .javaField
             .also { it?.isAccessible = true }
 

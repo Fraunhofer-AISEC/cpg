@@ -27,9 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -42,7 +44,7 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  *
  * Currently, this interface has no methods. However, in the future, this could be used to execute
  * language/frontend-specific code for the particular trait. This could help to fine-tune the
- * [CallResolver] for specific languages.
+ * [SymbolResolver] for specific languages.
  */
 interface LanguageTrait
 
@@ -234,4 +236,13 @@ interface HasFirstClassFunctions
 interface HasAnonymousIdentifier {
     val anonymousIdentifier: String
         get() = "_"
+}
+
+/**
+ * A language trait, that specifies that this language has global variables directly in the
+ * [GlobalScope], i.e,. not within a namespace, but directly contained in a
+ * [TranslationUnitDeclaration].
+ */
+interface HasGlobalVariables {
+    val globalVariableScopeClass: Class<out Node>
 }

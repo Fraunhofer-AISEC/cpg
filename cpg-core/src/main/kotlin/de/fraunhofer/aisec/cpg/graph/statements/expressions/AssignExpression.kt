@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -59,7 +61,14 @@ class AssignExpression :
     var lhs: List<Expression> = listOf()
         set(value) {
             field = value
-            if (operatorCode == "=") {
+            field.forEach {
+                var base = (it as? MemberExpression)?.base as? MemberExpression
+                while (base != null) {
+                    base.access = AccessValues.READWRITE
+                    base = (base as? MemberExpression)?.base as? MemberExpression
+                }
+            }
+            if (isSimpleAssignment) {
                 field.forEach {
                     val unwrapped = it.unwrapReference()
                     unwrapped?.let {
@@ -74,6 +83,17 @@ class AssignExpression :
                         it.access = AccessValues.READWRITE
                         it.dfgHandlerHint = true
                     }
+                }
+
+                if (!isCompoundAssignment) {
+                    // If this is neither a simple nor a compound assignment, probably something
+                    // went wrong, we still model this as a READWRITE, but we indicate a warning to
+                    // the user
+                    Util.warnWithFileLocation(
+                        this,
+                        log,
+                        "Assignment is neither a simple nor a compound assignment. This is suspicious."
+                    )
                 }
             }
         }
@@ -115,6 +135,16 @@ class AssignExpression :
         get() {
             return operatorCode in (language?.compoundAssignmentOperators ?: setOf()) &&
                 isSingleValue
+        }
+
+    /**
+     * Returns true, if this assignment is a "simple" assignment, meaning that the value is directly
+     * assigned, without any additional complex data-flow, such as compound assignments. This
+     * compares the [operatorCode] with [Language.simpleAssignmentOperators].
+     */
+    val isSimpleAssignment: Boolean
+        get() {
+            return operatorCode in (language?.simpleAssignmentOperators ?: setOf())
         }
 
     /**

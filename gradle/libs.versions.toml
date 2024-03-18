@@ -1,28 +1,33 @@
 [versions]
 kotlin = "1.9.0"
 neo4j = "4.0.6"
-log4j = "2.22.0"
+log4j = "2.23.0"
 sonarqube = "4.4.1.3373"
-spotless = "6.23.2"
+spotless = "6.25.0"
 nexus-publish = "1.3.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
 kotlin-script-runtime = { module = "org.jetbrains.kotlin:kotlin-script-runtime", version.ref = "kotlin"}
-kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.7.0"}
-kotlin-ki-shell = { module = "org.jetbrains.kotlinx:ki-shell", version = "0.5.2"}
+kotlin-scripting-common = { module = "org.jetbrains.kotlin:kotlin-scripting-common", version.ref = "kotlin"}
+kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin"}
+kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin"}
+kotlin-scripting-dependencies-maven-all = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies-maven-all", version.ref = "kotlin"}
+kotlin-scripting-ide-services = { module = "org.jetbrains.kotlin:kotlin-scripting-ide-services", version.ref = "kotlin"}
+kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.8.0"}
+kotlin-ki-shell = { module = "com.github.Kotlin:kotlin-interactive-shell", version = "5b1ff4d821"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
 
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
-log4j-core = { module= "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.14.0"}
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.25.4"}
-jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.16.0"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.30.0"}
+jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.17.0"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.31.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "74.2"}
 eclipse-cdt-core = { module = "org.eclipse.cdt:core", version = "8.3.1.202309150117"}
@@ -30,10 +35,13 @@ picocli = { module = "info.picocli:picocli", version = "4.7.0"}
 picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
+jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
+jline = { module = "org.jline:jline", version = "3.25.1" }
+antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.10.0"}
-mockito = { module = "org.mockito:mockito-core", version = "5.8.0"}
+mockito = { module = "org.mockito:mockito-core", version = "5.11.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -46,6 +54,13 @@ nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", versi
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
+kotlin-scripting = [
+    "kotlin-scripting-common",
+    "kotlin-scripting-jvm",
+    "kotlin-scripting-ide-services",
+    "kotlin-scripting-dependencies",
+    "kotlin-scripting-dependencies-maven-all",
+]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}

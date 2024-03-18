@@ -25,13 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
+import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.io.path.Path
 import kotlin.io.path.createTempFile
 import kotlin.reflect.jvm.javaField
 import kotlin.test.Test
@@ -39,6 +43,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.config.ObjectMapperFactory.objectMapper
 import picocli.CommandLine
 
 @Tag("integration")
@@ -62,7 +67,7 @@ class ApplicationTest {
     fun testPush() {
         val (application, translationResult) = createTranslationResult()
 
-        assertEquals(31, translationResult.functions.size)
+        assertEquals(32, translationResult.functions.size)
 
         application.pushToNeo4j(translationResult)
 
@@ -73,7 +78,7 @@ class ApplicationTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(31, functions.size)
+            assertEquals(32, functions.size)
 
             transaction.commit()
         }
@@ -86,7 +91,7 @@ class ApplicationTest {
     fun testSerializeCpgViaOGM() {
         val (application, translationResult) = createTranslationResult()
 
-        assertEquals(31, translationResult.functions.size)
+        assertEquals(32, translationResult.functions.size)
 
         val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
         val graph = application.buildJsonGraph(nodes, edges)
@@ -118,9 +123,31 @@ class ApplicationTest {
     @Test
     fun testExportToJson() {
         val (application, translationResult) = createTranslationResult()
-        assertEquals(31, translationResult.functions.size)
+        assertEquals(32, translationResult.functions.size)
         val path = createTempFile().toFile()
         application.exportToJson(translationResult, path)
         assert(path.length() > 0)
+    }
+
+    @Test
+    fun testExportMarkdownSchema() {
+        val path = "./tmp.md"
+        Application().printSchema(listOf(path), Schema.Format.MARKDOWN)
+        // Some magic number as size, where the current schema is larger and should never be lower
+        // in the future
+        assert(File(path).length() > 100000)
+        Files.deleteIfExists(Path(path))
+    }
+
+    @Test
+    fun testExportJSONSchema() {
+        val path = "./tmp.json"
+        Application().printSchema(listOf(path), Schema.Format.JSON)
+        val file = File(path)
+        val objectMapper: ObjectMapper = ObjectMapper()
+        val schema = objectMapper.readValue(file, List::class.java)
+        assert(schema is ArrayList)
+        assert((schema as ArrayList).size > 0)
+        Files.deleteIfExists(Path(path))
     }
 }

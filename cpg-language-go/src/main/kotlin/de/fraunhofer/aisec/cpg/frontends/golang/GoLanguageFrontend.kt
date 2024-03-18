@@ -57,13 +57,13 @@ import java.net.URI
  * We make use of JNA to call a dynamic library which exports C function wrappers around the Go API.
  * This is needed because we cannot directly export Go structs and pointers to C.
  */
-@SupportsParallelParsing(false)
 @RegisterExtraPass(GoExtraPass::class)
 @ReplacePass(
     lang = GoLanguage::class,
     old = EvaluationOrderGraphPass::class,
     with = GoEvaluationOrderGraphPass::class
 )
+@SupportsParallelParsing(false)
 class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(language, ctx) {
 
@@ -217,7 +217,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {
-        val type =
+        val cpgType =
             when (type) {
                 is GoStandardLibrary.Ast.Ident -> {
                     val name: String =
@@ -349,7 +349,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, scopeManager))
     }
 
     /**
@@ -446,29 +446,49 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     }
 }
 
+/**
+ * Go has the concept of the [underlying type](https://go.dev/ref/spec#Underlying_types), in which
+ * new named types can be created on top of existing core types (such as function types, slices,
+ * etc.). The named types then derive certain properties of their underlying type.
+ *
+ * For type literals, e.g., a directly specified function type, the underlying type is the type
+ * itself.
+ */
 val Type?.underlyingType: Type?
     get() {
-        return (this as? ObjectType)?.recordDeclaration?.superClasses?.singleOrNull()
+        return if (namedType) {
+            this?.superTypes?.singleOrNull()
+        } else {
+            this
+        }
     }
 
-val Type?.isOverlay: Boolean
+/**
+ * In Go, types can be constructed based on existing types (see [underlyingType]) and if given a
+ * name, they are considered a [named type](https://go.dev/ref/spec#Types).
+ *
+ * Since these named types can also be augmented with methods (see
+ * https://go.dev/ref/spec#Method_sets), we need to model them as an [ObjectType] with an associated
+ * [RecordDeclaration] (of kind "type").
+ */
+val Type?.namedType: Boolean
     get() {
-        return this is ObjectType && this.recordDeclaration?.kind == "overlay"
+        return this is ObjectType && this.recordDeclaration?.kind == "type"
     }
 
 val Type.isInterface: Boolean
     get() {
-        return this is ObjectType && this.recordDeclaration?.kind == "interface"
+        return underlyingType is ObjectType && this.recordDeclaration?.kind == "interface"
     }
 
 val Type.isMap: Boolean
     get() {
-        return this is ObjectType && this.name.localName == "map"
+        return underlyingType is ObjectType && this.name.localName == "map"
     }
 
 val Type.isChannel: Boolean
     get() {
-        return this is ObjectType && this.name.localName == "chan"
+        return underlyingType is ObjectType && this.name.localName == "chan"
     }
 
 val HasType?.isNil: Boolean

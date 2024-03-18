@@ -97,29 +97,37 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
                 // old stuff from getOperandValue, needs to be refactored to the when above
                 // TODO also move the other stuff to the expression handler
-                return if (LLVMIsConstant(value) != 1) {
-                    val operandName: String =
-                        if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
-                            val aliasee = LLVMAliasGetAliasee(value)
-                            LLVMPrintValueToString(aliasee)
-                                .string // Already resolve the aliasee of the constant
-                        } else {
-                            // TODO This does not return the actual constant but only a string
-                            // representation
-                            LLVMPrintValueToString(value).string
-                        }
-                    newLiteral(operandName, cpgType, rawNode = value)
-                } else if (LLVMIsUndef(value) == 1) {
-                    newReference("undef", cpgType, rawNode = value)
-                } else if (LLVMIsPoison(value) == 1) {
-                    newReference("poison", cpgType, rawNode = value)
-                } else {
-                    log.error("Unknown expression {}", kind)
-                    newProblemExpression(
-                        "Unknown expression $kind",
-                        ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = value
-                    )
+                return when {
+                    LLVMIsConstant(value) != 1 -> {
+                        val operandName: String =
+                            if (
+                                LLVMIsAGlobalAlias(value) != null ||
+                                    LLVMIsGlobalConstant(value) == 1
+                            ) {
+                                val aliasee = LLVMAliasGetAliasee(value)
+                                LLVMPrintValueToString(aliasee)
+                                    .string // Already resolve the aliasee of the constant
+                            } else {
+                                // TODO This does not return the actual constant but only a string
+                                // representation
+                                LLVMPrintValueToString(value).string
+                            }
+                        newLiteral(operandName, cpgType, rawNode = value)
+                    }
+                    LLVMIsUndef(value) == 1 -> {
+                        newReference("undef", cpgType, rawNode = value)
+                    }
+                    LLVMIsPoison(value) == 1 -> {
+                        newReference("poison", cpgType, rawNode = value)
+                    }
+                    else -> {
+                        log.error("Unknown expression {}", kind)
+                        newProblemExpression(
+                            "Unknown expression $kind",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            rawNode = value
+                        )
+                    }
                 }
             }
         }
@@ -244,7 +252,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                             ProblemNode.ProblemType.TRANSLATION,
                             rawNode = value
                         )
-                LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value) as? Expression
+                LLVMICmp ->
+                    frontend.statementHandler.handleIntegerComparison(value) as? Expression
                         ?: newProblemExpression(
                             "Wrong type of constant comparison",
                             ProblemNode.ProblemType.TRANSLATION,
@@ -493,7 +502,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
                 log.debug(
-                    "Trying to access a field within the record declaration of ${record.name}"
+                    "Trying to access a field within the record declaration of {}",
+                    record.name
                 )
 
                 // look for the field

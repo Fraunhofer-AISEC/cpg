@@ -49,7 +49,7 @@ class OutOfBoundsCheck {
         get() = LoggerFactory.getLogger(OutOfBoundsCheck::class.java)
 
     fun run(result: TranslationResult) {
-        for (tu in result.translationUnits) {
+        for (tu in result.components.flatMap { it.translationUnits }) {
             tu.accept(
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
@@ -57,60 +57,60 @@ class OutOfBoundsCheck {
                         val evaluator = ValueEvaluator()
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)
 
-                        if (resolvedIndex is Int) {
-                            // check, if we know that the array was initialized with a fixed length
-                            // TODO(oxisto): it would be nice to have a helper that follows the expr
-                            val decl =
-                                (v.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
-                            (decl?.initializer as? NewArrayExpression)?.let {
-                                val capacity = it.capacity
+                        if (resolvedIndex !is Int) {
+                            println("Could not resolve ${v.subscriptExpression}")
+                            return
+                        }
+                        // check, if we know that the array was initialized with a fixed length
+                        // TODO(oxisto): it would be nice to have a helper that follows the expr
+                        val decl =
+                            (v.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
+                        (decl?.initializer as? NewArrayExpression)?.let {
+                            val capacity = it.capacity
 
-                                if (resolvedIndex >= capacity) {
-                                    println("")
-                                    val sb = AttributedStringBuilder()
-                                    sb.append("--- FINDING: Out of bounds access in ")
-                                    sb.append(
-                                        it.javaClass.simpleName,
-                                        DEFAULT.foreground(AttributedStyle.GREEN)
-                                    )
-                                    sb.append(
-                                        " when accessing index ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} of "
-                                    )
-                                    sb.append(decl.name, DEFAULT.foreground(AttributedStyle.YELLOW))
-                                    sb.append(
-                                        ", an array of length ${AttributedString(""+capacity, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} ---"
-                                    )
+                            if (resolvedIndex >= capacity) {
+                                println("")
+                                val sb = AttributedStringBuilder()
+                                sb.append("--- FINDING: Out of bounds access in ")
+                                sb.append(
+                                    it.javaClass.simpleName,
+                                    DEFAULT.foreground(AttributedStyle.GREEN)
+                                )
+                                sb.append(
+                                    " when accessing index ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} of "
+                                )
+                                sb.append(decl.name, DEFAULT.foreground(AttributedStyle.YELLOW))
+                                sb.append(
+                                    ", an array of length ${AttributedString(""+capacity, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} ---"
+                                )
 
-                                    val header = sb.toAnsi()
+                                val header = sb.toAnsi()
 
-                                    println(header)
-                                    println(
-                                        "${
+                                println(header)
+                                println(
+                                    "${
                                             AttributedString(
                                                 PhysicalLocation.locationLink(v.location), DEFAULT.foreground(
                                                     AttributedStyle.BLUE or AttributedStyle.BRIGHT
                                                 )).toAnsi()}: ${v.fancyCode(showNumbers = false)}"
-                                    )
-                                    println("")
-                                    println(
-                                        "The following path was discovered that leads to ${v.subscriptExpression.fancyCode(
+                                )
+                                println("")
+                                println(
+                                    "The following path was discovered that leads to ${v.subscriptExpression.fancyCode(
                                             showNumbers = false
                                         )
                                         } being ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()}:"
-                                    )
-                                    for (p in evaluator.path) {
+                                )
+                                for (p in evaluator.path) {
 
-                                        println(
-                                            "${AttributedString(
+                                    println(
+                                        "${AttributedString(
                                                 PhysicalLocation.locationLink(p.location), DEFAULT.foreground(
                                                     AttributedStyle.BLUE or AttributedStyle.BRIGHT
                                                 )).toAnsi()}: ${p.fancyCode(showNumbers = false)}"
-                                        )
-                                    }
+                                    )
                                 }
                             }
-                        } else {
-                            println("Could not resolved ${v.subscriptExpression}")
                         }
                     }
                 }

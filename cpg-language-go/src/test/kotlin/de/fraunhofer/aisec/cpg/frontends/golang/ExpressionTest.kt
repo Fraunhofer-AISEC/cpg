@@ -39,6 +39,7 @@ import java.nio.file.Path
 import kotlin.test.*
 
 class ExpressionTest {
+
     @Test
     fun testCastExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
@@ -172,5 +173,31 @@ class ExpressionTest {
             assertNotNull(unaryOp)
             assertRefersTo(unaryOp.input, ch)
         }
+    }
+
+    @Test
+    fun testShortAssign() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("short_assign.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val lit5 = tu.literals.firstOrNull()
+        assertNotNull(lit5)
+        println(lit5.printDFG())
+
+        val x = tu.refs("x").lastOrNull()
+        assertNotNull(x)
+
+        val paths = x.followPrevDFGEdgesUntilHit { it == lit5 }
+        assertEquals(3, paths.fulfilled.firstOrNull()?.size)
+
+        assertEquals(5, x.evaluate())
     }
 }

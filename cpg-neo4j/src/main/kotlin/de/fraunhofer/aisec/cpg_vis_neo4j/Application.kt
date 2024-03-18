@@ -192,7 +192,7 @@ class Application : Callable<Int> {
         names = ["--custom-pass-list"],
         description =
             [
-                "Add custom list of passes (includes --no-default-passes) which is" +
+                "Add custom list of passes (might be used additional to --no-default-passes) which is" +
                     " passed as a comma-separated list; give either pass name if pass is in list," +
                     " or its FQDN" +
                     " (e.g. --custom-pass-list=DFGPass,CallResolver)"
@@ -217,6 +217,18 @@ class Application : Callable<Int> {
         description = ["Create inferred nodes for missing declarations"]
     )
     private var inferNodes: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--schema-markdown"],
+        description = ["Print the CPGs nodes and edges that they can have."]
+    )
+    private var schemaMarkdown: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--schema-json"],
+        description = ["Print the CPGs nodes and edges that they can have."]
+    )
+    private var schemaJson: Boolean = false
 
     @CommandLine.Option(
         names = ["--top-level"],
@@ -245,7 +257,9 @@ class Application : Callable<Int> {
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
             ControlFlowSensitiveDFGPass::class,
-            FilenameMapper::class
+            FilenameMapper::class,
+            ControlDependenceGraphPass::class,
+            ProgramDependenceGraphPass::class
         )
     private var passClassMap = passClassList.associateBy { it.simpleName }
 
@@ -312,8 +326,7 @@ class Application : Callable<Int> {
                     node.labels.toSet(),
                     node.propertyList.associate { prop -> prop.key to prop.value }
                 )
-            }
-                ?: emptyList()
+            } ?: emptyList()
         val edges =
             newRelationshipBuilders
                 // For some reason, there are edges without start or end node??
@@ -327,8 +340,7 @@ class Application : Callable<Int> {
                         edge.endNode,
                         edge.propertyList.associate { prop -> prop.key to prop.value }
                     )
-                }
-                ?: emptyList()
+                } ?: emptyList()
 
         return JsonGraph(nodes, edges)
     }
@@ -469,6 +481,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                 .loadIncludes(loadIncludes)
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
@@ -485,9 +498,10 @@ class Application : Callable<Int> {
             translationConfiguration.sourceLocations(filePaths)
         }
 
-        if (!noDefaultPasses && customPasses == "DEFAULT") {
+        if (!noDefaultPasses) {
             translationConfiguration.defaultPasses()
-        } else if (!noDefaultPasses && customPasses != "DEFAULT") {
+        }
+        if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
                 if (pass.contains(".")) {
@@ -496,7 +510,7 @@ class Application : Callable<Int> {
                     )
                 } else {
                     if (pass !in passClassMap) {
-                        throw ConfigurationException("Asked to produce unknown pass")
+                        throw ConfigurationException("Asked to produce unknown pass: $pass")
                     }
                     passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
                 }
@@ -532,6 +546,12 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
+    public fun printSchema(filenames: Collection<String>, format: Schema.Format) {
+        val schema = Schema()
+        schema.extractSchema()
+        filenames.forEach { schema.printToFile(it, format) }
+    }
+
     /**
      * The entrypoint of the cpg-vis-neo4j.
      *
@@ -544,6 +564,17 @@ class Application : Callable<Int> {
      */
     @Throws(Exception::class, ConnectException::class, IllegalArgumentException::class)
     override fun call(): Int {
+
+        if (schemaMarkdown || schemaJson) {
+            if (schemaMarkdown) {
+                printSchema(mutuallyExclusiveParameters.files, Schema.Format.MARKDOWN)
+            }
+            if (schemaJson) {
+                printSchema(mutuallyExclusiveParameters.files, Schema.Format.JSON)
+            }
+            return EXIT_SUCCESS
+        }
+
         if (mutuallyExclusiveParameters.listPasses) {
             log.info("List of passes:")
             passList.iterator().forEach { log.info("- $it") }

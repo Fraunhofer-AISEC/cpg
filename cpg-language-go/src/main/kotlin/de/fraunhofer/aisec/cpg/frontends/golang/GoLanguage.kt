@@ -57,6 +57,12 @@ class GoLanguage :
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&^=", "&=", "|=", "^=")
 
+    /**
+     * Go supports the normal `=` operator, as well as a short assignment operator, which also
+     * declares the variable under certain circumstances. But both act as a simple assignment.
+     */
+    override val simpleAssignmentOperators = setOf("=", ":=")
+
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
     override val builtInTypes =
@@ -139,8 +145,8 @@ class GoLanguage :
 
         // This makes lambda expression works, as long as we have the dedicated a
         // FunctionPointerType
-        if (type is FunctionPointerType && superType is FunctionType) {
-            return type == superType.reference(PointerType.PointerOrigin.POINTER)
+        if (type is FunctionPointerType && superType.underlyingType is FunctionType) {
+            return type == superType.underlyingType?.reference(PointerType.PointerOrigin.POINTER)
         }
 
         // the unsafe.IntegerType is a fake type in the unsafe package, that accepts any integer
@@ -170,7 +176,7 @@ class GoLanguage :
                 superType.isInterface ||
                 superType.isMap ||
                 superType.isChannel ||
-                superType is FunctionType
+                superType.underlyingType is FunctionType
         }
 
         // We accept all kind of numbers if the literal is part of the call expression

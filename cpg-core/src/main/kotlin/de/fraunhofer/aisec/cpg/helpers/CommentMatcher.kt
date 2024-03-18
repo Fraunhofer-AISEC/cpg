@@ -48,7 +48,7 @@ class CommentMatcher {
         artifactLocation: PhysicalLocation.ArtifactLocation?
     ): Node {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
-        var children =
+        val children =
             SubgraphWalker.getAstChildren(node)
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
@@ -94,12 +94,12 @@ class CommentMatcher {
                 getEnclosingChild(smallestEnclosingNode, location, artifactLocation)
         }
 
-        var children =
+        val children =
             SubgraphWalker.getAstChildren(smallestEnclosingNode)
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
-                .toMutableList()
+                .toMutableSet()
 
         // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
         // children with a location
@@ -107,6 +107,19 @@ class CommentMatcher {
             children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
                 SubgraphWalker.getAstChildren(namespace).filter { it !in children }
             }
+        )
+
+        // When a child has no location we can not properly consider it for comment matching,
+        // however, it might have
+        // a child with a location that we want to consider, this can overlap with namespaces but
+        // nodes are considered
+        // only once in the set
+        children.addAll(
+            children
+                .filter { node -> node.location == null || node.location?.region == Region() }
+                .flatMap { locationLess ->
+                    SubgraphWalker.getAstChildren(locationLess).filter { it !in children }
+                }
         )
 
         // Searching for the closest successor to our comment amongst the children of the smallest
@@ -127,7 +140,7 @@ class CommentMatcher {
                     )
                 )
                 .firstOrNull()
-        val closestLine = closest?.location?.region?.startLine ?: location.endLine + 1
+        var closestLine = closest?.location?.region?.startLine ?: (location.endLine + 1)
 
         // If the closest successor is not in the same line there may be a more adequate predecessor
         // to associate the comment to (Has to be in the same line)
@@ -148,8 +161,7 @@ class CommentMatcher {
                         )
                     )
                     .lastOrNull()
-            val closestLine =
-                closestPredecessor?.location?.region?.endLine ?: location.startLine - 1
+            closestLine = closestPredecessor?.location?.region?.endLine ?: (location.startLine - 1)
             if (closestPredecessor != null && closestLine == location.startLine) {
                 closest = closestPredecessor
             }

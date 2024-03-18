@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
@@ -33,9 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,7 +56,7 @@ import org.slf4j.LoggerFactory
  * Since this class implements [IsInferredProvider], all nodes that are created using the node
  * builder functions, will automatically have [Node.isInferred] set to true.
  */
-class Inference(val start: Node, override val ctx: TranslationContext) :
+class Inference internal constructor(val start: Node, override val ctx: TranslationContext) :
     LanguageProvider,
     ScopeProvider,
     IsInferredProvider,
@@ -63,20 +69,24 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     override val isInferred: Boolean
         get() = true
 
-    val scopeManager = ctx.scopeManager
-    val typeManager = ctx.typeManager
+    val scopeManager: ScopeManager
+    val typeManager: TypeManager
 
     override val scope: Scope?
         get() = scopeManager.currentScope
 
-    fun createInferredFunctionDeclaration(
+    fun inferFunctionDeclaration(
         name: CharSequence?,
         code: String?,
         isStatic: Boolean,
         signature: List<Type?>,
         returnType: Type?,
         hint: CallExpression? = null
-    ): FunctionDeclaration {
+    ): FunctionDeclaration? {
+        if (!ctx.config.inferenceConfiguration.inferFunctions) {
+            return null
+        }
+
         // We assume that the start is either a record, a namespace or the translation unit
         val record = start as? RecordDeclaration
         val namespace = start as? NamespaceDeclaration
@@ -107,6 +117,10 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 signature.map { it?.name }
             )
 
+            // Create parameter declarations and receiver (only for methods).
+            if (inferred is MethodDeclaration) {
+                createInferredReceiver(inferred, record)
+            }
             createInferredParameters(inferred, signature)
 
             // Set the type and return type(s)
@@ -117,11 +131,15 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
             scopeManager.addDeclaration(inferred)
 
             // Some magic that adds it to static imports. Not sure if this really needed
+            if (record != null && isStatic) {
+                record.staticImports.add(inferred)
+            }
 
-            if (record != null) {
-                if (isStatic) {
-                    record.staticImports.add(inferred)
-                }
+            // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
+            // with the language, since in some languages the AST of a method declaration could be
+            // outside of a method, but this will do for now
+            if (record != null && inferred is MethodDeclaration) {
+                record.addMethod(inferred)
             }
 
             // "upgrade" our struct to a class, if it was inferred by us, since we are calling
@@ -160,6 +178,22 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
     }
 
+    /**
+     * This function creates a [VariableDeclaration], which acts as the
+     * [MethodDeclaration.receiver], in order to hold all data flows to the object instance of this
+     * particular [method].
+     */
+    private fun createInferredReceiver(method: MethodDeclaration, record: RecordDeclaration?) {
+        // We do not really know, how a receiver is called in a particular language, but we will
+        // probably not do anything wrong by calling it "this".
+        val receiver = newVariableDeclaration("this", record?.toType() ?: unknownType())
+        method.receiver = receiver
+    }
+
+    /**
+     * This function creates a [ParameterDeclaration] for each parameter in the [function]'s
+     * [signature].
+     */
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters
@@ -256,7 +290,7 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
      * @param call
      * @return inferred FunctionTemplateDeclaration which can be invoked by the call
      */
-    fun createInferredFunctionTemplate(call: CallExpression): FunctionTemplateDeclaration {
+    fun inferFunctionTemplate(call: CallExpression): FunctionTemplateDeclaration {
         // We assume that the start is either a record or the translation unit
         val record = start as? RecordDeclaration
         val tu = start as? TranslationUnitDeclaration
@@ -292,18 +326,24 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
                 // Template Parameter
                 val inferredTypeIdentifier = "T$typeCounter"
                 val typeParamDeclaration =
-                    inferred.startInference(ctx).inferTemplateParameter(inferredTypeIdentifier)
+                    inferred.startInference(ctx)?.inferTemplateParameter(inferredTypeIdentifier)
                 typeCounter++
-                inferred.addParameter(typeParamDeclaration)
+                if (typeParamDeclaration != null) {
+                    inferred.addParameter(typeParamDeclaration)
+                }
             } else if (node is Expression) {
                 val inferredNonTypeIdentifier = "N$nonTypeCounter"
                 val paramVariableDeclaration =
                     node
                         .startInference(ctx)
-                        .inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
-                node.addNextDFG(paramVariableDeclaration)
+                        ?.inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
+                if (paramVariableDeclaration != null) {
+                    node.addNextDFG(paramVariableDeclaration)
+                }
                 nonTypeCounter++
-                inferred.addParameter(paramVariableDeclaration)
+                if (paramVariableDeclaration != null) {
+                    inferred.addParameter(paramVariableDeclaration)
+                }
             }
         }
         return inferred
@@ -312,41 +352,92 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     /**
      * Infers a record declaration for the given type. [type] is the object type representing a
      * record that we want to infer. The [kind] specifies if we create a class or a struct.
+     *
+     * Since [Type] does not contain a location, a separate node that contains a location can
+     * optionally be specified in [locationHint]. This could for example be a call expression that
+     * contained the reference to a class method.
      */
     fun inferRecordDeclaration(
         type: Type,
         currentTU: TranslationUnitDeclaration,
-        kind: String = "class"
+        kind: String = "class",
+        locationHint: Node? = null
     ): RecordDeclaration? {
+        if (!ctx.config.inferenceConfiguration.inferRecords) {
+            return null
+        }
+
         if (type !is ObjectType) {
-            Companion.log.error(
+            errorWithFileLocation(
+                locationHint,
+                log,
                 "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
             )
             return null
         }
-        Companion.log.debug(
+        debugWithFileLocation(
+            locationHint,
+            log,
             "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
         )
 
-        // This could be a class or a struct. We start with a class and may have to fine-tune this
-        // later.
-        val declaration = newRecordDeclaration(type.typeName, kind)
-        declaration.isInferred = true
+        return inferInScopeOf(currentTU) {
+            // This could be a class or a struct. We start with a class and may have to fine-tune
+            // this later.
+            val declaration = newRecordDeclaration(type.typeName, kind)
+            declaration.isInferred = true
 
-        // update the type
-        type.recordDeclaration = declaration
+            // Update the type
+            type.recordDeclaration = declaration
 
-        // add this record declaration to the current TU (this bypasses the scope manager)
-        currentTU.addDeclaration(declaration)
-        return declaration
+            scopeManager.addDeclaration(declaration)
+            declaration
+        }
     }
 
-    fun createInferredNamespaceDeclaration(name: Name, path: String?): NamespaceDeclaration {
+    /**
+     * This infers a [VariableDeclaration] based on an unresolved [Reference], which is supplied as
+     * a [hint]. Currently, this is only used to infer global variables. In the future, we might
+     * also infer static variables in namespaces.
+     */
+    fun inferVariableDeclaration(hint: Reference): VariableDeclaration? {
+        if (!ctx.config.inferenceConfiguration.inferVariables) {
+            return null
+        }
+
+        return inferInScopeOf(start) {
+            // Build a new variable declaration from the reference. Maybe we are even lucky and the
+            // reference has a type -- some language frontends provide us one -- but most likely
+            // this type will be unknown.
+            val inferred = newVariableDeclaration(hint.name, hint.type)
+
+            debugWithFileLocation(
+                hint,
+                log,
+                "Inferred a new variable declaration {} with type {}",
+                inferred.name,
+                inferred.type
+            )
+
+            // In any case, we will observe the type of our reference and update our new variable
+            // declaration accordingly.
+            hint.typeObservers += TypeInferenceObserver(inferred)
+
+            // Add it to the scope
+            scopeManager.addDeclaration(inferred)
+
+            inferred
+        }
+    }
+
+    fun inferNamespaceDeclaration(name: Name, path: String?, origin: Node): NamespaceDeclaration {
         // Here be dragons. Jump to the scope that the node defines directly, so that we can
-        // delegate further operations to the scope manager. We also save the old scope so we can
+        // delegate further operations to the scope manager. We also save the old scope, so we can
         // restore it.
         return inferInScopeOf(start) {
-            log.debug(
+            debugWithFileLocation(
+                origin,
+                log,
                 "Inferring a new namespace declaration {} {}",
                 name,
                 if (path != null) {
@@ -415,6 +506,11 @@ class Inference(val start: Node, override val ctx: TranslationContext) :
     companion object {
         val log: Logger = LoggerFactory.getLogger(Inference::class.java)
     }
+
+    init {
+        this.scopeManager = ctx.scopeManager
+        this.typeManager = ctx.typeManager
+    }
 }
 
 /** Provides information about the inference status of a node. */
@@ -427,17 +523,26 @@ interface IsImplicitProvider : MetadataProvider {
     val isImplicit: Boolean
 }
 
-/** Returns a new [Inference] object starting from this node. */
-fun Node.startInference(ctx: TranslationContext) = Inference(this, ctx)
+/**
+ * Returns a new [Inference] object starting from this node. This will check, whether inference is
+ * enabled at all (using [InferenceConfiguration.enabled]). Otherwise null, will be returned.
+ */
+fun Node.startInference(ctx: TranslationContext): Inference? {
+    if (!ctx.config.inferenceConfiguration.enabled) {
+        return null
+    }
+
+    return Inference(this, ctx)
+}
 
 /** Tries to infer a [FunctionDeclaration] from a [CallExpression]. */
 fun TranslationUnitDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
     ctx: TranslationContext
-): FunctionDeclaration {
-    return Inference(this, ctx)
-        .createInferredFunctionDeclaration(
+): FunctionDeclaration? {
+    return startInference(ctx)
+        ?.inferFunctionDeclaration(
             call.name.localName,
             call.code,
             isStatic,
@@ -453,9 +558,9 @@ fun NamespaceDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
     ctx: TranslationContext
-): FunctionDeclaration {
-    return Inference(this, ctx)
-        .createInferredFunctionDeclaration(
+): FunctionDeclaration? {
+    return startInference(ctx)
+        ?.inferFunctionDeclaration(
             call.name,
             call.code,
             isStatic,
@@ -471,9 +576,9 @@ fun RecordDeclaration.inferMethod(
     call: CallExpression,
     isStatic: Boolean = false,
     ctx: TranslationContext
-): MethodDeclaration {
-    return Inference(this, ctx)
-        .createInferredFunctionDeclaration(
+): MethodDeclaration? {
+    return startInference(ctx)
+        ?.inferFunctionDeclaration(
             call.name.localName,
             call.code,
             isStatic,
@@ -481,5 +586,5 @@ fun RecordDeclaration.inferMethod(
             // TODO: Is the call's type the return value's type?
             call.type,
             call
-        ) as MethodDeclaration
+        ) as? MethodDeclaration
 }

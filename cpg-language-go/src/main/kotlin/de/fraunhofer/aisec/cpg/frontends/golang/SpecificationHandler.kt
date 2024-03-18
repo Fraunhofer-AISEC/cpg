@@ -45,13 +45,14 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): IncludeDeclaration {
-        // We set the name of the include declaration to the imported name, i.e., the package name
-        val name = importSpec.importName
-
         // We set the filename of the include declaration to the package path, i.e., its full path
         // including any module identifiers. This way we can match the include declaration back to
         // the namespace's path and name
-        val filename = importSpec.path.value.removeSurrounding("\"")
+        val filename = importSpec.path.value.removeSurrounding("\"").removeSurrounding("`")
+
+        // We set the name of the include declaration to the imported name, i.e., the package name
+        val name = importSpec.importName
+
         val include = newIncludeDeclaration(filename, rawNode = importSpec)
         include.name = parseName(name)
 
@@ -70,12 +71,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleTypeSpec(spec: GoStandardLibrary.Ast.TypeSpec): Declaration {
-        val type = spec.type
         val decl =
-            when (type) {
+            when (val type = spec.type) {
                 is GoStandardLibrary.Ast.StructType -> handleStructTypeSpec(spec, type)
                 is GoStandardLibrary.Ast.InterfaceType -> handleInterfaceTypeSpec(spec, type)
-                is GoStandardLibrary.Ast.FuncType -> handleFuncTypeSpec(spec, type)
+                is GoStandardLibrary.Ast.FuncType,
                 is GoStandardLibrary.Ast.Ident,
                 is GoStandardLibrary.Ast.SelectorExpr,
                 is GoStandardLibrary.Ast.MapType,
@@ -125,8 +125,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         Pair(field.names[0].name, listOf())
                     }
 
-                val decl = newFieldDeclaration(fieldName, type, modifiers)
-                frontend.setCodeAndLocation(decl, field)
+                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
             }
         }
@@ -156,8 +155,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // "method" actually has a name, we declare a new method
                 // declaration.
                 if (field.names.isNotEmpty()) {
-                    val method = newMethodDeclaration(field.names[0].name)
-                    frontend.setCodeAndLocation(method, field)
+                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
 
                     frontend.scopeManager.enterScope(method)
@@ -335,10 +333,10 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
             // Otherwise, we are creating a new type, which is *different*. Since Go allows to add
             // methods to these kind of types, we need to create them as a record declaration. We
-            // use the special kind "overlay" to identity such types and put the target type in the
-            // list of superclasses.
+            // use the special kind "type" to identity such records and put the target type (also
+            // called the "underlying type") in the list of superclasses.
             else -> {
-                val record = newRecordDeclaration(spec.name.name, "overlay")
+                val record = newRecordDeclaration(spec.name.name, "type")
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)

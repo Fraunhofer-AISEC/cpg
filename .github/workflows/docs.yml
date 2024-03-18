@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ github.ref }}
           path: .cache

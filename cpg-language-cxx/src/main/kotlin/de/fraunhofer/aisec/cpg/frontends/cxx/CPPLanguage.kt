@@ -304,8 +304,7 @@ open class CPPLanguage :
                             function,
                             initializationSignature,
                             initializationType,
-                            orderedInitializationSignature,
-                            ctx
+                            orderedInitializationSignature
                         )
                     return Pair(true, candidates)
                 }
@@ -317,7 +316,7 @@ open class CPPLanguage :
             // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
             // Otherwise, we could not resolve to a template and no modifications are made
             val functionTemplateDeclaration =
-                holder.startInference(ctx).createInferredFunctionTemplate(templateCall)
+                holder.startInference(ctx)?.inferFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
             val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges
@@ -326,6 +325,10 @@ open class CPPLanguage :
                     Properties.INSTANTIATION,
                     TemplateDeclaration.TemplateInitialization.EXPLICIT
                 )
+            }
+
+            if (functionTemplateDeclaration == null) {
+                return Pair(false, listOf())
             }
 
             return Pair(true, functionTemplateDeclaration.realization)

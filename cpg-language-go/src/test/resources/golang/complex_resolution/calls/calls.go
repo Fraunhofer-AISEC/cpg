@@ -3,7 +3,8 @@ package calls
 import "mymodule.io/complex_resolution/util"
 
 type Something struct {
-	self *Something
+	self  *Something
+	funcy Funcy
 }
 
 func (s *Something) Do() {
@@ -13,9 +14,9 @@ func (s *Something) Do() {
 func NewSomething() *Something {
 	return &Something{}
 }
-
 func main() {
 	var some = NewSomething()
+	some.funcy = do
 
 	some.self.self.self.Do()
 
@@ -42,6 +43,8 @@ func main() {
 	// interface{} and any should be interchangeable
 	var a any = nil
 	old(a)
+
+	_ = doFuncy(some.funcy)
 }
 
 func Func(args ...int) {}
@@ -86,3 +89,7 @@ func doInt64(i int64) {}
 func doLength(l util.Length) {}
 
 func old(v interface{}) {}
+
+func do() error {
+	return nil
+}

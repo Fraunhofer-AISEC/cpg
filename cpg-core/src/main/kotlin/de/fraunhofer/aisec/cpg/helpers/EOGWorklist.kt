@@ -78,7 +78,7 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
  * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
  * one).
  */
-open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
+open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
     /**
      * It updates this state by adding all new nodes in [other] to `this` and by computing the least
@@ -236,6 +236,23 @@ class Worklist<K : Any, N : Any, V>() {
  * [State] [startState]. For each node, the [transformation] is applied which should update the
  * state.
  *
+ * [transformation] receives the current [Node] popped from the worklist and the [State] at this
+ * node which is considered for this analysis. The [transformation] has to return the updated
+ * [State].
+ */
+inline fun <reified K : Node, V> iterateEOG(
+    startNode: K,
+    startState: State<K, V>,
+    transformation: (K, State<K, V>) -> State<K, V>
+): State<K, V>? {
+    return iterateEOG(startNode, startState) { k, s, _ -> transformation(k, s) }
+}
+
+/**
+ * Iterates through the worklist of the Evaluation Order Graph starting at [startNode] and with the
+ * [State] [startState]. For each node, the [transformation] is applied which should update the
+ * state.
+ *
  * [transformation] receives the current [Node] popped from the worklist, the [State] at this node
  * which is considered for this analysis and even the current [Worklist]. The worklist is given if
  * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
@@ -272,6 +289,14 @@ inline fun <reified K : Node, V> iterateEOG(
         }
     }
     return worklist.mop()
+}
+
+inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+    startEdges: List<K>,
+    startState: State<N, V>,
+    transformation: (K, State<N, V>) -> State<N, V>
+): State<N, V>? {
+    return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
 }
 
 inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(

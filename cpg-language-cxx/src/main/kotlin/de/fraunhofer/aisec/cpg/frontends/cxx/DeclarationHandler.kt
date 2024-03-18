@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
@@ -107,6 +108,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
+        Util.errorWithFileLocation(frontend, ctx, log, ctx.problem.message)
+
         val problem = newProblemDeclaration(ctx.problem.message)
 
         frontend.scopeManager.addDeclaration(problem)
@@ -160,8 +163,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             var candidates =
                 (holder as? DeclarationHolder)
                     ?.declarations
-                    ?.filterIsInstance<FunctionDeclaration>()
-                    ?: listOf()
+                    ?.filterIsInstance<FunctionDeclaration>() ?: listOf()
 
             // Look for the method or constructor
             candidates =
@@ -233,8 +235,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     !it.isDefinition &&
                         it.name.lastPartsMatch(declaration.name) &&
                         it.hasSignature(declaration.signatureTypes)
-                }
-                ?: listOf()
+                } ?: listOf()
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
             // Do some additional magic with default parameters, which I do not really understand
@@ -456,7 +457,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 type = frontend.typeOf(declarator, declSpecifierToUse)
 
                 // Handle typedefs.
-                val declaration = handleTypedef(declarator, ctx, type)
+                val declaration = handleTypedef(declarator, type)
 
                 sequence.addDeclaration(declaration)
             } else {
@@ -618,11 +619,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return null
     }
 
-    private fun handleTypedef(
-        declarator: IASTDeclarator,
-        ctx: IASTSimpleDeclaration,
-        type: Type
-    ): Declaration {
+    private fun handleTypedef(declarator: IASTDeclarator, type: Type): Declaration {
         val (nameDecl: IASTDeclarator, _) = declarator.realName()
 
         val declaration =

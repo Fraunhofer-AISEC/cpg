@@ -27,11 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -66,7 +63,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is NewArrayExpression -> handleNewArrayExpression(node)
             is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
-            is MemberExpression -> handleMemberExpression(node, inferDfgForUnresolvedSymbols)
+            is MemberExpression -> handleMemberExpression(node)
             is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
@@ -114,17 +111,22 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * For a [MemberExpression], the base flows to the expression if the field is not implemented in
-     * the code under analysis. Otherwise, it's handled as a [Reference].
+     * For a [MemberExpression], the base flows from/to the expression, depending on the
+     * [MemberExpression.access].
      */
-    protected open fun handleMemberExpression(
-        node: MemberExpression,
-        inferDfgForUnresolvedCalls: Boolean
-    ) {
-        if (node.refersTo == null && inferDfgForUnresolvedCalls) {
-            node.addPrevDFG(node.base)
-        } else {
-            handleReference(node)
+    protected fun handleMemberExpression(node: MemberExpression) {
+        when (node.access) {
+            AccessValues.WRITE -> {
+                node.addNextDFG(node.base, granularity = partial(node.refersTo))
+            }
+            AccessValues.READWRITE -> {
+                node.addNextDFG(node.base, granularity = partial(node.refersTo))
+                // We do not make an edge in the other direction on purpose as a workaround for
+                // nested field accesses on the lhs of an assignment.
+            }
+            else -> {
+                node.addPrevDFG(node.base, granularity = partial(node.refersTo))
+            }
         }
     }
 
@@ -135,7 +137,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected open fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
             node.elements.withIndex().forEach {
-                it.value.addPrevDFG(initializer, mutableMapOf(Properties.INDEX to it.index))
+                it.value.addPrevDFG(
+                    initializer,
+                    granularity = partial(it.value),
+                )
             }
         }
     }
@@ -152,8 +157,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
-    protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
-        node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
+    protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
+        if (node.isInferred) {
+            // If the function is inferred, we connect all parameters to the function declaration.
+            // The condition should make sure that we don't add edges multiple times, i.e., we
+            // only handle the declaration exactly once.
+            node.addAllPrevDFG(node.parameters)
+            // If it's a method with a receiver, we connect that one too.
+            if (node is MethodDeclaration) {
+                node.receiver?.let { node.addPrevDFG(it) }
+            }
+        } else {
+            node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
+        }
     }
 
     /**
@@ -400,11 +416,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             handleUnresolvedCalls(call, call)
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
-                if (it.isInferred && inferDfgForUnresolvedSymbols) {
-                    handleUnresolvedCalls(call, call)
-                } else {
-                    Util.attachCallParameters(it, call.arguments)
-                }
+                Util.attachCallParameters(it, call)
                 call.addPrevDFG(it)
             }
         }

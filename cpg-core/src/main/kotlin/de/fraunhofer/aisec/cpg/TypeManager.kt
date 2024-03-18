@@ -207,8 +207,8 @@ class TypeManager {
                 log.trace(
                     "Registering unique first order type {}{}",
                     t.name,
-                    if (t is ObjectType && t.generics.isNotEmpty()) {
-                        " with generics [${t.generics.joinToString(",") { it.name.toString() }}]"
+                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
+                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
                     } else {
                         ""
                     }
@@ -345,8 +345,7 @@ val Collection<Type>.commonType: Type?
                             // only look at its type. Therefore, ancestors with the same type but
                             // different depths will match here.
                             it == ancestor
-                        }
-                            ?: return@mapNotNull null
+                        } ?: return@mapNotNull null
 
                     // We then need to select one of both, depending on the depth
                     if (ancestor.depth >= other.depth) {

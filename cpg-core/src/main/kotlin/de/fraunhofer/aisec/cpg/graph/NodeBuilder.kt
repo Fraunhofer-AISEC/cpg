@@ -33,9 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -62,10 +65,14 @@ interface LanguageProvider : MetadataProvider {
 
 /**
  * This interface denotes that the class is able to provide source code and location information for
- * a specific node and set it using the [setCodeAndLocation] function.
+ * a specific node.
  */
 interface CodeAndLocationProvider<in AstNode> : MetadataProvider {
-    fun setCodeAndLocation(cpgNode: Node, astNode: AstNode)
+    /** Returns the raw code of the supplied [AstNode]. */
+    fun codeOf(astNode: AstNode): String?
+
+    /** Returns the [PhysicalLocation] of the supplied [AstNode]. */
+    fun locationOf(astNode: AstNode): PhysicalLocation?
 }
 
 /**
@@ -101,6 +108,14 @@ fun Node.applyMetadata(
     localNameOnly: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
+    // We definitely need a context provider, because otherwise we cannot set the context and the
+    // node cannot access necessary information about the current translation context it lives in.
+    this.ctx =
+        (provider as? ContextProvider)?.ctx
+            ?: throw TranslationException(
+                "Trying to create a node without a ContextProvider. This will fail."
+            )
+
     // We try to set the code and especially the location as soon as possible because the hashCode
     // implementation of the Node class relies on it. Otherwise, we could have a problem that the
     // location is not yet set, but the node is put into a hashmap. In this case the hashCode is
@@ -108,7 +123,8 @@ fun Node.applyMetadata(
     // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
     // calling a node builder from these should already set the location.
     if (provider is CodeAndLocationProvider<*> && rawNode != null) {
-        (provider as CodeAndLocationProvider<Any>).setCodeAndLocation(this, rawNode)
+        @Suppress("UNCHECKED_CAST")
+        setCodeAndLocation(provider as CodeAndLocationProvider<Any>, rawNode)
     }
 
     if (provider is LanguageProvider) {
@@ -129,16 +145,6 @@ fun Node.applyMetadata(
         LOGGER.warn(
             "No scope provider was provided when creating the node {}. This might be an error",
             name
-        )
-    }
-
-    if (provider is ContextProvider) {
-        this.ctx = provider.ctx
-    }
-
-    if (this.ctx == null) {
-        throw TranslationException(
-            "Trying to create a node without a ContextProvider. This will fail."
         )
     }
 
@@ -264,8 +270,113 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
     return this
 }
 
-fun <T : Node, S> T.codeAndLocationFrom(frontend: LanguageFrontend<S, *>, rawNode: S): T {
-    frontend.setCodeAndLocation(this, rawNode)
+/**
+ * Sometimes we need to explicitly (re)set the code and location of a node to another raw node than
+ * originally used in the node builder. A common use-case for that is languages that contain
+ * expression statements, which we simplify to simple expressions. But in these languages, the
+ * expression often does not contain a semicolon at the end, where-as the statement does. In this
+ * case we want to preserve the original code containing the semicolon and need to set the node's
+ * code/location to the statement rather than the expression, after it comes back from the
+ * expression handler.
+ */
+context(CodeAndLocationProvider<AstNode>)
+fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
+    setCodeAndLocation(this@CodeAndLocationProvider, rawNode)
+    return this
+}
+
+/**
+ * This function allows the setting of a node's code and location region as the code and location of
+ * its children. Sometimes, when we translate a parent node in the language-specific AST with its
+ * children into the CPG AST, we have to set a specific intermediate Node between, that has no
+ * language-specific AST that can give it a proper code and location.
+ *
+ * While the location of the node is determined by the start and end of the child locations, the
+ * code is extracted from the parent node to catch separators and auxiliary syntactic elements that
+ * are between the child nodes.
+ *
+ * @param parentNode Used to extract the code for this node
+ */
+context(CodeAndLocationProvider<AstNode>)
+fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
+    var first: Node? = null
+    var last: Node? = null
+
+    // Search through all children to find the first and last node based on region startLine and
+    // startColumn
+    val worklist: MutableList<Node> = this.astChildren.toMutableList()
+    while (worklist.isNotEmpty()) {
+        val current = worklist.removeFirst()
+        if (current.location == null || current.location?.region == Region()) {
+            // If the node has no location we use the same search on his children again
+            worklist.addAll(current.astChildren)
+        } else {
+            // Compare nodes by line and column in lexicographic order, i.e. column is compared if
+            // lines are equal
+            if (first == null) {
+                first = current
+                last = current
+            }
+            first =
+                minOf(
+                    first,
+                    current,
+                    compareBy(
+                        { it.location?.region?.startLine },
+                        { it.location?.region?.startColumn }
+                    )
+                )
+            last =
+                maxOf(
+                    last,
+                    current,
+                    compareBy(
+                        { it?.location?.region?.endLine },
+                        { it?.location?.region?.endColumn }
+                    )
+                )
+        }
+    }
+
+    if (first != null && last != null) {
+        // Starts and ends are combined to one region
+        val newRegion =
+            Region(
+                startLine = first.location?.region?.startLine ?: -1,
+                startColumn = first.location?.region?.startColumn ?: -1,
+                endLine = last.location?.region?.endLine ?: -1,
+                endColumn = last.location?.region?.endColumn ?: -1,
+            )
+        this.location =
+            PhysicalLocation(first.location?.artifactLocation?.uri ?: URI(""), newRegion)
+
+        val parentCode = this@CodeAndLocationProvider.codeOf(parentNode)
+        val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
+        if (parentCode != null && parentRegion != null) {
+            // If the parent has code and region the new region is used to extract the code
+            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion)
+        }
+    }
 
     return this
+}
+
+/**
+ * This internal function sets the code and location according to the [CodeAndLocationProvider].
+ * This also performs some checks, e.g., if the config disabled setting the code.
+ */
+private fun <AstNode> Node.setCodeAndLocation(
+    provider: CodeAndLocationProvider<AstNode>,
+    rawNode: AstNode
+) {
+    if (this.ctx?.config?.codeInNodes == true) {
+        // only set code, if it's not already set or empty
+        val code = provider.codeOf(rawNode)
+        if (code != null) {
+            this.code = code
+        } else {
+            LOGGER.warn("Unexpected: No code for node {}", rawNode)
+        }
+    }
+    this.location = provider.locationOf(rawNode)
 }

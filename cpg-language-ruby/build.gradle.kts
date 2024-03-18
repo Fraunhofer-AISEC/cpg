@@ -43,5 +43,5 @@ publishing {
 }
 
 dependencies {
-    implementation("org.jruby:jruby-core:9.4.3.0")
+    implementation(libs.jruby)
 }

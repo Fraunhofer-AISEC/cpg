@@ -161,8 +161,7 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
         base =
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
                 (it as Node).name.lastPartsMatch(baseName)
-            }
-                ?: return null
+            } ?: return null
         lookup = name.split(".")[1]
     }
 
@@ -529,6 +528,10 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
     return null
 }
 
+/** Returns all [Node] children in this graph, starting with this [Node]. */
+val Node?.nodes: List<Node>
+    get() = this.allChildren()
+
 /** Returns all [CallExpression] children in this graph, starting with this [Node]. */
 val Node?.calls: List<CallExpression>
     get() = this.allChildren()
@@ -577,13 +580,16 @@ val Node?.literals: List<Literal<*>>
 val Node?.refs: List<Reference>
     get() = this.allChildren()
 
+/** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
+val Node?.memberExpressions: List<MemberExpression>
+    get() = this.allChildren()
+
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
     get() {
         return this?.allChildren<Node>()?.filterIsInstance<AssignmentHolder>()?.flatMap {
             it.assignments
-        }
-            ?: listOf()
+        } ?: listOf()
     }
 
 /**
@@ -608,12 +614,13 @@ inline operator fun <reified T> List<Node>.invoke(i: Int = 0): T? {
     return this.getOrNull(i) as? T
 }
 
-operator fun <N : Expression> Expression.invoke(): N? {
+operator fun <N : Expression> Expression?.invoke(): N? {
     return this as? N
 }
 
 /** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
+    @Suppress("UNCHECKED_CAST")
     return SubgraphWalker.flattenAST(this).filter { node ->
         node is CallExpression && node.invokes.any { it.name.lastPartsMatch(name) }
     } as List<CallExpression>

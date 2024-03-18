@@ -282,11 +282,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     private fun handleExpressionStatement(ctx: IASTExpressionStatement): Expression {
         val expression =
-            frontend.expressionHandler.handle(ctx.expression)
+            frontend.expressionHandler.handle(ctx.expression)?.codeAndLocationFromOtherRawNode(ctx)
                 ?: ProblemExpression("could not parse expression in statement")
-
-        // update the code and region to include the whole statement
-        frontend.setCodeAndLocation(expression, ctx)
 
         return expression
     }

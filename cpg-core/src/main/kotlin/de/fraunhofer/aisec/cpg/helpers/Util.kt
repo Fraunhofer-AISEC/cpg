@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -142,6 +143,11 @@ object Util {
         else refNodes.containsAll(nodeSide)
     }
 
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun <AstNode> warnWithFileLocation(
         lang: LanguageFrontend<AstNode, *>,
         astNode: AstNode,
@@ -159,6 +165,11 @@ object Util {
         )
     }
 
+    /**
+     * Logs an error with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun <AstNode> errorWithFileLocation(
         lang: LanguageFrontend<AstNode, *>,
         astNode: AstNode,
@@ -176,6 +187,11 @@ object Util {
         )
     }
 
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun warnWithFileLocation(
         node: Node,
         log: Logger,
@@ -188,18 +204,29 @@ object Util {
         )
     }
 
+    /**
+     * Logs an error with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun errorWithFileLocation(
-        node: Node,
+        node: Node?,
         log: Logger,
         format: String?,
         vararg arguments: Any?
     ) {
         log.error(
-            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
             *arguments
         )
     }
 
+    /**
+     * Logs a debug message with the specified file location. This is intentionally inlined, so that
+     * the [Logger] will use the location of the callee of this function, rather than the [Util]
+     * class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun debugWithFileLocation(
         node: Node?,
         log: Logger,
@@ -228,26 +255,28 @@ object Util {
         var openParentheses = 0
         var currPart = StringBuilder()
         for (c in toSplit.toCharArray()) {
-            if (c == '(') {
-                openParentheses++
-                currPart.append(c)
-            } else if (c == ')') {
-                if (openParentheses > 0) {
-                    openParentheses--
-                }
-                currPart.append(c)
-            } else if (delimiters.contains("" + c)) {
-                if (openParentheses == 0) {
-                    val toAdd = currPart.toString().trim()
-                    if (toAdd.isNotEmpty()) {
-                        result.add(currPart.toString().trim())
-                    }
-                    currPart = StringBuilder()
-                } else {
+            when {
+                c == '(' -> {
+                    openParentheses++
                     currPart.append(c)
                 }
-            } else {
-                currPart.append(c)
+                c == ')' -> {
+                    if (openParentheses > 0) {
+                        openParentheses--
+                    }
+                    currPart.append(c)
+                }
+                delimiters.contains("" + c) -> {
+                    if (openParentheses == 0) {
+                        val toAdd = currPart.toString().trim()
+                        if (toAdd.isNotEmpty()) {
+                            result.add(currPart.toString().trim())
+                        }
+                        currPart = StringBuilder()
+                    } else {
+                        currPart.append(c)
+                    }
+                }
             }
         }
         if (currPart.isNotEmpty()) {
@@ -292,29 +321,47 @@ object Util {
         var openParentheses = 0
         var openTemplate = 0
         for (c in input.toCharArray()) {
-            if (c == '(') {
-                openParentheses++
-            } else if (c == ')') {
-                openParentheses--
-            } else if (c == '<') {
-                openTemplate++
-            } else if (c == '>') {
-                openTemplate--
-            } else if (c == marker && openParentheses == 0 && openTemplate == 0) {
-                return true
+            when (c) {
+                '(' -> {
+                    openParentheses++
+                }
+                ')' -> {
+                    openParentheses--
+                }
+                '<' -> {
+                    openTemplate++
+                }
+                '>' -> {
+                    openTemplate--
+                }
+                marker -> {
+                    if (openParentheses == 0 && openTemplate == 0) {
+                        return true
+                    }
+                }
             }
         }
         return false
     }
 
     /**
-     * Establish dataflow from call arguments to the target [FunctionDeclaration] parameters
+     * Establish data-flow from a [CallExpression] arguments to the target [FunctionDeclaration]
+     * parameters. Additionally, if the call is a [MemberCallExpression], it establishes a data-flow
+     * from the [MemberCallExpression.base] towards the [MethodDeclaration.receiver].
      *
      * @param target The call's target [FunctionDeclaration]
-     * @param arguments The call's arguments to be connected to the target's parameters
+     * @param call The [CallExpression]
      */
-    fun attachCallParameters(target: FunctionDeclaration, arguments: List<Expression>) {
+    fun attachCallParameters(target: FunctionDeclaration, call: CallExpression) {
+        // Add an incoming DFG edge from a member call's base to the method's receiver
+        if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
+            target.receiver?.let { receiver -> call.base?.addNextDFG(receiver) }
+        }
+
+        // Connect the arguments to parameters
+        val arguments = call.arguments
         target.parameterEdges.sortWith(Comparator.comparing { it.end.argumentIndex })
+
         var j = 0
         while (j < arguments.size) {
             val parameters = target.parameters
@@ -322,7 +369,6 @@ object Util {
                 val param = parameters[j]
                 if (param.isVariadic) {
                     while (j < arguments.size) {
-
                         // map all the following arguments to this variadic param
                         param.addPrevDFG(arguments[j])
                         j++

@@ -31,9 +31,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -167,7 +165,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+    var prevDFGEdges: MutableList<Dataflow> = mutableListOf()
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
@@ -177,7 +175,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
-    var nextDFGEdges: MutableList<PropertyEdge<Node>> = mutableListOf()
+    var nextDFGEdges: MutableList<Dataflow> = mutableListOf()
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
@@ -249,11 +247,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         nextEOGEdges.clear()
     }
 
+    /** Adds a [Dataflow] edge from this node to [next], with the given [Granularity]. */
     fun addNextDFG(
         next: Node,
-        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+        granularity: Granularity = default(),
     ) {
-        val edge = PropertyEdge(this, next, properties)
+        val edge = Dataflow(this, next, granularity)
         nextDFGEdges.add(edge)
         next.prevDFGEdges.add(edge)
     }
@@ -270,11 +269,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
+    /** Adds a [Dataflow] edge from [prev] node to this node, with the given [Granularity]. */
     open fun addPrevDFG(
         prev: Node,
-        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+        granularity: Granularity = default(),
     ) {
-        val edge = PropertyEdge(prev, this, properties)
+        val edge = Dataflow(prev, this, granularity)
         prevDFGEdges.add(edge)
         prev.nextDFGEdges.add(edge)
     }
@@ -288,11 +288,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextCDGEdges.add(edge)
     }
 
+    /** Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [Granularity]. */
     fun addAllPrevDFG(
         prev: Collection<Node>,
-        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+        granularity: Granularity = full(),
     ) {
-        prev.forEach { addPrevDFG(it, properties.toMutableMap()) }
+        prev.forEach { addPrevDFG(it, granularity) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {
@@ -300,7 +301,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     }
 
     fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>, dependenceType: DependenceType) {
-
         prev.forEach {
             val edge = PropertyEdge(it).apply { addProperty(Properties.DEPENDENCE, dependenceType) }
             this.prevPDGEdges.add(edge)

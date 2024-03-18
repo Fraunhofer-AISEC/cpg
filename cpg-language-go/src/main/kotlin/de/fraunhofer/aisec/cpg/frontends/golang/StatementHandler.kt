@@ -71,7 +71,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             if (assignStmt.tok == 47) {
                 ":="
             } else {
-                ""
+                "="
             }
 
         return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
@@ -327,7 +327,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.key?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name).codeAndLocationFrom(frontend, it)
+                    val key = newVariableDeclaration(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
                     stmt.addToPropertyEdgeDeclaration(key)
                 }
@@ -337,7 +337,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.value?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name).codeAndLocationFrom(frontend, it)
+                    val key = newVariableDeclaration(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
                     stmt.addToPropertyEdgeDeclaration(key)
                 }

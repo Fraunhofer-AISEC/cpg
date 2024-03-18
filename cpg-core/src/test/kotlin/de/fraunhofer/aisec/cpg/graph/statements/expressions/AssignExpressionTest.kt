@@ -87,7 +87,7 @@ class AssignExpressionTest {
                 }
             }
 
-            val tu = result.translationUnits.firstOrNull()
+            val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             with(tu) {
                 val call = tu.calls["func"]
                 val func = tu.functions["func"]

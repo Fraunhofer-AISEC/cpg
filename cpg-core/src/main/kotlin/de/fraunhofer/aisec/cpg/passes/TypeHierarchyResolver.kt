@@ -85,10 +85,10 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             Strategy::AST_FORWARD,
             object : IVisitor<Node>() {
                 override fun visit(t: Node) {
-                    if (t is RecordDeclaration) {
-                        recordMap.putIfAbsent(t.name, t)
-                    } else if (t is EnumDeclaration) {
+                    if (t is EnumDeclaration) {
                         enums.add(t)
+                    } else if (t is RecordDeclaration) {
+                        recordMap.putIfAbsent(t.name, t)
                     }
                 }
             }

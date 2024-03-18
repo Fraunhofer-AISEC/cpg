@@ -75,15 +75,15 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             var members = setOf<ValueDeclaration>()
             if (base is RecordDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
-            } else if (base is EnumDeclaration) {
-                members = getOrCreateMembers(base, matcher.group("member"))
             }
             staticImports.addAll(members)
         }
 
         for (asteriskImport in partitioned[true] ?: listOf()) {
             val base = importables[asteriskImport.replace(".*", "")]
-            if (base is RecordDeclaration) {
+            if (base is EnumDeclaration) {
+                staticImports.addAll(base.entries)
+            } else if (base is RecordDeclaration) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
                 // Add all the static methods implemented in the class "base" and its superclasses
                 staticImports.addAll(
@@ -93,8 +93,6 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 staticImports.addAll(
                     classes.flatMap { it.fields }.filter { "static" in it.modifiers }
                 )
-            } else if (base is EnumDeclaration) {
-                staticImports.addAll(base.entries)
             }
         }
         return staticImports
@@ -102,10 +100,6 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun getDeclarationsForTypeNames(targetTypes: List<String>): MutableSet<Declaration> {
         return targetTypes.mapNotNull { importables[it] }.toMutableSet()
-    }
-
-    protected fun getOrCreateMembers(base: EnumDeclaration, name: String): Set<ValueDeclaration> {
-        return base.entries.filter { it.name.localName == name }.toSet()
     }
 
     protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
@@ -123,12 +117,18 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
         )
 
+        val memberEntries = mutableSetOf<EnumConstantDeclaration>()
+        if (base is EnumDeclaration) {
+            base.entries[name]?.let { memberEntries.add(it) }
+        }
+
         // now it gets weird: you can import a field and a number of methods that have the same
         // name, all with a *single* static import...
         // TODO(oxisto): Move all of the following code to the [Inference] class
         val result = mutableSetOf<ValueDeclaration>()
         result.addAll(memberMethods)
         result.addAll(memberFields)
+        result.addAll(memberEntries)
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
@@ -162,8 +162,6 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 override fun visit(t: Node) {
                     if (t is RecordDeclaration) {
                         records.add(t)
-                        importables.putIfAbsent(t.name.toString(), t)
-                    } else if (t is EnumDeclaration) {
                         importables.putIfAbsent(t.name.toString(), t)
                     }
                 }

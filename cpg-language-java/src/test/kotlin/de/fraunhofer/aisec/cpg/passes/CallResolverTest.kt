@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
@@ -119,8 +120,13 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result =
-            TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-        val tu = result.translationUnits.firstOrNull()
+            TestUtils.analyze("java", topLevel, true) {
+                it.registerLanguage(JavaLanguage())
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(false).build()
+                )
+            }
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
         val records = result.records

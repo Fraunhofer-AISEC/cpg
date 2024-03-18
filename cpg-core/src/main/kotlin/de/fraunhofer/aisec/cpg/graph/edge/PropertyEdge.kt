@@ -83,6 +83,8 @@ open class PropertyEdge<T : Node> : Persistable {
         this.properties = properties
     }
 
+    open val label: String = "EDGE"
+
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
 
@@ -216,8 +218,11 @@ open class PropertyEdge<T : Node> : Persistable {
             if (element is PropertyEdge<*>) {
                 try {
                     val outputCollection =
-                        collection.javaClass.getDeclaredConstructor().newInstance()
-                            as MutableCollection<Node>
+                        collection.javaClass
+                            .getDeclaredConstructor()
+                            .newInstance()
+                            .filterIsInstance<Node>()
+                            .toMutableList()
                     for (obj in collection) {
                         if (obj is PropertyEdge<*>) {
                             if (outgoing) {

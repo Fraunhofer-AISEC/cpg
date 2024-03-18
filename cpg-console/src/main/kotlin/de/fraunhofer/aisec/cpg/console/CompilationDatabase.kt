@@ -73,11 +73,14 @@ class CompilationDatabase : Plugin {
                         "                TranslationConfiguration.builder()\n" +
                         "                    .useCompilationDatabase(db)\n" +
                         "                    .sourceLocations(db.sourceFiles)\n" +
-                        "                    .defaultLanguages()\n" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage\")" +
                         "                    .defaultPasses()\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
@@ -86,8 +89,6 @@ class CompilationDatabase : Plugin {
                     "val tu = result.translationUnits.first()"
                 )
             )
-
-            // return Command.Result.RunSnippets(listOf(content))
         }
     }
 

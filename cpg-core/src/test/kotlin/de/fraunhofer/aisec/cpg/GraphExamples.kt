@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -1036,6 +1037,140 @@ class GraphExamples {
 
                                     memberCall("method2", ref("variable"))
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+        /**
+         * This roughly represents the following C code:
+         * ```c
+         * struct myStruct {
+         *   int field1;
+         * };
+         *
+         * void doSomething(int i) {}
+         *
+         * int main() {
+         *   struct myStruct s1;
+         *   struct myStruct s2;
+         *
+         *   doSomething(s1.field1);
+         *
+         *   s1.field1 = 1;
+         *   s2.field1 = 2;
+         *
+         *   doSomething(s1.field1);
+         *   doSomething(s2.field1);
+         * }
+         * ```
+         */
+        fun getSimpleFieldDataflow(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerPass<EdgeCachePass>()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("dataflow_field.c") {
+                        record("myStruct") { field("field1", t("int")) }
+                        function("doSomething") { param("i", t("int")) }
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    // Declare s1 and s2 of the same type
+                                    variable("s1", t("myStruct"))
+                                    variable("s2", t("myStruct"))
+                                }
+
+                                // Call doSomething on field1 of s1
+                                call("doSomething") {
+                                        member("field1", ref("s1", makeMagic = false).line(11))
+                                            .line(11)
+                                    }
+                                    .line(11)
+
+                                // Set field1 of both s1 and s2, to literal 1 and 2 respectively
+                                member("field1", ref("s1", makeMagic = false).line(13))
+                                    .line(13) assign literal(1)
+                                member("field1", ref("s2", makeMagic = false).line(14))
+                                    .line(14) assign literal(2)
+
+                                // Call doSomething on field1 of s1 and s2
+                                call("doSomething") {
+                                        member("field1", ref("s1", makeMagic = false).line(15))
+                                            .line(15)
+                                    }
+                                    .line(15)
+                                call("doSomething") {
+                                        member("field1", ref("s2", makeMagic = false).line(16))
+                                            .line(16)
+                                    }
+                                    .line(16)
+                            }
+                        }
+                    }
+                }
+            }
+
+        /**
+         * This roughly represents the following C code:
+         * ```c
+         * struct inner {
+         *   int field;
+         * };
+         *
+         * struct outer {
+         *   struct inner in;
+         * };
+         *
+         * void doSomething(int i) {}
+         *
+         * int main() {
+         *   struct outer o;
+         *   o.in.field = 1;
+         *
+         *   doSomething(o.in.field);
+         * }
+         * ```
+         */
+        fun getNestedFieldDataflow(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerPass<EdgeCachePass>()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("dataflow_field.c") {
+                        record("inner") { field("field", t("int")) }
+                        record("outer") { field("in", t("inner")) }
+                        function("doSomething") { param("i", t("int")) }
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("o", t("outer")) }
+
+                                member(
+                                        "field",
+                                        member("in", ref("o", makeMagic = false).line(13)).line(13)
+                                    )
+                                    .line(13) assign literal(1)
+
+                                call("doSomething") {
+                                        member(
+                                                "field",
+                                                member("in", ref("o", makeMagic = false).line(15))
+                                                    .line(15)
+                                            )
+                                            .line(15)
+                                    }
+                                    .line(15)
                             }
                         }
                     }

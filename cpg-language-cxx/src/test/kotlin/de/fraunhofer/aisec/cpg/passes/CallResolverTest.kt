@@ -25,14 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.findByName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
@@ -85,8 +82,8 @@ class CallResolverTest : BaseTest() {
      * @param result
      */
     private fun ensureInvocationOfMethodsInFunction(result: TranslationResult) {
-        assertEquals(1, result.translationUnits.size)
-        val tu = result.translationUnits[0]
+        assertEquals(1, result.components.flatMap { it.translationUnits }.size)
+        val tu = result.components.flatMap { it.translationUnits }[0]
         for (declaration in tu.declarations) {
             assertNotEquals("invoke", declaration.name.localName)
         }
@@ -155,8 +152,11 @@ class CallResolverTest : BaseTest() {
                 true
             ) {
                 it.registerLanguage<CPPLanguage>()
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(false).build()
+                )
             }
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
         val records = result.records
