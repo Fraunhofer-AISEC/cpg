@@ -140,6 +140,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
+     * Checks if there's an entry in [edgePropertiesMap] with key `(x, null)` where `x` is in [from]
+     * and, if so, adds an entry with key `(x, to)` and the same value
+     */
+    protected fun findAndSetProperties(from: Set<Node>, to: Node) {
+        edgePropertiesMap
+            .filter { it.key.first in from && it.key.second == null }
+            .forEach { edgePropertiesMap[Pair(it.key.first, to)] = it.value }
+    }
+
+    /**
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the block of
      * code [node].
      */
@@ -230,13 +240,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     // We check if we have something relevant for this node (because there was an
                     // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
                     // a dedicated entry for the edge between declState and currentNode.
-                    val relevantProperties =
-                        edgePropertiesMap.filter {
-                            it.key.first in declState.elements && it.key.second == null
-                        }
-                    relevantProperties.forEach {
-                        edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
-                    }
+                    findAndSetProperties(declState.elements, currentNode)
                     state.push(currentNode, declState)
                 } else {
                     // If we do not have a stored state of our object+field, we can use the field
@@ -260,13 +264,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     // We check if we have something relevant for this node (because there was an
                     // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
                     // a dedicated entry for the edge between declState and currentNode.
-                    val relevantProperties =
-                        edgePropertiesMap.filter {
-                            it.key.first in declState.elements && it.key.second == null
-                        }
-                    relevantProperties.forEach {
-                        edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
-                    }
+                    findAndSetProperties(declState.elements, currentNode)
                     state.push(currentNode, declState)
                 } else {
                     // If we do not have a stored state of our object+field, we can use the field
@@ -311,13 +309,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We check if we have something relevant for this node (because there was an entry
                 // for the incoming edge) in the edgePropertiesMap and, if so, we generate a
                 // dedicated entry for the edge between declState and currentNode.
-                val relevantProperties =
-                    edgePropertiesMap.filter {
-                        it.key.first in (prev?.elements ?: setOf()) && it.key.second == null
-                    }
-                relevantProperties.forEach {
-                    edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
-                }
+                findAndSetProperties(prev?.elements ?: setOf(), currentNode)
                 state.push(input, prev)
                 doubleState.declarationsState[writtenDeclaration] =
                     PowersetLattice(identitySetOf(input))
@@ -332,13 +324,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
             if (writtenDeclaration != null && lhs != null) {
                 val prev = doubleState.declarationsState[writtenDeclaration]
-                val relevantProperties =
-                    edgePropertiesMap.filter {
-                        it.key.first in (prev?.elements ?: setOf()) && it.key.second == null
-                    }
-                relevantProperties.forEach {
-                    edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
-                }
+                findAndSetProperties(prev?.elements ?: setOf(), currentNode)
                 // Data flows from the last writes to the lhs variable to this node
                 state.push(lhs, prev)
 
@@ -359,13 +345,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We check if we have something relevant for this node (because there was an entry
                 // for the incoming edge) in the edgePropertiesMap and, if so, we generate a
                 // dedicated entry for the edge between declState and currentNode.
-                val relevantProperties =
-                    edgePropertiesMap.filter { it2 ->
-                        it2.key.first in it.elements && it2.key.second == null
-                    }
-                relevantProperties.forEach {
-                    edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
-                }
+                findAndSetProperties(it.elements, currentNode)
                 state.push(currentNode, it)
             }
         } else if (
