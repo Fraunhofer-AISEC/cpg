@@ -1,3 +1,4 @@
-libcpgo.dylib
-libcpgo.h
+*.dylib
+*.so
+*.h
 
