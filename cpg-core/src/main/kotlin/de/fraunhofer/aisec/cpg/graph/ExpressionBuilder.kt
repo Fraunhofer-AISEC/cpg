@@ -563,14 +563,18 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.file = this.file
     duplicate.name = this.name.clone()
     for (next in this.nextDFGEdges) {
-        if (next is ContextSensitiveDataflow)
-            duplicate.addNextDFGWithContext(next.end, next.callingContext, next.granularity)
-        else duplicate.addNextDFG(next.end, next.granularity)
+        duplicate.addNextDFG(
+            next.end,
+            next.granularity,
+            (next as? ContextSensitiveDataflow)?.callingContext
+        )
     }
     for (next in this.prevDFGEdges) {
-        if (next is ContextSensitiveDataflow)
-            duplicate.addPrevDFGWithContext(next.start, next.callingContext, next.granularity)
-        else duplicate.addNextDFG(next.start, next.granularity)
+        duplicate.addPrevDFG(
+            next.start,
+            next.granularity,
+            (next as? ContextSensitiveDataflow)?.callingContext
+        )
     }
     // TODO: This loses the properties of the edges.
     duplicate.nextEOG = this.nextEOG

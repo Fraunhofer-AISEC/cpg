@@ -43,7 +43,7 @@ class ExpressionBuilderTest {
         val node2 = Reference()
         val granularity = PartialDataflowGranularity(FieldDeclaration())
         val callingContextIn = CallingContextIn(CallExpression())
-        node1.addPrevDFGWithContext(node2, callingContextIn, granularity)
+        node1.addPrevDFG(node2, granularity, callingContextIn)
 
         val clone = node1.duplicate(false)
         val clonedPrevDFG = clone.prevDFGEdges.single()
@@ -60,7 +60,7 @@ class ExpressionBuilderTest {
         val node2 = Reference()
         val granularity = PartialDataflowGranularity(FieldDeclaration())
         val callingContextIn = CallingContextIn(CallExpression())
-        node1.addNextDFGWithContext(node2, callingContextIn, granularity)
+        node1.addNextDFG(node2, granularity, callingContextIn)
 
         val clone = node1.duplicate(false)
         val clonedPrevDFG = clone.nextDFGEdges.single()

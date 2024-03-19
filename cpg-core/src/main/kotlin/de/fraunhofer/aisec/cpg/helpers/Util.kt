@@ -357,7 +357,7 @@ object Util {
         // Add an incoming DFG edge from a member call's base to the method's receiver
         if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
             target.receiver?.let { receiver ->
-                call.base?.addNextDFGWithContext(receiver, CallingContextIn(call))
+                call.base?.addNextDFG(receiver, callingContext = CallingContextIn(call))
             }
         }
 
@@ -373,12 +373,12 @@ object Util {
                 if (param.isVariadic) {
                     while (j < arguments.size) {
                         // map all the following arguments to this variadic param
-                        param.addPrevDFGWithContext(arguments[j], CallingContextIn(call))
+                        param.addPrevDFG(arguments[j], callingContext = CallingContextIn(call))
                         j++
                     }
                     break
                 } else {
-                    param.addPrevDFGWithContext(arguments[j], CallingContextIn(call))
+                    param.addPrevDFG(arguments[j], callingContext = CallingContextIn(call))
                 }
             }
             j++

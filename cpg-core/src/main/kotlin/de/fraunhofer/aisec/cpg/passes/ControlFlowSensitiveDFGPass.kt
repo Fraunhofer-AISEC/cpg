@@ -127,9 +127,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         Pair(it, key) in edgePropertiesMap &&
                             edgePropertiesMap[Pair(it, key)] is CallingContext
                     ) {
-                        key.addPrevDFGWithContext(
+                        key.addPrevDFG(
                             it,
-                            (edgePropertiesMap[Pair(it, key)] as CallingContext)
+                            callingContext = (edgePropertiesMap[Pair(it, key)] as? CallingContext)
                         )
                     } else {
                         key.addPrevDFG(it)
@@ -471,7 +471,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        // TODO: Map probably needs param and a second node!
                         edgePropertiesMap[Pair(param, null)] = CallingContextOut(currentNode)
                     }
                 }
