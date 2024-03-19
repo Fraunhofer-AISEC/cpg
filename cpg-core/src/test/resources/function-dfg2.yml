@@ -1,0 +1,64 @@
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: test.List.addAll
+    signature:
+      - int
+      - test.Object
+  dataFlows:
+    - from: param1
+      to: base
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: test.List.addAll
+    signature:
+      - int
+      - test.List
+  dataFlows:
+    - from: base
+      to: param0
+      dfgType: full
+    - from: param1
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: test.VerySpecialList.addAll
+    signature:
+      - int
+      - test.Object
+  dataFlows:
+    - from: base
+      to: param0
+      dfgType: full
+    - from: param1
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: test.List.addAll
+    signature:
+      - test.List
+  dataFlows:
+    - from: param0
+      to: base
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: test.List.add
+  dataFlows:
+    - from: param0
+      to: base
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: memcpy
+  dataFlows:
+    - from: param1
+      to: param0
+      dfgType: full
