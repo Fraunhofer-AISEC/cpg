@@ -156,7 +156,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 // A comparison, so we return the type "boolean"
                 this.builtInTypes.values.firstOrNull { it is BooleanType }
                     ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
-                    ?: unknownType()
+                        ?: unknownType()
             "+" ->
                 if (operation.lhs.type is StringType) {
                     // string + anything => string

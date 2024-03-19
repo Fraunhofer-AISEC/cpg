@@ -252,8 +252,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                             ProblemNode.ProblemType.TRANSLATION,
                             rawNode = value
                         )
-                LLVMICmp ->
-                    frontend.statementHandler.handleIntegerComparison(value) as? Expression
+                LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value) as? Expression
                         ?: newProblemExpression(
                             "Wrong type of constant comparison",
                             ProblemNode.ProblemType.TRANSLATION,

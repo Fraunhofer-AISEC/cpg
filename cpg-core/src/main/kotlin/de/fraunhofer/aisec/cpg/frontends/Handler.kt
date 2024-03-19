@@ -90,7 +90,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
             handler = map[toHandle]
             if (
                 handler != null && // always ok to handle as generic literal expr
-                    !ctx.javaClass.simpleName.contains("LiteralExpr")
+                !ctx.javaClass.simpleName.contains("LiteralExpr")
             ) {
                 errorWithFileLocation(
                     frontend,

@@ -280,6 +280,7 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
  * expression handler.
  */
 context(CodeAndLocationProvider<AstNode>)
+
 fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
     setCodeAndLocation(this@CodeAndLocationProvider, rawNode)
     return this
@@ -298,6 +299,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
  * @param parentNode Used to extract the code for this node
  */
 context(CodeAndLocationProvider<AstNode>)
+
 fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
     var first: Node? = null
     var last: Node? = null

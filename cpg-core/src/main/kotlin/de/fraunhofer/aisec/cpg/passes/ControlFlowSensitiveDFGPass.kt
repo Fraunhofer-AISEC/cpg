@@ -117,7 +117,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         value.elements.filterNot {
                             (it is VariableDeclaration || it is ParameterDeclaration) && key == it
                         },
-                        //mutableMapOf(Properties.INDEX to i)
+                        // mutableMapOf(Properties.INDEX to i)
                         granularity = partial(element)
                     )
                 }
@@ -156,7 +156,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        //for (varDecl in node.variables.filter { it !is FieldDeclaration && !it.isGlobal }) {
+        // for (varDecl in node.variables.filter { it !is FieldDeclaration && !it.isGlobal }) {
         for (varDecl in node.variables /*.filter { it !is FieldDeclaration }*/) {
             varDecl.clearPrevDFG()
             varDecl.clearNextDFG()

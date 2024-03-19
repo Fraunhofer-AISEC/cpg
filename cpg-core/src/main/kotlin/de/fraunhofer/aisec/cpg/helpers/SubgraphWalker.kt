@@ -152,7 +152,8 @@ object SubgraphWalker {
                         // restore old state
                         field.isAccessible = false
                         obj
-                    } ?: continue
+                    }
+                        ?: continue
 
                 // skip, if null
                 var outgoing = true // default
