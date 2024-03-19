@@ -514,7 +514,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     protected fun isSimpleAssignment(currentNode: Node): Boolean {
         contract { returns(true) implies (currentNode is AssignExpression) }
-        return currentNode is AssignExpression && currentNode.operatorCode == "="
+        return currentNode is AssignExpression && currentNode.isSimpleAssignment
     }
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
