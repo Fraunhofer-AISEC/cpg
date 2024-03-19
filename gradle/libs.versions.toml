@@ -1,6 +1,6 @@
 [versions]
 kotlin = "1.9.0"
-neo4j = "4.0.6"
+neo4j = "4.0.10"
 log4j = "2.23.0"
 sonarqube = "4.4.1.3373"
 spotless = "6.25.0"
