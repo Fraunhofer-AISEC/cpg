@@ -30,6 +30,9 @@ plugins {
 
 application {
     mainClass.set("de.fraunhofer.aisec.cpg_vis_neo4j.ApplicationKt")
+    // Since we are potentially persisting deeply nested graphs, we need to increase the stack and heap size.
+    // Note, that if you are running this IntelliJ, you might need to manually specify this as VM arguments.
+    applicationDefaultJvmArgs = listOf("-Xss515m", "-Xmx8g")
 }
 
 publishing {

@@ -58,8 +58,8 @@ class Literal<T> : Expression() {
     override fun hashCode() = Objects.hash(super.hashCode(), value)
 }
 
-class ValueConverter : AttributeConverter<Any, Any> {
-    override fun toGraphProperty(value: Any): Any {
+class ValueConverter : AttributeConverter<Any?, Any?> {
+    override fun toGraphProperty(value: Any?): Any? {
         return if (value is BigInteger) {
             value.toString()
         } else {
@@ -67,7 +67,7 @@ class ValueConverter : AttributeConverter<Any, Any> {
         }
     }
 
-    override fun toEntityAttribute(value: Any): Any {
+    override fun toEntityAttribute(value: Any?): Any? {
         // Note: this will most likely produce false results when we try to load back a BigInteger.
         // But loading the graph from a Neo4J database is not really supported because a lot of
         // things, such as scopes are not populated correctly.
