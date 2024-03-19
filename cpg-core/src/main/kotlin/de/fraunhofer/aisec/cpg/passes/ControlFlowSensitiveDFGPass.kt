@@ -123,8 +123,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 value.elements.forEach {
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
-                    } else if (it in edgePropertiesMap && edgePropertiesMap[it] is CallingContext) {
-                        key.addPrevDFGWithContext(it, (edgePropertiesMap[it] as CallingContext))
+                    } else if (
+                        Pair(it, key) in edgePropertiesMap &&
+                            edgePropertiesMap[Pair(it, key)] is CallingContext
+                    ) {
+                        key.addPrevDFGWithContext(
+                            it,
+                            (edgePropertiesMap[Pair(it, key)] as CallingContext)
+                        )
                     } else {
                         key.addPrevDFG(it)
                     }
@@ -221,6 +227,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // later for READ accesses.
                 val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    val relevantProperties =
+                        edgePropertiesMap.filter {
+                            it.key.first in declState.elements && it.key.second == null
+                        }
+                    relevantProperties.forEach {
+                        edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
+                    }
                     state.push(currentNode, declState)
                 } else {
                     // If we do not have a stored state of our object+field, we can use the field
@@ -241,6 +257,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // later for READ accesses.
                 val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    val relevantProperties =
+                        edgePropertiesMap.filter {
+                            it.key.first in declState.elements && it.key.second == null
+                        }
+                    relevantProperties.forEach {
+                        edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
+                    }
                     state.push(currentNode, declState)
                 } else {
                     // If we do not have a stored state of our object+field, we can use the field
@@ -281,7 +307,18 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             writtenDeclaration = input.refersTo
 
             if (writtenDeclaration != null) {
-                state.push(input, doubleState.declarationsState[writtenDeclaration])
+                val prev = doubleState.declarationsState[writtenDeclaration]
+                // We check if we have something relevant for this node (because there was an entry
+                // for the incoming edge) in the edgePropertiesMap and, if so, we generate a
+                // dedicated entry for the edge between declState and currentNode.
+                val relevantProperties =
+                    edgePropertiesMap.filter {
+                        it.key.first in (prev?.elements ?: setOf()) && it.key.second == null
+                    }
+                relevantProperties.forEach {
+                    edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
+                }
+                state.push(input, prev)
                 doubleState.declarationsState[writtenDeclaration] =
                     PowersetLattice(identitySetOf(input))
             }
@@ -294,8 +331,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             writtenDeclaration = (lhs as? Reference)?.refersTo
 
             if (writtenDeclaration != null && lhs != null) {
+                val prev = doubleState.declarationsState[writtenDeclaration]
+                val relevantProperties =
+                    edgePropertiesMap.filter {
+                        it.key.first in (prev?.elements ?: setOf()) && it.key.second == null
+                    }
+                relevantProperties.forEach {
+                    edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
+                }
                 // Data flows from the last writes to the lhs variable to this node
-                state.push(lhs, doubleState.declarationsState[writtenDeclaration])
+                state.push(lhs, prev)
 
                 // The whole current node is the place of the last update, not (only) the lhs!
                 doubleState.declarationsState[writtenDeclaration] =
@@ -311,6 +356,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             doubleState.declarationsState[currentNode.refersTo]?.let {
                 // We only read the variable => Get previous write which have been collected in
                 // the other steps
+                // We check if we have something relevant for this node (because there was an entry
+                // for the incoming edge) in the edgePropertiesMap and, if so, we generate a
+                // dedicated entry for the edge between declState and currentNode.
+                val relevantProperties =
+                    edgePropertiesMap.filter { it2 ->
+                        it2.key.first in it.elements && it2.key.second == null
+                    }
+                relevantProperties.forEach {
+                    edgePropertiesMap[Pair(it.key.first, currentNode)] = it.value
+                }
                 state.push(currentNode, it)
             }
         } else if (
@@ -391,28 +446,37 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 PowersetLattice(identitySetOf(currentNode))
             )
         } else if (currentNode is CallExpression) {
+            // If the CallExpression invokes a function for which we have a function summary, we use
+            // the summary to identify the last write to a parameter (or receiver) and match it to
+            // the respective argument or the base.
+            // Since this Reference r is manipulated inside the invoked function, the next
+            // read-access of a Reference r' with r'.refersTo == r.refersTo will be affected by the
+            // node that has been stored inside the function summary for this particular
+            // parameter/receiver, and we store this last write-access in the state.
+            // As the node is in another function, we also store the CallingContext of the call
+            // expression in the edgePropertiesMap.
             val functionsWithSummaries =
-                currentNode.invokes.filter {
-                    it in ctx.config.functionSummaries.functionToChangedParameters
-                }
+                currentNode.invokes.filter { ctx.config.functionSummaries.hasSummary(it) }
             if (functionsWithSummaries.isNotEmpty()) {
                 for (invoked in functionsWithSummaries) {
-                    val changedParams =
-                        ctx.config.functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                    val changedParams = ctx.config.functionSummaries.getLastWrites(invoked)
                     for ((param, _) in changedParams) {
-                        if (param == (invoked as? MethodDeclaration)?.receiver) {
-                            doubleState.declarationsState[
-                                    ((currentNode as? MemberCallExpression)?.base as? Reference)
-                                        ?.refersTo] = PowersetLattice(identitySetOf(param))
-                        } else if (param is ParameterDeclaration) {
-                            val arg = currentNode.arguments[param.argumentIndex]
-                            doubleState.declarationsState[(arg as? Reference)?.refersTo] =
-                                PowersetLattice(identitySetOf(param))
-                        }
-                        edgePropertiesMap[param] = CallingContextOut(currentNode)
+                        val arg =
+                            when (param) {
+                                (invoked as? MethodDeclaration)?.receiver ->
+                                    (currentNode as? MemberCallExpression)?.base as? Reference
+                                is ParameterDeclaration ->
+                                    currentNode.arguments[param.argumentIndex] as? Reference
+                                else -> null
+                            }
+                        doubleState.declarationsState[arg?.refersTo] =
+                            PowersetLattice(identitySetOf(param))
+                        // TODO: Map probably needs param and a second node!
+                        edgePropertiesMap[Pair(param, null)] = CallingContextOut(currentNode)
                     }
                 }
             } else {
+                // The default behavior so we continue with the next EOG thing.
                 doubleState.declarationsState.push(
                     currentNode,
                     doubleState.declarationsState[currentEdge.start]
@@ -427,7 +491,15 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         return state
     }
 
-    val edgePropertiesMap = mutableMapOf<Node, Any>()
+    /**
+     * We use this map to store additional information on the DFG edges which we cannot keep in the
+     * state. This is for example the case to identify if the resulting edge will receive a
+     * context-sensitivity label (i.e., if the node used as key is somehow inside the called
+     * function and the next usage happens inside the function under analysis right now). The key of
+     * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
+     * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st.
+     */
+    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, Any>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
