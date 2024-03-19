@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
@@ -561,8 +562,21 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.comment = this.comment
     duplicate.file = this.file
     duplicate.name = this.name.clone()
-    duplicate.nextDFG = this.nextDFG
-    duplicate.prevDFG = this.prevDFG
+    for (next in this.nextDFGEdges) {
+        duplicate.addNextDFG(
+            next.end,
+            next.granularity,
+            (next as? ContextSensitiveDataflow)?.callingContext
+        )
+    }
+    for (next in this.prevDFGEdges) {
+        duplicate.addPrevDFG(
+            next.start,
+            next.granularity,
+            (next as? ContextSensitiveDataflow)?.callingContext
+        )
+    }
+    // TODO: This loses the properties of the edges.
     duplicate.nextEOG = this.nextEOG
     duplicate.prevEOG = this.prevEOG
     duplicate.isImplicit = implicit
