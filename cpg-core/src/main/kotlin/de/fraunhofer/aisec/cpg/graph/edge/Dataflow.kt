@@ -94,24 +94,21 @@ sealed interface CallingContext
 
 class CallingContextIn(
     /** The call expression that affects this dataflow edge. */
-    val callExpression: CallExpression
+    val call: CallExpression
 ) : CallingContext
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    val callExpression: CallExpression
+    val call: CallExpression
 ) : CallingContext
-
-fun callIn(callExpression: CallExpression): CallingContext {
-    return CallingContextIn(callExpression)
-}
 
 /**
  * This edge class defines a flow of data between [start] and [end]. The flow must have a
- * [callingContext] and can have a certain [granularity].
+ * [callingContext] which allows for a context-sensitive dataflow analysis. This edge can also have
+ * a certain [granularity].
  */
 @RelationshipEntity
-class ContextsensitiveDataflow(
+class ContextSensitiveDataflow(
     start: Node,
     end: Node,
     /** The calling context affecting this dataflow. */

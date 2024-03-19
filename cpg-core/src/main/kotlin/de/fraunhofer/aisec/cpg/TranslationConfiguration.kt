@@ -401,17 +401,6 @@ private constructor(
             return this
         }
 
-        inline fun <reified P : Pass<*>> unregisterPass(): Builder {
-            unregisterPass(P::class)
-            return this
-        }
-
-        /** Unregister a [Pass]. */
-        fun unregisterPass(passType: KClass<out Pass<*>>): Builder {
-            passes.remove(passType)
-            return this
-        }
-
         /** Register an additional [Pass]. */
         fun registerPass(passType: KClass<out Pass<*>>): Builder {
             passes.add(passType)
@@ -435,13 +424,8 @@ private constructor(
             return this
         }
 
-        fun registerFunctionSummaries(functionSummaries: List<File>): Builder {
-            this.functionSummaries.addAll(functionSummaries)
-            return this
-        }
-
-        fun registerFunctionSummary(functionSummary: File): Builder {
-            this.functionSummaries.add(functionSummary)
+        fun registerFunctionSummaries(vararg functionSummary: File): Builder {
+            this.functionSummaries.addAll(functionSummary)
             return this
         }
 

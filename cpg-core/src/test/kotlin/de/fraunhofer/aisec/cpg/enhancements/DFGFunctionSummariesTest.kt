@@ -34,13 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edge.ContextsensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.io.File
@@ -72,7 +72,7 @@ class DFGFunctionSummariesTest {
                     TranslationConfiguration.builder()
                         .defaultPasses()
                         .registerLanguage(TestLanguage("."))
-                        .registerFunctionSummary(File("src/test/resources/function-dfg2.yml"))
+                        .registerFunctionSummaries(File("src/test/resources/function-dfg2.yml"))
                         .inferenceConfiguration(
                             InferenceConfiguration.builder()
                                 .inferDfgForUnresolvedCalls(true)
@@ -248,7 +248,7 @@ class DFGFunctionSummariesTest {
 
     @Test
     fun testPropagateArguments() {
-        val dfgTest = getDfgInferredCall()
+        val dfgTest = getDfgInferredCall() { defaultPasses() }
         assertNotNull(dfgTest)
 
         val main = dfgTest.functions["main"]
@@ -275,8 +275,7 @@ class DFGFunctionSummariesTest {
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
             call,
-            ((nextDfg as? ContextsensitiveDataflow)?.callingContext as? CallingContextIn)
-                ?.callExpression
+            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call
         )
         assertEquals(param0, nextDfg.end)
 
@@ -284,7 +283,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(variableA)
         assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
 
-        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextsensitiveDataflow }
+        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
@@ -296,15 +295,26 @@ class DFGFunctionSummariesTest {
         // Check that also the CallingContext property is set correctly
         val nextDfgOfParam0 =
             param0.nextDFGEdges.singleOrNull {
-                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
-                    ?.callExpression == call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
+                    call
             }
         assertEquals(returnA, nextDfgOfParam0?.end)
     }
 
     @Test
     fun testPropagateArgumentsControlFlowInsensitive() {
-        val dfgTest = getDfgInferredCall { unregisterPass<ControlFlowSensitiveDFGPass>() }
+        // We don't use the ControlFlowSensitiveDFGPass here to check the method
+        // DFGPass.connectInferredCallArguments
+        val dfgTest = getDfgInferredCall {
+            this.registerPass<TypeHierarchyResolver>()
+            registerPass<ImportResolver>()
+            registerPass<SymbolResolver>()
+            registerPass<DFGPass>()
+            registerPass<DynamicInvokeResolver>()
+            registerPass<EvaluationOrderGraphPass>()
+            registerPass<TypeResolver>()
+            registerPass<FilenameMapper>()
+        }
         assertNotNull(dfgTest)
 
         val main = dfgTest.functions["main"]
@@ -331,8 +341,8 @@ class DFGFunctionSummariesTest {
 
         val nextDfg =
             argA.nextDFGEdges.singleOrNull {
-                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextIn)
-                    ?.callExpression == call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call ==
+                    call
             }
         assertNotNull(nextDfg)
         assertEquals(param0, nextDfg.end)
@@ -341,7 +351,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(variableA)
         assertEquals(mutableSetOf<Node>(variableA, param0), argA.prevDFG)
 
-        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextsensitiveDataflow }
+        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
@@ -355,8 +365,8 @@ class DFGFunctionSummariesTest {
         // Check that also the CallingContext property is set correctly
         val nextDfgOfParam0 =
             param0.nextDFGEdges.singleOrNull {
-                ((it as? ContextsensitiveDataflow)?.callingContext as? CallingContextOut)
-                    ?.callExpression == call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
+                    call
             }
         assertEquals(argA, nextDfgOfParam0?.end)
     }
@@ -370,9 +380,8 @@ class DFGFunctionSummariesTest {
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
-                    .defaultPasses()
                     .registerLanguage(TestLanguage("."))
-                    .registerFunctionSummary(File("src/test/resources/function-dfg.yml"))
+                    .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
                             .inferDfgForUnresolvedCalls(true)

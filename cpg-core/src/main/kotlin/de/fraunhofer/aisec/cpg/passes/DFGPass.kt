@@ -70,10 +70,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     if (param == (invoked as? MethodDeclaration)?.receiver) {
                         (call as? MemberCallExpression)
                             ?.base
-                            ?.addPrevDFGContext(param, CallingContextOut(call))
+                            ?.addPrevDFGWithContext(param, CallingContextOut(call))
                     } else if (param is ParameterDeclaration) {
                         val arg = call.arguments[param.argumentIndex]
-                        arg.addPrevDFGContext(param, CallingContextOut(call))
+                        arg.addPrevDFGWithContext(param, CallingContextOut(call))
                         (arg as? Reference)?.let {
                             it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.addNextDFG(it1) }
@@ -463,7 +463,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
                 Util.attachCallParameters(it, call)
-                call.addPrevDFGContext(it, CallingContextOut(call))
+                call.addPrevDFGWithContext(it, CallingContextOut(call))
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)
                 }

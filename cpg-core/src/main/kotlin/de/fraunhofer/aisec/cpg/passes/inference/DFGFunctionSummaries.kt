@@ -42,9 +42,8 @@ import java.io.File
 
 /**
  * If the user of the library registers one or multiple DFG-function summary files (via
- * [Builder.registerFunctionSummaries] or [Builder.registerFunctionSummary]), this class is
- * responsible for parsing the files, caching the result and adding the respective DFG summaries to
- * the [FunctionDeclaration].
+ * [Builder.registerFunctionSummaries]), this class is responsible for parsing the files, caching
+ * the result and adding the respective DFG summaries to the [FunctionDeclaration].
  */
 class DFGFunctionSummaries {
     private constructor()

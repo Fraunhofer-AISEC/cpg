@@ -261,12 +261,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * Adds a [Dataflow] edge from this node to [next], with the given [CallingContext] and
      * [Granularity].
      */
-    fun addNextDFGContext(
+    fun addNextDFGWithContext(
         next: Node,
         callingContext: CallingContext,
         granularity: Granularity = default(),
     ) {
-        val edge = ContextsensitiveDataflow(this, next, callingContext, granularity)
+        val edge = ContextSensitiveDataflow(this, next, callingContext, granularity)
         nextDFGEdges.add(edge)
         next.prevDFGEdges.add(edge)
     }
@@ -297,12 +297,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * Adds a [Dataflow] edge from [prev] node to this node, with the given [CallingContext] and
      * [Granularity].
      */
-    open fun addPrevDFGContext(
+    open fun addPrevDFGWithContext(
         prev: Node,
         callingContext: CallingContext,
         granularity: Granularity = default(),
     ) {
-        val edge = ContextsensitiveDataflow(prev, this, callingContext, granularity)
+        val edge = ContextSensitiveDataflow(prev, this, callingContext, granularity)
         prevDFGEdges.add(edge)
         prev.nextDFGEdges.add(edge)
     }
@@ -328,12 +328,12 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [CallingContext]
      * and [Granularity].
      */
-    fun addAllPrevDFGContext(
+    fun addAllPrevDFGWithContext(
         prev: Collection<Node>,
         callingContext: CallingContext,
         granularity: Granularity = full(),
     ) {
-        prev.forEach { addPrevDFGContext(it, callingContext, granularity) }
+        prev.forEach { addPrevDFGWithContext(it, callingContext, granularity) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {

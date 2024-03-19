@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
-import de.fraunhofer.aisec.cpg.graph.edge.ContextsensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edge.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -43,11 +43,11 @@ class ExpressionBuilderTest {
         val node2 = Reference()
         val granularity = PartialDataflowGranularity(FieldDeclaration())
         val callingContextIn = CallingContextIn(CallExpression())
-        node1.addPrevDFGContext(node2, callingContextIn, granularity)
+        node1.addPrevDFGWithContext(node2, callingContextIn, granularity)
 
         val clone = node1.duplicate(false)
         val clonedPrevDFG = clone.prevDFGEdges.single()
-        assertTrue(clonedPrevDFG is ContextsensitiveDataflow)
+        assertTrue(clonedPrevDFG is ContextSensitiveDataflow)
         assertEquals(callingContextIn, clonedPrevDFG.callingContext)
         assertEquals(granularity, clonedPrevDFG.granularity)
 
@@ -60,11 +60,11 @@ class ExpressionBuilderTest {
         val node2 = Reference()
         val granularity = PartialDataflowGranularity(FieldDeclaration())
         val callingContextIn = CallingContextIn(CallExpression())
-        node1.addNextDFGContext(node2, callingContextIn, granularity)
+        node1.addNextDFGWithContext(node2, callingContextIn, granularity)
 
         val clone = node1.duplicate(false)
         val clonedPrevDFG = clone.nextDFGEdges.single()
-        assertTrue(clonedPrevDFG is ContextsensitiveDataflow)
+        assertTrue(clonedPrevDFG is ContextSensitiveDataflow)
         assertEquals(callingContextIn, clonedPrevDFG.callingContext)
         assertEquals(granularity, clonedPrevDFG.granularity)
 

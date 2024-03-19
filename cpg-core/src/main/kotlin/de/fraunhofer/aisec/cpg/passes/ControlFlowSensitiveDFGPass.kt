@@ -124,7 +124,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
                     } else if (it in edgePropertiesMap && edgePropertiesMap[it] is CallingContext) {
-                        key.addPrevDFGContext(it, (edgePropertiesMap[it] as CallingContext))
+                        key.addPrevDFGWithContext(it, (edgePropertiesMap[it] as CallingContext))
                     } else {
                         key.addPrevDFG(it)
                     }
