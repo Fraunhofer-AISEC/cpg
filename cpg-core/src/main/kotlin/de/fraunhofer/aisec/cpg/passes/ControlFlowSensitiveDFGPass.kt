@@ -670,7 +670,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  * that are the same (for example, because one is assigned into the other), they will be considered
  * different "objects".
  */
-private fun Node.objectIdentifier(): Int? {
+fun Node.objectIdentifier(): Int? {
     return when (this) {
         is MemberExpression -> this.objectIdentifier()
         is Reference -> this.objectIdentifier()
@@ -680,7 +680,7 @@ private fun Node.objectIdentifier(): Int? {
 }
 
 /** Implements [Node.objectIdentifier] for a [MemberExpression]. */
-private fun MemberExpression.objectIdentifier(): Int? {
+fun MemberExpression.objectIdentifier(): Int? {
     val ref = this.refersTo
     return if (ref == null) {
         null
@@ -695,6 +695,6 @@ private fun MemberExpression.objectIdentifier(): Int? {
 }
 
 /** Implements [Node.objectIdentifier] for a [Reference]. */
-private fun Reference.objectIdentifier(): Int? {
+fun Reference.objectIdentifier(): Int? {
     return this.refersTo?.hashCode()
 }

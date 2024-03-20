@@ -163,8 +163,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             var candidates =
                 (holder as? DeclarationHolder)
                     ?.declarations
-                    ?.filterIsInstance<FunctionDeclaration>()
-                    ?: listOf()
+                    ?.filterIsInstance<FunctionDeclaration>() ?: listOf()
 
             // Look for the method or constructor
             candidates =
@@ -236,8 +235,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     !it.isDefinition &&
                         it.name.lastPartsMatch(declaration.name) &&
                         it.hasSignature(declaration.signatureTypes)
-                }
-                ?: listOf()
+                } ?: listOf()
         for (candidate in declarationCandidates) {
             candidate.definition = declaration
             // Do some additional magic with default parameters, which I do not really understand

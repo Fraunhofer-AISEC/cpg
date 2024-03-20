@@ -265,7 +265,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             (forStatement.initializerStatement as? DeclarationStatement)?.singleDeclaration
 
         return initializerDecl == node || // The node is the declaration of the loop variable
-        forStatement.initializerStatement == node || // The node is the initialization
+            forStatement.initializerStatement == node || // The node is the initialization
             (initializerDecl != null &&
                 initializerDecl ==
                     node.astParent) || // The parent of the node is the initializer of the loop

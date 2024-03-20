@@ -410,7 +410,8 @@ private constructor(
         inline fun <
             reified OldPass : Pass<*>,
             reified For : Language<*>,
-            reified With : Pass<*>> replacePass(): Builder {
+            reified With : Pass<*>
+        > replacePass(): Builder {
             return replacePass(OldPass::class, For::class, With::class)
         }
 

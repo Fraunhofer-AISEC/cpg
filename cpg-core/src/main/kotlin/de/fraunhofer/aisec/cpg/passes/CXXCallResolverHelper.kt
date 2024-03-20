@@ -412,8 +412,7 @@ fun getTemplateInitializationSignature(
             instantiationType,
             orderedInitializationSignature,
             explicitInstantiated
-        )
-            ?: return null
+        ) ?: return null
     val parameterizedTypeResolution = getParameterizedSignaturesFromInitialization(signature)
 
     // Check for unresolved Parameters and try to deduce Type by looking at call arguments

@@ -161,8 +161,7 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
         base =
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
                 (it as Node).name.lastPartsMatch(baseName)
-            }
-                ?: return null
+            } ?: return null
         lookup = name.split(".")[1]
     }
 
@@ -590,8 +589,7 @@ val Node?.assignments: List<Assignment>
     get() {
         return this?.allChildren<Node>()?.filterIsInstance<AssignmentHolder>()?.flatMap {
             it.assignments
-        }
-            ?: listOf()
+        } ?: listOf()
     }
 
 /**

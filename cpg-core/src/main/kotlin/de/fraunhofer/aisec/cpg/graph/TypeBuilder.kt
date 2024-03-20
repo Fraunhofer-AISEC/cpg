@@ -51,7 +51,6 @@ fun MetadataProvider?.incompleteType(): Type {
 
 /** Returns a [PointerType] that describes an array reference to the current type. */
 context(ContextProvider)
-
 fun Type.array(): Type {
     val c =
         (this@ContextProvider).ctx
@@ -65,7 +64,6 @@ fun Type.array(): Type {
 
 /** Returns a [PointerType] that describes a pointer reference to the current type. */
 context(ContextProvider)
-
 fun Type.pointer(): Type {
     val c =
         (this@ContextProvider).ctx
@@ -78,7 +76,6 @@ fun Type.pointer(): Type {
 }
 
 context(ContextProvider)
-
 fun Type.ref(): Type {
     val c =
         (this@ContextProvider).ctx

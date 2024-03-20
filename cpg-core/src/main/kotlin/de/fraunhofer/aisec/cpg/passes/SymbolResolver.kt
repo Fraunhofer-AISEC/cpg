@@ -804,8 +804,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Filter the value declarations for an appropriate method
             scope?.valueDeclarations?.filterIsInstance<MethodDeclaration>()?.filter {
                 it.name.lastPartsMatch(name) && it.hasSignature(call)
-            }
-                ?: listOf()
+            } ?: listOf()
         }
     }
 

@@ -68,7 +68,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTFunctionCallExpression -> handleFunctionCallExpression(node)
             is IASTCastExpression -> handleCastExpression(node)
             is IASTExpressionList -> handleExpressionList(node)
-            is IASTInitializerList -> frontend.initializerHandler.handle(node)
+            is IASTInitializerList ->
+                frontend.initializerHandler.handle(node)
                     ?: ProblemExpression("could not parse initializer list")
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
@@ -515,8 +516,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
-            }
-                ?: newProblemExpression("could not parse rhs")
+            } ?: newProblemExpression("could not parse rhs")
 
         if (
             lhs is CastExpression &&
@@ -546,8 +546,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
-            }
-                ?: newProblemExpression("missing RHS")
+            } ?: newProblemExpression("missing RHS")
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
