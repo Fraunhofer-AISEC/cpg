@@ -36,7 +36,6 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -771,9 +770,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun createImplicitThis():
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        val thisType =
-            frontend.scopeManager.currentMethod?.receiver?.type
-                ?: unknownType()
+        val thisType = frontend.scopeManager.currentMethod?.receiver?.type ?: unknownType()
         base = newReference("this", thisType).implicit("this")
         return base
     }
