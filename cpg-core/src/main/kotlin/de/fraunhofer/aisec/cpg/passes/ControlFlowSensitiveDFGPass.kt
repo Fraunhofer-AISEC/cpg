@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.partial
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -122,13 +120,33 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     )
                 }
             } else {
-                key.addAllPrevDFG(
-                    value.elements.filterNot {
-                        (it is VariableDeclaration || it is ParameterDeclaration) && key == it
+                value.elements.forEach {
+                    if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
+                        // Nothing to do
+                    } else if (
+                        Pair(it, key) in edgePropertiesMap &&
+                            edgePropertiesMap[Pair(it, key)] is CallingContext
+                    ) {
+                        key.addPrevDFG(
+                            it,
+                            callingContext = (edgePropertiesMap[Pair(it, key)] as? CallingContext)
+                        )
+                    } else {
+                        key.addPrevDFG(it)
                     }
-                )
+                }
             }
         }
+    }
+
+    /**
+     * Checks if there's an entry in [edgePropertiesMap] with key `(x, null)` where `x` is in [from]
+     * and, if so, adds an entry with key `(x, to)` and the same value
+     */
+    protected fun findAndSetProperties(from: Set<Node>, to: Node) {
+        edgePropertiesMap
+            .filter { it.key.first in from && it.key.second == null }
+            .forEach { edgePropertiesMap[Pair(it.key.first, to)] = it.value }
     }
 
     /**
@@ -219,6 +237,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // later for READ accesses.
                 val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    findAndSetProperties(declState.elements, currentNode)
                     state.push(currentNode, declState)
                 } else {
                     // If we do not have a stored state of our object+field, we can use the field
@@ -239,6 +261,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // later for READ accesses.
                 val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    findAndSetProperties(declState.elements, currentNode)
                     state.push(currentNode, declState)
                 } else {
                     // If we do not have a stored state of our object+field, we can use the field
@@ -279,7 +305,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             writtenDeclaration = input.refersTo
 
             if (writtenDeclaration != null) {
-                state.push(input, doubleState.declarationsState[writtenDeclaration])
+                val prev = doubleState.declarationsState[writtenDeclaration]
+                // We check if we have something relevant for this node (because there was an entry
+                // for the incoming edge) in the edgePropertiesMap and, if so, we generate a
+                // dedicated entry for the edge between declState and currentNode.
+                findAndSetProperties(prev?.elements ?: setOf(), currentNode)
+                state.push(input, prev)
                 doubleState.declarationsState[writtenDeclaration] =
                     PowersetLattice(identitySetOf(input))
             }
@@ -292,8 +323,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             writtenDeclaration = (lhs as? Reference)?.refersTo
 
             if (writtenDeclaration != null && lhs != null) {
+                val prev = doubleState.declarationsState[writtenDeclaration]
+                findAndSetProperties(prev?.elements ?: setOf(), currentNode)
                 // Data flows from the last writes to the lhs variable to this node
-                state.push(lhs, doubleState.declarationsState[writtenDeclaration])
+                state.push(lhs, prev)
 
                 // The whole current node is the place of the last update, not (only) the lhs!
                 doubleState.declarationsState[writtenDeclaration] =
@@ -309,6 +342,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             doubleState.declarationsState[currentNode.refersTo]?.let {
                 // We only read the variable => Get previous write which have been collected in
                 // the other steps
+                // We check if we have something relevant for this node (because there was an entry
+                // for the incoming edge) in the edgePropertiesMap and, if so, we generate a
+                // dedicated entry for the edge between declState and currentNode.
+                findAndSetProperties(it.elements, currentNode)
                 state.push(currentNode, it)
             }
         } else if (
@@ -388,6 +425,42 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 currentNode,
                 PowersetLattice(identitySetOf(currentNode))
             )
+        } else if (currentNode is CallExpression) {
+            // If the CallExpression invokes a function for which we have a function summary, we use
+            // the summary to identify the last write to a parameter (or receiver) and match it to
+            // the respective argument or the base.
+            // Since this Reference r is manipulated inside the invoked function, the next
+            // read-access of a Reference r' with r'.refersTo == r.refersTo will be affected by the
+            // node that has been stored inside the function summary for this particular
+            // parameter/receiver, and we store this last write-access in the state.
+            // As the node is in another function, we also store the CallingContext of the call
+            // expression in the edgePropertiesMap.
+            val functionsWithSummaries =
+                currentNode.invokes.filter { ctx.config.functionSummaries.hasSummary(it) }
+            if (functionsWithSummaries.isNotEmpty()) {
+                for (invoked in functionsWithSummaries) {
+                    val changedParams = ctx.config.functionSummaries.getLastWrites(invoked)
+                    for ((param, _) in changedParams) {
+                        val arg =
+                            when (param) {
+                                (invoked as? MethodDeclaration)?.receiver ->
+                                    (currentNode as? MemberCallExpression)?.base as? Reference
+                                is ParameterDeclaration ->
+                                    currentNode.arguments[param.argumentIndex] as? Reference
+                                else -> null
+                            }
+                        doubleState.declarationsState[arg?.refersTo] =
+                            PowersetLattice(identitySetOf(param))
+                        edgePropertiesMap[Pair(param, null)] = CallingContextOut(currentNode)
+                    }
+                }
+            } else {
+                // The default behavior so we continue with the next EOG thing.
+                doubleState.declarationsState.push(
+                    currentNode,
+                    doubleState.declarationsState[currentEdge.start]
+                )
+            }
         } else {
             doubleState.declarationsState.push(
                 currentNode,
@@ -396,6 +469,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         }
         return state
     }
+
+    /**
+     * We use this map to store additional information on the DFG edges which we cannot keep in the
+     * state. This is for example the case to identify if the resulting edge will receive a
+     * context-sensitivity label (i.e., if the node used as key is somehow inside the called
+     * function and the next usage happens inside the function under analysis right now). The key of
+     * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
+     * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st.
+     */
+    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, Any>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
@@ -411,7 +494,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     protected fun isSimpleAssignment(currentNode: Node): Boolean {
         contract { returns(true) implies (currentNode is AssignExpression) }
-        return currentNode is AssignExpression && currentNode.operatorCode == "="
+        return currentNode is AssignExpression && currentNode.isSimpleAssignment
     }
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */

@@ -251,8 +251,14 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     fun addNextDFG(
         next: Node,
         granularity: Granularity = default(),
+        callingContext: CallingContext? = null,
     ) {
-        val edge = Dataflow(this, next, granularity)
+        val edge =
+            if (callingContext != null) {
+                ContextSensitiveDataflow(this, next, callingContext, granularity)
+            } else {
+                Dataflow(this, next, granularity)
+            }
         nextDFGEdges.add(edge)
         next.prevDFGEdges.add(edge)
     }
@@ -269,12 +275,21 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
-    /** Adds a [Dataflow] edge from [prev] node to this node, with the given [Granularity]. */
+    /**
+     * Adds a [Dataflow] edge from [prev] node to this node, with the given [Granularity] and
+     * [CallingContext].
+     */
     open fun addPrevDFG(
         prev: Node,
         granularity: Granularity = default(),
+        callingContext: CallingContext? = null,
     ) {
-        val edge = Dataflow(prev, this, granularity)
+        val edge =
+            if (callingContext != null) {
+                ContextSensitiveDataflow(prev, this, callingContext, granularity)
+            } else {
+                Dataflow(prev, this, granularity)
+            }
         prevDFGEdges.add(edge)
         prev.nextDFGEdges.add(edge)
     }
@@ -288,12 +303,16 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         prev.nextCDGEdges.add(edge)
     }
 
-    /** Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [Granularity]. */
+    /**
+     * Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [Granularity] and
+     * [CallingContext] if applicable.
+     */
     fun addAllPrevDFG(
         prev: Collection<Node>,
         granularity: Granularity = full(),
+        callingContext: CallingContext? = null,
     ) {
-        prev.forEach { addPrevDFG(it, granularity) }
+        prev.forEach { addPrevDFG(it, granularity, callingContext) }
     }
 
     fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {

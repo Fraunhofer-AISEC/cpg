@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.util.function.Function
 
 /**
@@ -49,6 +50,9 @@ class PropertyEdgeConverterManager private constructor() {
         addDeserializer("INSTANTIATION") { s: Any? ->
             if (s != null) TemplateInitialization.valueOf(s.toString()) else null
         }
+        addSerializer(CallExpression::class.java.name) { it.toString() }
+        addDeserializer("CALLING_CONTEXT_IN") { null } // TODO: Not supported yet
+        addDeserializer("CALLING_CONTEXT_OUT") { null } // TODO: Not supported yet
     }
 
     fun addSerializer(clazz: String, func: Function<Any, String>) {

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edge.Granularity
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -147,8 +148,8 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         return super.hashCode()
     }
 
-    override fun addPrevDFG(prev: Node, granularity: Granularity) {
-        super.addPrevDFG(prev, granularity)
+    override fun addPrevDFG(prev: Node, granularity: Granularity, callingContext: CallingContext?) {
+        super.addPrevDFG(prev, granularity, callingContext)
 
         // We want to propagate assigned types all through the previous DFG nodes. Therefore, we
         // override the DFG adding function here and add a type observer to the previous node (if it

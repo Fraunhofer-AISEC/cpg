@@ -1,0 +1,69 @@
+[
+  {
+    "functionDeclaration": {
+      "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+      "methodName": "java.util.List.addAll",
+      "signature": ["int", "java.util.Object"]
+    },
+    "dataFlows": [
+      {
+        "from": "param1",
+        "to": "base",
+        "dfgType": "full"
+      }
+    ]
+  },
+  {
+    "functionDeclaration": {
+      "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+      "methodName": "java.util.List.addAll",
+      "signature": ["java.util.Object"]
+    },
+    "dataFlows": [
+      {
+        "from": "param0",
+        "to": "base",
+        "dfgType": "full"
+      }
+    ]
+  },
+  {
+    "functionDeclaration": {
+      "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+      "methodName": "java.util.List.add"
+    },
+    "dataFlows": [
+      {
+        "from": "param0",
+        "to": "base",
+        "dfgType": "full"
+      }
+    ]
+  },
+  {
+    "functionDeclaration": {
+      "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
+      "methodName": "memcpy"
+    },
+    "dataFlows": [
+      {
+        "from": "param1",
+        "to": "param0",
+        "dfgType": "full"
+      }
+    ]
+  },
+  {
+    "functionDeclaration": {
+      "language": "de.fraunhofer.aisec.cpg.frontends.TestLanguage",
+      "methodName": "memcpy"
+    },
+    "dataFlows": [
+      {
+        "from": "param1",
+        "to": "param0",
+        "dfgType": "full"
+      }
+    ]
+  }
+]

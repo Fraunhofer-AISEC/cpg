@@ -28,24 +28,59 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edge.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
 class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
+    private val callsInferredFunctions = mutableListOf<CallExpression>()
+
     override fun accept(component: Component) {
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit2 { node, parent ->
-            handle(node, parent, inferDfgForUnresolvedCalls)
+            handle(node, parent, inferDfgForUnresolvedCalls, config.functionSummaries)
         }
         for (tu in component.translationUnits) {
             walker.iterate(tu)
+        }
+        if (config.registeredPasses.all { ControlFlowSensitiveDFGPass::class !in it }) {
+            connectInferredCallArguments(config.functionSummaries)
+        }
+    }
+
+    /**
+     * For inferred functions which have function summaries encoded, we connect the arguments to
+     * modified parameter to propagate the changes to the arguments out of the [FunctionDeclaration]
+     * again.
+     */
+    private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
+        for (call in callsInferredFunctions) {
+            for (invoked in call.invokes.filter { it.isInferred }) {
+                val changedParams =
+                    functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                for ((param, _) in changedParams) {
+                    if (param == (invoked as? MethodDeclaration)?.receiver) {
+                        (call as? MemberCallExpression)
+                            ?.base
+                            ?.addPrevDFG(param, callingContext = CallingContextOut(call))
+                    } else if (param is ParameterDeclaration) {
+                        val arg = call.arguments[param.argumentIndex]
+                        arg.addPrevDFG(param, callingContext = CallingContextOut(call))
+                        (arg as? Reference)?.let {
+                            it.access = AccessValues.READWRITE
+                            it.refersTo?.let { it1 -> it.addNextDFG(it1) }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -53,7 +88,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Nothing to do
     }
 
-    protected fun handle(node: Node?, parent: Node?, inferDfgForUnresolvedSymbols: Boolean) {
+    protected fun handle(
+        node: Node?,
+        parent: Node?,
+        inferDfgForUnresolvedSymbols: Boolean,
+        functionSummaries: DFGFunctionSummaries
+    ) {
         when (node) {
             // Expressions
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
@@ -83,7 +123,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is IfStatement -> handleIfStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
-            is FunctionDeclaration -> handleFunctionDeclaration(node)
+            is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
         }
@@ -159,15 +199,23 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
-    protected fun handleFunctionDeclaration(node: FunctionDeclaration) {
+    protected fun handleFunctionDeclaration(
+        node: FunctionDeclaration,
+        functionSummaries: DFGFunctionSummaries
+    ) {
         if (node.isInferred) {
-            // If the function is inferred, we connect all parameters to the function declaration.
-            // The condition should make sure that we don't add edges multiple times, i.e., we
-            // only handle the declaration exactly once.
-            node.addAllPrevDFG(node.parameters)
-            // If it's a method with a receiver, we connect that one too.
-            if (node is MethodDeclaration) {
-                node.receiver?.let { node.addPrevDFG(it) }
+            val summaryExists = functionSummaries.addFlowsToFunctionDeclaration(node)
+
+            if (!summaryExists) {
+                // If the function is inferred, we connect all parameters to the function
+                // declaration.
+                // The condition should make sure that we don't add edges multiple times, i.e., we
+                // only handle the declaration exactly once.
+                node.addAllPrevDFG(node.parameters)
+                // If it's a method with a receiver, we connect that one too.
+                if (node is MethodDeclaration) {
+                    node.receiver?.let { node.addPrevDFG(it) }
+                }
             }
         } else {
             node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
@@ -415,7 +463,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
                 Util.attachCallParameters(it, call)
-                call.addPrevDFG(it)
+                call.addPrevDFG(it, callingContext = CallingContextOut(call))
+                if (it.isInferred) {
+                    callsInferredFunctions.add(call)
+                }
             }
         }
     }

@@ -83,6 +83,9 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>
 
+    /** All operators which perform a simple assignment from the rhs to the lhs. */
+    open val simpleAssignmentOperators: Set<String> = setOf("=")
+
     /**
      * Creates a new [LanguageFrontend] object to parse the language. It requires the
      * [TranslationContext], which holds the necessary managers.
