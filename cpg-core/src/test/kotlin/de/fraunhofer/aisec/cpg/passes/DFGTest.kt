@@ -489,7 +489,7 @@ class DFGTest {
     @Throws(Exception::class)
     fun testOutgoingDFGFromVariableDeclaration() {
         // TODO: IMHO this test is quite useless and can be merged into another one (e.g.
-        // testControlSensitiveDFGPassIfMerge).
+        //   testControlSensitiveDFGPassIfMerge).
         val result = GraphExamples.getBasicSlice()
 
         val varA = TestUtils.findByUniqueName(result.variables, "a")

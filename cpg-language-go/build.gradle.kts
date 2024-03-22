@@ -44,18 +44,16 @@ dependencies {
     testImplementation(project(":cpg-analysis"))
 }
 
-if (!project.hasProperty("skipGoBuild")) {
-    val compileGolang = tasks.register("compileGolang") {
-        doLast {
-            project.exec {
-                commandLine("./build.sh")
-                    .setStandardOutput(System.out)
-                    .workingDir("src/main/golang")
-            }
+val downloadLibGoAST = tasks.register("downloadLibGoAST") {
+    doLast {
+        project.exec {
+            commandLine("./download.sh")
+                .setStandardOutput(System.out)
+                .workingDir("src/main/resources")
         }
     }
+}
 
-    tasks.compileJava {
-        dependsOn(compileGolang)
-    }
+tasks.processResources {
+    dependsOn(downloadLibGoAST)
 }

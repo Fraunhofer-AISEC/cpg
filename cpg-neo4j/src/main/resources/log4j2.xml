@@ -7,6 +7,7 @@
 	</Appenders>
 	<Loggers>
 		<Logger level="INFO" name="de.fraunhofer.aisec"/>
+		<Logger level="ERROR" name="org.neo4j.ogm.drivers.bolt.response.BoltResponse" />
 		<Root level="INFO">
 			<AppenderRef ref="STDOUT"/>
 		</Root>

@@ -87,8 +87,8 @@ open class ValueEvaluator(
         node?.let { this.path += it }
 
         when (node) {
-            is NewArrayExpression -> return evaluateInternal(node.initializer, depth + 1)
-            is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
+            is NewArrayExpression -> return evaluateInternal(node.initializer, depth)
+            is VariableDeclaration -> return handleVariableDeclaration(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is Reference -> return handleReference(node, depth)
@@ -106,6 +106,12 @@ open class ValueEvaluator(
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
         return cannotEvaluate(node, this)
+    }
+
+    protected fun handleVariableDeclaration(node: VariableDeclaration, depth: Int): Any? {
+        // If we have an initializer, we can use it. However, we actually should just use the DFG
+        // instead and do something similar to handleReference
+        return evaluateInternal(node.initializer, depth + 1)
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */

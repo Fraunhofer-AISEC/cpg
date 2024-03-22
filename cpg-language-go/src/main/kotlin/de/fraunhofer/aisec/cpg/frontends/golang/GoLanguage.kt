@@ -57,6 +57,12 @@ class GoLanguage :
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&^=", "&=", "|=", "^=")
 
+    /**
+     * Go supports the normal `=` operator, as well as a short assignment operator, which also
+     * declares the variable under certain circumstances. But both act as a simple assignment.
+     */
+    override val simpleAssignmentOperators = setOf("=", ":=")
+
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
     override val builtInTypes =

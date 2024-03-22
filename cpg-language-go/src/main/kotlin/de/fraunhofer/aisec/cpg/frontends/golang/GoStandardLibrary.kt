@@ -42,13 +42,13 @@ interface GoStandardLibrary : Library {
     }
 
     /**
-     * This class represents the Go go/token package and contains classes representing structs in
+     * This class represents the Go `go/token` package and contains classes representing structs in
      * this package.
      */
     class Token {}
 
     /**
-     * This class represents the Go go/parser package and contains classes representing structs in
+     * This class represents the Go `go/parser` package and contains classes representing structs in
      * this package.
      */
     object Parser {
@@ -842,9 +842,9 @@ interface GoStandardLibrary : Library {
                     }
 
                 val stream =
-                    GoLanguageFrontend::class.java.getResourceAsStream("/libcpgo-$arch$ext")
+                    GoLanguageFrontend::class.java.getResourceAsStream("/libgoast-$arch$ext")
 
-                val tmp = java.io.File.createTempFile("libcpgo", ext)
+                val tmp = java.io.File.createTempFile("libgoast", ext)
                 tmp.deleteOnExit()
                 val fos = FileOutputStream(tmp)
                 stream?.copyTo(FileOutputStream(tmp))
@@ -852,9 +852,8 @@ interface GoStandardLibrary : Library {
                 fos.close()
                 stream?.close()
 
-                LanguageFrontend.log.info("Loading cpgo library from ${tmp.absoluteFile}")
+                LanguageFrontend.log.info("Loading libgoast library from ${tmp.absoluteFile}")
 
-                // System.load(tmp.absolutePath)
                 Native.load(tmp.absolutePath, GoStandardLibrary::class.java)
             } catch (ex: Exception) {
                 throw TranslationException(
