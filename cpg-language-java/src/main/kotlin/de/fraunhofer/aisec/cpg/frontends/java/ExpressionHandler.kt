@@ -770,7 +770,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun createImplicitThis():
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        val thisType = frontend.scopeManager.currentMethod?.receiver?.type ?: unknownType()
+        val thisType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         base = newReference("this", thisType).implicit("this")
         return base
     }
