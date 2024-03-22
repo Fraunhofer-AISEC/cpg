@@ -83,8 +83,6 @@ object Edges {
  *
  * The cache itself is stored in the [Edges] object.
  */
-@DependsOn(TypeResolver::class)
-@DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(SymbolResolver::class)
 @DependsOn(DFGPass::class)
