@@ -233,13 +233,13 @@ fun Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
 
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.removeFirst()
-        if (currentPath.last().prevDFG.isEmpty()) {
+        if (currentPath.last().prevFullDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
             continue
         }
 
-        for (prev in currentPath.last().prevDFG) {
+        for (prev in currentPath.last().prevFullDFG) {
             // Copy the path for each outgoing DFG edge and add the prev node
             val nextPath = mutableListOf<Node>()
             nextPath.addAll(currentPath)
@@ -292,13 +292,12 @@ fun Node.followNextDFGEdgesUntilHit(
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (currentNode.nextDFG.isEmpty()) {
+        if (currentNode.nextFullDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
             if (collectFailedPaths) failedPaths.add(currentPath)
-            continue
         }
 
-        for (next in currentNode.nextDFG) {
+        for (next in currentNode.nextFullDFG) {
             // Copy the path for each outgoing DFG edge and add the next node
             val nextPath = currentPath.toMutableList()
             nextPath.add(next)
@@ -509,7 +508,7 @@ fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEd
 fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
     val path = mutableListOf<Node>()
 
-    for (prev in this.prevDFG) {
+    for (prev in this.prevFullDFG) {
         path.add(prev)
 
         if (predicate(prev)) {
