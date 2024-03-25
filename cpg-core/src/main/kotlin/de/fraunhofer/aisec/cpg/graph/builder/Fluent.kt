@@ -718,8 +718,8 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
  * nearest enclosing [WhileStatement]. The [init] block can be used to create further sub-nodes as
  * well as configuring the created node itself.
  */
-context(WhileStatement)
-fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
+context(LanguageFrontend<*, *>)
+fun WhileStatement.loopBody(init: Block.() -> Unit): Block {
     val node = newBlock()
     init(node)
     statement = node
@@ -732,8 +732,8 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
  * nearest enclosing [WhileStatement]. The [init] block can be used to create further sub-nodes as
  * well as configuring the created node itself.
  */
-context(DoStatement)
-fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
+context(LanguageFrontend<*, *>)
+fun DoStatement.loopBody(init: Block.() -> Unit): Block {
     val node = newBlock()
     init(node)
     statement = node
@@ -746,8 +746,8 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
  * the nearest enclosing [ForEachStatement]. The [init] block can be used to create further
  * sub-nodes as well as configuring the created node itself.
  */
-context(ForEachStatement)
-fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
+context(LanguageFrontend<*, *>)
+fun ForEachStatement.loopBody(init: Block.() -> Unit): Block {
     val node = newBlock()
     init(node)
     statement = node
