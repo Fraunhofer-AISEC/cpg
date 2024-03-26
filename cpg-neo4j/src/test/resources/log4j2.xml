@@ -1,0 +1,15 @@
+<Configuration status="WARN">
+	<Appenders>
+		<Console name="STDOUT" target="SYSTEM_OUT">
+			<PatternLayout pattern="%d{HH:mm:ss,SSS} %-5p %C{1} %m%n"/>
+			<ThresholdFilter level="DEBUG"/>
+		</Console>
+	</Appenders>
+	<Loggers>
+		<Logger level="DEBUG" name="de.fraunhofer.aisec"/>
+		<Logger level="ERROR" name="org.neo4j.ogm.drivers.bolt.response.BoltResponse" />
+		<Root level="INFO">
+			<AppenderRef ref="STDOUT"/>
+		</Root>
+	</Loggers>
+</Configuration>

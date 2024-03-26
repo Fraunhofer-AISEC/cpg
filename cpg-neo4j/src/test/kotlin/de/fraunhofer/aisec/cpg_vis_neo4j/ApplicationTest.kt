@@ -62,7 +62,6 @@ class ApplicationTest {
     @Test
     fun testSerializeCpgViaOGM() {
         val (application, translationResult) = createTranslationResult()
-
         assertEquals(32, translationResult.functions.size)
 
         val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
