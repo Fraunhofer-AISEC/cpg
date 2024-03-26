@@ -511,6 +511,30 @@ class GoLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testPointerTypeInference() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("inference.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
+
+        // There should be only a single one inferred method with that name
+        val queryDecl = result.methods("Query").singleOrNull()
+        assertNotNull(queryDecl)
+        assertTrue(queryDecl.isInferred)
+
+        val query = result.mcalls["Query"]
+        assertInvokes(query, queryDecl)
+    }
+
+    @Test
     fun testQualifiedCallInMethod() {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
         val topLevel = Path.of("src", "test", "resources", "golang")

@@ -727,7 +727,7 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
-                    Util.errorWithFileLocation(
+                    Util.warnWithFileLocation(
                         node,
                         LOGGER,
                         "Could not find the scope $scopeName needed to resolve the call ${node.name}"

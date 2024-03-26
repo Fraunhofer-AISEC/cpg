@@ -700,7 +700,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (root != null && record == null) {
                     record =
                         it.startInference(ctx)
-                            ?.inferRecordDeclaration(it, currentTU, locationHint = call)
+                            ?.inferRecordDeclaration(root, currentTU, locationHint = call)
                     // update the record declaration
                     root.recordDeclaration = record
                 }
