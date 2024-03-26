@@ -573,6 +573,13 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 hint.name.localName == "operator#0" -> {
                 hint.name.parent?.let { objectType(it) } ?: unknownType()
             }
+            // The type of destructor is unspecified, but we model it as a void type to make it
+            // compatible with other methods.
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is MethodDeclaration &&
+                hint.isDestructor -> {
+                incompleteType()
+            }
             // C (not C++) allows unspecified types in function declarations, they
             // default to int and usually produce a warning
             name == "" && language !is CPPLanguage -> {
@@ -810,4 +817,13 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
         }
 
         return parts.joinToString(" ")
+    }
+
+/**
+ * Returns whether this method is a
+ * [Destructor](https://en.cppreference.com/w/cpp/language/destructor).
+ */
+val MethodDeclaration.isDestructor: Boolean
+    get() {
+        return "~" + this.name.parent.toString() == this.name.localName
     }

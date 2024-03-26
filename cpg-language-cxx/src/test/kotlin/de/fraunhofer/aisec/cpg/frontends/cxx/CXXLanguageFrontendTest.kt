@@ -746,7 +746,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
         assertEquals(tu.incompleteType().reference(POINTER), field.type)
-        assertEquals(3, recordDeclaration.methods.size)
+        assertEquals(4, recordDeclaration.methods.size)
 
         val method = recordDeclaration.methods[0]
         assertLocalName("method", method)

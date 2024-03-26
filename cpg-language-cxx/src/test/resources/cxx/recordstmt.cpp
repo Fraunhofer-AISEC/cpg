@@ -17,6 +17,7 @@ public:
   }
 
   SomeClass(int a);
+  ~SomeClass();
 };
 
 void* SomeClass::method() {
