@@ -129,8 +129,9 @@ fun MetadataProvider.newAssignExpression(
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
     node.operatorCode = operatorCode
-    node.lhs = lhs
+    // make sure that RHS is set first, so that we have the information available in the LHS setter
     node.rhs = rhs
+    node.lhs = lhs
 
     log(node)
 

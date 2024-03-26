@@ -573,6 +573,12 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 hint.name.localName == "operator#0" -> {
                 hint.name.parent?.let { objectType(it) } ?: unknownType()
             }
+            // The type of conversion operator is also always the declaration itself
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is MethodDeclaration &&
+                hint.name.localName == "operator#0*" -> {
+                hint.name.parent?.let { objectType(it).pointer() } ?: unknownType()
+            }
             // The type of destructor is unspecified, but we model it as a void type to make it
             // compatible with other methods.
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
@@ -825,5 +831,5 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
  */
 val MethodDeclaration.isDestructor: Boolean
     get() {
-        return "~" + this.name.parent.toString() == this.name.localName
+        return "~" + this.name.parent?.localName == this.name.localName
     }
