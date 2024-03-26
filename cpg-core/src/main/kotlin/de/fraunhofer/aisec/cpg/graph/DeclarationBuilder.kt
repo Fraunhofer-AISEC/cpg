@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.astParent
 
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
@@ -67,6 +68,8 @@ fun MetadataProvider.newFunctionDeclaration(
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
     node.applyMetadata(this@MetadataProvider, name, rawNode, localNameOnly)
+
+    (this as? AstStackProvider)?.astStack?.peek()?.let { node.astParent = it }
 
     log(node)
     return node

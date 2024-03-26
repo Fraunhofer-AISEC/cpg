@@ -252,6 +252,8 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 ?: TODO() // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
         val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
+        astStack.push(tud)
+
         scopeManager.resetToGlobal(tud)
 
         val nsdName = Path(path).nameWithoutExtension
@@ -266,6 +268,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         scopeManager.addDeclaration(nsd)
 
+        astStack.pop() // tud
         return tud
     }
 }

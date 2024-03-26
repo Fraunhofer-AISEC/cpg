@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+import java.util.*
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -89,6 +90,10 @@ interface ScopeProvider : MetadataProvider {
  */
 interface NamespaceProvider : MetadataProvider {
     val namespace: Name?
+}
+
+interface AstStackProvider : MetadataProvider {
+    val astStack: Stack<Node>
 }
 
 /**

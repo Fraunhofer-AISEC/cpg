@@ -61,12 +61,15 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     ScopeProvider,
     NamespaceProvider,
     ContextProvider,
-    RawNodeTypeProvider<AstNode> {
+    RawNodeTypeProvider<AstNode>,
+    AstStackProvider {
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
 
     var currentTU: TranslationUnitDeclaration? = null
+
+    override val astStack: Stack<Node> = Stack()
 
     @Throws(TranslationException::class)
     fun parseAll(): List<TranslationUnitDeclaration> {
