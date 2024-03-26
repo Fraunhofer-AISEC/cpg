@@ -201,7 +201,7 @@ fun dataFlow(
     findAllPossiblePaths: Boolean = true
 ): QueryTree<Boolean> {
     val evalRes =
-        from.followNextDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths) { it == to }
+        from.followNextFullDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths) { it == to }
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
     if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
@@ -222,7 +222,7 @@ fun dataFlow(
     findAllPossiblePaths: Boolean = true
 ): QueryTree<Boolean> {
     val evalRes =
-        from.followNextDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths, predicate)
+        from.followNextFullDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths, predicate)
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
     if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
