@@ -55,7 +55,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
      * [TranslationConfiguration.softwareComponents] with the necessary files to parse for each
      * component.
      */
-    val components = mutableMapOf<String, MutableList<File>>()
+    var components = mutableMapOf<String, MutableList<File>>()
 
     val sourceFiles: List<File>
         get() {
@@ -102,8 +102,13 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
 
     companion object {
         @JvmStatic
-        /** This function returns a [CompilationDatabase] from the specified file. */
-        fun fromFile(file: File): CompilationDatabase {
+        /**
+         * This function returns a [CompilationDatabase] from the specified file. OOptionally, if
+         * [filterComponents] is not-null, it can be used to filter specific components from the
+         * compilation database. This is useful if you want to ignore tests or focus on a main
+         * library component.
+         */
+        fun fromFile(file: File, filterComponents: List<String>?): CompilationDatabase {
             val jsonStringFile = file.readText()
             val mapper = ObjectMapper().registerKotlinModule()
             val db = mapper.readValue<CompilationDatabase>(jsonStringFile)
@@ -145,6 +150,12 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                     map?.put("__${parsedEntry.arch}__", "")
                 }
             }
+
+            // Just filter at the end
+            db.components =
+                db.components
+                    .filter { filterComponents == null || it.key in filterComponents }
+                    .toMutableMap()
 
             return db
         }

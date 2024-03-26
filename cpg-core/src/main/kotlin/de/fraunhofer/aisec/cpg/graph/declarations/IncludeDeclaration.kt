@@ -94,5 +94,5 @@ class IncludeDeclaration : Declaration() {
             filename == other.filename)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), includes, problems, filename)
+    override fun hashCode() = Objects.hash(super.hashCode(), problems, filename)
 }

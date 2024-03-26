@@ -519,7 +519,7 @@ class Application : Callable<Int> {
         translationConfiguration.registerPass(PrepareSerialization::class)
 
         mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
-            val db = fromFile(it)
+            val db = fromFile(it, filterComponents)
             if (db.isNotEmpty()) {
                 translationConfiguration.useCompilationDatabase(db)
                 translationConfiguration.sourceLocations(db.sourceFiles)
