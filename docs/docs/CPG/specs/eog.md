@@ -365,6 +365,7 @@ flowchart LR
 Throwing of exceptions is modelled as unary operation. The EOG continues at an exception catching structure or a function that does a re-throw. 
 
 Interesting fields:
+
 * `input: Expression`: Exception to be thrown for exception handling.
 
 Scheme:
