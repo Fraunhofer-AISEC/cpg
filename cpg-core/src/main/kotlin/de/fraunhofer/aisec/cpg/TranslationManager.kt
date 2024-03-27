@@ -31,6 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
@@ -114,6 +117,17 @@ private constructor(
                 executedFrontends.forEach { it.cleanup() }
             }
         }
+
+        // Print some graph statistics
+        val nodes = result.nodes
+        val functions = nodes.filterIsInstance<FunctionDeclaration>()
+        val records = nodes.filterIsInstance<CallExpression>()
+        val calls = nodes.filterIsInstance<CallExpression>()
+
+        log.info("Total graph nodes: ${nodes.size} ")
+        log.info("Function nodes: ${functions.size}")
+        log.info("Record nodes: ${records.size}")
+        log.info("Call nodes: ${calls.size}")
 
         return result
     }
