@@ -375,17 +375,18 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             )
             return null
         }
-        debugWithFileLocation(
-            locationHint,
-            log,
-            "Encountered an unknown record type ${type.typeName} during a call. We are going to infer that record"
-        )
 
         return inferInScopeOf(currentTU) {
             // This could be a class or a struct. We start with a class and may have to fine-tune
             // this later.
             val declaration = newRecordDeclaration(type.typeName, kind)
             declaration.isInferred = true
+
+            debugWithFileLocation(
+                locationHint,
+                log,
+                "Inferred a new record declaration ${declaration.name} (${declaration.kind})"
+            )
 
             // Update the type
             type.recordDeclaration = declaration

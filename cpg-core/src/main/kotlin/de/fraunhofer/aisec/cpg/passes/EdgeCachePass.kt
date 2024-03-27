@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
@@ -82,6 +83,11 @@ object Edges {
  *
  * The cache itself is stored in the [Edges] object.
  */
+@DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(SymbolResolver::class)
+@DependsOn(DFGPass::class)
+@DependsOn(DynamicInvokeResolver::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class)
 class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         Edges.clear()

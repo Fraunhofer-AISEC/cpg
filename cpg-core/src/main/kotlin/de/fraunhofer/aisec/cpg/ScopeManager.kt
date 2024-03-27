@@ -113,6 +113,15 @@ class ScopeManager : ScopeProvider {
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
+
+    /**
+     * The current method in the active scope tree, this ensures that 'this' keywords are mapped
+     * correctly if a method contains a lambda or other types of function declarations
+     */
+    val currentMethod: MethodDeclaration?
+        get() =
+            this.firstScopeOrNull { scope: Scope? -> scope?.astNode is MethodDeclaration }?.astNode
+                as? MethodDeclaration
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
@@ -718,7 +727,7 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
-                    Util.errorWithFileLocation(
+                    Util.warnWithFileLocation(
                         node,
                         LOGGER,
                         "Could not find the scope $scopeName needed to resolve the call ${node.name}"

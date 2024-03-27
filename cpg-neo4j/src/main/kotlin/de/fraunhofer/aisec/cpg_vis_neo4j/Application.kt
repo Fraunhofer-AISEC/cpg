@@ -418,7 +418,6 @@ class Application : Callable<Int> {
                 val configuration =
                     Configuration.Builder()
                         .uri("$PROTOCOL$host:$port")
-                        .autoIndex(AUTO_INDEX)
                         .credentials(neo4jUsername, neo4jPassword)
                         .verifyConnection(VERIFY_CONNECTION)
                         .build()
@@ -486,6 +485,7 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
+                .useParallelPasses(true)
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()

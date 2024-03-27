@@ -448,7 +448,9 @@ class QueryTest {
                     max(it.subscriptExpression) <
                         min(
                             it.arrayExpression
-                                .followPrevDFGEdgesUntilHit { node -> node is NewArrayExpression }
+                                .followPrevFullDFGEdgesUntilHit { node ->
+                                    node is NewArrayExpression
+                                }
                                 .fulfilled
                                 .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
                         ) && min(it.subscriptExpression) > 0
@@ -462,7 +464,9 @@ class QueryTest {
                     (max(it.subscriptExpression) lt
                         min(
                             it.arrayExpression
-                                .followPrevDFGEdgesUntilHit { node -> node is NewArrayExpression }
+                                .followPrevFullDFGEdgesUntilHit { node ->
+                                    node is NewArrayExpression
+                                }
                                 .fulfilled
                                 .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
                         )) and (min(it.subscriptExpression) ge 0)
