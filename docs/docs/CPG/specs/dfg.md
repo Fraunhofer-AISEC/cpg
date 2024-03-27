@@ -270,7 +270,7 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
     input -- DFG 4 --> R[/Node/];
     R == next read of ==> refersTo;
   ```
-* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!*
+* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
   ```mermaid
   flowchart LR
     node -.- rhs;
@@ -284,7 +284,7 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
     node -- DFG 3 --> lhs;
     R[/Node/] == next read of ==> refersTo;
   ```
-* If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation.
+* If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation. Scheme:
   ```mermaid
   flowchart LR
     node -.- rhs;
