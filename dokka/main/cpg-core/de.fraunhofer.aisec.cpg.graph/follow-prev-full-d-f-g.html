@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>followPrevDFGEdgesUntilHit</title>
+    <title>followPrevFullDFG</title>
 <link href="../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,9 +43,9 @@
                             cpg
                     </a>            </div>
             <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph/follow-prev-d-f-g-edges-until-hit.html&quot;}"><div class="versions-dropdown">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph/follow-prev-full-d-f-g.html&quot;}"><div class="versions-dropdown">
   <div class="versions-dropdown-button">main</div>
-  <div class="versions-dropdown-data"><a href="../../older/8.1.2/cpg-core/de.fraunhofer.aisec.cpg.graph/follow-prev-d-f-g-edges-until-hit.html">8.1.2</a><a href="follow-prev-d-f-g-edges-until-hit.html">main</a></div>
+  <div class="versions-dropdown-data"><a href="../../not-found-version.html?v=8.1.2">8.1.2</a><a href="follow-prev-full-d-f-g.html">main</a></div>
 </div>
 </dokka-template-command>            </div>
         </div>
@@ -63,12 +63,12 @@
                 <div class="sidebar--inner" id="sideMenu"></div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph//followPrevDFGEdgesUntilHit/de.fraunhofer.aisec.cpg.graph.Node#kotlin.Function1[de.fraunhofer.aisec.cpg.graph.Node,kotlin.Boolean]/PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><a href="index.html">de.fraunhofer.aisec.cpg.graph</a><span class="delimiter">/</span><span class="current">followPrevDFGEdgesUntilHit</span></div>
+<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph//followPrevFullDFG/de.fraunhofer.aisec.cpg.graph.Node#kotlin.Function1[de.fraunhofer.aisec.cpg.graph.Node,kotlin.Boolean]/PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><a href="index.html">de.fraunhofer.aisec.cpg.graph</a><span class="delimiter">/</span><span class="current">followPrevFullDFG</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>follow</span><wbr><span>Prev</span><wbr><span>DFGEdges</span><wbr><span>Until</span><wbr><span><span>Hit</span></span></h1>
+    <h1 class="cover"><span>follow</span><wbr><span>Prev</span><wbr><span>Full</span><wbr><span><span>DFG</span></span></h1>
   </div>
-  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-node/index.html">Node</a><span class="token punctuation">.</span><a href="follow-prev-d-f-g-edges-until-hit.html"><span class="token function">followPrevDFGEdgesUntilHit</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">predicate<span class="token operator">: </span><span class="token punctuation">(</span><span class="token keyword"></span><a href="-node/index.html">Node</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-fulfilled-and-failed-paths/index.html">FulfilledAndFailedPaths</a></div><p class="paragraph">Returns an instance of <a href="-fulfilled-and-failed-paths/index.html">FulfilledAndFailedPaths</a> where <a href="-fulfilled-and-failed-paths/fulfilled.html">FulfilledAndFailedPaths.fulfilled</a> contains all possible shortest data flow paths between the end node <a href="../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/index.html">this</a> and the starting node fulfilling <a href="follow-prev-d-f-g-edges-until-hit.html">predicate</a>. The paths are represented as lists of nodes. Paths which do not end at such a node are included in <a href="-fulfilled-and-failed-paths/failed.html">FulfilledAndFailedPaths.failed</a>.</p><p class="paragraph">Hence, if "fulfilled" is a non-empty list, a data flow from <a href="../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/index.html">this</a> to such a node is <strong>possible but not mandatory</strong>. If the list "failed" is empty, the data flow is mandatory.</p></div></div>
+  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-node/index.html">Node</a><span class="token punctuation">.</span><a href="follow-prev-full-d-f-g.html"><span class="token function">followPrevFullDFG</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">predicate<span class="token operator">: </span><span class="token punctuation">(</span><span class="token keyword"></span><a href="-node/index.html">Node</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token operator">?</span></div><p class="paragraph">Returns a list of nodes which are a data flow path (with <a href="../de.fraunhofer.aisec.cpg.graph.edge/-full-dataflow-granularity/index.html">FullDataflowGranularity</a>) between the starting node <a href="../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/index.html">this</a> and the end node fulfilling <a href="follow-prev-full-d-f-g.html">predicate</a>. If the return value is not <code class="lang-kotlin">null</code>, a data flow from <a href="../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/index.html">this</a> to such a node is <strong>possible but not mandatory</strong>.</p><p class="paragraph">It returns only a single possible path even if multiple paths are possible.</p></div></div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
