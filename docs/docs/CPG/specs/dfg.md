@@ -286,7 +286,7 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
   ```
 * If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation. Scheme:
   ```mermaid
-  flowchart LR
+  flowchart LR 
     node -.- rhs;
     node -.- lhs;
     lhs -.- refersTo;
@@ -463,8 +463,8 @@ Scheme:
 ### DoStatement
 
 Interesting fields:
-* `condition: Statement`: The condition that is evaluated before making the branching decision
 
+* `condition: Statement`: The condition that is evaluated before making the branching decision
 
 Scheme:
 ```mermaid
