@@ -162,6 +162,7 @@ Scheme:
 ## NewExpression
 
 Interesting fields:
+
 * `initializer: Expression`: The initializer of the expression.
 
 The `initializer` flows to the whole expression.
