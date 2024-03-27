@@ -55,7 +55,7 @@ class ShortcutsTest {
                 ?.byNameOrNull<MethodDeclaration>("print")
 
         val (fulfilled, failed) =
-            toStringCall.followNextDFGEdgesUntilHit { it == printDecl?.parameters?.first() }
+            toStringCall.followNextFullDFGEdgesUntilHit { it == printDecl?.parameters?.first() }
 
         assertEquals(1, fulfilled.size)
         assertEquals(0, failed.size)
@@ -267,7 +267,7 @@ class ShortcutsTest {
                 .lhs
                 .first()
 
-        val paramPassed2 = aAssignment2.followPrevDFGEdgesUntilHit { it is Literal<*> }
+        val paramPassed2 = aAssignment2.followPrevFullDFGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed2.fulfilled.size)
         assertEquals(0, paramPassed2.failed.size)
         assertEquals(5, (paramPassed2.fulfilled[0].last() as? Literal<*>)?.value)
@@ -282,7 +282,7 @@ class ShortcutsTest {
                 .lhs
                 .first()
 
-        val paramPassed = attrAssignment.followPrevDFGEdgesUntilHit { it is Literal<*> }
+        val paramPassed = attrAssignment.followPrevFullDFGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
         assertEquals(3, (paramPassed.fulfilled[0].last() as? Literal<*>)?.value)
@@ -346,7 +346,7 @@ class ShortcutsTest {
                 .lhs
                 .first()
 
-        val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
+        val paramPassed = attrAssignment.followPrevFullDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
     }
