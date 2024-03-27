@@ -528,7 +528,7 @@ flowchart LR
 ```
 
 ## ExpressionList
-List of several expressions that aer evaluated sequentially. The resulting value is the last evaluated expression.
+List of several expressions that are evaluated sequentially. The resulting value is the last evaluated expression.
 
 Interesting fields:
 
