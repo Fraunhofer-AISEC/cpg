@@ -502,7 +502,7 @@ Interesting fields:
 
 * `initializer: Expression`: To be evaluated before creating a new object.
 
-* Scheme:
+Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
