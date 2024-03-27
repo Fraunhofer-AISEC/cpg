@@ -195,7 +195,7 @@ class ExpressionTest {
         val x = tu.refs("x").lastOrNull()
         assertNotNull(x)
 
-        val paths = x.followPrevDFGEdgesUntilHit { it == lit5 }
+        val paths = x.followPrevFullDFGEdgesUntilHit { it == lit5 }
         assertEquals(3, paths.fulfilled.firstOrNull()?.size)
 
         assertEquals(5, x.evaluate())

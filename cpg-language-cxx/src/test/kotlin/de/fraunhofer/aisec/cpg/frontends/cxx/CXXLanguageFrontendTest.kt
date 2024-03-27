@@ -1365,7 +1365,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertIs<Reference>(refCount)
         assertRefersTo(refCount, count)
 
-        var paths = addr.followPrevDFGEdgesUntilHit { it == refCount }
+        var paths = addr.followPrevFullDFGEdgesUntilHit { it == refCount }
         assertTrue(paths.fulfilled.isNotEmpty())
         assertTrue(paths.failed.isEmpty())
 
@@ -1374,7 +1374,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val assign = tu.assignments.firstOrNull { it.value is UnaryOperator }
         assertNotNull(assign)
-        paths = assign.value.followPrevDFGEdgesUntilHit { it == refKey }
+        paths = assign.value.followPrevFullDFGEdgesUntilHit { it == refKey }
         assertTrue(paths.fulfilled.isNotEmpty())
         assertTrue(paths.failed.isEmpty())
     }
@@ -1527,7 +1527,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val noParam = main.variables["no_param"]
         assertNotNull(noParam)
         assertTrue(
-            noParam.followPrevDFGEdgesUntilHit { it == targetNoParam }.fulfilled.isNotEmpty()
+            noParam.followPrevFullDFGEdgesUntilHit { it == targetNoParam }.fulfilled.isNotEmpty()
         )
 
         // ensure that our function pointer variable is connected to the method declaration via DFG
@@ -1535,7 +1535,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(singleParam)
         assertTrue(
             singleParam
-                .followPrevDFGEdgesUntilHit { it == targetSingleParam }
+                .followPrevFullDFGEdgesUntilHit { it == targetSingleParam }
                 .fulfilled
                 .isNotEmpty()
         )
