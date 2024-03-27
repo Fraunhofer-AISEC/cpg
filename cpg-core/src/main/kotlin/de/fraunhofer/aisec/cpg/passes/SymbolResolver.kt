@@ -100,7 +100,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         for (tu in component.translationUnits) {
             currentTU = tu
             // gather all resolution start holders and their start nodes
-            val nodes = tu.allEOGStarters.toSet()
+            val nodes = tu.allEOGStarters
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -700,7 +700,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (root != null && record == null) {
                     record =
                         it.startInference(ctx)
-                            ?.inferRecordDeclaration(it, currentTU, locationHint = call)
+                            ?.inferRecordDeclaration(root, currentTU, locationHint = call)
                     // update the record declaration
                     root.recordDeclaration = record
                 }
