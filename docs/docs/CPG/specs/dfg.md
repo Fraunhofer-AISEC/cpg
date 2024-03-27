@@ -91,7 +91,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   A[assignment.rhs] -- DFG --> assignment.lhs;
-  subgraph S[If the ast parent is not a Block
+  subgraph S[If the ast parent is not a Block]
     direction LR
     assignment.rhs -- DFG --> assignment;
   end
