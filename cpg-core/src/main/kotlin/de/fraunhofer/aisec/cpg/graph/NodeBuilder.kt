@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+import java.util.*
+import kotlin.collections.ArrayDeque
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -89,6 +91,10 @@ interface ScopeProvider : MetadataProvider {
  */
 interface NamespaceProvider : MetadataProvider {
     val namespace: Name?
+}
+
+interface AstStackProvider : MetadataProvider {
+    val astStack: ArrayDeque<Node>
 }
 
 /**
@@ -146,6 +152,12 @@ fun Node.applyMetadata(
             "No scope provider was provided when creating the node {}. This might be an error",
             name
         )
+    }
+
+    if (provider is AstStackProvider) {
+        provider.astStack.lastOrNull().let { this.astParent = it }
+    } else {
+        LOGGER.warn("No AstStackProvider.")
     }
 
     if (name != null) {
@@ -379,4 +391,18 @@ private fun <AstNode> Node.setCodeAndLocation(
         }
     }
     this.location = provider.locationOf(rawNode)
+}
+
+context(AstStackProvider, ContextProvider)
+fun <T : Node> T.withChildren(hasScope: Boolean = false, init: T.() -> Unit): T {
+    (this@AstStackProvider).astStack.addLast(this@withChildren)
+    if (hasScope) {
+        (this@ContextProvider).ctx?.scopeManager?.enterScope(this@withChildren)
+        init(this@withChildren)
+        (this@ContextProvider).ctx?.scopeManager?.leaveScope(this@withChildren)
+    } else {
+        init(this@withChildren)
+    }
+    (this@AstStackProvider).astStack.removeLast()
+    return this
 }

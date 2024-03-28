@@ -48,8 +48,8 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
     node.applyMetadata(this, name, rawNode, true)
-
     log(node)
+
     return node
 }
 
@@ -63,12 +63,13 @@ fun MetadataProvider.newTranslationUnitDeclaration(
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
     localNameOnly: Boolean = false,
-    rawNode: Any? = null,
+    rawNode: Any? = null
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
     node.applyMetadata(this@MetadataProvider, name, rawNode, localNameOnly)
 
     log(node)
+
     return node
 }
 
@@ -83,7 +84,7 @@ fun MetadataProvider.newMethodDeclaration(
     name: CharSequence?,
     isStatic: Boolean = false,
     recordDeclaration: RecordDeclaration? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): MethodDeclaration {
     val node = MethodDeclaration()
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
@@ -412,6 +413,7 @@ fun MetadataProvider.newNamespaceDeclaration(
     node.applyMetadata(this, name, rawNode)
 
     log(node)
+
     return node
 }
 
