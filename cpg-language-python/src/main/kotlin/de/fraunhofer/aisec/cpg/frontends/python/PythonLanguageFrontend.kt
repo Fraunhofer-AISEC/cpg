@@ -253,23 +253,19 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         val tud =
             newTranslationUnitDeclaration(name = path, rawNode = pythonASTModule).withChildren(
-                hasScope = true
+                hasScope = false
             ) {
+                scopeManager.resetToGlobal(this)
                 val nsdName = Path(path).nameWithoutExtension
                 val nsd =
                     newNamespaceDeclaration(name = nsdName, rawNode = pythonASTModule).withChildren(
                         hasScope = true
                     ) {
-                        this.addDeclaration(this)
-
-                        scopeManager.enterScope(this)
                         for (stmt in pythonASTModule.body) {
                             this.statements += statementHandler.handle(stmt)
                         }
-                        scopeManager.leaveScope(this)
-
-                        scopeManager.addDeclaration(this)
                     }
+                scopeManager.addDeclaration(nsd)
             }
         return tud
     }

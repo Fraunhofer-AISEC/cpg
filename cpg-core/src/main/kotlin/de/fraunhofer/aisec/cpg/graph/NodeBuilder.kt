@@ -154,7 +154,9 @@ fun Node.applyMetadata(
     }
 
     if (provider is AstStackProvider) {
-        provider.astStack.peek()?.let { this.astParent = it }
+        if (provider.astStack.isNotEmpty()) {
+            provider.astStack.peek().let { this.astParent = it }
+        }
     }
 
     if (name != null) {

@@ -47,6 +47,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
     rawNode: Any? = null
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
+    node.applyMetadata(this, name, rawNode, true)
     log(node)
 
     return node
