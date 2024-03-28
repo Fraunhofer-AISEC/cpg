@@ -183,9 +183,6 @@ fun MetadataProvider.newConstructExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
-    condition: Expression,
-    thenExpression: Expression?,
-    elseExpression: Expression?,
     type: Type = unknownType(),
     rawNode: Any? = null
 ): ConditionalExpression {
@@ -193,9 +190,6 @@ fun MetadataProvider.newConditionalExpression(
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.type = type
-    node.condition = condition
-    node.thenExpression = thenExpression
-    node.elseExpression = elseExpression
 
     log(node)
     return node
