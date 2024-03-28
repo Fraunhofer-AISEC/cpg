@@ -235,7 +235,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
 
         result.withChildren(hasScope = true) {
-
             // Handle decorators (which are translated into CPG "annotations")
             result.addAnnotations(handleAnnotations(s))
 
@@ -353,9 +352,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             if (s.body.isNotEmpty()) {
                 result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
             }
-
-            frontend.scopeManager.addDeclaration(result)
         }
+
+        frontend.scopeManager.addDeclaration(result)
+
         return wrapDeclarationToStatement(result)
     }
 
