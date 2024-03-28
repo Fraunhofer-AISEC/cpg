@@ -98,6 +98,11 @@ signing {
 // specify Java & Kotlin JVM version
 kotlin {
     jvmToolchain(17)
+    sourceSets.all {
+        languageSettings {
+            languageVersion = "2.0"
+        }
+    }
 }
 
 tasks.withType<KotlinCompile> {
