@@ -73,7 +73,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             newVariableDeclaration(imp.name, rawNode = imp)
                         }
                     frontend.scopeManager.addDeclaration(v)
-                    this.addDeclaration(v)
+                    it.addDeclaration(v)
                 }
             }
         return declStmt
@@ -82,8 +82,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleWhile(node: Python.ASTWhile): Statement {
         val ret =
             newWhileStatement(rawNode = node).withChildren(hasScope = false) {
-                this.condition = frontend.expressionHandler.handle(node.test)
-                this.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+                it.condition = frontend.expressionHandler.handle(node.test)
+                it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
                 node.orelse.firstOrNull()?.let { TODO("Not supported") }
             }
         return ret
@@ -92,9 +92,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleFor(node: Python.ASTFor): Statement {
         val ret =
             newForEachStatement(rawNode = node).withChildren(hasScope = false) {
-                this.iterable = frontend.expressionHandler.handle(node.iter)
-                this.variable = frontend.expressionHandler.handle(node.target)
-                this.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+                it.iterable = frontend.expressionHandler.handle(node.iter)
+                it.variable = frontend.expressionHandler.handle(node.target)
+                it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
                 node.orelse.firstOrNull()?.let { TODO("Not supported") }
             }
         return ret
@@ -126,14 +126,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleIf(node: Python.ASTIf): Statement {
         val ret =
             newIfStatement(rawNode = node).withChildren(hasScope = false) {
-                this.condition = frontend.expressionHandler.handle(node.test)
-                this.thenStatement =
+                it.condition = frontend.expressionHandler.handle(node.test)
+                it.thenStatement =
                     if (node.body.isNotEmpty()) {
                         makeBlock(node.body).codeAndLocationFromChildren(node)
                     } else {
                         null
                     }
-                this.elseStatement =
+                it.elseStatement =
                     if (node.orelse.isNotEmpty()) {
                         makeBlock(node.orelse).codeAndLocationFromChildren(node)
                     } else {
@@ -145,8 +145,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleReturn(node: Python.ASTReturn): Statement {
         val ret =
-            newReturnStatement(rawNode = node).withChildren(hasScope = false) {
-                node.value?.let { this.returnValue = frontend.expressionHandler.handle(it) }
+            newReturnStatement(rawNode = node).withChildren(hasScope = false) { ret ->
+                node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
             }
         return ret
     }
@@ -154,8 +154,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleAssign(node: Python.ASTAssign): Statement {
         val ret =
             newAssignExpression(rawNode = node).withChildren(hasScope = false) {
-                this.lhs = node.targets.map { frontend.expressionHandler.handle(it) }
-                this.rhs = listOf(frontend.expressionHandler.handle(node.value))
+                it.lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+                it.rhs = listOf(frontend.expressionHandler.handle(node.value))
             }
         return ret
     }
@@ -172,7 +172,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         }
                     val decl = newVariableDeclaration(name = name, rawNode = node)
                     frontend.scopeManager.addDeclaration(decl)
-                    this.addDeclaration(decl)
+                    it.addDeclaration(decl)
                 }
             }
         return declStmt
@@ -180,19 +180,21 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
         val cls =
-            newRecordDeclaration(stmt.name, "class", rawNode = stmt).withChildren(hasScope = true) {
-                stmt.bases.map { this.superClasses.add(frontend.typeOf(it)) }
+            newRecordDeclaration(stmt.name, "class", rawNode = stmt).withChildren(
+                hasScope = true
+            ) { record ->
+                stmt.bases.map { record.superClasses.add(frontend.typeOf(it)) }
 
                 stmt.keywords.map { TODO() }
 
                 for (s in stmt.body) {
                     when (s) {
-                        is Python.ASTFunctionDef -> handleFunctionDef(s, this)
-                        else -> this.addStatement(handleNode(s))
+                        is Python.ASTFunctionDef -> handleFunctionDef(s, record)
+                        else -> record.addStatement(handleNode(s))
                     }
                 }
 
-                frontend.scopeManager.addDeclaration(this)
+                frontend.scopeManager.addDeclaration(record)
             }
         return wrapDeclarationToStatement(cls)
     }

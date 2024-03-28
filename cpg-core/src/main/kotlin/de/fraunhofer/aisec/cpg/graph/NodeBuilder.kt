@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -156,8 +157,6 @@ fun Node.applyMetadata(
 
     if (provider is AstStackProvider) {
         provider.astStack.lastOrNull().let { this.astParent = it }
-    } else {
-        LOGGER.warn("No AstStackProvider.")
     }
 
     if (name != null) {
@@ -334,8 +333,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
                     first,
                     current,
                     compareBy(
-                        { it.location?.region?.startLine },
-                        { it.location?.region?.startColumn }
+                        { it?.location?.region?.startLine },
+                        { it?.location?.region?.startColumn }
                     )
                 )
             last =
@@ -394,15 +393,31 @@ private fun <AstNode> Node.setCodeAndLocation(
 }
 
 context(AstStackProvider, ContextProvider)
-fun <T : Node> T.withChildren(hasScope: Boolean = false, init: T.() -> Unit): T {
+fun <T : Node> T.withChildren(
+    hasScope: Boolean = false,
+    isGlobalScope: Boolean = false,
+    init: (T) -> Unit
+): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+
     (this@AstStackProvider).astStack.addLast(this@withChildren)
-    if (hasScope) {
-        (this@ContextProvider).ctx?.scopeManager?.enterScope(this@withChildren)
-        init(this@withChildren)
-        (this@ContextProvider).ctx?.scopeManager?.leaveScope(this@withChildren)
+
+    if (isGlobalScope && this is TranslationUnitDeclaration) {
+        scopeManager.resetToGlobal(this)
+        init(this)
+    } else if (hasScope) {
+        scopeManager.enterScope(this)
+        init(this)
+        scopeManager.leaveScope(this)
     } else {
-        init(this@withChildren)
+        init(this)
     }
+
     (this@AstStackProvider).astStack.removeLast()
+
     return this
 }

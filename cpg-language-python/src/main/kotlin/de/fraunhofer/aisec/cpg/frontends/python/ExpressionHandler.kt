@@ -56,7 +56,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 for (e in node.elts) {
                     lst += handle(e)
                 }
-                this.initializers = lst.toList()
+                it.initializers = lst.toList()
             }
         return ile
     }
@@ -68,16 +68,16 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 for (e in node.elts) {
                     lst += handle(e)
                 }
-                this.initializers = lst.toList()
+                it.initializers = lst.toList()
             }
         return ile
     }
 
     private fun handleIfExp(node: Python.ASTIfExp): Expression {
         return newConditionalExpression(rawNode = node).withChildren(hasScope = false) {
-            condition = handle(node.test)
-            thenExpression = handle(node.body)
-            elseExpression = handle(node.orelse)
+            it.condition = handle(node.test)
+            it.thenExpression = handle(node.body)
+            it.elseExpression = handle(node.orelse)
         }
     }
 
@@ -94,7 +94,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                             )
                             .codeAndLocationFromChildren(node)
                 }
-                this.initializers = lst.toList()
+                it.initializers = lst.toList()
             }
         return ile
     }
@@ -119,8 +119,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             }
         val ret =
             newBinaryOperator(operatorCode = op, rawNode = node).withChildren(hasScope = false) {
-                this.lhs = handle(node.left)
-                this.rhs = handle(node.comparators.first())
+                it.lhs = handle(node.left)
+                it.rhs = handle(node.comparators.first())
             }
         return ret
     }
@@ -145,8 +145,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             }
         val ret =
             newBinaryOperator(operatorCode = op, rawNode = node).withChildren(hasScope = false) {
-                this.lhs = handle(node.left)
-                this.rhs = handle(node.right)
+                it.lhs = handle(node.left)
+                it.rhs = handle(node.right)
             }
         return ret
     }

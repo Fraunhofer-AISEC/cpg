@@ -59,7 +59,6 @@ fun MetadataProvider.newTranslationUnitDeclaration(
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
-@JvmOverloads
 fun MetadataProvider.newFunctionDeclaration(
     name: CharSequence?,
     localNameOnly: Boolean = false,

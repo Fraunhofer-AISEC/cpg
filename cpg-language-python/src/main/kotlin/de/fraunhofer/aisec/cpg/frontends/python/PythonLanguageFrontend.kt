@@ -253,29 +253,20 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         val tud =
             newTranslationUnitDeclaration(name = path, rawNode = pythonASTModule).withChildren(
-                hasScope = false
+                isGlobalScope = true
             ) {
-                handleTud(this, path, pythonASTModule)
+                val nsdName = Path(path).nameWithoutExtension
+                val nsd =
+                    newNamespaceDeclaration(name = nsdName, rawNode = pythonASTModule).withChildren(
+                        hasScope = true
+                    ) {
+                        for (stmt in pythonASTModule.body) {
+                            it.statements += statementHandler.handle(stmt)
+                        }
+                    }
+                scopeManager.addDeclaration(nsd)
             }
         return tud
-    }
-
-    private fun handleTud(
-        tud: TranslationUnitDeclaration,
-        path: String,
-        pythonASTModule: Python.ASTModule
-    ) {
-        scopeManager.resetToGlobal(tud)
-        val nsdName = Path(path).nameWithoutExtension
-        val nsd =
-            newNamespaceDeclaration(name = nsdName, rawNode = pythonASTModule).withChildren(
-                hasScope = true
-            ) {
-                for (stmt in pythonASTModule.body) {
-                    this.statements += statementHandler.handle(stmt)
-                }
-            }
-        scopeManager.addDeclaration(nsd)
     }
 }
 
