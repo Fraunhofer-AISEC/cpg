@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.util.*
+import kotlin.collections.ArrayDeque
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -93,7 +94,7 @@ interface NamespaceProvider : MetadataProvider {
 }
 
 interface AstStackProvider : MetadataProvider {
-    val astStack: Stack<Node>
+    val astStack: ArrayDeque<Node>
 }
 
 /**
@@ -154,9 +155,9 @@ fun Node.applyMetadata(
     }
 
     if (provider is AstStackProvider) {
-        if (provider.astStack.isNotEmpty()) {
-            provider.astStack.peek().let { this.astParent = it }
-        }
+        provider.astStack.lastOrNull().let { this.astParent = it }
+    } else {
+        LOGGER.warn("No AstStackProvider.")
     }
 
     if (name != null) {
@@ -394,7 +395,7 @@ private fun <AstNode> Node.setCodeAndLocation(
 
 context(AstStackProvider, ContextProvider)
 fun <T : Node> T.withChildren(hasScope: Boolean = false, init: T.() -> Unit): T {
-    (this@AstStackProvider).astStack.push(this)
+    (this@AstStackProvider).astStack.addLast(this)
     if (hasScope) {
         (this@ContextProvider).ctx?.scopeManager?.enterScope(this)
     }
@@ -402,6 +403,6 @@ fun <T : Node> T.withChildren(hasScope: Boolean = false, init: T.() -> Unit): T 
     if (hasScope) {
         (this@ContextProvider).ctx?.scopeManager?.leaveScope(this)
     }
-    (this@AstStackProvider).astStack.pop()
+    (this@AstStackProvider).astStack.removeLast()
     return this
 }

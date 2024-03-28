@@ -60,29 +60,30 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleImport(node: Python.ASTImport): Statement {
-        val declStmt = newDeclarationStatement(rawNode = node)
-        frontend.astStack.push(declStmt)
-        for (imp in node.names) {
-            val v =
-                if (imp.asname != null) {
-                    newVariableDeclaration(imp.asname, rawNode = imp) // TODO refers to original????
-                } else {
-                    newVariableDeclaration(imp.name, rawNode = imp)
+        val declStmt =
+            newDeclarationStatement(rawNode = node).withChildren {
+                for (imp in node.names) {
+                    val v =
+                        if (imp.asname != null) {
+                            newVariableDeclaration(
+                                imp.asname,
+                                rawNode = imp
+                            ) // TODO refers to original????
+                        } else {
+                            newVariableDeclaration(imp.name, rawNode = imp)
+                        }
+                    frontend.scopeManager.addDeclaration(v)
+                    this.addDeclaration(v)
                 }
-            frontend.scopeManager.addDeclaration(v)
-            declStmt.addDeclaration(v)
-        }
-        frontend.astStack.pop() // declStmt
+            }
         return declStmt
     }
 
     private fun handleWhile(node: Python.ASTWhile): Statement {
         val ret = newWhileStatement(rawNode = node)
-        frontend.astStack.push(ret)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
-        frontend.astStack.pop() // ret
         return ret
     }
 

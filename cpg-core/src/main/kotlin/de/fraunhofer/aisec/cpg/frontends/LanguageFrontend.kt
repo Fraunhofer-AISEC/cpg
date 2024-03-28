@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.util.*
+import kotlin.collections.ArrayDeque
 import org.slf4j.LoggerFactory
 
 /**
@@ -69,7 +70,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
 
     var currentTU: TranslationUnitDeclaration? = null
 
-    override val astStack: Stack<Node> = Stack()
+    override val astStack: ArrayDeque<Node> = ArrayDeque()
 
     @Throws(TranslationException::class)
     fun parseAll(): List<TranslationUnitDeclaration> {
