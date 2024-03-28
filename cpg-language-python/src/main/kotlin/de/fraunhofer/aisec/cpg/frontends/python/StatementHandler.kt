@@ -184,7 +184,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 hasScope = true
             ) { record ->
                 stmt.bases.map { record.superClasses.add(frontend.typeOf(it)) }
-
                 stmt.keywords.map { TODO() }
 
                 for (s in stmt.body) {
@@ -193,9 +192,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         else -> record.addStatement(handleNode(s))
                     }
                 }
-
-                frontend.scopeManager.addDeclaration(record)
             }
+
+        frontend.scopeManager.addDeclaration(cls)
+
         return wrapDeclarationToStatement(cls)
     }
 
