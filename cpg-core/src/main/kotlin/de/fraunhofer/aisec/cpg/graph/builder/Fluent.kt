@@ -74,11 +74,10 @@ fun LanguageFrontend<*, *>.translationUnit(
     name: CharSequence = Node.EMPTY_NAME,
     init: TranslationUnitDeclaration.() -> Unit
 ): TranslationUnitDeclaration {
-    val node = (this@LanguageFrontend).newTranslationUnitDeclaration(name) { TODO() }
+    val node = (this@LanguageFrontend).newTranslationUnitDeclaration(name)
 
     scopeManager.resetToGlobal(node)
     init(node)
-
     this@TranslationResult.components.firstOrNull()?.translationUnits?.add(node)
 
     return node
@@ -94,7 +93,7 @@ fun LanguageFrontend<*, *>.namespace(
     name: CharSequence,
     init: NamespaceDeclaration.() -> Unit
 ): NamespaceDeclaration {
-    val node = (this@LanguageFrontend).newNamespaceDeclaration(name) { TODO() }
+    val node = (this@LanguageFrontend).newNamespaceDeclaration(name)
 
     scopeManager.enterScope(node)
     init(node)
@@ -169,7 +168,7 @@ fun LanguageFrontend<*, *>.function(
     returnTypes: List<Type>? = null,
     init: (FunctionDeclaration.() -> Unit)? = null
 ): FunctionDeclaration {
-    val node = newFunctionDeclaration(name) { TODO() }
+    val node = newFunctionDeclaration(name)
 
     if (returnTypes != null) {
         node.returnTypes = returnTypes
@@ -200,7 +199,7 @@ fun LanguageFrontend<*, *>.method(
     returnType: Type = unknownType(),
     init: (MethodDeclaration.() -> Unit)? = null
 ): MethodDeclaration {
-    val node = newMethodDeclaration(name) { TODO() }
+    val node = newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
     node.type = FunctionType.computeType(node)
 

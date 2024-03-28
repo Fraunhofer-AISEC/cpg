@@ -142,7 +142,7 @@ open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             targetField.language = base.language
             targetField.isInferred = true
 
-            val targetMethod = newMethodDeclaration(name, true, base) { TODO() }
+            val targetMethod = newMethodDeclaration(name, true, base)
             targetMethod.language = base.language
             targetMethod.isInferred = true
 

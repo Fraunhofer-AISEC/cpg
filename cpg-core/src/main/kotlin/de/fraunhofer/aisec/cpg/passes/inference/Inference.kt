@@ -102,9 +102,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         return inferInScopeOf(start) {
             val inferred: FunctionDeclaration =
                 if (record != null) {
-                    newMethodDeclaration(name ?: "", isStatic, record) { TODO() }
+                    newMethodDeclaration(name ?: "", isStatic, record)
                 } else {
-                    newFunctionDeclaration(name ?: "") { TODO() }
+                    newFunctionDeclaration(name ?: "")
                 }
             inferred.code = code
 
@@ -448,7 +448,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 }
             )
 
-            val inferred = newNamespaceDeclaration(name) { TODO() }
+            val inferred = newNamespaceDeclaration(name)
             inferred.path = path
 
             scopeManager.addDeclaration(inferred)
