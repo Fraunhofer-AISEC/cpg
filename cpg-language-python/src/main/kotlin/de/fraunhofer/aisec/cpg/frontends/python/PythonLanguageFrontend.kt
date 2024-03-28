@@ -251,24 +251,26 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             fromPython(pyAST) as? Python.ASTModule
                 ?: TODO() // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
-        astStack.push(tud)
+        val tud =
+            newTranslationUnitDeclaration(name = path, rawNode = pythonASTModule).withChildren(
+                hasScope = true
+            ) {
+                val nsdName = Path(path).nameWithoutExtension
+                val nsd =
+                    newNamespaceDeclaration(name = nsdName, rawNode = pythonASTModule).withChildren(
+                        hasScope = true
+                    ) {
+                        this.addDeclaration(this)
 
-        scopeManager.resetToGlobal(tud)
+                        scopeManager.enterScope(this)
+                        for (stmt in pythonASTModule.body) {
+                            this.statements += statementHandler.handle(stmt)
+                        }
+                        scopeManager.leaveScope(this)
 
-        val nsdName = Path(path).nameWithoutExtension
-        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
-        tud.addDeclaration(nsd)
-
-        scopeManager.enterScope(nsd)
-        for (stmt in pythonASTModule.body) {
-            nsd.statements += statementHandler.handle(stmt)
-        }
-        scopeManager.leaveScope(nsd)
-
-        scopeManager.addDeclaration(nsd)
-
-        astStack.pop() // tud
+                        scopeManager.addDeclaration(this)
+                    }
+            }
         return tud
     }
 }

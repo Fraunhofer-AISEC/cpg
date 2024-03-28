@@ -217,6 +217,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunctionDeclaration(name = s.name, rawNode = s)
             }
+        //  result.withChildren {
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")

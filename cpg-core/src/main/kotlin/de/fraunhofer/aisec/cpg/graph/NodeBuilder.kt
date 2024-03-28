@@ -153,6 +153,10 @@ fun Node.applyMetadata(
         )
     }
 
+    if (provider is AstStackProvider) {
+        provider.astStack.peek()?.let { this.astParent = it }
+    }
+
     if (name != null) {
         val namespace =
             if (provider is NamespaceProvider) {
@@ -384,4 +388,18 @@ private fun <AstNode> Node.setCodeAndLocation(
         }
     }
     this.location = provider.locationOf(rawNode)
+}
+
+context(AstStackProvider, ContextProvider)
+fun <T : Node> T.withChildren(hasScope: Boolean = false, init: T.() -> Unit): T {
+    (this@AstStackProvider).astStack.push(this)
+    if (hasScope) {
+        (this@ContextProvider).ctx?.scopeManager?.enterScope(this)
+    }
+    init(this)
+    if (hasScope) {
+        (this@ContextProvider).ctx?.scopeManager?.leaveScope(this)
+    }
+    (this@AstStackProvider).astStack.pop()
+    return this
 }
