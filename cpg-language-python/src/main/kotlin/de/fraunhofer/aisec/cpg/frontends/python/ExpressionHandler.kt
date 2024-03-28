@@ -50,47 +50,52 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleList(node: Python.ASTList): Expression {
-        val lst = mutableListOf<Expression>()
-        for (e in node.elts) {
-            lst += handle(e)
-        }
-        val ile = newInitializerListExpression(rawNode = node)
-        ile.initializers = lst.toList()
+        val ile =
+            newInitializerListExpression(rawNode = node).withChildren(hasScope = false) {
+                val lst = mutableListOf<Expression>()
+                for (e in node.elts) {
+                    lst += handle(e)
+                }
+                this.initializers = lst.toList()
+            }
         return ile
     }
 
     private fun handleTuple(node: Python.ASTTuple): Expression {
-        val lst = mutableListOf<Expression>()
-        for (e in node.elts) {
-            lst += handle(e)
-        }
-        val ile = newInitializerListExpression(rawNode = node)
-        ile.initializers = lst.toList()
+        val ile =
+            newInitializerListExpression(rawNode = node).withChildren(hasScope = false) {
+                val lst = mutableListOf<Expression>()
+                for (e in node.elts) {
+                    lst += handle(e)
+                }
+                this.initializers = lst.toList()
+            }
         return ile
     }
 
     private fun handleIfExp(node: Python.ASTIfExp): Expression {
-        return newConditionalExpression(
-            condition = handle(node.test),
-            thenExpression = handle(node.body),
-            elseExpression = handle(node.orelse),
-            rawNode = node
-        )
+        return newConditionalExpression(rawNode = node).withChildren(hasScope = false) {
+            condition = handle(node.test)
+            thenExpression = handle(node.body)
+            elseExpression = handle(node.orelse)
+        }
     }
 
     private fun handleDict(node: Python.ASTDict): Expression {
-        val lst = mutableListOf<Expression>()
-        for (i in node.values.indices) { // TODO: keys longer than values possible?
-            // Here we can not use node as raw node as it spans all keys and values
-            lst +=
-                newKeyValueExpression(
-                        key = node.keys[i]?.let { handle(it) },
-                        value = handle(node.values[i]),
-                    )
-                    .codeAndLocationFromChildren(node)
-        }
-        val ile = newInitializerListExpression(rawNode = node)
-        ile.initializers = lst.toList()
+        val ile =
+            newInitializerListExpression(rawNode = node).withChildren(hasScope = false) {
+                val lst = mutableListOf<Expression>()
+                for (i in node.values.indices) { // TODO: keys longer than values possible?
+                    // Here we can not use node as raw node as it spans all keys and values
+                    lst +=
+                        newKeyValueExpression(
+                                key = node.keys[i]?.let { handle(it) },
+                                value = handle(node.values[i]),
+                            )
+                            .codeAndLocationFromChildren(node)
+                }
+                this.initializers = lst.toList()
+            }
         return ile
     }
 
@@ -112,9 +117,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTNotIn -> "not in"
                 else -> TODO()
             }
-        val ret = newBinaryOperator(op, rawNode = node)
-        ret.lhs = handle(node.left)
-        ret.rhs = handle(node.comparators.first())
+        val ret =
+            newBinaryOperator(operatorCode = op, rawNode = node).withChildren(hasScope = false) {
+                this.lhs = handle(node.left)
+                this.rhs = handle(node.comparators.first())
+            }
         return ret
     }
 
@@ -136,9 +143,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTFloorDiv -> "//"
                 else -> TODO()
             }
-        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-        ret.lhs = handle(node.left)
-        ret.rhs = handle(node.right)
+        val ret =
+            newBinaryOperator(operatorCode = op, rawNode = node).withChildren(hasScope = false) {
+                this.lhs = handle(node.left)
+                this.rhs = handle(node.right)
+            }
         return ret
     }
 

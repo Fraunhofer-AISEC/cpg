@@ -395,13 +395,13 @@ private fun <AstNode> Node.setCodeAndLocation(
 
 context(AstStackProvider, ContextProvider)
 fun <T : Node> T.withChildren(hasScope: Boolean = false, init: T.() -> Unit): T {
-    (this@AstStackProvider).astStack.addLast(this)
+    (this@AstStackProvider).astStack.addLast(this@withChildren)
     if (hasScope) {
-        (this@ContextProvider).ctx?.scopeManager?.enterScope(this)
-    }
-    init(this)
-    if (hasScope) {
-        (this@ContextProvider).ctx?.scopeManager?.leaveScope(this)
+        (this@ContextProvider).ctx?.scopeManager?.enterScope(this@withChildren)
+        init(this@withChildren)
+        (this@ContextProvider).ctx?.scopeManager?.leaveScope(this@withChildren)
+    } else {
+        init(this@withChildren)
     }
     (this@AstStackProvider).astStack.removeLast()
     return this

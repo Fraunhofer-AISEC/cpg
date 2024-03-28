@@ -80,19 +80,23 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleWhile(node: Python.ASTWhile): Statement {
-        val ret = newWhileStatement(rawNode = node)
-        ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        val ret =
+            newWhileStatement(rawNode = node).withChildren(hasScope = false) {
+                this.condition = frontend.expressionHandler.handle(node.test)
+                this.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+                node.orelse.firstOrNull()?.let { TODO("Not supported") }
+            }
         return ret
     }
 
     private fun handleFor(node: Python.ASTFor): Statement {
-        val ret = newForEachStatement(rawNode = node)
-        ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        val ret =
+            newForEachStatement(rawNode = node).withChildren(hasScope = false) {
+                this.iterable = frontend.expressionHandler.handle(node.iter)
+                this.variable = frontend.expressionHandler.handle(node.target)
+                this.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+                node.orelse.firstOrNull()?.let { TODO("Not supported") }
+            }
         return ret
     }
 
@@ -103,82 +107,93 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleAnnAssign(node: Python.ASTAnnAssign): Statement {
         // TODO: annotations
         val lhs = frontend.expressionHandler.handle(node.target)
-        return if (node.value != null) {
-            newAssignExpression(
-                lhs = listOf(lhs),
-                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
-                rawNode = node
-            )
-        } else {
-            lhs
-        }
+        val ret =
+            lhs.withChildren(hasScope = false) {
+                if (node.value != null) {
+                    newAssignExpression(
+                        lhs = listOf(lhs),
+                        rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
+                        rawNode = node
+                    )
+                } else {
+                    lhs
+                }
+            } // TODO ???
+
+        return ret
     }
 
     private fun handleIf(node: Python.ASTIf): Statement {
-        val ret = newIfStatement(rawNode = node)
-        ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.thenStatement =
-            if (node.body.isNotEmpty()) {
-                makeBlock(node.body).codeAndLocationFromChildren(node)
-            } else {
-                null
-            }
-        ret.elseStatement =
-            if (node.orelse.isNotEmpty()) {
-                makeBlock(node.orelse).codeAndLocationFromChildren(node)
-            } else {
-                null
+        val ret =
+            newIfStatement(rawNode = node).withChildren(hasScope = false) {
+                this.condition = frontend.expressionHandler.handle(node.test)
+                this.thenStatement =
+                    if (node.body.isNotEmpty()) {
+                        makeBlock(node.body).codeAndLocationFromChildren(node)
+                    } else {
+                        null
+                    }
+                this.elseStatement =
+                    if (node.orelse.isNotEmpty()) {
+                        makeBlock(node.orelse).codeAndLocationFromChildren(node)
+                    } else {
+                        null
+                    }
             }
         return ret
     }
 
     private fun handleReturn(node: Python.ASTReturn): Statement {
-        val ret = newReturnStatement(rawNode = node)
-        node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
+        val ret =
+            newReturnStatement(rawNode = node).withChildren(hasScope = false) {
+                node.value?.let { this.returnValue = frontend.expressionHandler.handle(it) }
+            }
         return ret
     }
 
     private fun handleAssign(node: Python.ASTAssign): Statement {
-        val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
-        val rhs = frontend.expressionHandler.handle(node.value)
-        if (rhs is List<*>) TODO()
-        return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
+        val ret =
+            newAssignExpression(rawNode = node).withChildren(hasScope = false) {
+                this.lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+                this.rhs = listOf(frontend.expressionHandler.handle(node.value))
+            }
+        return ret
     }
 
     private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
-        val declStmt = newDeclarationStatement(rawNode = node)
-        for (stmt in node.names) {
-            val name =
-                if (stmt.asname != null) {
-                    stmt.asname
-                } else {
-                    stmt.name
+        val declStmt =
+            newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
+                for (stmt in node.names) {
+                    val name =
+                        if (stmt.asname != null) {
+                            stmt.asname
+                        } else {
+                            stmt.name
+                        }
+                    val decl = newVariableDeclaration(name = name, rawNode = node)
+                    frontend.scopeManager.addDeclaration(decl)
+                    this.addDeclaration(decl)
                 }
-            val decl = newVariableDeclaration(name = name, rawNode = node)
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.addDeclaration(decl)
-        }
+            }
         return declStmt
     }
 
     private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
-        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
-        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
+        val cls =
+            newRecordDeclaration(stmt.name, "class", rawNode = stmt).withChildren(hasScope = true) {
+                stmt.bases.map { this.superClasses.add(frontend.typeOf(it)) }
 
-        frontend.scopeManager.enterScope(cls)
+                stmt.keywords.map { TODO() }
 
-        stmt.keywords.map { TODO() }
+                for (s in stmt.body) {
+                    when (s) {
+                        is Python.ASTFunctionDef -> handleFunctionDef(s, this)
+                        else -> this.addStatement(handleNode(s))
+                    }
+                }
 
-        for (s in stmt.body) {
-            when (s) {
-                is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.addStatement(handleNode(s))
+                frontend.scopeManager.addDeclaration(this)
             }
-        }
-
-        frontend.scopeManager.leaveScope(cls)
-        frontend.scopeManager.addDeclaration(cls)
-
         return wrapDeclarationToStatement(cls)
     }
 
@@ -218,130 +233,129 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunctionDeclaration(name = s.name, rawNode = s)
             }
-        //  result.withChildren {
-        frontend.scopeManager.enterScope(result)
 
-        // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.withChildren(hasScope = true) {
 
-        // Handle arguments
-        if (s.args.posonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`posonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
+            // Handle decorators (which are translated into CPG "annotations")
+            result.addAnnotations(handleAnnotations(s))
 
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
-        }
-        result.type = FunctionType.computeType(result)
-
-        if (recordDeclaration != null) {
-            // first argument is the `receiver`
-            if (s.args.args.isEmpty()) {
+            // Handle arguments
+            if (s.args.posonlyargs.isNotEmpty()) {
                 val problem =
                     newProblemDeclaration(
-                        "Expected a receiver",
+                        "`posonlyargs` are not yet supported",
                         problemType = ProblemNode.ProblemType.TRANSLATION,
                         rawNode = s.args
                     )
                 frontend.scopeManager.addDeclaration(problem)
+            }
+
+            // Handle return type and calculate function type
+            if (result is ConstructorDeclaration) {
+                // Return type of the constructor is always its record declaration type
+                result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
             } else {
-                val recvPythonNode = s.args.args.first()
-                val tpe = recordDeclaration.toType()
-                val recvNode =
-                    newVariableDeclaration(
-                        name = recvPythonNode.arg,
-                        type = tpe,
-                        implicitInitializerAllowed = false,
-                        rawNode = recvPythonNode
-                    )
-                frontend.scopeManager.addDeclaration(recvNode)
-                when (result) {
-                    is ConstructorDeclaration -> result.receiver = recvNode
-                    is MethodDeclaration -> result.receiver = recvNode
-                    else -> TODO()
+                result.returnTypes = listOf(frontend.typeOf(s.returns))
+            }
+            result.type = FunctionType.computeType(result)
+
+            if (recordDeclaration != null) {
+                // first argument is the `receiver`
+                if (s.args.args.isEmpty()) {
+                    val problem =
+                        newProblemDeclaration(
+                            "Expected a receiver",
+                            problemType = ProblemNode.ProblemType.TRANSLATION,
+                            rawNode = s.args
+                        )
+                    frontend.scopeManager.addDeclaration(problem)
+                } else {
+                    val recvPythonNode = s.args.args.first()
+                    val tpe = recordDeclaration.toType()
+                    val recvNode =
+                        newVariableDeclaration(
+                            name = recvPythonNode.arg,
+                            type = tpe,
+                            implicitInitializerAllowed = false,
+                            rawNode = recvPythonNode
+                        )
+                    frontend.scopeManager.addDeclaration(recvNode)
+                    when (result) {
+                        is ConstructorDeclaration -> result.receiver = recvNode
+                        is MethodDeclaration -> result.receiver = recvNode
+                        else -> TODO()
+                    }
                 }
             }
-        }
 
-        if (recordDeclaration != null) {
-            // first argument is the receiver
-            for (arg in s.args.args.subList(1, s.args.args.size)) {
-                handleArgument(arg)
+            if (recordDeclaration != null) {
+                // first argument is the receiver
+                for (arg in s.args.args.subList(1, s.args.args.size)) {
+                    handleArgument(arg)
+                }
+            } else {
+                for (arg in s.args.args) {
+                    handleArgument(arg)
+                }
             }
-        } else {
-            for (arg in s.args.args) {
-                handleArgument(arg)
+
+            s.args.vararg?.let {
+                val problem =
+                    newProblemDeclaration(
+                        "`vararg` is not yet supported",
+                        problemType = ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = it
+                    )
+                frontend.scopeManager.addDeclaration(problem)
             }
+
+            if (s.args.kwonlyargs.isNotEmpty()) {
+                val problem =
+                    newProblemDeclaration(
+                        "`kwonlyargs` are not yet supported",
+                        problemType = ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = s.args
+                    )
+                frontend.scopeManager.addDeclaration(problem)
+            }
+
+            if (s.args.kw_defaults.isNotEmpty()) {
+                val problem =
+                    newProblemDeclaration(
+                        "`kw_defaults` are not yet supported",
+                        problemType = ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = s.args
+                    )
+                frontend.scopeManager.addDeclaration(problem)
+            }
+
+            s.args.kwarg?.let {
+                val problem =
+                    newProblemDeclaration(
+                        "`kwarg` is not yet supported",
+                        problemType = ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = it
+                    )
+                frontend.scopeManager.addDeclaration(problem)
+            }
+
+            if (s.args.defaults.isNotEmpty()) {
+                val problem =
+                    newProblemDeclaration(
+                        "`defaults` are not yet supported",
+                        problemType = ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = s.args
+                    )
+                frontend.scopeManager.addDeclaration(problem)
+            }
+            // END HANDLE ARGUMENTS
+
+            if (s.body.isNotEmpty()) {
+                result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+            }
+
+            frontend.scopeManager.addDeclaration(result)
         }
-
-        s.args.vararg?.let {
-            val problem =
-                newProblemDeclaration(
-                    "`vararg` is not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = it
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (s.args.kwonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`kwonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (s.args.kw_defaults.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`kw_defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        s.args.kwarg?.let {
-            val problem =
-                newProblemDeclaration(
-                    "`kwarg` is not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = it
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (s.args.defaults.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-        // END HANDLE ARGUMENTS
-
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
-        }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
         return wrapDeclarationToStatement(result)
     }
 
