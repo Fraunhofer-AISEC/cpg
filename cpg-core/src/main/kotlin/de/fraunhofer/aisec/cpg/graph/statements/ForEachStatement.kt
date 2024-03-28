@@ -41,6 +41,7 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         set(value) {
             if (value is Reference) {
                 value.access = AccessValues.WRITE
+                value.dfgHandlerHint = true
             }
             field = value
         }

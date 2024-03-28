@@ -69,9 +69,21 @@ class AssignExpression :
                 }
             }
             if (isSimpleAssignment) {
-                field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
+                field.forEach {
+                    val unwrapped = it.unwrapReference()
+                    unwrapped?.let {
+                        it.access = AccessValues.WRITE
+                        it.dfgHandlerHint = true
+                    }
+                }
             } else {
-                field.forEach { (it as? Reference)?.access = AccessValues.READWRITE }
+                field.forEach {
+                    val unwrapped = it.unwrapReference()
+                    unwrapped?.let {
+                        it.access = AccessValues.READWRITE
+                        it.dfgHandlerHint = true
+                    }
+                }
 
                 if (!isCompoundAssignment) {
                     // If this is neither a simple nor a compound assignment, probably something
