@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -419,5 +420,16 @@ fun <T : Node> T.withChildren(
 
     (this@AstStackProvider).astStack.removeLast()
 
+    return this
+}
+
+context(ContextProvider)
+fun <T : Declaration> T.declare(): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+    scopeManager.addDeclaration(this)
     return this
 }

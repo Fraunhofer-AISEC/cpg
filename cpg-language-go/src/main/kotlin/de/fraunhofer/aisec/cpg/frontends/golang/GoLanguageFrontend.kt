@@ -166,54 +166,53 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         currentFile = f
         currentFileSet = fset
 
-        val tu = newTranslationUnitDeclaration(file.absolutePath, rawNode = f)
-        scopeManager.resetToGlobal(tu)
-        currentTU = tu
+        return newTranslationUnitDeclaration(file.absolutePath, rawNode = f).withChildren(
+            isGlobalScope = true
+        ) { tu ->
+            currentTU = tu
 
-        for (spec in f.imports) {
-            val import = specificationHandler.handle(spec)
-            scopeManager.addDeclaration(import)
-        }
-
-        val p = newNamespaceDeclaration(f.name.name)
-        scopeManager.enterScope(p)
-
-        try {
-            // we need to construct the package "path" (e.g. "encoding/json") out of the
-            // module path as well as the current directory in relation to the topLevel
-            var packagePath = file.parentFile.relativeTo(topLevel)
-
-            // If we are in a module, we need to prepend the module path to it. There is an
-            // exception if we are in the "std" module, which represents the standard library
-            val modulePath = currentModule?.module?.mod?.path
-            if (modulePath != null && modulePath != "std") {
-                packagePath = File(modulePath).resolve(packagePath)
+            for (spec in f.imports) {
+                val import = specificationHandler.handle(spec)
+                scopeManager.addDeclaration(import)
             }
 
-            p.path = packagePath.path
-        } catch (ex: IllegalArgumentException) {
-            log.error(
-                "Could not relativize package path to top level. Cannot set package path.",
-                ex
-            )
+            newNamespaceDeclaration(f.name.name)
+                .withChildren(hasScope = true) { p ->
+                    try {
+                        // we need to construct the package "path" (e.g. "encoding/json") out of the
+                        // module path as well as the current directory in relation to the topLevel
+                        var packagePath = file.parentFile.relativeTo(topLevel)
+
+                        // If we are in a module, we need to prepend the module path to it. There is
+                        // an
+                        // exception if we are in the "std" module, which represents the standard
+                        // library
+                        val modulePath = currentModule?.module?.mod?.path
+                        if (modulePath != null && modulePath != "std") {
+                            packagePath = File(modulePath).resolve(packagePath)
+                        }
+
+                        p.path = packagePath.path
+                    } catch (ex: IllegalArgumentException) {
+                        log.error(
+                            "Could not relativize package path to top level. Cannot set package path.",
+                            ex
+                        )
+                    }
+
+                    for (decl in f.decls) {
+                        // Retrieve all top level declarations. One "Decl" could potentially
+                        // contain multiple CPG declarations.
+                        val declaration = declarationHandler.handle(decl)
+                        if (declaration is DeclarationSequence) {
+                            declaration.declarations.forEach { it.declare() }
+                        } else {
+                            declaration?.declare()
+                        }
+                    }
+                }
+                .declare()
         }
-
-        for (decl in f.decls) {
-            // Retrieve all top level declarations. One "Decl" could potentially
-            // contain multiple CPG declarations.
-            val declaration = declarationHandler.handle(decl)
-            if (declaration is DeclarationSequence) {
-                declaration.declarations.forEach { scopeManager.addDeclaration(it) }
-            } else {
-                scopeManager.addDeclaration(declaration)
-            }
-        }
-
-        scopeManager.leaveScope(p)
-
-        scopeManager.addDeclaration(p)
-
-        return tu
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {

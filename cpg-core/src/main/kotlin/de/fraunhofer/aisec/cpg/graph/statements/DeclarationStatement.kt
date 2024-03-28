@@ -92,4 +92,8 @@ open class DeclarationStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
+
+    operator fun plusAssign(declaration: Declaration) {
+        addToPropertyEdgeDeclaration(declaration)
+    }
 }

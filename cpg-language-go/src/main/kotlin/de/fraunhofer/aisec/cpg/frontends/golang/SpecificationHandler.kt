@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 class SpecificationHandler(frontend: GoLanguageFrontend) :
@@ -104,84 +105,72 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         structType: GoStandardLibrary.Ast.StructType,
         name: CharSequence,
         typeSpec: GoStandardLibrary.Ast.TypeSpec? = null,
-    ): RecordDeclaration {
-        val record = newRecordDeclaration(name, "struct", rawNode = typeSpec)
+    ) =
+        newRecordDeclaration(name, "struct", rawNode = typeSpec).withChildren(hasScope = true) {
+            if (!structType.incomplete) {
+                for (field in structType.fields.list) {
+                    val type = frontend.typeOf(field.type)
 
-        frontend.scopeManager.enterScope(record)
+                    // A field can also have no name, which means that it is embedded. In this case,
+                    // it can be accessed by the local name of its type and therefore we name the
+                    // field accordingly. We use the modifiers property to denote that this is an
+                    // embedded field, so we can easily retrieve them later
+                    val (fieldName, modifiers) =
+                        if (field.names.isEmpty()) {
+                            // Retrieve the root type local name
+                            Pair(type.root.name.localName, listOf("embedded"))
+                        } else {
+                            Pair(field.names[0].name, listOf())
+                        }
 
-        if (!structType.incomplete) {
-            for (field in structType.fields.list) {
-                val type = frontend.typeOf(field.type)
-
-                // A field can also have no name, which means that it is embedded. In this case, it
-                // can be accessed by the local name of its type and therefore we name the field
-                // accordingly. We use the modifiers property to denote that this is an embedded
-                // field, so we can easily retrieve them later
-                val (fieldName, modifiers) =
-                    if (field.names.isEmpty()) {
-                        // Retrieve the root type local name
-                        Pair(type.root.name.localName, listOf("embedded"))
-                    } else {
-                        Pair(field.names[0].name, listOf())
-                    }
-
-                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
-                frontend.scopeManager.addDeclaration(decl)
-            }
-        }
-
-        frontend.scopeManager.leaveScope(record)
-
-        return record
-    }
-
-    private fun handleInterfaceTypeSpec(
-        typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        interfaceType: GoStandardLibrary.Ast.InterfaceType
-    ): Declaration {
-        val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
-
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
-
-        frontend.scopeManager.enterScope(record)
-
-        if (!interfaceType.incomplete) {
-            for (field in interfaceType.methods.list) {
-                val type = frontend.typeOf(field.type)
-
-                // Even though this list is called "Methods", it contains all kinds
-                // of things, so we need to proceed with caution. Only if the
-                // "method" actually has a name, we declare a new method
-                // declaration.
-                if (field.names.isNotEmpty()) {
-                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
-                    method.type = type
-
-                    frontend.scopeManager.enterScope(method)
-
-                    val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
-                    if (params != null) {
-                        frontend.declarationHandler.handleFuncParams(params)
-                    }
-
-                    frontend.scopeManager.leaveScope(method)
-
-                    frontend.scopeManager.addDeclaration(method)
-                } else {
-                    log.debug("Adding {} as super class of interface {}", type.name, record.name)
-                    // Otherwise, it contains either types or interfaces. For now, we
-                    // hope that it only has interfaces. We consider embedded
-                    // interfaces as sort of super types for this interface.
-                    record.addSuperClass(type)
+                    newFieldDeclaration(fieldName, type, modifiers, rawNode = field).declare()
                 }
             }
         }
 
-        frontend.scopeManager.leaveScope(record)
+    private fun handleInterfaceTypeSpec(
+        typeSpec: GoStandardLibrary.Ast.TypeSpec,
+        interfaceType: GoStandardLibrary.Ast.InterfaceType
+    ) =
+        newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec).withChildren(
+            hasScope = true
+        ) { record ->
+            // Make sure to register the type
+            frontend.typeManager.registerType(record.toType())
 
-        return record
-    }
+            if (!interfaceType.incomplete) {
+                for (field in interfaceType.methods.list) {
+                    val type = frontend.typeOf(field.type)
+
+                    // Even though this list is called "Methods", it contains all kinds
+                    // of things, so we need to proceed with caution. Only if the
+                    // "method" actually has a name, we declare a new method
+                    // declaration.
+                    if (field.names.isNotEmpty()) {
+                        newMethodDeclaration(field.names[0].name, rawNode = field)
+                            .withChildren(hasScope = true) { method ->
+                                method.type = type
+
+                                val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
+                                if (params != null) {
+                                    frontend.declarationHandler.handleFuncParams(params)
+                                }
+                            }
+                            .declare()
+                    } else {
+                        log.debug(
+                            "Adding {} as super class of interface {}",
+                            type.name,
+                            record.name
+                        )
+                        // Otherwise, it contains either types or interfaces. For now, we
+                        // hope that it only has interfaces. We consider embedded
+                        // interfaces as sort of super types for this interface.
+                        record.addSuperClass(type)
+                    }
+                }
+            }
+        }
 
     /**
      * // handleValueSpec handles parsing of an ast.ValueSpec, which is a variable declaration.
@@ -213,22 +202,22 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     } else {
                         ident.name
                     }
-                val decl = newVariableDeclaration(fqn, rawNode = valueSpec)
-
-                if (valueSpec.type != null) {
-                    decl.type = frontend.typeOf(valueSpec.type!!)
-                } else {
-                    decl.type = autoType()
-                }
-
-                if (valueSpec.values.isNotEmpty()) {
-                    tuple.initializer = frontend.expressionHandler.handle(valueSpec.values[0])
-                }
-
                 // We need to manually add the variables to the scope manager
-                frontend.scopeManager.addDeclaration(decl)
+                tuple +=
+                    newVariableDeclaration(fqn, rawNode = valueSpec)
+                        .withChildren { decl ->
+                            if (valueSpec.type != null) {
+                                decl.type = frontend.typeOf(valueSpec.type!!)
+                            } else {
+                                decl.type = autoType()
+                            }
 
-                tuple += decl
+                            if (valueSpec.values.isNotEmpty()) {
+                                tuple.initializer =
+                                    frontend.expressionHandler.handle(valueSpec.values[0])
+                            }
+                        }
+                        .declare()
             }
             return tuple
         } else {
@@ -246,54 +235,59 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     } else {
                         ident.name
                     }
-                val decl = newVariableDeclaration(fqn, rawNode = valueSpec)
-                if (type != null) {
-                    decl.type = type
-                } else {
-                    decl.type = autoType()
-                }
-
-                if (valueSpec.values.size > nameIdx) {
-                    // the initializer is in the "Values" slice with the respective index
-                    decl.initializer = frontend.expressionHandler.handle(valueSpec.values[nameIdx])
-                }
-
-                // If we are in a const declaration, we need to do something rather unusual.
-                // If we have an initializer, we need to set this as the current const initializer,
-                // because following specs will "inherit" the one from the previous line.
-                //
-                // Note: we cannot just take the already parsed initializer, but instead we need to
-                // reparse the raw AST expression, so that `iota` gets evaluated differently for
-                // each spec
-                if (frontend.declCtx.currentDecl?.tok == 64) {
-                    var initializerExpr = valueSpec.values.getOrNull(nameIdx)
-                    if (initializerExpr != null) {
-                        // Set the current initializer
-                        frontend.declCtx.constInitializers[nameIdx] = initializerExpr
-
-                        // Set the const type
-                        frontend.declCtx.constType = type
-                    } else {
-                        // Fetch expr from existing initializers
-                        initializerExpr = frontend.declCtx.constInitializers[nameIdx]
-                        if (initializerExpr == null) {
-                            Util.errorWithFileLocation(
-                                decl,
-                                log,
-                                "Const declaration is missing its initializer"
-                            )
+                sequence +=
+                    newVariableDeclaration(fqn, rawNode = valueSpec).withChildren { decl ->
+                        if (type != null) {
+                            decl.type = type as Type
                         } else {
-                            decl.initializer = frontend.expressionHandler.handle(initializerExpr)
+                            decl.type = autoType()
+                        }
+
+                        if (valueSpec.values.size > nameIdx) {
+                            // the initializer is in the "Values" slice with the respective index
+                            decl.initializer =
+                                frontend.expressionHandler.handle(valueSpec.values[nameIdx])
+                        }
+
+                        // If we are in a const declaration, we need to do something rather unusual.
+                        // If we have an initializer, we need to set this as the current const
+                        // initializer,
+                        // because following specs will "inherit" the one from the previous line.
+                        //
+                        // Note: we cannot just take the already parsed initializer, but instead we
+                        // need to
+                        // reparse the raw AST expression, so that `iota` gets evaluated differently
+                        // for
+                        // each spec
+                        if (frontend.declCtx.currentDecl?.tok == 64) {
+                            var initializerExpr = valueSpec.values.getOrNull(nameIdx)
+                            if (initializerExpr != null) {
+                                // Set the current initializer
+                                frontend.declCtx.constInitializers[nameIdx] = initializerExpr
+
+                                // Set the const type
+                                frontend.declCtx.constType = type
+                            } else {
+                                // Fetch expr from existing initializers
+                                initializerExpr = frontend.declCtx.constInitializers[nameIdx]
+                                if (initializerExpr == null) {
+                                    Util.errorWithFileLocation(
+                                        decl,
+                                        log,
+                                        "Const declaration is missing its initializer"
+                                    )
+                                } else {
+                                    decl.initializer =
+                                        frontend.expressionHandler.handle(initializerExpr)
+                                }
+                            }
+
+                            type = frontend.declCtx.constType
+                            if (type != null) {
+                                decl.type = type as Type
+                            }
                         }
                     }
-
-                    type = frontend.declCtx.constType
-                    if (type != null) {
-                        decl.type = type
-                    }
-                }
-
-                sequence += decl
             }
 
             return sequence

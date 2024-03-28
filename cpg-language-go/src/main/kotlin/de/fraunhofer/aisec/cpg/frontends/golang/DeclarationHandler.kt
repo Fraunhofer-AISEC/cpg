@@ -63,12 +63,14 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // because the syntax is only there to ensure that this method is part
                 // of the struct, but it is not modifying the receiver.
                 if (recvField?.names?.isNotEmpty() == true) {
-                    method.receiver =
-                        newVariableDeclaration(
-                            recvField.names[0].name,
-                            recordType,
-                            rawNode = recvField
-                        )
+                    method.withChildren {
+                        it.receiver =
+                            newVariableDeclaration(
+                                recvField.names[0].name,
+                                recordType,
+                                rawNode = recvField
+                            )
+                    }
                 }
 
                 if (recordType !is UnknownType) {
@@ -103,59 +105,57 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 newFunctionDeclaration(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
-        frontend.scopeManager.enterScope(func)
+        func.withChildren(hasScope = true) {
+            if (func is MethodDeclaration && func.receiver != null) {
+                // Add the receiver do the scope manager, so we can resolve the receiver value
+                func.receiver?.declare()
+            }
 
-        if (func is MethodDeclaration && func.receiver != null) {
-            // Add the receiver do the scope manager, so we can resolve the receiver value
-            frontend.scopeManager.addDeclaration(func.receiver)
-        }
+            val returnTypes = mutableListOf<Type>()
 
-        val returnTypes = mutableListOf<Type>()
+            // Build return types (and variables)
+            val results = funcDecl.type.results
+            if (results != null) {
+                for (returnVar in results.list) {
+                    returnTypes += frontend.typeOf(returnVar.type)
 
-        // Build return types (and variables)
-        val results = funcDecl.type.results
-        if (results != null) {
-            for (returnVar in results.list) {
-                returnTypes += frontend.typeOf(returnVar.type)
+                    // If the function has named return variables, be sure to declare them as well
+                    if (returnVar.names.isNotEmpty()) {
+                        val param =
+                            newVariableDeclaration(
+                                returnVar.names[0].name,
+                                frontend.typeOf(returnVar.type),
+                                rawNode = returnVar
+                            )
 
-                // If the function has named return variables, be sure to declare them as well
-                if (returnVar.names.isNotEmpty()) {
-                    val param =
-                        newVariableDeclaration(
-                            returnVar.names[0].name,
-                            frontend.typeOf(returnVar.type),
-                            rawNode = returnVar
-                        )
-
-                    // Add parameter to scope
-                    frontend.scopeManager.addDeclaration(param)
+                        // Add parameter to scope
+                        param.declare()
+                    }
                 }
             }
-        }
 
-        func.type = frontend.typeOf(funcDecl.type)
-        func.returnTypes = returnTypes
+            func.type = frontend.typeOf(funcDecl.type)
+            func.returnTypes = returnTypes
 
-        // Parse parameters
-        handleFuncParams(funcDecl.type.params)
+            // Parse parameters
+            handleFuncParams(funcDecl.type.params)
 
-        // Only parse function body in non-dependencies
-        if (!frontend.isDependency) {
-            // Check, if the last statement is a return statement, otherwise we insert an implicit
-            // one
-            val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
-            if (body is Block) {
-                val last = body.statements.lastOrNull()
-                if (last !is ReturnStatement) {
-                    val ret = newReturnStatement()
-                    ret.isImplicit = true
-                    body += ret
-                }
+            // Only parse function body in non-dependencies
+            if (!frontend.isDependency) {
+                // Check, if the last statement is a return statement, otherwise we insert an
+                // implicit one
+                func.body =
+                    (funcDecl.body?.let { frontend.statementHandler.handle(it) } as? Block)
+                        ?.withChildren { body ->
+                            val last = body.statements.lastOrNull()
+                            if (last !is ReturnStatement) {
+                                val ret = newReturnStatement()
+                                ret.isImplicit = true
+                                body += ret
+                            }
+                        }
             }
-            func.body = body
         }
-
-        frontend.scopeManager.leaveScope(func)
 
         // Leave scope of record, if applicable
         (func as? MethodDeclaration)?.recordDeclaration?.let {

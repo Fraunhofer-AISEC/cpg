@@ -1088,7 +1088,11 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 operator fun Expression.plusAssign(rhs: Expression) {
-    val node = (this@LanguageFrontend).newAssignExpression("+=", listOf(this), listOf(rhs))
+    val node =
+        (this@LanguageFrontend).newAssignExpression("+=").withChildren {
+            it.rhs = listOf(rhs)
+            it.lhs = listOf(this)
+        }
 
     (this@StatementHolder) += node
 }
@@ -1328,7 +1332,11 @@ infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpr
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assign(rhs: Expression): AssignExpression {
-    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
+    val node =
+        (this@LanguageFrontend).newAssignExpression("=").withChildren {
+            it.rhs = listOf(rhs)
+            it.lhs = listOf(this)
+        }
 
     if (this@Holder is StatementHolder) {
         this@Holder += node
@@ -1343,7 +1351,11 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
-    val node = (this@LanguageFrontend).newAssignExpression("+=", listOf(this), listOf(rhs))
+    val node =
+        (this@LanguageFrontend).newAssignExpression("+=").withChildren {
+            it.rhs = listOf(rhs)
+            it.lhs = listOf(this)
+        }
 
     if (this@Holder is StatementHolder) {
         this@Holder += node
@@ -1358,7 +1370,11 @@ infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
-    val node = (this@LanguageFrontend).newAssignExpression("=", listOf(this), listOf(rhs))
+    val node =
+        (this@LanguageFrontend).newAssignExpression("=").withChildren {
+            it.rhs = listOf(rhs)
+            it.lhs = listOf(this)
+        }
 
     node.usedAsExpression = true
 

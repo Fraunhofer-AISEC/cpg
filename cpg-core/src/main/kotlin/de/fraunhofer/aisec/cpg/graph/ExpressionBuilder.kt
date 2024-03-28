@@ -122,15 +122,11 @@ fun MetadataProvider.newUnaryOperator(
 @JvmOverloads
 fun MetadataProvider.newAssignExpression(
     operatorCode: String = "=",
-    lhs: List<Expression> = listOf(),
-    rhs: List<Expression> = listOf(),
     rawNode: Any? = null
 ): AssignExpression {
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
     node.operatorCode = operatorCode
-    node.lhs = lhs
-    node.rhs = rhs
 
     log(node)
 
