@@ -365,6 +365,7 @@ flowchart LR
 Throwing of exceptions is modelled as unary operation. The EOG continues at an exception catching structure or a function that does a re-throw. 
 
 Interesting fields:
+
 * `input: Expression`: Exception to be thrown for exception handling.
 
 Scheme:
@@ -501,7 +502,7 @@ Interesting fields:
 
 * `initializer: Expression`: To be evaluated before creating a new object.
 
-* Scheme:
+Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -527,7 +528,7 @@ flowchart LR
 ```
 
 ## ExpressionList
-List of several expressions that aer evaluated sequentially. The resulting value is the last evaluated expression.
+List of several expressions that are evaluated sequentially. The resulting value is the last evaluated expression.
 
 Interesting fields:
 

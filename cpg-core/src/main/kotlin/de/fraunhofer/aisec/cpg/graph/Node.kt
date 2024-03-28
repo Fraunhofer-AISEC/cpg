@@ -174,6 +174,15 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var prevDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevDFGEdges, false)
 
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    val prevFullDFG: List<Node>
+        get() {
+            return prevDFGEdges
+                .filter { it.granularity is FullDataflowGranularity }
+                .map { it.start }
+        }
+
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
@@ -183,6 +192,13 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var nextDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::nextDFGEdges, true)
+
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    val nextFullDFG: List<Node>
+        get() {
+            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
+        }
 
     /** Outgoing Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)

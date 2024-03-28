@@ -91,7 +91,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   A[assignment.rhs] -- DFG --> assignment.lhs;
-  subgraph S[If the ast parent is not a Block
+  subgraph S[If the ast parent is not a Block]
     direction LR
     assignment.rhs -- DFG --> assignment;
   end
@@ -162,6 +162,7 @@ Scheme:
 ## NewExpression
 
 Interesting fields:
+
 * `initializer: Expression`: The initializer of the expression.
 
 The `initializer` flows to the whole expression.
@@ -207,7 +208,7 @@ Scheme:
     thenExpression -.- node;
     elseExpression -.- node;
     elseExpression -- DFG --> node;
-   ```
+  ```
 
 ## Reference
 
@@ -269,7 +270,7 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
     input -- DFG 4 --> R[/Node/];
     R == next read of ==> refersTo;
   ```
-* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!*
+* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
   ```mermaid
   flowchart LR
     node -.- rhs;
@@ -283,9 +284,9 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
     node -- DFG 3 --> lhs;
     R[/Node/] == next read of ==> refersTo;
   ```
-* If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation.
+* If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation. Scheme:
   ```mermaid
-  flowchart LR
+  flowchart LR 
     node -.- rhs;
     node -.- lhs;
     lhs -.- refersTo;
@@ -462,8 +463,8 @@ Scheme:
 ### DoStatement
 
 Interesting fields:
-* `condition: Statement`: The condition that is evaluated before making the branching decision
 
+* `condition: Statement`: The condition that is evaluated before making the branching decision
 
 Scheme:
 ```mermaid
@@ -475,6 +476,7 @@ Scheme:
 ### WhileStatement
 
 Interesting fields:
+
 * `condition: Statement`: The condition that is evaluated before making the branching decision
 * `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition
 
@@ -490,6 +492,7 @@ Scheme:
 ### ForStatement
 
 Interesting fields:
+
 * `condition: Statement`: The condition that is evaluated before making the branching decision
 * `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition.
 
@@ -506,6 +509,7 @@ Scheme:
 ### IfStatement
 
 Interesting fields:
+
 * `condition: Statement`: The condition that is evaluated before making the branching decision
 * `conditionDeclaration: Statement`: A declaration containing the condition in the initialize, used instead of the condition.
 
@@ -521,6 +525,7 @@ Scheme:
 
 ### SwitchStatement
 Interesting fields:
+
 * `selector: Statement`: The expression that is evaluated before making the branching decision
 * `selectorDeclaration: Statement`: A declaration containing the selector in the initializer, used instead of the selector.
 

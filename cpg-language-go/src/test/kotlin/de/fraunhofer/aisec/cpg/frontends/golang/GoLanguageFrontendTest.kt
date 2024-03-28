@@ -96,7 +96,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // We should be able to follow the DFG backwards from the declaration to the individual
         // key/value expressions
-        val path = data.firstAssignment?.followPrevDFG { it is KeyValueExpression }
+        val path = data.firstAssignment?.followPrevFullDFG { it is KeyValueExpression }
 
         assertNotNull(path)
         assertEquals(2, path.size)
@@ -508,6 +508,30 @@ class GoLanguageFrontendTest : BaseTest() {
         assertLocalName("Printf", printfCall)
         assertFullName("fmt.Printf", printfCall)
         assertInvokes(printfCall, printf)
+    }
+
+    @Test
+    fun testPointerTypeInference() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("inference.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
+
+        // There should be only a single one inferred method with that name
+        val queryDecl = result.methods("Query").singleOrNull()
+        assertNotNull(queryDecl)
+        assertTrue(queryDecl.isInferred)
+
+        val query = result.mcalls["Query"]
+        assertInvokes(query, queryDecl)
     }
 
     @Test

@@ -107,12 +107,14 @@ An example of a file could look as follows:
   ```
 
 This file configures the following edges:
+
 * For a method declaration in Java `java.util.List.addAll(int, java.util.Object)`, the parameter 1 flows to the base (i.e., the list object)
 * For a method declaration in Java `java.util.List.addAll(java.util.Object)`, the parameter 0 flows to the base (i.e., the list object)
 * For a function declaration in C `memcpy` (and thus also CXX `std::memcpy`), the parameter 1 flows to parameter 0.
 
 
 Note: If multiple function summaries match a method/function declaration (after the normal matching considering the language, local name of the function/method, signature if applicable and type hierarchy of the base object), we use the following routine to identify ideally a single entry:
+
 1. We filter for existing signatures since it's more precisely specified than the generic "catch all" without a signature-element.
 2. We filter for the most precise class of the base.
 3. If there are still multiple options, we take the longest signature.
