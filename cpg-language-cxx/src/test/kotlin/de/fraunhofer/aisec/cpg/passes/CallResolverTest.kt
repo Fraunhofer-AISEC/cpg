@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
 import java.nio.file.Path
 import java.util.function.Predicate
@@ -240,11 +239,10 @@ class CallResolverTest : BaseTest() {
         val functionDeclaration = multiply.invokes[0]
         assertFalse(functionDeclaration.isInferred)
         assertEquals("int", functionDeclaration.signatureTypes[0].typeName)
-        assertTrue(multiply.arguments[0] is CastExpression)
 
-        val implicitCast = multiply.arguments[0] as CastExpression
-        assertEquals("int", implicitCast.castType.typeName)
-        assertEquals("10.0", implicitCast.expression.code)
+        var arg = multiply.arguments.firstOrNull()
+        assertIs<Literal<*>>(arg)
+        assertLiteralValue(10.0, arg)
 
         // Check implicit cast in case of ambiguous call
         val ambiguousCall = findByUniqueName(callExpressions, "ambiguous_multiply")
@@ -260,12 +258,9 @@ class CallResolverTest : BaseTest() {
                     func.parameters[0].type.name.localName == "float"
             )
         }
-        // Check Cast
-        assertTrue(ambiguousCall.arguments[0] is CastExpression)
-
-        val castExpression = ambiguousCall.arguments[0] as CastExpression
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), castExpression.type)
-        assertEquals("10.0", castExpression.expression.code)
+        arg = ambiguousCall.arguments.firstOrNull()
+        assertIs<Literal<*>>(arg)
+        assertLiteralValue(10.0, arg)
     }
 
     @Test
@@ -352,9 +347,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(2, display10.invokes.size)
         assertTrue(display.invokes.contains(displayDeclaration))
         assertEquals(1, display10.arguments.size)
-        assertTrue(display10.arguments[0] is CastExpression)
-        assertEquals("10.0", (display10.arguments[0] as CastExpression).expression.code)
-        assertLocalName("int", (display10.arguments[0] as CastExpression).castType)
+        assertLiteralValue(10.0, display10.arguments[0])
     }
 
     @Test

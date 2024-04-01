@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
@@ -479,6 +480,85 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
+        // Let's do some next generation stuff here, but currently only for "normal" function calls
+        val nextGen =
+            when {
+                curClass != null -> false
+                call is MemberCallExpression -> false
+                call is ConstructExpression -> false
+                call.instantiatesTemplate() && call.language is HasTemplates -> false
+                call.callee !is Reference -> false
+                else -> {
+                    // Unfortunate we need to resort the old symbol resolving if templates are
+                    // involved and since we do not have the template expansion pass yet, we need to
+                    // a rather stupid check, if they are possible template functions with this name
+                    // and disable NG.
+                    val templateFunctions =
+                        scopeManager.resolve<FunctionTemplateDeclaration>(scope) {
+                            it.name.lastPartsMatch(call.name)
+                        }
+                    templateFunctions.isEmpty()
+                }
+            }
+
+        if (nextGen) {
+            handleCallExpression(call, curClass)
+        } else {
+            handleCallExpressionLegacy(call, curClass)
+        }
+    }
+
+    /**
+     * This function tries to resolve the call expression according to the [CallExpression.callee].
+     */
+    private fun handleCallExpression(call: CallExpression, curClass: RecordDeclaration?) {
+        val result = scopeManager.resolveCall(call)
+
+        when (result.success) {
+            ScopeManager.CallResolutionResult.SuccessKind.PROBLEMATIC -> {
+                log.error(
+                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible candidates"
+                )
+                call.invokes = result.bestViable.toList()
+            }
+            ScopeManager.CallResolutionResult.SuccessKind.AMBIGUOUS -> {
+                log.warn(
+                    "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain all possible candidates"
+                )
+                call.invokes = result.bestViable.toList()
+            }
+            ScopeManager.CallResolutionResult.SuccessKind.SUCCESSFUL -> {
+                call.invokes = result.bestViable.toList()
+            }
+            ScopeManager.CallResolutionResult.SuccessKind.UNRESOLVED -> {
+                // Resolution has provided no result, we can forward this to the inference system,
+                // if we want. While this is definitely a function, it could still be a function
+                // inside a namespace. We therefore have two possible start points, a namespace
+                // declaration or a translation unit. Nothing else is allowed (fow now). We can
+                // re-use the information in the ResolutionResult, since this already contains the
+                // actual start scope (e.g. in case the callee has an FQN).
+                var scope = result.actualStartScope
+                if (scope !is NameScope) {
+                    scope = scopeManager.globalScope
+                }
+                val func =
+                    when (val start = scope?.astNode) {
+                        is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
+                        is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
+                        else -> null
+                    }
+                call.invokes = listOfNotNull(func)
+            }
+        }
+
+        // We also set the callee's refersTo
+        (call.callee as? Reference)?.refersTo = call.invokes.firstOrNull()
+    }
+
+    private fun handleCallExpressionLegacy(
+        call: CallExpression,
+        curClass: RecordDeclaration?,
+    ) {
         // At this point, we decide what to do based on the callee property
         val callee = call.callee
 
@@ -498,7 +578,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
                 candidates
             } else {
-                resolveCallee(callee, curClass, call) ?: return
+                resolveCalleeLegacy(callee, curClass, call) ?: return
             }
 
         // If we do not have any candidates at this point, we will infer one.
@@ -523,7 +603,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     val (scope, _) = scopeManager.extractScope(call, scopeManager.globalScope)
 
                     // We have two possible start points, a namespace declaration or a translation
-                    // unit. Nothing else is allowed (fow now)
+                    // unit. Nothing else is allowed (for now)
                     val func =
                         when (val start = scope?.astNode) {
                             is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
@@ -554,7 +634,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *
      * In case a resolution is not possible, `null` can be returned.
      */
-    protected fun resolveCallee(
+    protected fun resolveCalleeLegacy(
         callee: Expression?,
         curClass: RecordDeclaration?,
         call: CallExpression
@@ -601,7 +681,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     // complexity
                     language.refineNormalCallResolution(call, ctx, currentTU)
                 } else {
-                    scopeManager.resolveFunction(call).toMutableList()
+                    scopeManager.resolveFunctionLegacy(call).toMutableList()
                 }
 
             candidates
@@ -658,7 +738,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     )
                     .toMutableList()
             } else {
-                scopeManager.resolveFunction(call).toMutableList()
+                scopeManager.resolveFunctionLegacy(call).toMutableList()
             }
 
         // Find invokes by supertypes
@@ -803,7 +883,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // Filter the value declarations for an appropriate method
             scope?.valueDeclarations?.filterIsInstance<MethodDeclaration>()?.filter {
-                it.name.lastPartsMatch(name) && it.hasSignature(call)
+                it.name.lastPartsMatch(name) && it.hasSignature(call.signature, call.arguments)
             } ?: listOf()
         }
     }

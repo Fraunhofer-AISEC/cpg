@@ -30,8 +30,7 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -40,11 +39,31 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import de.fraunhofer.aisec.cpg.isDerivedFrom
-import de.fraunhofer.aisec.cpg.wrapState
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+
+/**
+ * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
+ * type into another is successful according to the logic of the [Language].
+ */
+sealed class CastResult(
+    /**
+     * The "distance" from the base type to the target type that is needed when this object needs to
+     * be cast. For example, if the types are the same, the distance is 0. An implicit cast is 1.
+     * The distance from a derived class to its direct super class is also 1. It increments for each
+     * super class in the hierarchy.
+     */
+    open var depthDistance: Int
+)
+
+data object CastNotPossible : CastResult(-1)
+
+data object DirectMatch : CastResult(0)
+
+data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDistance) {
+    companion object : CastResult(1)
+}
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -215,28 +234,28 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     }
 
     /**
-     * This function checks, if [type] is derived from [superType]. Note, this also takes the
+     * This function checks, if [type] is derived from [targetType]. Note, this also takes the
      * [WrapState] of the type into account, which means that pointer types of derived types will
      * not match with a non-pointer type of its base type. But, if both are pointer types, they will
      * match.
      *
      * Optionally, the nodes that hold the respective type can be supplied as [hint] and
-     * [superHint].
+     * [targetHint].
      */
     open fun isDerivedFrom(
         type: Type,
-        superType: Type,
+        targetType: Type,
         hint: HasType?,
-        superHint: HasType?
+        targetHint: HasType?
     ): Boolean {
         // We can take a shortcut if it is the same type
-        if (type == superType) {
+        if (type == targetType) {
             return true
         }
 
         // We can also take a shortcut: if they are not of the same subclass, they will never
         // match
-        if (type::class != superType::class) {
+        if (type::class != targetType::class) {
             return false
         }
 
@@ -246,7 +265,52 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         // Check, if super type (or its root) is in the list. Also, the wrap state needs to be the
         // same
-        return superType.root in superTypes && type.wrapState == superType.wrapState
+        return targetType.root in superTypes && type.wrapState == targetType.wrapState
+    }
+
+    open fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType? = null,
+        targetHint: HasType? = null
+    ): CastResult {
+        // We can take a shortcut if it is the same type
+        if (type == targetType) {
+            return DirectMatch
+        }
+
+        // We can also take a shortcut: if they are not of the same subclass, they will never
+        // match
+        if (type::class != targetType::class) {
+            return CastNotPossible
+        }
+
+        // Retrieve all ancestor types of our type (more concretely of the root type)
+        val root = type.root
+        val ancestors = root.ancestors
+        val superTypes = ancestors.map(Type.Ancestor::type)
+
+        return if (targetType.root in superTypes) {
+            // Find depth
+            val depth = ancestors.firstOrNull { it.type == targetType.root }?.depth
+            if (depth == null) {
+                // This should not happen
+                CastNotPossible
+            } else {
+                ImplicitCast(depth)
+            }
+        } else {
+            CastNotPossible
+        }
+    }
+
+    open fun isImplicitCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        superHint: HasType?
+    ): Boolean {
+        return false
     }
 
     /**
@@ -260,6 +324,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         target: FunctionDeclaration,
         signature: List<Type>,
         expressions: List<Expression>? = null,
+        neededImplicitCasts: Map<Int, Boolean>? = null,
     ): Boolean {
         val targetSignature = target.parameters
         return if (
@@ -294,6 +359,60 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             // Longer target signatures are only allowed with varargs. If we reach this point, no
             // vararg has been encountered
             signature.size == targetSignature.size
+        }
+    }
+
+    /**
+     * This functions gives the language a chance to refine the results of a
+     * [ScopeManager.resolveCall]. The default implementation will follow the following heuristic:
+     * - If the list of viableFunctions is empty, we can directly return.
+     * - If we have only one item in viableFunctions, we can take it.
+     * - Next, we can check for direct matches, meaning that they have a SignatureResult that only
+     *   has DirectMatchNoCastNeeded casts.
+     * - Lastly, if we have not direct matches, we need to sort the viable functions using a simple
+     *   ranking. The function(s) will the best (lowest) ranking will be chosen as the best. The
+     *   ranking is determined by the "depth" of all cast results in the signature results.
+     */
+    open fun bestViableResolution(
+        result: ScopeManager.CallResolutionResult
+    ): List<FunctionDeclaration> {
+        // No need to do anything, if the list of viable functions is empty
+        if (result.viableFunctions.isEmpty()) {
+            return listOf()
+        }
+
+        // If we already have only one viable result, we can just go back
+        val single = result.viableFunctions.singleOrNull()
+        if (single != null) {
+            return listOf(single)
+        }
+
+        // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
+        // result
+        val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
+        return if (directMatches.size > 1) {
+            // This is an ambiguous result
+            result.success = ScopeManager.CallResolutionResult.SuccessKind.AMBIGUOUS
+            // Let's return all direct matches
+            directMatches.map { it.key }
+        } else if (directMatches.size == 1) {
+            // Let's return the single direct match
+            listOf(directMatches.first().key)
+        } else {
+            // Otherwise, sort it according to a simple ranking based on the total number of
+            // conversions needed. This might not necessarily be the best idea and this is also
+            // not really optimized.
+            val rankings = result.signatureResults.entries.map { Pair(it.value.ranking, it.key) }
+
+            // Find the best (lowest) rank and find functions with the specific rank
+            val bestRanking = rankings.minBy { it.first }.first
+            val list = rankings.filter { it.first == bestRanking }.map { it.second }
+            if (list.size > 1) {
+                // One then more result has the same ranking, this result is ambiguous
+                result.success = ScopeManager.CallResolutionResult.SuccessKind.AMBIGUOUS
+            }
+            // Return the list of best-ranked (hopefully only one)
+            list
         }
     }
 }

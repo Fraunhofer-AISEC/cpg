@@ -30,14 +30,16 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Tag
 
+@Tag("integration")
 class Neo4JTest {
     @Test
     @Throws(InterruptedException::class)
     fun testPush() {
         val (application, translationResult) = createTranslationResult()
 
-        assertEquals(32, translationResult.functions.size)
+        assertEquals(36, translationResult.functions.size)
 
         application.pushToNeo4j(translationResult)
 
@@ -48,7 +50,7 @@ class Neo4JTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(32, functions.size)
+            assertEquals(36, functions.size)
 
             transaction.commit()
         }

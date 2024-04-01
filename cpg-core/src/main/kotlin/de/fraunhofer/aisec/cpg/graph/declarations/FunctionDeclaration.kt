@@ -107,14 +107,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
                 })
 
     /**
-     * This function checks, if the supplied [CallExpression] has the same signature as the current
-     * [FunctionDeclaration].
-     */
-    fun hasSignature(call: CallExpression): Boolean {
-        return hasSignature(call.signature, call.arguments)
-    }
-
-    /**
      * This function checks, if the two supplied signatures are equal. The usual use-case is
      * comparing the signature arguments of a [CallExpression] (in [targetSignature]) against the
      * current [FunctionDeclaration]. Optionally, a list of [targetExpressions] (e.g., the actual
@@ -123,9 +115,15 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
      */
     fun hasSignature(
         targetSignature: List<Type>,
-        targetExpressions: List<Expression>? = null
+        targetExpressions: List<Expression>? = null,
+        neededImplicitCasts: Map<Int, Boolean>? = null,
     ): Boolean {
-        return this.language?.hasSignature(this, targetSignature, targetExpressions) ?: false
+        return this.language?.hasSignature(
+            this,
+            targetSignature,
+            targetExpressions,
+            neededImplicitCasts
+        ) ?: false
     }
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
