@@ -109,6 +109,11 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 .mapNotNull { (it as? ObjectType)?.recordDeclaration }
                 .toSet()
         recordDeclaration.superTypeDeclarations = superTypeDeclarations
+
+        // This will make sure that the type is correctly registered with the type system and that
+        // all the super types are set correctly
+        recordDeclaration.toType()
+
         return superTypeDeclarations
     }
 
