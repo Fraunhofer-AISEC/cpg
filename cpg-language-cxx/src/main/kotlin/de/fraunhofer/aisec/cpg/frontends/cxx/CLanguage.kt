@@ -111,26 +111,6 @@ open class CLanguage :
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
-    override fun isDerivedFrom(
-        type: Type,
-        targetType: Type,
-        hint: HasType?,
-        targetHint: HasType?
-    ): Boolean {
-        val match = super.isDerivedFrom(type, targetType, hint, targetHint)
-        if (match) {
-            return true
-        }
-
-        // As a special rule, a non-nested pointer and array of the same type are completely
-        // interchangeable
-        if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
-            return true
-        }
-
-        return false
-    }
-
     override fun tryCast(
         type: Type,
         targetType: Type,

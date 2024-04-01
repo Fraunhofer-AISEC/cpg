@@ -43,6 +43,8 @@ import java.util.*
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
+annotation class NextGen
+
 /**
  * The scope manager builds a multi-tree structure of nodes associated to a scope. These scopes
  * capture the validity of certain (Variable-, Field-, Record-)declarations but are also used to
