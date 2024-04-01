@@ -256,3 +256,9 @@ interface HasGlobalVariables : LanguageTrait {
  * ([ReplaceCallCastPass]) after the initial language frontends are done.
  */
 interface HasFunctionalCasts : LanguageTrait
+
+/**
+ * A language trait that specifies that this language allowed overloading functions, meaning that
+ * multiple functions can share the same name with different parameters.
+ */
+interface HasFunctionOverloading : LanguageTrait

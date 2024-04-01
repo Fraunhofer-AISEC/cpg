@@ -1161,7 +1161,9 @@ class GoLanguageFrontendTest : BaseTest() {
         val calls = result.calls
         calls.forEach {
             assertTrue(it.invokes.isNotEmpty(), "${it.name}'s invokes should not be empty")
-            it.invokes.forEach { func -> assertFalse(func.isInferred) }
+            it.invokes.forEach { func ->
+                assertFalse(func.isInferred, "${func.name}'s should not be inferred")
+            }
         }
 
         val funcy = result.calls["funcy"]
@@ -1172,7 +1174,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertInvokes(funcy, result.functions["do"])
 
         val refs = result.refs.filter { it.name.localName != GoLanguage().anonymousIdentifier }
-        refs.forEach { assertNotNull(it.refersTo) }
+        refs.forEach { assertNotNull(it.refersTo, "${it.name}'s referTo is empty") }
     }
 
     @Test

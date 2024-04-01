@@ -122,7 +122,7 @@ open class CLanguage :
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration> {
-        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
+        val invocationCandidates = ctx.scopeManager.resolveFunctionLegacy(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for implicit casts
             invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
@@ -164,21 +164,46 @@ open class CLanguage :
 
     override fun isDerivedFrom(
         type: Type,
-        superType: Type,
+        targetType: Type,
         hint: HasType?,
-        superHint: HasType?
+        targetHint: HasType?
     ): Boolean {
-        val match = super.isDerivedFrom(type, superType, hint, superHint)
+        val match = super.isDerivedFrom(type, targetType, hint, targetHint)
         if (match) {
             return true
         }
 
         // As a special rule, a non-nested pointer and array of the same type are completely
         // interchangeable
-        if (type.root == superType.root && type is PointerType && superType is PointerType) {
+        if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
             return true
         }
 
         return false
+    }
+
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?
+    ): CastResult {
+        val match = super.tryCast(type, targetType, hint, targetHint)
+        if (match != CastNotPossible) {
+            return match
+        }
+
+        // Numeric types can be cast implicitly
+        if (type is NumericType && targetType is NumericType) {
+            return ImplicitCast
+        }
+
+        // As a special rule, a non-nested pointer and array of the same type are completely
+        // interchangeable
+        if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
+            return ImplicitCast
+        }
+
+        return CastNotPossible
     }
 }

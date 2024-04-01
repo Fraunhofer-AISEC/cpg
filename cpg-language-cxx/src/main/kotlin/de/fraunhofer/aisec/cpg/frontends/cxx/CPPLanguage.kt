@@ -46,7 +46,8 @@ open class CPPLanguage :
     HasStructs,
     HasClasses,
     HasUnknownType,
-    HasFunctionalCasts {
+    HasFunctionalCasts,
+    HasFunctionOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
@@ -197,7 +198,7 @@ open class CPPLanguage :
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration> {
-        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
+        val invocationCandidates = ctx.scopeManager.resolveFunctionLegacy(call).toMutableList()
         if (invocationCandidates.isEmpty()) {
             // Check for usage of default args
             invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, ctx))
