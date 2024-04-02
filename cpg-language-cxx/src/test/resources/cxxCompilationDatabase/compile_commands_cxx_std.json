@@ -1,0 +1,14 @@
+[
+  {
+    "command": "/usr/bin/gcc -c main.cpp -std=gnu++20 -o CMakeFiles/cxx20.dir/main.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "main.cpp",
+    "output": "src/CMakeFiles/cxx20.dir/main.cpp.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c main.cpp -std=c++14 -o CMakeFiles/cxx14.dir/main.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "main.cpp",
+    "output": "src/CMakeFiles/cxx14.dir/main.cpp.o"
+  }
+]

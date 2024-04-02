@@ -200,7 +200,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
-        val includePaths: MutableList<String> = ArrayList()
+        val includePaths = mutableSetOf<String>()
         config.topLevel?.let { includePaths.add(it.toPath().toAbsolutePath().toString()) }
 
         val symbols: HashMap<String, String> = HashMap()
@@ -209,7 +209,19 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         includePaths.addAll(config.includePaths.map { it.toAbsolutePath().toString() })
 
         config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
-        config.compilationDatabase?.getSymbols(file)?.let { symbols.putAll(it) }
+        if (config.useUnityBuild) {
+            // For a unity build, we cannot access the individual symbols per file, but rather only
+            // for the whole component
+            symbols.putAll(
+                config.compilationDatabase?.getAllSymbols(
+                    ctx.currentComponent?.name?.localName ?: ""
+                ) ?: mutableMapOf()
+            )
+        } else {
+            config.compilationDatabase
+                ?.getSymbols(ctx.currentComponent?.name?.localName ?: "", file)
+                ?.let { symbols.putAll(it) }
+        }
 
         val scannerInfo = ScannerInfo(symbols, includePaths.toTypedArray())
         val log = DefaultLogService()

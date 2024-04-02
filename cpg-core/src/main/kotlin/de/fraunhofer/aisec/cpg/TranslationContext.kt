@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.graph.Component
+
 /**
  * The translation context holds all necessary managers and configurations needed during the
  * translation process.
@@ -45,5 +47,11 @@ class TranslationContext(
      * The type manager is responsible for managing type information. Currently, we have one
      * instance of a [TypeManager] for the overall [TranslationResult].
      */
-    val typeManager: TypeManager
+    val typeManager: TypeManager,
+
+    /**
+     * Some frontends need access to the current [Component] we are currently processing. Note: for
+     * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
+     */
+    var currentComponent: Component? = null,
 )

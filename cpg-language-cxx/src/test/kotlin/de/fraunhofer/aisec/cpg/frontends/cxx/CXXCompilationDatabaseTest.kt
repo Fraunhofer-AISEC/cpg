@@ -28,9 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.evaluate
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -160,5 +163,29 @@ class CXXCompilationDatabaseTest {
                 .firstOrNull()
                 ?.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
+    }
+
+    @Test
+    fun testVersion() {
+        val versions =
+            mapOf(
+                "cxx20" to 202002L,
+                "cxx14" to 201402L,
+            )
+
+        val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_cxx_std.json")
+        val result =
+            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        for ((name, version) in versions) {
+            val component = result.components[name]
+            val a = component.variables["a"]
+            assertNotNull(a)
+            assertEquals(version, a.evaluate(), "$name should be version $version")
+        }
     }
 }
