@@ -261,6 +261,11 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                     //  C++ we can't, as vararg types are not defined here anyways)
                     return true
                 }
+                if (i >= signature.size && this !is HasDefaultArguments) {
+                    // The function accepts more arguments than we have
+                    // TODO: Check if i and everything subsequent could be a default argument
+                    return false
+                }
                 val provided = signature[i]
                 val expression = expressions?.get(i)
                 if (!provided.isDerivedFrom(declared.type, expression, target)) {
