@@ -271,6 +271,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 type = this.objectType(t)
                 type.typeOrigin = Type.Origin.GUESSED
             }
+        } catch (e: IllegalArgumentException) {
+            val t = frontend.recoverTypeFromUnsolvedException(e)
+            if (t == null) {
+                log.warn("Could not resolve type for {}", variable)
+                type = frontend.typeOf(variable.type)
+            } else {
+                type = this.objectType(t)
+                type.typeOrigin = Type.Origin.GUESSED
+            }
         }
         val fieldDeclaration =
             this.newFieldDeclaration(
