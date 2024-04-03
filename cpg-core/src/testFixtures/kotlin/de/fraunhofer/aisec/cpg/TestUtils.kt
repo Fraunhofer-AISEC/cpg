@@ -178,7 +178,11 @@ object TestUtils {
         filterComponents: List<String>? = null,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): TranslationResult {
-        return analyze(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
+        return analyze(
+            listOf(),
+            jsonCompilationDatabase.parentFile.toPath().toAbsolutePath(),
+            usePasses
+        ) {
             val db = CompilationDatabase.fromFile(jsonCompilationDatabase, filterComponents)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)

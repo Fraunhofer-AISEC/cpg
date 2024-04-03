@@ -216,7 +216,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
             return listOf(*command.split(" ").toTypedArray())
         }
 
-        /** Try to convert relative path to absolut path by using basedir as root */
+        /** Try to convert relative path to absolute path by using basedir as root */
         private fun resolveRelativePath(path: String, basedir: String?): String {
             if (
                 !File(path).isAbsolute &&
