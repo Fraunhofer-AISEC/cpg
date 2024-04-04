@@ -783,7 +783,11 @@ class ScopeManager : ScopeProvider {
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
      * `B` points to `A::B`, rather than to `A`.
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(
+        node: Node,
+        scope: Scope? = currentScope,
+        allowedToFail: Boolean = false
+    ): Pair<Scope?, Name> {
         var name: Name = node.name
         var s = scope
 
@@ -807,12 +811,16 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
-                    Util.warnWithFileLocation(
-                        node,
-                        LOGGER,
-                        "Could not find the scope $scopeName needed to resolve the call ${node.name}"
-                    )
-                    scope
+                    if (!allowedToFail) {
+                        Util.warnWithFileLocation(
+                            node,
+                            LOGGER,
+                            "Could not find the scope $scopeName needed to resolve the call ${node.name}"
+                        )
+                        scope
+                    } else {
+                        null
+                    }
                 } else {
                     scopes[0]
                 }

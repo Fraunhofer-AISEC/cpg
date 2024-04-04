@@ -49,6 +49,18 @@ class Name(
         language: Language<*>?
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
+    val parts: List<String>
+        get() {
+            val internal = mutableListOf<String>()
+            var name: Name? = this
+            while (name != null) {
+                internal += name.localName
+                name = name.parent
+            }
+
+            return internal.reversed()
+        }
+
     /**
      * The full string representation of this name. Since [localName] and [parent] are immutable,
      * this is basically a cache for [toString]. Otherwise, we would need to call [toString] a lot
@@ -159,3 +171,12 @@ fun Name?.fqn(localName: String) =
     } else {
         Name(localName, this, this.delimiter)
     }
+
+fun Name?.fqn(name: Name): Name {
+    return if (this == null) {
+        name
+    } else {
+        // not really the best way
+        parseName(this.toString() + this.delimiter + name.toString(), this.delimiter)
+    }
+}

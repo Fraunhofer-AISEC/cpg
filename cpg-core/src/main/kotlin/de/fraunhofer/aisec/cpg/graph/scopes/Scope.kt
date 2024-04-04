@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity
@@ -98,6 +99,9 @@ abstract class Scope(
         return result
     }
 
+    // TODO: not the best way
+    val using = mutableListOf<Name>()
+
     /** Returns the [GlobalScope] of this scope by traversing its parents upwards. */
     val globalScope: Scope?
         get() {
@@ -112,4 +116,14 @@ abstract class Scope(
 
             return scope
         }
+
+    override fun toString(): String {
+        val builder = ToStringBuilder(this, Node.TO_STRING_STYLE)
+
+        if (name?.isNotEmpty() == true) {
+            builder.append("name", name)
+        }
+
+        return builder.toString()
+    }
 }

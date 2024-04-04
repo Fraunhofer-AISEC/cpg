@@ -1813,4 +1813,22 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val functions = result.functions { it.name.localName == "foo" && it.isDefinition }
         assertEquals(2, functions.size)
     }
+
+    @Test
+    fun testUsing() {
+        val file = File("src/test/resources/cxx/using.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        // There should be no type "string" anymore, only "std::string"
+        assertFalse(result.finalCtx.typeManager.typeExists("string"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::string"))
+
+        // the same applies to "inner::secret"
+        assertFalse(result.finalCtx.typeManager.typeExists("inner::secret"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::inner::secret"))
+    }
 }

@@ -183,10 +183,13 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return other is Type && name == other.name && language == other.language
+        return other is Type &&
+            name == other.name &&
+            language == other.language &&
+            scope == other.scope
     }
 
-    override fun hashCode() = Objects.hash(name, language)
+    override fun hashCode() = Objects.hash(name, language, scope)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE).append("name", name).toString()

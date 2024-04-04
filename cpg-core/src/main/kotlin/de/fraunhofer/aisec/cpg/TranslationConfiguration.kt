@@ -505,6 +505,7 @@ private constructor(
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
+            registerPass<TypeNormalizer>()
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
             registerPass<ReplaceCallCastPass>()

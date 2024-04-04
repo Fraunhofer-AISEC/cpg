@@ -423,13 +423,11 @@ fun MetadataProvider.newNamespaceDeclaration(
  */
 @JvmOverloads
 fun MetadataProvider.newUsingDeclaration(
-    qualifiedName: CharSequence?,
+    name: CharSequence?,
     rawNode: Any? = null
 ): UsingDeclaration {
     val node = UsingDeclaration()
-    node.applyMetadata(this, qualifiedName, rawNode)
-
-    node.qualifiedName = qualifiedName.toString()
+    node.applyMetadata(this, name, rawNode)
 
     log(node)
     return node
