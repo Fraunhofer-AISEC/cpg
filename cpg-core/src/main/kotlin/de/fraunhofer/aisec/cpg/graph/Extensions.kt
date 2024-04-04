@@ -311,8 +311,17 @@ fun Node.followNextFullDFGEdgesUntilHit(
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
+            // For our daily dose of special magic, we check that the path reaching the next node
+            // differs. If the path is different, we do accept seeing the same node multiple times.
+            val indexedPath =
+                currentPath
+                    .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
+                    .filterNotNull()
             if (
-                next !in currentPath &&
+                (indexedPath.isEmpty() ||
+                    indexedPath.all {
+                        it.first == 0 || currentNode != currentPath[it.first - 1]
+                    }) &&
                     (findAllPossiblePaths ||
                         (next !in alreadySeenNodes && worklist.none { next in it }))
             ) {
