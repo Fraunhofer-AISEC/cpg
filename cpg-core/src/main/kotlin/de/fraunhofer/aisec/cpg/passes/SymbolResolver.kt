@@ -399,8 +399,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (member == null) {
             member =
                 containingClass.superTypes
-                    .flatMap { it.fields }
-                    .filter { it.name.lastPartsMatch(reference.name) }
+                    .flatMap { it.recordDeclaration?.fields ?: listOf() }
+                    .filter { it.name.localName == reference.name.localName }
                     .map { it.definition }
                     .firstOrNull()
         }
