@@ -47,7 +47,7 @@ class ScopeVariables{
 
             try {
                 throw new error();
-            } catch (const error& varName) {
+            } catch (error* varName) {
                 printLog("func2_catch_varName", varName);
             };
             ScopeVariables scopeVariables;
