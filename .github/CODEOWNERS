@@ -1,4 +1,4 @@
-*                       @konradweiss @oxisto
+*                       @konradweiss @oxisto @KuechA
 
 *.go                    @oxisto
 cpg-language-go         @oxisto
@@ -8,6 +8,10 @@ cpg-language-typescript @oxisto
 
 *.py                    @maximiliankaul
 cpg-language-python     @maximiliankaul
+
+*.c                     @peckto
+*.cpp                   @peckto
+cpg-language-cxx        @peckto
 
 *.ll                    @KuechA
 cpg-language-llvm       @KuechA
