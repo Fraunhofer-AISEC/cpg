@@ -229,13 +229,13 @@ interface HasShortCircuitOperators : LanguageTrait {
  * A language trait, that specifies that this language treats functions "first-class citizens",
  * meaning they can be assigned to variables and passed as arguments to other functions.
  */
-interface HasFirstClassFunctions
+interface HasFirstClassFunctions : LanguageTrait
 
 /**
  * A language trait, that specifies that this language has an "anonymous" identifier, used for
  * unused parameters or suppressed assignments.
  */
-interface HasAnonymousIdentifier {
+interface HasAnonymousIdentifier : LanguageTrait {
     val anonymousIdentifier: String
         get() = "_"
 }
@@ -245,7 +245,7 @@ interface HasAnonymousIdentifier {
  * [GlobalScope], i.e., not within a namespace, but directly contained in a
  * [TranslationUnitDeclaration].
  */
-interface HasGlobalVariables {
+interface HasGlobalVariables : LanguageTrait {
     val globalVariableScopeClass: Class<out Node>
 }
 
@@ -255,4 +255,4 @@ interface HasGlobalVariables {
  * [CallExpression] and a [CastExpression], we need to employ an additional pass
  * ([ReplaceCallCastPass]) after the initial language frontends are done.
  */
-interface HasFunctionalCasts
+interface HasFunctionalCasts : LanguageTrait
