@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
@@ -258,17 +258,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * This function tries to resolve a [Node.name] to a list of symbols (a symbol represented by a
+     * [Declaration]) starting with [startScope]. This function can return a list of multiple
+     * symbols in order to check for things like function overloading. but it will only return list
+     * of symbols within the same scope; the list cannot be spread across different scopes.
+     *
+     * This means that as soon one or more symbols are found in a "local" scope, these shadow all
+     * other occurrences of the same / symbol in a "higher" scope and only the ones from the lower
+     * ones will be returned.
+     */
     private fun findSymbols(
         nodeWithName: Node,
         startScope: Scope? = scopeManager.currentScope
-    ): List<Declaration> {
+    ): Set<Declaration> {
         val (scope, name) = scopeManager.extractScope(nodeWithName, startScope)
         val list =
             scopeManager
                 .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
-                .toMutableList()
-        // If we have both the definition and the declaration in our list, we chose only the
-        // definition
+                .toMutableSet()
+        // If we have both the definition and the declaration of a function declaration in our list,
+        // we chose only the definition
         val it = list.iterator()
         while (it.hasNext()) {
             val decl = it.next()
@@ -543,22 +553,22 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val result = scopeManager.resolveCall(call)
 
         when (result.success) {
-            ScopeManager.CallResolutionResult.SuccessKind.PROBLEMATIC -> {
+            CallResolutionResult.SuccessKind.PROBLEMATIC -> {
                 log.error(
                     "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible candidates"
                 )
                 call.invokes = result.bestViable.toList()
             }
-            ScopeManager.CallResolutionResult.SuccessKind.AMBIGUOUS -> {
+            CallResolutionResult.SuccessKind.AMBIGUOUS -> {
                 log.warn(
                     "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain all possible candidates"
                 )
                 call.invokes = result.bestViable.toList()
             }
-            ScopeManager.CallResolutionResult.SuccessKind.SUCCESSFUL -> {
+            CallResolutionResult.SuccessKind.SUCCESSFUL -> {
                 call.invokes = result.bestViable.toList()
             }
-            ScopeManager.CallResolutionResult.SuccessKind.UNRESOLVED -> {
+            CallResolutionResult.SuccessKind.UNRESOLVED -> {
                 // Resolution has provided no result, we can forward this to the inference system,
                 // if we want. While this is definitely a function, it could still be a function
                 // inside a namespace. We therefore have two possible start points, a namespace
