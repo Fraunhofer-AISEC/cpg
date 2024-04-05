@@ -27,7 +27,7 @@ theme:
   language: en
   features:
     - content.code.annotate
-    # - content.tabs.link
+    - content.tabs.link
     - content.tooltips
     # - header.autohide
     # - navigation.expand
@@ -142,6 +142,7 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:

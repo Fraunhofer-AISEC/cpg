@@ -80,6 +80,20 @@ body {
   margin: 0;
 }
 
+.md-typeset .tabbed-set {
+  border: 1px solid #c7cacc;
+  border-bottom: none;
+  border-top: none;
+  padding-right: 0.8rem;
+  padding-left: 0.8rem;
+  padding-bottom: 0.8rem;
+  margin: 0;
+}
+.md-typeset .tabbed-set .tabbed-content,
+.md-typeset .tabbed-set .tabbed-block {
+  border: none;
+}
+
 .md-typeset div.papers {
   border: 1px solid #c7cacc;
   border-bottom: none;
@@ -228,6 +242,10 @@ body {
 
 [dir="ltr"] .md-typeset .box ol,
 [dir="ltr"] .md-typeset .box ul {
+  border: none;
+}
+
+[dir="ltr"] .md-typeset ul>li>ul {
   border: none;
 }
 

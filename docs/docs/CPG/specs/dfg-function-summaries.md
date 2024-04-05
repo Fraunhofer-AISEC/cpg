@@ -27,84 +27,84 @@ An example of a file could look as follows:
 
 === "JSON"
 
-  ```json
-  [
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
-        "methodName": "java.util.List.addAll",
-        "signature": ["int", "java.util.Object"]
+    ```json
+    [
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+          "methodName": "java.util.List.addAll",
+          "signature": ["int", "java.util.Object"]
+        },
+        "dataFlows": [
+          {
+            "from": "param1",
+            "to": "base",
+            "dfgType": "full"
+          }
+        ]
       },
-      "dataFlows": [
-        {
-          "from": "param1",
-          "to": "base",
-          "dfgType": "full"
-        }
-      ]
-    },
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
-        "methodName": "java.util.List.addAll",
-        "signature": ["java.util.Object"]
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+          "methodName": "java.util.List.addAll",
+          "signature": ["java.util.Object"]
+        },
+        "dataFlows": [
+          {
+            "from": "param0",
+            "to": "base",
+            "dfgType": "full"
+          }
+        ]
       },
-      "dataFlows": [
-        {
-          "from": "param0",
-          "to": "base",
-          "dfgType": "full"
-        }
-      ]
-    },
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
-        "methodName": "memcpy"
-      },
-      "dataFlows": [
-        {
-          "from": "param1",
-          "to": "param0",
-          "dfgType": "full"
-        }
-      ]
-    }
-  ]
-  ```
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
+          "methodName": "memcpy"
+        },
+        "dataFlows": [
+          {
+            "from": "param1",
+            "to": "param0",
+            "dfgType": "full"
+          }
+        ]
+      }
+    ]
+    ```
 
 === "YAML"
 
-  ```yml
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-      methodName: java.util.List.addAll
-      signature:
-        - int
-        - java.util.Object
-    dataFlows:
-      - from: param1
-        to: base
-        dfgType: full
-  
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-      methodName: java.util.List.addAll
-      signature:
-        - java.util.Object
-    dataFlows:
-      - from: param0
-        to: base
-        dfgType: full
-
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
-      methodName: memcpy
-    dataFlows:
-      - from: param1
-        to: param0
-        dfgType: full
-  ```
+    ```yaml
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+        methodName: java.util.List.addAll
+        signature:
+          - int
+          - java.util.Object
+        dataFlows:
+          - from: param1
+            to: base
+            dfgType: full
+    
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+        methodName: java.util.List.addAll
+        signature:
+          - java.util.Object
+        dataFlows:
+          - from: param0
+            to: base
+            dfgType: full
+    
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+        methodName: memcpy
+        dataFlows:
+          - from: param1
+            to: param0
+            dfgType: full
+    ```
 
 This file configures the following edges:
 
