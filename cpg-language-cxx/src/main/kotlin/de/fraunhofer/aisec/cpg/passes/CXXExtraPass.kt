@@ -127,7 +127,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     it::class == declaration::class &&
                         !it.isDefinition &&
                         it.name == declaration.name &&
-                        it.hasSignature(declaration.signatureTypes)
+                        it.signature == declaration.signature
                 }
             for (candidate in candidates) {
                 candidate.definition = declaration
