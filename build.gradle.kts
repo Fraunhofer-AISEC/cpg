@@ -31,6 +31,7 @@ plugins {
     id("org.jetbrains.dokka")
     id("org.sonarqube")
     id("io.github.gradle-nexus.publish-plugin")
+    id("org.cyclonedx.bom") version "1.7.1"
 }
 
 // this is needed for the plugins block
