@@ -779,15 +779,16 @@ class ScopeManager : ScopeProvider {
                 CallResolutionResult.SuccessKind.UNRESOLVED,
                 startScope,
             )
+        // We can only resolve non-dynamic function calls here that have a reference node to our
+        // function
+        val callee = call.callee as? Reference ?: return result
 
-        val callee = call.callee ?: return result
-
-        val (scope, name) = extractScope(callee, startScope)
+        val (scope, _) = extractScope(callee, startScope)
         result.actualStartScope = scope
 
         // Retrieve a list of possible functions with a matching name
         result.candidateFunctions =
-            resolve<FunctionDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
+            callee.candidates?.filterIsInstance<FunctionDeclaration>() ?: listOf()
 
         if (call.language !is HasFunctionOverloading) {
             // If the function does not allow function overloading, and we have multiple values, the
