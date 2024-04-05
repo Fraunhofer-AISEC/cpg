@@ -91,7 +91,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
      * Until we have proper support for AST parents, we need to rely on the [resolutionHelper] to
      * find out if this reference is used as a [CallExpression.callee].
      */
-    var candidates: List<Declaration>? = null
+    var candidates: Set<Declaration>? = null
 
     override var aliases = mutableSetOf<HasAliases>()
 

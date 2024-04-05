@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
@@ -695,87 +696,22 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This is the result of [ScopeManager.resolveCall]. It holds all necessary intermediate results
-     * (such as [candidateFunctions], [viableFunctions]) as well as the final result (see
-     * [bestViable]) of the call resolution.
-     */
-    class CallResolutionResult(
-        /** The original call expression. */
-        val call: CallExpression,
-        var candidateFunctions: List<FunctionDeclaration>,
-        var viableFunctions: Set<FunctionDeclaration>,
-        var signatureResults: Map<FunctionDeclaration, SignatureResult>,
-        var bestViable: List<FunctionDeclaration>,
-        var success: SuccessKind,
-        /**
-         * The actual start scope of the resolution, after [extractScope] is called on the callee.
-         * This can differ from the original start scope parameter handed to [resolveCall] if the
-         * callee contains an FQN.
-         */
-        var actualStartScope: Scope?
-    ) {
-
-        /**
-         * This enum holds information about the kind of success this call resolution had. For
-         * example, whether it was successful without any errors or if an ambiguous result was
-         * returned.
-         */
-        enum class SuccessKind {
-            /**
-             * The call resolution was successful, and we have identified the best viable
-             * function(s).
-             *
-             * Ideally, we have only one function in [bestViable], but it could be that we still
-             * have multiple functions in this list. The most common scenario for this is if we have
-             * a member call to an interface, and we know at least partially which implemented
-             * classes could be in the [MemberExpression.base]. In this case, all best viable
-             * functions of each of the implemented classes are contained in [bestViable].
-             */
-            SUCCESSFUL,
-
-            /**
-             * The call resolution was problematic, i.e., some error occurred, or we were running
-             * into an unexpected state. An example would be that we arrive at multiple
-             * [candidateFunctions] for a language that does not have [HasFunctionOverloading].
-             *
-             * We try to store the most accurate result(s) possible in [bestViable].
-             */
-            PROBLEMATIC,
-
-            /**
-             * The call resolution was ambiguous in a way that we cannot decide between one or more
-             * [viableFunctions]. This can happen if we have multiple functions that have the same
-             * [SignatureResult.ranking]. A real compiler could not differentiate between those two
-             * functions and would throw a compile error.
-             *
-             * We store all ambiguous functions in [bestViable].
-             */
-            AMBIGUOUS,
-
-            /**
-             * The call resolution was unsuccessful, we could not find a [bestViable] or even a list
-             * of [viableFunctions] out of the [candidateFunctions].
-             *
-             * [bestViable] is empty in this case.
-             */
-            UNRESOLVED
-        }
-    }
-
-    /**
      * This function tries to resolve a [CallExpression] into its matching [FunctionDeclaration] (or
      * multiple functions, if applicable). The result is returned in the form of a
      * [CallResolutionResult] which holds detail information about intermediate results as well as
      * the kind of success the resolution had.
+     *
+     * Note: The [CallExpression.callee] needs to be resolved first, otherwise the call resolution
+     * fails.
      */
     fun resolveCall(call: CallExpression, startScope: Scope? = currentScope): CallResolutionResult {
         val result =
             CallResolutionResult(
                 call,
-                listOf(),
+                setOf(),
                 setOf(),
                 mapOf(),
-                listOf(),
+                setOf(),
                 CallResolutionResult.SuccessKind.UNRESOLVED,
                 startScope,
             )
@@ -788,7 +724,7 @@ class ScopeManager : ScopeProvider {
 
         // Retrieve a list of possible functions with a matching name
         result.candidateFunctions =
-            callee.candidates?.filterIsInstance<FunctionDeclaration>() ?: listOf()
+            callee.candidates?.filterIsInstance<FunctionDeclaration>()?.toSet() ?: setOf()
 
         if (call.language !is HasFunctionOverloading) {
             // If the function does not allow function overloading, and we have multiple values, the
@@ -808,7 +744,7 @@ class ScopeManager : ScopeProvider {
         result.viableFunctions = result.signatureResults.keys
 
         // Give the language a chance to narrow down the result (ideally to one)
-        result.bestViable = call.language?.bestViableResolution(result) ?: listOf()
+        result.bestViable = call.language?.bestViableResolution(result) ?: setOf()
 
         if (
             result.success != CallResolutionResult.SuccessKind.PROBLEMATIC &&
@@ -1106,5 +1042,92 @@ private fun FunctionDeclaration.matchesSignature(
         IncompatibleSignature
     } else {
         SignatureMatches(casts)
+    }
+}
+
+/**
+ * This is the result of [ScopeManager.resolveCall]. It holds all necessary intermediate results
+ * (such as [candidateFunctions], [viableFunctions]) as well as the final result (see [bestViable])
+ * of the call resolution.
+ */
+class CallResolutionResult(
+    /** The original call expression. */
+    val call: CallExpression,
+
+    /**
+     * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
+     * [SymbolResolver.findSymbols]), more specifically a list of [FunctionDeclaration] nodes.
+     */
+    var candidateFunctions: Set<FunctionDeclaration>,
+
+    /**
+     * A set of functions, that restrict the [candidateFunctions] to those whose signature match.
+     */
+    var viableFunctions: Set<FunctionDeclaration>,
+
+    /**
+     * A helper map to store the [SignatureResult] of each call to
+     * [FunctionDeclaration.matchesSignature] for each function in [viableFunctions].
+     */
+    var signatureResults: Map<FunctionDeclaration, SignatureResult>,
+
+    /**
+     * This set contains the best viable function(s) of the [viableFunctions]. Ideally this is only
+     * one, but because of ambiguities or other factors, this can contain multiple functions.
+     */
+    var bestViable: Set<FunctionDeclaration>,
+
+    /** The kind of success this resolution had. */
+    var success: SuccessKind,
+
+    /**
+     * The actual start scope of the resolution, after [ScopeManager.extractScope] is called on the
+     * callee. This can differ from the original start scope parameter handed to
+     * [ScopeManager.resolveCall] if the callee contains an FQN.
+     */
+    var actualStartScope: Scope?
+) {
+    /**
+     * This enum holds information about the kind of success this call resolution had. For example,
+     * whether it was successful without any errors or if an ambiguous result was returned.
+     */
+    enum class SuccessKind {
+        /**
+         * The call resolution was successful, and we have identified the best viable function(s).
+         *
+         * Ideally, we have only one function in [bestViable], but it could be that we still have
+         * multiple functions in this list. The most common scenario for this is if we have a member
+         * call to an interface, and we know at least partially which implemented classes could be
+         * in the [MemberExpression.base]. In this case, all best viable functions of each of the
+         * implemented classes are contained in [bestViable].
+         */
+        SUCCESSFUL,
+
+        /**
+         * The call resolution was problematic, i.e., some error occurred, or we were running into
+         * an unexpected state. An example would be that we arrive at multiple [candidateFunctions]
+         * for a language that does not have [HasFunctionOverloading].
+         *
+         * We try to store the most accurate result(s) possible in [bestViable].
+         */
+        PROBLEMATIC,
+
+        /**
+         * The call resolution was ambiguous in a way that we cannot decide between one or more
+         * [viableFunctions]. This can happen if we have multiple functions that have the same
+         * [SignatureResult.ranking]. A real compiler could not differentiate between those two
+         * functions and would throw a compile error.
+         *
+         * We store all ambiguous functions in [bestViable].
+         */
+        AMBIGUOUS,
+
+        /**
+         * The call resolution was unsuccessful, we could not find a [bestViable] or even a list of
+         * [viableFunctions] out of the [candidateFunctions].
+         *
+         * [bestViable] is empty in this case.
+         */
+        UNRESOLVED
     }
 }
