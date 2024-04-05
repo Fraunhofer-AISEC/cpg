@@ -65,10 +65,10 @@ var a = result.variables["a"]
 // returns the only variable with the name "a" or an exception otherwise
 var theOnlyA = result.variables["a", SearchModifiers.UNIQUE]
 
-// returns the first variable in the graph which does have an initialiser
+// returns the first variable in the graph which does have an initializer
 var anyWithInitializer = result.variables[{ it.initializer != null }]
 
-// returns the only variable in the graph which does not have an initialiser or throws an exception
+// returns the only variable in the graph which does not have an initializer or throws an exception
 var uniqueWithInitializer = result.variables[{ it.initializer != null }, SearchModifiers.UNIQUE]
 
 // returns a list of all VariableDeclarations in the graph with the name "a"

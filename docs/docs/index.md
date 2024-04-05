@@ -42,6 +42,7 @@ programming language.
   * Python
   * TypeScript
   * LLVM-IR
+  * Ruby
 
   Nothing suitable found? [Write your own language frontend](./CPG/impl/language.md)
   for the respective language.

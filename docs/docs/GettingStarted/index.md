@@ -5,7 +5,7 @@ no_list: true
 weight: 2
 date: 2020-01-30
 description: >
-  In CLI mode, Codyze integrates into scripts and automated build processes.
+  Using the CPG library
 ---
 
 

@@ -739,7 +739,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         pushToEOG(node)
 
-        if (node.anoymousClass != null) {
+        if (node.anonymousClass != null) {
             // Generate the EOG inside the anonymous class. It's not linked to the EOG of the outer
             // part.
             val tmpCurrentEOG = currentPredecessors.toMutableList()
@@ -750,7 +750,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             currentPredecessors.clear()
             intermediateNodes.clear()
 
-            createEOG(node.anoymousClass)
+            createEOG(node.anonymousClass)
 
             nextEdgeProperties.clear()
             currentPredecessors.clear()
