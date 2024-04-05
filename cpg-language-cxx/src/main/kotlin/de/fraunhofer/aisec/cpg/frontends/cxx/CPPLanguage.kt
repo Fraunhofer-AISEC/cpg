@@ -45,7 +45,8 @@ open class CPPLanguage :
     HasComplexCallResolution,
     HasStructs,
     HasClasses,
-    HasUnknownType {
+    HasUnknownType,
+    HasFunctionalCasts {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")

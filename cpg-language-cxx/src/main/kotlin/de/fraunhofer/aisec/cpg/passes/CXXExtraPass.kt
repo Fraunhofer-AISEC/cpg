@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
+@ExecuteBefore(ReplaceCallCastPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
