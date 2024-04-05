@@ -364,58 +364,61 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
     /**
      * This functions gives the language a chance to refine the results of a
-     * [ScopeManager.resolveCall]. The default implementation will follow the following heuristic:
-     * - If the list of viableFunctions is empty, we can directly return.
-     * - If we have only one item in viableFunctions, we can take it.
-     * - Next, we can check for direct matches, meaning that they have a SignatureResult that only
-     *   has DirectMatchNoCastNeeded casts.
-     * - Lastly, if we have not direct matches, we need to sort the viable functions using a simple
-     *   ranking. The function(s) will the best (lowest) ranking will be chosen as the best. The
-     *   ranking is determined by the "depth" of all cast results in the signature results.
+     * [ScopeManager.resolveCall] by choosing the best viable function(s) out of the set of viable
+     * functions. It can also influence the [CallResolutionResult.SuccessKind] of the resolution,
+     * e.g., if the result is ambiguous.
+     *
+     * The default implementation will follow the following heuristic:
+     * - If the list of [CallResolutionResult.viableFunctions] is empty, we can directly return.
+     * - If we have only one item in [CallResolutionResult.viableFunctions], we can take it.
+     * - Next, we can check for direct matches, meaning that they have a [SignatureResult] that only
+     *   has [DirectMatch] casts.
+     * - Lastly, if we have no direct matches, we need to sort the viable functions using a simple
+     *   ranking. The function(s) will the best (lowest) [SignatureResult.ranking] will be chosen as
+     *   the best. The ranking is determined by the [CastResult.depthDistance] of all cast results
+     *   in the signature results.
      */
-    open fun bestViableResolution(result: CallResolutionResult): Set<FunctionDeclaration> {
+    open fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
         // No need to do anything, if the list of viable functions is empty
         if (result.viableFunctions.isEmpty()) {
-            return setOf()
+            return Pair(setOf(), CallResolutionResult.SuccessKind.UNRESOLVED)
         }
 
         // If we already have only one viable result, we can just go back
         val single = result.viableFunctions.singleOrNull()
         if (single != null) {
-            return setOf(single)
+            return Pair(setOf(single), CallResolutionResult.SuccessKind.SUCCESSFUL)
         }
 
         // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
         // result
         val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
         return if (directMatches.size > 1) {
-            // This is an ambiguous result
-            result.success = CallResolutionResult.SuccessKind.AMBIGUOUS
-            // Let's return all direct matches
-            directMatches.map { it.key }.toSet()
-        } else
-            if (directMatches.size == 1) {
-                    // Let's return the single direct match
-                    setOf(directMatches.first().key)
-                } else {
-                    // Otherwise, sort it according to a simple ranking based on the total number of
-                    // conversions needed. This might not necessarily be the best idea and this is
-                    // also
-                    // not really optimized.
-                    val rankings =
-                        result.signatureResults.entries.map { Pair(it.value.ranking, it.key) }
+            // This is an ambiguous result. Let's return all direct matches
+            Pair(directMatches.map { it.key }.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
+        } else if (directMatches.size == 1) {
+            // Let's return the single direct match
+            Pair(setOf(directMatches.first().key), CallResolutionResult.SuccessKind.SUCCESSFUL)
+        } else {
+            // Otherwise, sort it according to a simple ranking based on the total number of
+            // conversions needed. This might not necessarily be the best idea and this is
+            // also
+            // not really optimized.
+            val rankings = result.signatureResults.entries.map { Pair(it.value.ranking, it.key) }
 
-                    // Find the best (lowest) rank and find functions with the specific rank
-                    val bestRanking = rankings.minBy { it.first }.first
-                    val list = rankings.filter { it.first == bestRanking }.map { it.second }
-                    if (list.size > 1) {
-                        // One then more result has the same ranking, this result is ambiguous
-                        result.success = CallResolutionResult.SuccessKind.AMBIGUOUS
-                    }
-                    // Return the list of best-ranked (hopefully only one)
-                    list
-                }
-                .toSet()
+            // Find the best (lowest) rank and find functions with the specific rank
+            val bestRanking = rankings.minBy { it.first }.first
+            val list = rankings.filter { it.first == bestRanking }.map { it.second }
+            if (list.size > 1) {
+                // Return the list of best-ranked (hopefully only one). If one then more result has
+                // the same ranking, this result is ambiguous
+                Pair(list.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
+            } else {
+                Pair(list.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
+            }
+        }
     }
 }
 

@@ -339,3 +339,17 @@ open class CPPLanguage :
         return Pair(false, listOf())
     }
 }
+
+/**
+ * @param call we want to find invocation targets for by performing implicit casts
+ * @param scopeManager the scope manager used
+ * @return list of invocation candidates by applying implicit casts
+ */
+fun resolveWithImplicitCastFunc(
+    call: CallExpression,
+    ctx: TranslationContext,
+): List<FunctionDeclaration> {
+    val initialInvocationCandidates =
+        listOf(*ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray())
+    return resolveWithImplicitCast(call, initialInvocationCandidates)
+}

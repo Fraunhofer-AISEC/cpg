@@ -727,15 +727,17 @@ class ScopeManager : ScopeProvider {
             callee.candidates?.filterIsInstance<FunctionDeclaration>()?.toSet() ?: setOf()
 
         if (call.language !is HasFunctionOverloading) {
-            // If the function does not allow function overloading, and we have multiple values, the
-            // result is probably incorrect
+            // If the function does not allow function overloading, and we have multiple candidate
+            // symbols, the
+            // result is "problematic"
             if (result.candidateFunctions.size > 1) {
                 result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
             }
         }
 
-        // Filter functions that either directly match the signature or match the signature with.
-        // Those are "viable"
+        // Filter functions that match the signature of our call, either directly or with casts;
+        // those functions are "viable". Take default arguments into account if the language has
+        // them.
         result.signatureResults =
             result.candidateFunctions
                 .map { Pair(it, it.matchesSignature(call, call.language is HasDefaultArguments)) }
@@ -743,19 +745,19 @@ class ScopeManager : ScopeProvider {
                 .associate { it }
         result.viableFunctions = result.signatureResults.keys
 
-        // Give the language a chance to narrow down the result (ideally to one)
-        result.bestViable = call.language?.bestViableResolution(result) ?: setOf()
+        // If we have a "problematic" result, we can stop here. In this case we cannot really
+        // determine anything more.
+        if (result.success == CallResolutionResult.SuccessKind.PROBLEMATIC) {
+            result.bestViable = result.viableFunctions
+            return result
+        }
 
-        if (
-            result.success != CallResolutionResult.SuccessKind.PROBLEMATIC &&
-                result.success != CallResolutionResult.SuccessKind.AMBIGUOUS
-        ) {
-            result.success =
-                if (result.bestViable.isNotEmpty()) {
-                    CallResolutionResult.SuccessKind.SUCCESSFUL
-                } else {
-                    CallResolutionResult.SuccessKind.UNRESOLVED
-                }
+        // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
+        // the success kind.
+        val pair = call.language?.bestViableResolution(result)
+        if (pair != null) {
+            result.bestViable = pair.first
+            result.success = pair.second
         }
 
         return result
@@ -1050,7 +1052,7 @@ private fun FunctionDeclaration.matchesSignature(
  * (such as [candidateFunctions], [viableFunctions]) as well as the final result (see [bestViable])
  * of the call resolution.
  */
-class CallResolutionResult(
+data class CallResolutionResult(
     /** The original call expression. */
     val call: CallExpression,
 
