@@ -33,8 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.ReplaceCallCastPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 
 /**
@@ -227,22 +229,30 @@ interface HasShortCircuitOperators : LanguageTrait {
  * A language trait, that specifies that this language treats functions "first-class citizens",
  * meaning they can be assigned to variables and passed as arguments to other functions.
  */
-interface HasFirstClassFunctions
+interface HasFirstClassFunctions : LanguageTrait
 
 /**
  * A language trait, that specifies that this language has an "anonymous" identifier, used for
  * unused parameters or suppressed assignments.
  */
-interface HasAnonymousIdentifier {
+interface HasAnonymousIdentifier : LanguageTrait {
     val anonymousIdentifier: String
         get() = "_"
 }
 
 /**
  * A language trait, that specifies that this language has global variables directly in the
- * [GlobalScope], i.e,. not within a namespace, but directly contained in a
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a
  * [TranslationUnitDeclaration].
  */
-interface HasGlobalVariables {
+interface HasGlobalVariables : LanguageTrait {
     val globalVariableScopeClass: Class<out Node>
 }
+
+/**
+ * A language trait, that specifies that the language has so-called functional style casts, meaning
+ * that they look like regular call expressions. Since we can therefore not distinguish between a
+ * [CallExpression] and a [CastExpression], we need to employ an additional pass
+ * ([ReplaceCallCastPass]) after the initial language frontends are done.
+ */
+interface HasFunctionalCasts : LanguageTrait
