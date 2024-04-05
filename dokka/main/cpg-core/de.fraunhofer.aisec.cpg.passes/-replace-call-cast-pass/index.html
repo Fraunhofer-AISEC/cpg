@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>EOGStarterPass</title>
+    <title>ReplaceCallCastPass</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,7 +43,7 @@
                             cpg
                     </a>            </div>
             <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-e-o-g-starter-pass/index.html&quot;}">main</dokka-template-command>            </div>
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-replace-call-cast-pass/index.html&quot;}">main</dokka-template-command>            </div>
         </div>
         <div class="filter-section" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
@@ -59,23 +59,23 @@
                 <div class="sidebar--inner" id="sideMenu"></div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.passes/EOGStarterPass///PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes</a><span class="delimiter">/</span><span class="current">EOGStarterPass</span></div>
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.passes/ReplaceCallCastPass///PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes</a><span class="delimiter">/</span><span class="current">ReplaceCallCastPass</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>EOGStarter</span><wbr><span><span>Pass</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">EOGStarterPass</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../-pass/index.html">Pass</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt; </span></div><p class="paragraph">A <a href="index.html">EOGStarterPass</a> is a pass that operates on nodes that are contained in a <a href="../../de.fraunhofer.aisec.cpg.graph/-e-o-g-starter-holder/index.html">EOGStarterHolder</a>. If used with <a href="../execute-pass.html">executePass</a>, one <a href="../-pass/index.html">Pass</a> object is instantiated for each <a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a> in a <a href="../../de.fraunhofer.aisec.cpg.graph/-e-o-g-starter-holder/index.html">EOGStarterHolder</a> in each <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a> in each <a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a>.</p><h4 class="">Inheritors</h4><div class="table"><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-control-dependence-graph-pass/index.html">ControlDependenceGraphPass</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-control-flow-sensitive-d-f-g-pass/index.html">ControlFlowSensitiveDFGPass</a></div></span></div><div></div></div></div></div></div></div>
+    <h1 class="cover"><span>Replace</span><wbr><span>Call</span><wbr><span>Cast</span><wbr><span><span>Pass</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">ReplaceCallCastPass</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../-translation-unit-pass/index.html">TranslationUnitPass</a></div><p class="paragraph">If a <a href="../../de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a> has the trait <a href="../../de.fraunhofer.aisec.cpg.frontends/-has-functional-casts/index.html">HasFunctionalCasts</a>, we cannot distinguish between a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a> and a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-cast-expression/index.html">CastExpression</a> during the initial translation. This stems from the fact that we might not know all the types yet. We therefore need to handle them as regular call expression in a <a href="../../de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a> or <a href="../../de.fraunhofer.aisec.cpg.frontends/-handler/index.html">Handler</a> and then later replace them with a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-cast-expression/index.html">CastExpression</a>, if the <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/callee.html">CallExpression.callee</a> refers to name of a <a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a> rather than a function.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button><button class="section-tab" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION,EXTENSION_PROPERTY,EXTENSION_FUNCTION">Members &amp; Extensions</button></div>
     <div class="tabs-section-body">
       <div data-togglable="CONSTRUCTOR">
         <h2 class="">Constructors</h2>
-        <div class="table"><a data-name="-555110840%2FConstructors%2F1556141526" anchor-label="EOGStarterPass" id="-555110840%2FConstructors%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="-959843742%2FConstructors%2F1556141526" anchor-label="ReplaceCallCastPass" id="-959843742%2FConstructors%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="-e-o-g-starter-pass.html"><span>EOGStarter</span><wbr><span><span>Pass</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-555110840%2FConstructors%2F1556141526"></span>
+                  <div><a href="-replace-call-cast-pass.html"><span>Replace</span><wbr><span>Call</span><wbr><span>Cast</span><wbr><span><span>Pass</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-959843742%2FConstructors%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
@@ -183,47 +183,47 @@
       </div>
       <div data-togglable="FUNCTION">
         <h2 class="">Functions</h2>
-        <div class="table"><a data-name="-712190411%2FFunctions%2F1556141526" anchor-label="accept" id="-712190411%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="-791055920%2FFunctions%2F1556141526" anchor-label="accept" id="-791055920%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="index.html#-712190411%2FFunctions%2F1556141526"><span><span>accept</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-712190411%2FFunctions%2F1556141526"></span>
+                  <div><a href="accept.html"><span><span>accept</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-791055920%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-712190411%2FFunctions%2F1556141526"><span class="token function">accept</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="accept.html"><span class="token function">accept</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">tu<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
           </div>
-<a data-name="-1854413177%2FFunctions%2F1556141526" anchor-label="andThen" id="-1854413177%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+<a data-name="-2086085763%2FFunctions%2F1556141526" anchor-label="andThen" id="-2086085763%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="index.html#-1854413177%2FFunctions%2F1556141526"><span>and</span><wbr><span><span>Then</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1854413177%2FFunctions%2F1556141526"></span>
+                  <div><a href="index.html#-2086085763%2FFunctions%2F1556141526"><span>and</span><wbr><span><span>Then</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2086085763%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-1854413177%2FFunctions%2F1556141526"><span class="token function">andThen</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-2086085763%2FFunctions%2F1556141526"><span class="token function">andThen</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
           </div>
-<a data-name="-387281821%2FFunctions%2F1556141526" anchor-label="cleanup" id="-387281821%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+<a data-name="-921244998%2FFunctions%2F1556141526" anchor-label="cleanup" id="-921244998%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="../-pass/cleanup.html"><span><span>cleanup</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-387281821%2FFunctions%2F1556141526"></span>
+                  <div><a href="cleanup.html"><span><span>cleanup</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-921244998%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="../-pass/cleanup.html"><span class="token function">cleanup</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="cleanup.html"><span class="token function">cleanup</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
