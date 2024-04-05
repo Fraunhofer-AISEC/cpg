@@ -555,13 +555,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         when (result.success) {
             CallResolutionResult.SuccessKind.PROBLEMATIC -> {
                 log.error(
-                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible candidates"
+                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
                 call.invokes = result.bestViable.toList()
             }
             CallResolutionResult.SuccessKind.AMBIGUOUS -> {
                 log.warn(
-                    "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain all possible candidates"
+                    "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
                 )
                 call.invokes = result.bestViable.toList()
             }
