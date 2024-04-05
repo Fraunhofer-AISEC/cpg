@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -151,41 +150,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // Store the reference to a declaration holder of a named scope.
         val holder = (declaration.scope as? NameScope)?.astNode
 
-        if (holder != null) {
-            if (outsideOfScope) {
-                // everything inside the method is within the scope of its record or namespace
-                frontend.scopeManager.enterScope(holder)
-            }
-
-            // Update the definition
-            // TODO: This should be extracted into a separate pass and done for all function
-            //  declarations, also global ones
-            var candidates =
-                (holder as? DeclarationHolder)
-                    ?.declarations
-                    ?.filterIsInstance<FunctionDeclaration>() ?: listOf()
-
-            // Look for the method or constructor
-            candidates =
-                candidates.filter {
-                    it::class == declaration::class && it.signature == declaration.signature
-                }
-            if (candidates.isEmpty() && frontend.scopeManager.currentScope !is TemplateScope) {
-                log.warn(
-                    "Could not find declaration of method {} in record {}",
-                    declaration.name,
-                    holder.name
-                )
-            } else if (candidates.size > 1) {
-                log.warn(
-                    "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
-                    declaration.name,
-                    holder.name
-                )
-            }
-            for (candidate in candidates) {
-                candidate.definition = declaration
-            }
+        if (holder != null && outsideOfScope) {
+            // everything inside the method is within the scope of its record or namespace
+            frontend.scopeManager.enterScope(holder)
         }
 
         // Enter the scope of our function
@@ -222,28 +189,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         if (holder != null && outsideOfScope) {
             frontend.scopeManager.leaveScope(holder)
-        }
-
-        // Check for declarations of the same function within the same translation unit to connect
-        // definitions and declarations.
-        // TODO: Extract this into a pass
-        val declarationCandidates =
-            frontend.currentTU
-                ?.declarations
-                ?.filterIsInstance(FunctionDeclaration::class.java)
-                ?.filter {
-                    !it.isDefinition &&
-                        it.name.lastPartsMatch(declaration.name) &&
-                        it.hasSignature(declaration.signatureTypes)
-                } ?: listOf()
-        for (candidate in declarationCandidates) {
-            candidate.definition = declaration
-            // Do some additional magic with default parameters, which I do not really understand
-            for (i in declaration.parameters.indices) {
-                if (candidate.parameters[i].default != null) {
-                    declaration.parameters[i].default = candidate.parameters[i].default
-                }
-            }
         }
 
         return declaration
