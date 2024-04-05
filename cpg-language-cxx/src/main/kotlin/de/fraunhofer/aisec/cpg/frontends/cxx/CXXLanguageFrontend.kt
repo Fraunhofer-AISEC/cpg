@@ -60,6 +60,7 @@ import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLiteralExpression
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateId
@@ -672,7 +673,22 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
         } else if (declarator is IASTStandardFunctionDeclarator) {
             // Loop through the parameters
-            var paramTypes = declarator.parameters.map { typeOf(it.declarator, it.declSpecifier) }
+            var paramTypes =
+                declarator.parameters.map {
+                    val specifier = it.declSpecifier
+                    // If we are running into the situation where the declSpecifier is "unspecified"
+                    // and the name is not, then this is an unnamed parameter of an unknown type and
+                    // CDT is not able to handle this correctly
+                    if (
+                        specifier is CASTSimpleDeclSpecifier &&
+                            specifier.type == IASTDeclSpecifier.sc_unspecified &&
+                            it.declarator.name.toString() != ""
+                    ) {
+                        typeOf(it.declarator.name)
+                    } else {
+                        typeOf(it.declarator, it.declSpecifier)
+                    }
+                }
 
             var i = 0
             // Filter out void
