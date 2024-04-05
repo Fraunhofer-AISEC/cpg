@@ -295,6 +295,24 @@ body {
   margin-bottom: 1px;
 }
 
+
+.md-typeset .info {
+  background-color: var(--fraunhofer-blue-medium);
+  border-color: var(--fraunhofer-blue);
+}
+.md-typeset .info summary  {
+  background-color: var(--fraunhofer-blue);
+}
+
+.md-typeset .info > summary::before {
+  background-color: #FFFFFF;
+  color: #FFFFFF;
+}
+
+.md-typeset .info p{
+  border: none;
+}
+
 .md-typeset details>.admonition-title::before,
 .md-typeset details>summary::before {
   background-color: #FFFFFF;

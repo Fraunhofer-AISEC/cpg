@@ -366,7 +366,8 @@ class Schema {
             }
 
             if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
-                out.println("<details markdown><summary>Inherited Relationships</summary>")
+                out.println("<div class=\"papers\" markdown>")
+                out.println("??? info \"Inherited Relationships\"")
                 out.println()
                 removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inherited ->
                     var current = classInfo
@@ -379,6 +380,7 @@ class Schema {
                         }
                         hierarchy[current]?.first?.let { current = it }
                     }
+                    out.print("    ")
                     out.println(
                         getBoxWithClass(
                             "inherited-relationship",
@@ -386,7 +388,7 @@ class Schema {
                         )
                     )
                 }
-                out.println("</details>")
+                out.println("</div>")
                 out.println()
             }
 
@@ -403,12 +405,13 @@ class Schema {
                 out.println()
             }
             if (inheritedProperties[entityLabel]?.isNotEmpty() == true) {
-                out.println("<details markdown><summary>Inherited Properties</summary>")
+                out.println("<div class=\"papers\" markdown>")
+                out.println("??? info \"Inherited Properties\"")
                 removeLabelDuplicates(inheritedProperties[entityLabel])?.forEach {
-                    out.println("${it.second} : ${it.first}")
+                    out.println("    ${it.second} : ${it.first}")
                     out.println()
                 }
-                out.println("</details>")
+                out.println("</div>")
                 out.println()
             }
         }
