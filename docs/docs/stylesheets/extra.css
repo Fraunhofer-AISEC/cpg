@@ -194,6 +194,9 @@ body {
   border-top: none;
   border-bottom: none;
 }
+.md-typeset li>.mermaid {
+  border: none;
+}
 
 .md-typeset .child {
   background: #dddddd;
