@@ -300,11 +300,8 @@ class CallResolverTest : BaseTest() {
                 c.code == "display(1);"
             }
 
-        // it will contain two nodes: the definition and the declaration. this is a general
-        // problem, that we need to tackle in the future, how to combine those two. See
-        // https://github.com/Fraunhofer-AISEC/cpg/issues/194
-        assertEquals(2, display1.invokes.size)
-        assertTrue(display1.invokes.contains(displayDeclaration))
+        assertEquals(1, display1.invokes.size)
+        assertTrue(display1.invokes.contains(displayDefinition))
         assertEquals("1", display1.arguments[0].code)
         assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[1]!!))
         assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[0]!!))
@@ -325,8 +322,8 @@ class CallResolverTest : BaseTest() {
                 assert(c.code != null)
                 c.code == "display();"
             }
-        assertEquals(2, display.invokes.size)
-        assertTrue(display.invokes.contains(displayDeclaration))
+        assertEquals(1, display.invokes.size)
+        assertTrue(display.invokes.contains(displayDefinition))
         assertEquals(0, display.arguments.size)
 
         val displayCount =
@@ -334,8 +331,8 @@ class CallResolverTest : BaseTest() {
                 assert(c.code != null)
                 c.code == "display(count, '$');"
             }
-        assertEquals(2, display.invokes.size)
-        assertTrue(display.invokes.contains(displayDeclaration))
+        assertEquals(1, display.invokes.size)
+        assertTrue(display.invokes.contains(displayDefinition))
         assertLocalName("count", displayCount.arguments[0])
         assertEquals("'$'", displayCount.arguments[1].code)
 
@@ -344,8 +341,8 @@ class CallResolverTest : BaseTest() {
                 assert(c.code != null)
                 c.code == "display(10.0);"
             }
-        assertEquals(2, display10.invokes.size)
-        assertTrue(display.invokes.contains(displayDeclaration))
+        assertEquals(1, display10.invokes.size)
+        assertTrue(display.invokes.contains(displayDefinition))
         assertEquals(1, display10.arguments.size)
         assertLiteralValue(10.0, display10.arguments[0])
     }

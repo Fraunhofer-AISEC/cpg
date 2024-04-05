@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.StructureDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -189,6 +190,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // now).
             wouldResolveTo = scopeManager.resolveReference(current)
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
+                // TODO: not the best place for it and it is somewhat redundant
+                current.candidates = findSymbols(current)
                 return
             }
         }
@@ -253,6 +256,31 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Did not find a declaration for ${current.name}"
             )
         }
+    }
+
+    private fun findSymbols(
+        nodeWithName: Node,
+        startScope: Scope? = scopeManager.currentScope
+    ): List<Declaration> {
+        val (scope, name) = scopeManager.extractScope(nodeWithName, startScope)
+        val list =
+            scopeManager
+                .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
+                .toMutableList()
+        // If we have both the definition and the declaration in our list, we chose only the
+        // definition
+        val it = list.iterator()
+        while (it.hasNext()) {
+            val decl = it.next()
+            if (decl is FunctionDeclaration) {
+                val definition = decl.definition
+                if (!decl.isDefinition && definition != null && definition in list) {
+                    it.remove()
+                }
+            }
+        }
+
+        return list
     }
 
     /**
