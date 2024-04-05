@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -35,9 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.order.RequiresLanguageTrait
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.findAnnotations
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -112,16 +117,36 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
      *   [RequiredFrontend]
      */
     fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend<*, *>>): Boolean {
-        if (!this.javaClass.isAnnotationPresent(RequiredFrontend::class.java)) return true
-        val requiredFrontend = this.javaClass.getAnnotation(RequiredFrontend::class.java).value
+        val requiredFrontend = this::class.findAnnotation<RequiredFrontend>() ?: return true
         for (used in usedFrontends) {
-            if (used.javaClass == requiredFrontend.java) return true
+            if (used::class == requiredFrontend.value) return true
         }
         return false
     }
 
-    companion object {
+    /**
+     * Checks, if the pass requires a specific [LanguageTrait] and if the current target of the pass
+     * has this trait.
+     *
+     * @return true, if the pass does not require a specific language trait or if it matches the
+     *   [RequiresLanguageTrait].
+     */
+    fun runsWithLanguageTrait(language: Language<*>?): Boolean {
+        if (language == null) {
+            return true
+        }
 
+        val requiresLanguageTraits = this::class.findAnnotations<RequiresLanguageTrait>()
+        for (requiresLanguageTrait in requiresLanguageTraits) {
+            if (!language::class.isSubclassOf(requiresLanguageTrait.value)) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    companion object {
         val log: Logger = LoggerFactory.getLogger(Pass::class.java)
     }
 
@@ -264,7 +289,10 @@ private inline fun <reified T : Node> consumeTarget(
     val realClass = checkForReplacement(cls, language, ctx.config)
 
     val pass = realClass.primaryConstructor?.call(ctx)
-    if (pass?.runsWithCurrentFrontend(executedFrontends) == true) {
+    if (
+        pass?.runsWithCurrentFrontend(executedFrontends) == true &&
+            pass.runsWithLanguageTrait(language)
+    ) {
         pass.accept(target)
         pass.cleanup()
         return pass

@@ -125,7 +125,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, parent, node ->
             when (node) {
-                is CallExpression -> handleCall(node, parent)
                 is IncludeDeclaration -> handleInclude(node)
                 is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
@@ -413,83 +412,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 ?.astNode
                 ?.startInference(ctx)
                 ?.inferNamespaceDeclaration(include.name, include.filename, include)
-        }
-    }
-
-    /**
-     * This function gets called for every [CallExpression] and checks, whether this is actually a
-     * "calling" a type and is thus a [CastExpression] rather than a [CallExpression].
-     */
-    private fun handleCall(call: CallExpression, parent: Node?) {
-        // We need to check, whether the "callee" refers to a type and if yes, convert it into a
-        // cast expression. And this is only really necessary, if the function call has a single
-        // argument.
-        var callee = call.callee
-        if (parent != null && callee != null && call.arguments.size == 1) {
-            val language = parent.language ?: GoLanguage()
-
-            var pointer = false
-            // If the argument is a UnaryOperator, unwrap them
-            if (callee is UnaryOperator && callee.operatorCode == "*") {
-                pointer = true
-                callee = callee.input
-            }
-
-            // First, check if this is a built-in type
-            if (language.builtInTypes.contains(callee.name.toString())) {
-                replaceCallWithCast(callee.name.toString(), parent, call, false)
-            } else {
-                // If not, then this could still refer to an existing type. We need to make sure
-                // that we take the current namespace into account
-                val fqn =
-                    if (callee.name.parent == null) {
-                        scopeManager.currentNamespace.fqn(callee.name.localName)
-                    } else {
-                        callee.name
-                    }
-
-                if (typeManager.typeExists(fqn.toString())) {
-                    replaceCallWithCast(fqn, parent, call, pointer)
-                }
-            }
-        }
-    }
-
-    private fun replaceCallWithCast(
-        typeName: CharSequence,
-        parent: Node,
-        call: CallExpression,
-        pointer: Boolean,
-    ) {
-        val cast = newCastExpression()
-        cast.code = call.code
-        cast.language = call.language
-        cast.location = call.location
-        cast.castType =
-            if (pointer) {
-                call.objectType(typeName).pointer()
-            } else {
-                call.objectType(typeName)
-            }
-        cast.expression = call.arguments.single()
-
-        if (parent !is ArgumentHolder) {
-            log.error(
-                "Parent AST node of call expression is not an argument holder. Cannot convert to cast expression. Further analysis might not be entirely accurate."
-            )
-            return
-        }
-
-        val success = parent.replaceArgument(call, cast)
-        if (!success) {
-            log.error(
-                "Replacing call expression with cast expression was not successful. Further analysis might not be entirely accurate."
-            )
-        } else {
-            call.disconnectFromGraph()
-
-            // Make sure to inform the walker about our change
-            walker.registerReplacement(call, cast)
         }
     }
 
