@@ -44,7 +44,7 @@ Scheme:
 
 Interesting fields:
 
-* `expression: Expression`: The inner expression which has to be casted
+* `expression: Expression`: The inner expression which has to be cast
 
 The value of the `expression` flows to the cast expression.
 Scheme:
@@ -407,7 +407,7 @@ Scheme:
     returnValue -.- node;
 ```
 ## Branching Statements
-Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision can lead to an implicit data flow via the branching and we therefore draw a dfg edge from the condition, to the branching node.
+Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision can lead to an implicit data flow via the branching, and we therefore draw a dfg edge from the condition, to the branching node.
 
 ### ForEachStatement
 
@@ -498,7 +498,7 @@ Scheme:
 Interesting fields:
 
 * `condition: Statement`: The condition that is evaluated before making the branching decision
-* `conditionDeclaration: Statement`: A declaration containing the condition in the initialize, used instead of the condition.
+* `conditionDeclaration: Statement`: A declaration with an initializer containing the condition which can be used instead of the condition.
 
 Scheme:
 ```mermaid

@@ -1,6 +1,6 @@
 # Specification: Data Flow Graph - Function Summaries
 
-For functions and methods which are part of the analyzed codebase, the CPG can track data flows interprocedurally to some extent.
+For functions and methods which are part of the analyzed codebase, the CPG can track data flows inter-procedurally to some extent.
 However, for all functions and methods which cannot be analyzed, we have no information available.
 For this case, we provide the user a way to specify custom summaries of the data flows through the function.
 To do so, you need to fill a JSON or YAML file as follows:

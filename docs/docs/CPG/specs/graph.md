@@ -1034,7 +1034,7 @@ template : boolean
 ### Relationships
 <span class="relationship">[INSTANTIATES](#ConstructExpressionINSTANTIATES)</span>
 <span class="relationship">[CONSTRUCTOR](#ConstructExpressionCONSTRUCTOR)</span>
-<span class="relationship">[ANOYMOUS_CLASS](#ConstructExpressionANOYMOUS_CLASS)</span>
+<span class="relationship">[ANONYMOUS_CLASS](#ConstructExpressionANONYMOUS_CLASS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -1082,11 +1082,11 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ConstructExpression--"CONSTRUCTOR¹"-->ConstructExpressionCONSTRUCTOR[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
 ```
-#### ANOYMOUS_CLASS<a id="ConstructExpressionANOYMOUS_CLASS"></a>
+#### ANONYMOUS_CLASS<a id="ConstructExpressionANONYMOUS_CLASS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConstructExpression--"ANOYMOUS_CLASS¹"-->ConstructExpressionANOYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+ConstructExpression--"ANONYMOUS_CLASS¹"-->ConstructExpressionANONYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>

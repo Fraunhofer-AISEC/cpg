@@ -48,7 +48,7 @@ Note that, in the following graphics we will often draw an EOG edge to an abstra
 The EOG path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST leaf nodes.
 
 ## FunctionDeclaration
-A function declaration is the start of an intra-procedural EOG and contains its end. Therefore there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
+A function declaration is the start of an intra-procedural EOG and contains its end. Therefore, there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
 
 Interesting fields:
 
@@ -69,7 +69,7 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `Block`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `Block`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non-static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
 
 Interesting fields:
 
