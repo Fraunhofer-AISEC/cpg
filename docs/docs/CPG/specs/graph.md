@@ -120,23 +120,24 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[LOCALS](#StatementLOCALS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### LOCALS<a id="StatementLOCALS"></a>
 ```mermaid
@@ -145,38 +146,39 @@ flowchart LR
 Statement--"LOCALS*"-->StatementLOCALS[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## AssertStatement<a id="eassertstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -186,25 +188,26 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[MESSAGE](#AssertStatementMESSAGE)</span>
 <span class="relationship">[CONDITION](#AssertStatementCONDITION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### MESSAGE<a id="AssertStatementMESSAGE"></a>
 ```mermaid
@@ -219,38 +222,39 @@ flowchart LR
 AssertStatement--"CONDITION¹"-->AssertStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## DoStatement<a id="edostatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -260,25 +264,26 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[CONDITION](#DoStatementCONDITION)</span>
 <span class="relationship">[STATEMENT](#DoStatementSTATEMENT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CONDITION<a id="DoStatementCONDITION"></a>
 ```mermaid
@@ -293,38 +298,39 @@ flowchart LR
 DoStatement--"STATEMENT¹"-->DoStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Expression<a id="eexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -357,25 +363,26 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[TYPE](#ExpressionTYPE)</span>
 <span class="relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### TYPE<a id="ExpressionTYPE"></a>
 ```mermaid
@@ -390,38 +397,39 @@ flowchart LR
 Expression--"ASSIGNED_TYPES*"-->ExpressionASSIGNED_TYPES[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## RangeExpression<a id="erangeexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -433,29 +441,30 @@ isInferred : boolean
 <span class="relationship">[CEILING](#RangeExpressionCEILING)</span>
 <span class="relationship">[THIRD](#RangeExpressionTHIRD)</span>
 <span class="relationship">[FLOOR](#RangeExpressionFLOOR)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CEILING<a id="RangeExpressionCEILING"></a>
 ```mermaid
@@ -478,38 +487,39 @@ RangeExpression--"FLOOR¹"-->RangeExpressionFLOOR[<a href='#eexpression'>Express
 ### Properties
 operatorCode : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## NewExpression<a id="enewexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -520,29 +530,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[INITIALIZER](#NewExpressionINITIALIZER)</span>
 <span class="relationship">[TEMPLATE_PARAMETERS](#NewExpressionTEMPLATE_PARAMETERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INITIALIZER<a id="NewExpressionINITIALIZER"></a>
 ```mermaid
@@ -557,38 +568,39 @@ flowchart LR
 NewExpression--"TEMPLATE_PARAMETERS*"-->NewExpressionTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## LambdaExpression<a id="elambdaexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -599,29 +611,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[MUTABLE_VARIABLES](#LambdaExpressionMUTABLE_VARIABLES)</span>
 <span class="relationship">[FUNCTION](#LambdaExpressionFUNCTION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### MUTABLE_VARIABLES<a id="LambdaExpressionMUTABLE_VARIABLES"></a>
 ```mermaid
@@ -638,38 +651,39 @@ LambdaExpression--"FUNCTION¹"-->LambdaExpressionFUNCTION[<a href='#efunctiondec
 ### Properties
 areVariablesMutable : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## UnaryOperator<a id="eunaryoperator"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -679,29 +693,30 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[INPUT](#UnaryOperatorINPUT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INPUT<a id="UnaryOperatorINPUT"></a>
 ```mermaid
@@ -716,38 +731,39 @@ isPostfix : boolean
 
 isPrefix : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Block<a id="eblock"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -760,29 +776,30 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[STATEMENTS](#BlockSTATEMENTS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### STATEMENTS<a id="BlockSTATEMENTS"></a>
 ```mermaid
@@ -793,38 +810,39 @@ Block--"STATEMENTS*"-->BlockSTATEMENTS[<a href='#estatement'>Statement</a>]:::ou
 ### Properties
 isStaticBlock : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## DistinctLanguageBlock<a id="edistinctlanguageblock"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -834,67 +852,69 @@ isInferred : boolean
 <span class="classLabel">[DistinctLanguageBlock](#edistinctlanguageblock)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[STATEMENTS](#BlockSTATEMENTS)</span>
+    <span class="inherited-relationship">[STATEMENTS](#BlockSTATEMENTS)</span>
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-isStaticBlock : boolean
+    isStaticBlock : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## CallExpression<a id="ecallexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -912,29 +932,30 @@ isInferred : boolean
 <span class="relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
 <span class="relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
 <span class="relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CALLEE<a id="CallExpressionCALLEE"></a>
 ```mermaid
@@ -969,38 +990,39 @@ CallExpression--"TEMPLATE_PARAMETERS*"-->CallExpressionTEMPLATE_PARAMETERS[<a hr
 ### Properties
 template : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ConstructExpression<a id="econstructexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1012,40 +1034,41 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[INSTANTIATES](#ConstructExpressionINSTANTIATES)</span>
 <span class="relationship">[CONSTRUCTOR](#ConstructExpressionCONSTRUCTOR)</span>
-<span class="relationship">[ANOYMOUS_CLASS](#ConstructExpressionANOYMOUS_CLASS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<span class="relationship">[ANONYMOUS_CLASS](#ConstructExpressionANONYMOUS_CLASS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
+    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
 
-<span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
+    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
 
-<span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
+    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
 
-<span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
+    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
 
-<span class="inherited-relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
+    <span class="inherited-relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INSTANTIATES<a id="ConstructExpressionINSTANTIATES"></a>
 ```mermaid
@@ -1059,47 +1082,48 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ConstructExpression--"CONSTRUCTOR¹"-->ConstructExpressionCONSTRUCTOR[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
 ```
-#### ANOYMOUS_CLASS<a id="ConstructExpressionANOYMOUS_CLASS"></a>
+#### ANONYMOUS_CLASS<a id="ConstructExpressionANONYMOUS_CLASS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConstructExpression--"ANOYMOUS_CLASS¹"-->ConstructExpressionANOYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+ConstructExpression--"ANONYMOUS_CLASS¹"-->ConstructExpressionANONYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-template : boolean
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    template : boolean
 
-code : String
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-</details>
+</div>
 
 ## MemberCallExpression<a id="emembercallexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1109,77 +1133,79 @@ endColumn : int
 <span class="classLabel">[MemberCallExpression](#emembercallexpression)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
+    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
 
-<span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
+    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
 
-<span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
+    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
 
-<span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
+    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
 
-<span class="inherited-relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
+    <span class="inherited-relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 isStatic : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-template : boolean
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    template : boolean
 
-code : String
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## NewArrayExpression<a id="enewarrayexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1190,29 +1216,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[INITIALIZER](#NewArrayExpressionINITIALIZER)</span>
 <span class="relationship">[DIMENSIONS](#NewArrayExpressionDIMENSIONS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INITIALIZER<a id="NewArrayExpressionINITIALIZER"></a>
 ```mermaid
@@ -1227,38 +1254,39 @@ flowchart LR
 NewArrayExpression--"DIMENSIONS*"-->NewArrayExpressionDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## KeyValueExpression<a id="ekeyvalueexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1269,29 +1297,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[VALUE](#KeyValueExpressionVALUE)</span>
 <span class="relationship">[KEY](#KeyValueExpressionKEY)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### VALUE<a id="KeyValueExpressionVALUE"></a>
 ```mermaid
@@ -1306,38 +1335,39 @@ flowchart LR
 KeyValueExpression--"KEY¹"-->KeyValueExpressionKEY[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## AssignExpression<a id="eassignexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1349,29 +1379,30 @@ isInferred : boolean
 <span class="relationship">[DECLARATIONS](#AssignExpressionDECLARATIONS)</span>
 <span class="relationship">[LHS](#AssignExpressionLHS)</span>
 <span class="relationship">[RHS](#AssignExpressionRHS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DECLARATIONS<a id="AssignExpressionDECLARATIONS"></a>
 ```mermaid
@@ -1396,38 +1427,39 @@ usedAsExpression : boolean
 
 operatorCode : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## CastExpression<a id="ecastexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1438,29 +1470,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[CAST_TYPE](#CastExpressionCAST_TYPE)</span>
 <span class="relationship">[EXPRESSION](#CastExpressionEXPRESSION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CAST_TYPE<a id="CastExpressionCAST_TYPE"></a>
 ```mermaid
@@ -1475,38 +1508,39 @@ flowchart LR
 CastExpression--"EXPRESSION¹"-->CastExpressionEXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## TypeExpression<a id="etypeexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1515,63 +1549,65 @@ isInferred : boolean
 <span class="classLabel">[TypeExpression](#etypeexpression)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Reference<a id="ereference"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1586,29 +1622,30 @@ isInferred : boolean
 <span class="relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
 <span class="relationship">[ALIASES](#ReferenceALIASES)</span>
 <span class="relationship">[RESOLUTION_HELPER](#ReferenceRESOLUTION_HELPER)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### REFERS_TO<a id="ReferenceREFERS_TO"></a>
 ```mermaid
@@ -1633,38 +1670,39 @@ access : AccessValues
 
 isStaticAccess : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## MemberExpression<a id="ememberexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1675,35 +1713,36 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[BASE](#MemberExpressionBASE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
+    <span class="inherited-relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
 
-<span class="inherited-relationship">[ALIASES](#ReferenceALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ReferenceALIASES)</span>
 
-<span class="inherited-relationship">[RESOLUTION_HELPER](#ReferenceRESOLUTION_HELPER)</span>
+    <span class="inherited-relationship">[RESOLUTION_HELPER](#ReferenceRESOLUTION_HELPER)</span>
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### BASE<a id="MemberExpressionBASE"></a>
 ```mermaid
@@ -1714,42 +1753,43 @@ MemberExpression--"BASE¹"-->MemberExpressionBASE[<a href='#eexpression'>Express
 ### Properties
 operatorCode : String
 
-<details markdown><summary>Inherited Properties</summary>
-access : AccessValues
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    access : AccessValues
 
-code : String
+    code : String
 
-isStaticAccess : boolean
+    isStaticAccess : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## BinaryOperator<a id="ebinaryoperator"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1763,29 +1803,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[LHS](#BinaryOperatorLHS)</span>
 <span class="relationship">[RHS](#BinaryOperatorRHS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### LHS<a id="BinaryOperatorLHS"></a>
 ```mermaid
@@ -1802,38 +1843,39 @@ BinaryOperator--"RHS¹"-->BinaryOperatorRHS[<a href='#eexpression'>Expression</a
 ### Properties
 operatorCode : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ShortCircuitOperator<a id="eshortcircuitoperator"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1843,69 +1885,71 @@ isInferred : boolean
 <span class="classLabel">[ShortCircuitOperator](#eshortcircuitoperator)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LHS](#BinaryOperatorLHS)</span>
+    <span class="inherited-relationship">[LHS](#BinaryOperatorLHS)</span>
 
-<span class="inherited-relationship">[RHS](#BinaryOperatorRHS)</span>
+    <span class="inherited-relationship">[RHS](#BinaryOperatorRHS)</span>
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-operatorCode : String
+    operatorCode : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ConditionalExpression<a id="econditionalexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -1917,29 +1961,30 @@ isInferred : boolean
 <span class="relationship">[ELSE_EXPRESSION](#ConditionalExpressionELSE_EXPRESSION)</span>
 <span class="relationship">[CONDITION](#ConditionalExpressionCONDITION)</span>
 <span class="relationship">[THEN_EXPRESSION](#ConditionalExpressionTHEN_EXPRESSION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ELSE_EXPRESSION<a id="ConditionalExpressionELSE_EXPRESSION"></a>
 ```mermaid
@@ -1960,38 +2005,39 @@ flowchart LR
 ConditionalExpression--"THEN_EXPRESSION¹"-->ConditionalExpressionTHEN_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## InitializerListExpression<a id="einitializerlistexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2001,29 +2047,30 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[INITIALIZERS](#InitializerListExpressionINITIALIZERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INITIALIZERS<a id="InitializerListExpressionINITIALIZERS"></a>
 ```mermaid
@@ -2032,38 +2079,39 @@ flowchart LR
 InitializerListExpression--"INITIALIZERS*"-->InitializerListExpressionINITIALIZERS[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## DeleteExpression<a id="edeleteexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2073,29 +2121,30 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[OPERAND](#DeleteExpressionOPERAND)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### OPERAND<a id="DeleteExpressionOPERAND"></a>
 ```mermaid
@@ -2104,38 +2153,39 @@ flowchart LR
 DeleteExpression--"OPERAND¹"-->DeleteExpressionOPERAND[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## SubscriptExpression<a id="esubscriptexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2146,29 +2196,30 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[ARRAY_EXPRESSION](#SubscriptExpressionARRAY_EXPRESSION)</span>
 <span class="relationship">[SUBSCRIPT_EXPRESSION](#SubscriptExpressionSUBSCRIPT_EXPRESSION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ARRAY_EXPRESSION<a id="SubscriptExpressionARRAY_EXPRESSION"></a>
 ```mermaid
@@ -2183,38 +2234,39 @@ flowchart LR
 SubscriptExpression--"SUBSCRIPT_EXPRESSION¹"-->SubscriptExpressionSUBSCRIPT_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ProblemExpression<a id="eproblemexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2223,67 +2275,69 @@ isInferred : boolean
 <span class="classLabel">[ProblemExpression](#eproblemexpression)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 problem : String
 
 problemType : ProblemType
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Literal<a id="eliteral"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2292,65 +2346,67 @@ isInferred : boolean
 <span class="classLabel">[Literal](#eliteral)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 value : Object
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## TypeIdExpression<a id="etypeidexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2360,29 +2416,30 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[REFERENCED_TYPE](#TypeIdExpressionREFERENCED_TYPE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### REFERENCED_TYPE<a id="TypeIdExpressionREFERENCED_TYPE"></a>
 ```mermaid
@@ -2393,38 +2450,39 @@ TypeIdExpression--"REFERENCED_TYPE¹"-->TypeIdExpressionREFERENCED_TYPE[<a href=
 ### Properties
 operatorCode : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ExpressionList<a id="eexpressionlist"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2434,29 +2492,30 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[SUBEXPR](#ExpressionListSUBEXPR)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### SUBEXPR<a id="ExpressionListSUBEXPR"></a>
 ```mermaid
@@ -2465,38 +2524,39 @@ flowchart LR
 ExpressionList--"SUBEXPR*"-->ExpressionListSUBEXPR[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## CaseStatement<a id="ecasestatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2505,25 +2565,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[CASE_EXPRESSION](#CaseStatementCASE_EXPRESSION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CASE_EXPRESSION<a id="CaseStatementCASE_EXPRESSION"></a>
 ```mermaid
@@ -2532,38 +2593,39 @@ flowchart LR
 CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ReturnStatement<a id="ereturnstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2572,25 +2634,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[RETURN_VALUES](#ReturnStatementRETURN_VALUES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### RETURN_VALUES<a id="ReturnStatementRETURN_VALUES"></a>
 ```mermaid
@@ -2599,38 +2662,39 @@ flowchart LR
 ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## IfStatement<a id="eifstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2643,25 +2707,26 @@ isInferred : boolean
 <span class="relationship">[THEN_STATEMENT](#IfStatementTHEN_STATEMENT)</span>
 <span class="relationship">[CONDITION](#IfStatementCONDITION)</span>
 <span class="relationship">[ELSE_STATEMENT](#IfStatementELSE_STATEMENT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CONDITION_DECLARATION<a id="IfStatementCONDITION_DECLARATION"></a>
 ```mermaid
@@ -2696,38 +2761,39 @@ IfStatement--"ELSE_STATEMENT¹"-->IfStatementELSE_STATEMENT[<a href='#estatement
 ### Properties
 isConstExpression : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ForStatement<a id="eforstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2740,25 +2806,26 @@ isInferred : boolean
 <span class="relationship">[ITERATION_STATEMENT](#ForStatementITERATION_STATEMENT)</span>
 <span class="relationship">[CONDITION](#ForStatementCONDITION)</span>
 <span class="relationship">[STATEMENT](#ForStatementSTATEMENT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CONDITION_DECLARATION<a id="ForStatementCONDITION_DECLARATION"></a>
 ```mermaid
@@ -2791,38 +2858,39 @@ flowchart LR
 ForStatement--"STATEMENT¹"-->ForStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## CatchClause<a id="ecatchclause"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2832,25 +2900,26 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[BODY](#CatchClauseBODY)</span>
 <span class="relationship">[PARAMETER](#CatchClausePARAMETER)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### BODY<a id="CatchClauseBODY"></a>
 ```mermaid
@@ -2865,38 +2934,39 @@ flowchart LR
 CatchClause--"PARAMETER¹"-->CatchClausePARAMETER[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## SwitchStatement<a id="eswitchstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2908,25 +2978,26 @@ isInferred : boolean
 <span class="relationship">[SELECTOR_DECLARATION](#SwitchStatementSELECTOR_DECLARATION)</span>
 <span class="relationship">[STATEMENT](#SwitchStatementSTATEMENT)</span>
 <span class="relationship">[SELECTOR](#SwitchStatementSELECTOR)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INITIALIZER_STATEMENT<a id="SwitchStatementINITIALIZER_STATEMENT"></a>
 ```mermaid
@@ -2953,38 +3024,39 @@ flowchart LR
 SwitchStatement--"SELECTOR¹"-->SwitchStatementSELECTOR[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## GotoStatement<a id="egotostatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -2993,25 +3065,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[TARGET_LABEL](#GotoStatementTARGET_LABEL)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### TARGET_LABEL<a id="GotoStatementTARGET_LABEL"></a>
 ```mermaid
@@ -3022,38 +3095,39 @@ GotoStatement--"TARGET_LABEL¹"-->GotoStatementTARGET_LABEL[<a href='#elabelstat
 ### Properties
 labelName : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## WhileStatement<a id="ewhilestatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3064,25 +3138,26 @@ isInferred : boolean
 <span class="relationship">[CONDITION_DECLARATION](#WhileStatementCONDITION_DECLARATION)</span>
 <span class="relationship">[CONDITION](#WhileStatementCONDITION)</span>
 <span class="relationship">[STATEMENT](#WhileStatementSTATEMENT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CONDITION_DECLARATION<a id="WhileStatementCONDITION_DECLARATION"></a>
 ```mermaid
@@ -3103,38 +3178,39 @@ flowchart LR
 WhileStatement--"STATEMENT¹"-->WhileStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ContinueStatement<a id="econtinuestatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3142,61 +3218,63 @@ isInferred : boolean
 <span class="classLabel">[ContinueStatement](#econtinuestatement)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 label : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## DefaultStatement<a id="edefaultstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3204,59 +3282,61 @@ isInferred : boolean
 <span class="classLabel">[DefaultStatement](#edefaultstatement)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## SynchronizedStatement<a id="esynchronizedstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3266,25 +3346,26 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[EXPRESSION](#SynchronizedStatementEXPRESSION)</span>
 <span class="relationship">[BLOCK](#SynchronizedStatementBLOCK)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### EXPRESSION<a id="SynchronizedStatementEXPRESSION"></a>
 ```mermaid
@@ -3299,38 +3380,39 @@ flowchart LR
 SynchronizedStatement--"BLOCK¹"-->SynchronizedStatementBLOCK[<a href='#eblock'>Block</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## TryStatement<a id="etrystatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3342,25 +3424,26 @@ isInferred : boolean
 <span class="relationship">[FINALLY_BLOCK](#TryStatementFINALLY_BLOCK)</span>
 <span class="relationship">[TRY_BLOCK](#TryStatementTRY_BLOCK)</span>
 <span class="relationship">[CATCH_CLAUSES](#TryStatementCATCH_CLAUSES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### RESOURCES<a id="TryStatementRESOURCES"></a>
 ```mermaid
@@ -3387,38 +3470,39 @@ flowchart LR
 TryStatement--"CATCH_CLAUSES*"-->TryStatementCATCH_CLAUSES[<a href='#ecatchclause'>CatchClause</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ForEachStatement<a id="eforeachstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3429,25 +3513,26 @@ isInferred : boolean
 <span class="relationship">[ITERABLE](#ForEachStatementITERABLE)</span>
 <span class="relationship">[STATEMENT](#ForEachStatementSTATEMENT)</span>
 <span class="relationship">[VARIABLE](#ForEachStatementVARIABLE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ITERABLE<a id="ForEachStatementITERABLE"></a>
 ```mermaid
@@ -3468,38 +3553,39 @@ flowchart LR
 ForEachStatement--"VARIABLE¹"-->ForEachStatementVARIABLE[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## LabelStatement<a id="elabelstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3508,25 +3594,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[SUB_STATEMENT](#LabelStatementSUB_STATEMENT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### SUB_STATEMENT<a id="LabelStatementSUB_STATEMENT"></a>
 ```mermaid
@@ -3537,38 +3624,39 @@ LabelStatement--"SUB_STATEMENT¹"-->LabelStatementSUB_STATEMENT[<a href='#estate
 ### Properties
 label : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## BreakStatement<a id="ebreakstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3576,61 +3664,63 @@ isInferred : boolean
 <span class="classLabel">[BreakStatement](#ebreakstatement)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 label : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## DeclarationStatement<a id="edeclarationstatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3639,25 +3729,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[DECLARATIONS](#DeclarationStatementDECLARATIONS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DECLARATIONS<a id="DeclarationStatementDECLARATIONS"></a>
 ```mermaid
@@ -3666,38 +3757,39 @@ flowchart LR
 DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## EmptyStatement<a id="eemptystatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3705,59 +3797,61 @@ isInferred : boolean
 <span class="classLabel">[EmptyStatement](#eemptystatement)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Declaration<a id="edeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3775,57 +3869,59 @@ isInferred : boolean
 <span class="child">[IncludeDeclaration](#eincludedeclaration)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ValueDeclaration<a id="evaluedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3846,23 +3942,24 @@ isInferred : boolean
 <span class="relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 <span class="relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 <span class="relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ALIASES<a id="ValueDeclarationALIASES"></a>
 ```mermaid
@@ -3895,38 +3992,39 @@ flowchart LR
 ValueDeclaration--"TYPE_OBSERVERS*"-->ValueDeclarationTYPE_OBSERVERS[<a href='#enode'>Node</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## VariableDeclaration<a id="evariabledeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -3941,33 +4039,34 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[INITIALIZER](#VariableDeclarationINITIALIZER)</span>
 <span class="relationship">[TEMPLATE_PARAMETERS](#VariableDeclarationTEMPLATE_PARAMETERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INITIALIZER<a id="VariableDeclarationINITIALIZER"></a>
 ```mermaid
@@ -3986,38 +4085,39 @@ isImplicitInitializerAllowed : boolean
 
 isArray : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## TupleDeclaration<a id="etupledeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4028,37 +4128,38 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[ELEMENTS](#TupleDeclarationELEMENTS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[INITIALIZER](#VariableDeclarationINITIALIZER)</span>
+    <span class="inherited-relationship">[INITIALIZER](#VariableDeclarationINITIALIZER)</span>
 
-<span class="inherited-relationship">[TEMPLATE_PARAMETERS](#VariableDeclarationTEMPLATE_PARAMETERS)</span>
+    <span class="inherited-relationship">[TEMPLATE_PARAMETERS](#VariableDeclarationTEMPLATE_PARAMETERS)</span>
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ELEMENTS<a id="TupleDeclarationELEMENTS"></a>
 ```mermaid
@@ -4067,42 +4168,43 @@ flowchart LR
 TupleDeclaration--"ELEMENTS*"-->TupleDeclarationELEMENTS[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-isImplicitInitializerAllowed : boolean
+    isImplicitInitializerAllowed : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-isArray : boolean
+    isArray : boolean
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## FieldDeclaration<a id="efielddeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4113,37 +4215,38 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[DEFINES](#FieldDeclarationDEFINES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[INITIALIZER](#VariableDeclarationINITIALIZER)</span>
+    <span class="inherited-relationship">[INITIALIZER](#VariableDeclarationINITIALIZER)</span>
 
-<span class="inherited-relationship">[TEMPLATE_PARAMETERS](#VariableDeclarationTEMPLATE_PARAMETERS)</span>
+    <span class="inherited-relationship">[TEMPLATE_PARAMETERS](#VariableDeclarationTEMPLATE_PARAMETERS)</span>
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DEFINES<a id="FieldDeclarationDEFINES"></a>
 ```mermaid
@@ -4156,42 +4259,43 @@ modifiers : List
 
 isDefinition : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-isImplicitInitializerAllowed : boolean
+    isImplicitInitializerAllowed : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-isArray : boolean
+    isArray : boolean
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-</details>
+</div>
 
 ## ProblemDeclaration<a id="eproblemdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4200,71 +4304,73 @@ endColumn : int
 <span class="classLabel">[ProblemDeclaration](#eproblemdeclaration)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 problem : String
 
 problemType : ProblemType
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## EnumConstantDeclaration<a id="eenumconstantdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4274,33 +4380,34 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[INITIALIZER](#EnumConstantDeclarationINITIALIZER)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INITIALIZER<a id="EnumConstantDeclarationINITIALIZER"></a>
 ```mermaid
@@ -4309,38 +4416,39 @@ flowchart LR
 EnumConstantDeclaration--"INITIALIZER¹"-->EnumConstantDeclarationINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## FunctionDeclaration<a id="efunctiondeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4359,33 +4467,34 @@ isInferred : boolean
 <span class="relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
 <span class="relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
 <span class="relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### THROWS_TYPES<a id="FunctionDeclarationTHROWS_TYPES"></a>
 ```mermaid
@@ -4432,38 +4541,39 @@ FunctionDeclaration--"PARAMETERS*"-->FunctionDeclarationPARAMETERS[<a href='#epa
 ### Properties
 isDefinition : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-</details>
+</div>
 
 ## MethodDeclaration<a id="emethoddeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4478,47 +4588,48 @@ endColumn : int
 ### Relationships
 <span class="relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
 <span class="relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
+    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
 
-<span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
+    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
 
-<span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
+    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
 
-<span class="inherited-relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
+    <span class="inherited-relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
 
-<span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
+    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
 
-<span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
+    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
 
-<span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
+    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### RECORD_DECLARATION<a id="MethodDeclarationRECORD_DECLARATION"></a>
 ```mermaid
@@ -4535,40 +4646,41 @@ MethodDeclaration--"RECEIVER¹"-->MethodDeclarationRECEIVER[<a href='#evariabled
 ### Properties
 isStatic : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-isDefinition : boolean
+    isDefinition : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-</details>
+</div>
 
 ## ConstructorDeclaration<a id="econstructordeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4579,89 +4691,91 @@ endColumn : int
 <span class="classLabel">[ConstructorDeclaration](#econstructordeclaration)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
+    <span class="inherited-relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
 
-<span class="inherited-relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
+    <span class="inherited-relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
 
-<span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
+    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
 
-<span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
+    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
 
-<span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
+    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
 
-<span class="inherited-relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
+    <span class="inherited-relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
 
-<span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
+    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
 
-<span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
+    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
 
-<span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
+    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-isStatic : boolean
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    isStatic : boolean
 
-code : String
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-isDefinition : boolean
+    isDefinition : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-</details>
+</div>
 
 ## TypeParameterDeclaration<a id="etypeparameterdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4671,33 +4785,34 @@ endColumn : int
 
 ### Relationships
 <span class="relationship">[DEFAULT](#TypeParameterDeclarationDEFAULT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DEFAULT<a id="TypeParameterDeclarationDEFAULT"></a>
 ```mermaid
@@ -4706,38 +4821,39 @@ flowchart LR
 TypeParameterDeclaration--"DEFAULT¹"-->TypeParameterDeclarationDEFAULT[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ParameterDeclaration<a id="eparameterdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4747,33 +4863,34 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[DEFAULT](#ParameterDeclarationDEFAULT)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
 
-<span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
 
-<span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
 
-<span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
-<span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DEFAULT<a id="ParameterDeclarationDEFAULT"></a>
 ```mermaid
@@ -4784,38 +4901,39 @@ ParameterDeclaration--"DEFAULT¹"-->ParameterDeclarationDEFAULT[<a href='#eexpre
 ### Properties
 isVariadic : boolean
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## TemplateDeclaration<a id="etemplatedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4828,23 +4946,24 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### PARAMETERS<a id="TemplateDeclarationPARAMETERS"></a>
 ```mermaid
@@ -4853,38 +4972,39 @@ flowchart LR
 TemplateDeclaration--"PARAMETERS*"-->TemplateDeclarationPARAMETERS[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## RecordTemplateDeclaration<a id="erecordtemplatedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4894,25 +5014,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[REALIZATION](#RecordTemplateDeclarationREALIZATION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
+    <span class="inherited-relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### REALIZATION<a id="RecordTemplateDeclarationREALIZATION"></a>
 ```mermaid
@@ -4921,38 +5042,39 @@ flowchart LR
 RecordTemplateDeclaration--"REALIZATION*"-->RecordTemplateDeclarationREALIZATION[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## FunctionTemplateDeclaration<a id="efunctiontemplatedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -4962,25 +5084,26 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[REALIZATION](#FunctionTemplateDeclarationREALIZATION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
+    <span class="inherited-relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### REALIZATION<a id="FunctionTemplateDeclarationREALIZATION"></a>
 ```mermaid
@@ -4989,38 +5112,39 @@ flowchart LR
 FunctionTemplateDeclaration--"REALIZATION*"-->FunctionTemplateDeclarationREALIZATION[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## RecordDeclaration<a id="erecorddeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5040,23 +5164,24 @@ isInferred : boolean
 <span class="relationship">[SUPER_TYPE_DECLARATIONS](#RecordDeclarationSUPER_TYPE_DECLARATIONS)</span>
 <span class="relationship">[STATEMENTS](#RecordDeclarationSTATEMENTS)</span>
 <span class="relationship">[METHODS](#RecordDeclarationMETHODS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### IMPORTS<a id="RecordDeclarationIMPORTS"></a>
 ```mermaid
@@ -5119,38 +5244,39 @@ importStatements : List
 
 staticImportStatements : List
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-</details>
+</div>
 
 ## EnumDeclaration<a id="eenumdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5160,41 +5286,42 @@ endColumn : int
 
 ### Relationships
 <span class="relationship">[ENTRIES](#EnumDeclarationENTRIES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[IMPORTS](#RecordDeclarationIMPORTS)</span>
+    <span class="inherited-relationship">[IMPORTS](#RecordDeclarationIMPORTS)</span>
 
-<span class="inherited-relationship">[CONSTRUCTORS](#RecordDeclarationCONSTRUCTORS)</span>
+    <span class="inherited-relationship">[CONSTRUCTORS](#RecordDeclarationCONSTRUCTORS)</span>
 
-<span class="inherited-relationship">[FIELDS](#RecordDeclarationFIELDS)</span>
+    <span class="inherited-relationship">[FIELDS](#RecordDeclarationFIELDS)</span>
 
-<span class="inherited-relationship">[TEMPLATES](#RecordDeclarationTEMPLATES)</span>
+    <span class="inherited-relationship">[TEMPLATES](#RecordDeclarationTEMPLATES)</span>
 
-<span class="inherited-relationship">[STATIC_IMPORTS](#RecordDeclarationSTATIC_IMPORTS)</span>
+    <span class="inherited-relationship">[STATIC_IMPORTS](#RecordDeclarationSTATIC_IMPORTS)</span>
 
-<span class="inherited-relationship">[RECORDS](#RecordDeclarationRECORDS)</span>
+    <span class="inherited-relationship">[RECORDS](#RecordDeclarationRECORDS)</span>
 
-<span class="inherited-relationship">[SUPER_TYPE_DECLARATIONS](#RecordDeclarationSUPER_TYPE_DECLARATIONS)</span>
+    <span class="inherited-relationship">[SUPER_TYPE_DECLARATIONS](#RecordDeclarationSUPER_TYPE_DECLARATIONS)</span>
 
-<span class="inherited-relationship">[STATEMENTS](#RecordDeclarationSTATEMENTS)</span>
+    <span class="inherited-relationship">[STATEMENTS](#RecordDeclarationSTATEMENTS)</span>
 
-<span class="inherited-relationship">[METHODS](#RecordDeclarationMETHODS)</span>
+    <span class="inherited-relationship">[METHODS](#RecordDeclarationMETHODS)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ENTRIES<a id="EnumDeclarationENTRIES"></a>
 ```mermaid
@@ -5203,44 +5330,45 @@ flowchart LR
 EnumDeclaration--"ENTRIES*"-->EnumDeclarationENTRIES[<a href='#eenumconstantdeclaration'>EnumConstantDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-file : String
+    file : String
 
-isInferred : boolean
+    isInferred : boolean
 
-kind : String
+    kind : String
 
-argumentIndex : int
+    argumentIndex : int
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-importStatements : List
+    importStatements : List
 
-staticImportStatements : List
+    staticImportStatements : List
 
-</details>
+</div>
 
 ## TypedefDeclaration<a id="etypedefdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5250,23 +5378,24 @@ staticImportStatements : List
 ### Relationships
 <span class="relationship">[TYPE](#TypedefDeclarationTYPE)</span>
 <span class="relationship">[ALIAS](#TypedefDeclarationALIAS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### TYPE<a id="TypedefDeclarationTYPE"></a>
 ```mermaid
@@ -5281,38 +5410,39 @@ flowchart LR
 TypedefDeclaration--"ALIAS¹"-->TypedefDeclarationALIAS[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## NamespaceDeclaration<a id="enamespacedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5322,23 +5452,24 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[DECLARATIONS](#NamespaceDeclarationDECLARATIONS)</span>
 <span class="relationship">[STATEMENTS](#NamespaceDeclarationSTATEMENTS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DECLARATIONS<a id="NamespaceDeclarationDECLARATIONS"></a>
 ```mermaid
@@ -5355,38 +5486,39 @@ NamespaceDeclaration--"STATEMENTS*"-->NamespaceDeclarationSTATEMENTS[<a href='#e
 ### Properties
 path : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## DeclarationSequence<a id="edeclarationsequence"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5395,23 +5527,24 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[CHILDREN](#DeclarationSequenceCHILDREN)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### CHILDREN<a id="DeclarationSequenceCHILDREN"></a>
 ```mermaid
@@ -5420,38 +5553,39 @@ flowchart LR
 DeclarationSequence--"CHILDREN*"-->DeclarationSequenceCHILDREN[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## TranslationUnitDeclaration<a id="etranslationunitdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5463,23 +5597,24 @@ isInferred : boolean
 <span class="relationship">[NAMESPACES](#TranslationUnitDeclarationNAMESPACES)</span>
 <span class="relationship">[STATEMENTS](#TranslationUnitDeclarationSTATEMENTS)</span>
 <span class="relationship">[INCLUDES](#TranslationUnitDeclarationINCLUDES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### DECLARATIONS<a id="TranslationUnitDeclarationDECLARATIONS"></a>
 ```mermaid
@@ -5506,38 +5641,39 @@ flowchart LR
 TranslationUnitDeclaration--"INCLUDES*"-->TranslationUnitDeclarationINCLUDES[<a href='#eincludedeclaration'>IncludeDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## UsingDeclaration<a id="eusingdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5545,59 +5681,61 @@ isInferred : boolean
 <span class="classLabel">[UsingDeclaration](#eusingdeclaration)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 qualifiedName : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## IncludeDeclaration<a id="eincludedeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5607,23 +5745,24 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[INCLUDES](#IncludeDeclarationINCLUDES)</span>
 <span class="relationship">[PROBLEMS](#IncludeDeclarationPROBLEMS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INCLUDES<a id="IncludeDeclarationINCLUDES"></a>
 ```mermaid
@@ -5640,38 +5779,39 @@ IncludeDeclaration--"PROBLEMS*"-->IncludeDeclarationPROBLEMS[<a href='#eproblemd
 ### Properties
 filename : String
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Type<a id="etype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5692,23 +5832,24 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### SUPER_TYPE<a id="TypeSUPER_TYPE"></a>
 ```mermaid
@@ -5721,38 +5862,39 @@ isPrimitive : boolean
 
 typeOrigin : Origin
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ProblemType<a id="eproblemtype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5760,63 +5902,65 @@ isInferred : boolean
 <span class="classLabel">[ProblemType](#eproblemtype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## UnknownType<a id="eunknowntype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5824,63 +5968,65 @@ typeOrigin : Origin
 <span class="classLabel">[UnknownType](#eunknowntype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 typeOrigin : Origin
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## ObjectType<a id="eobjecttype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5894,25 +6040,26 @@ isInferred : boolean
 ### Relationships
 <span class="relationship">[GENERICS](#ObjectTypeGENERICS)</span>
 <span class="relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### GENERICS<a id="ObjectTypeGENERICS"></a>
 ```mermaid
@@ -5927,42 +6074,43 @@ flowchart LR
 ObjectType--"RECORD_DECLARATION¹"-->ObjectTypeRECORD_DECLARATION[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## NumericType<a id="enumerictype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -5976,71 +6124,73 @@ typeOrigin : Origin
 <span class="child">[BooleanType](#ebooleantype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
 
-<span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
 modifier : Modifier
 
 bitWidth : Integer
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## IntegerType<a id="eintegertype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6050,71 +6200,73 @@ typeOrigin : Origin
 <span class="classLabel">[IntegerType](#eintegertype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
 
-<span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-modifier : Modifier
+    modifier : Modifier
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-bitWidth : Integer
+    bitWidth : Integer
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## FloatingPointType<a id="efloatingpointtype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6124,71 +6276,73 @@ typeOrigin : Origin
 <span class="classLabel">[FloatingPointType](#efloatingpointtype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
 
-<span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-modifier : Modifier
+    modifier : Modifier
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-bitWidth : Integer
+    bitWidth : Integer
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## BooleanType<a id="ebooleantype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6198,71 +6352,73 @@ typeOrigin : Origin
 <span class="classLabel">[BooleanType](#ebooleantype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
 
-<span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-modifier : Modifier
+    modifier : Modifier
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-bitWidth : Integer
+    bitWidth : Integer
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## StringType<a id="estringtype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6271,67 +6427,69 @@ typeOrigin : Origin
 <span class="classLabel">[StringType](#estringtype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
 
-<span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## ParameterizedType<a id="eparameterizedtype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6339,63 +6497,65 @@ typeOrigin : Origin
 <span class="classLabel">[ParameterizedType](#eparameterizedtype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## PointerType<a id="epointertype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6404,25 +6564,26 @@ typeOrigin : Origin
 
 ### Relationships
 <span class="relationship">[ELEMENT_TYPE](#PointerTypeELEMENT_TYPE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ELEMENT_TYPE<a id="PointerTypeELEMENT_TYPE"></a>
 ```mermaid
@@ -6433,42 +6594,43 @@ PointerType--"ELEMENT_TYPE¹"-->PointerTypeELEMENT_TYPE[<a href='#etype'>Type</a
 ### Properties
 pointerOrigin : PointerOrigin
 
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## AutoType<a id="eautotype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6476,63 +6638,65 @@ typeOrigin : Origin
 <span class="classLabel">[AutoType](#eautotype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## FunctionPointerType<a id="efunctionpointertype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6542,25 +6706,26 @@ typeOrigin : Origin
 ### Relationships
 <span class="relationship">[PARAMETERS](#FunctionPointerTypePARAMETERS)</span>
 <span class="relationship">[RETURN_TYPE](#FunctionPointerTypeRETURN_TYPE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### PARAMETERS<a id="FunctionPointerTypePARAMETERS"></a>
 ```mermaid
@@ -6575,42 +6740,43 @@ flowchart LR
 FunctionPointerType--"RETURN_TYPE¹"-->FunctionPointerTypeRETURN_TYPE[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## TupleType<a id="etupletype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6619,25 +6785,26 @@ typeOrigin : Origin
 
 ### Relationships
 <span class="relationship">[TYPES](#TupleTypeTYPES)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### TYPES<a id="TupleTypeTYPES"></a>
 ```mermaid
@@ -6646,42 +6813,43 @@ flowchart LR
 TupleType--"TYPES*"-->TupleTypeTYPES[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## IncompleteType<a id="eincompletetype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6689,63 +6857,65 @@ typeOrigin : Origin
 <span class="classLabel">[IncompleteType](#eincompletetype)</span>
 
 ### Relationships
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## ReferenceType<a id="ereferencetype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6754,25 +6924,26 @@ typeOrigin : Origin
 
 ### Relationships
 <span class="relationship">[ELEMENT_TYPE](#ReferenceTypeELEMENT_TYPE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### ELEMENT_TYPE<a id="ReferenceTypeELEMENT_TYPE"></a>
 ```mermaid
@@ -6781,42 +6952,43 @@ flowchart LR
 ReferenceType--"ELEMENT_TYPE¹"-->ReferenceTypeELEMENT_TYPE[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## FunctionType<a id="efunctiontype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6826,25 +6998,26 @@ typeOrigin : Origin
 ### Relationships
 <span class="relationship">[RETURN_TYPES](#FunctionTypeRETURN_TYPES)</span>
 <span class="relationship">[PARAMETERS](#FunctionTypePARAMETERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### RETURN_TYPES<a id="FunctionTypeRETURN_TYPES"></a>
 ```mermaid
@@ -6859,42 +7032,43 @@ flowchart LR
 FunctionType--"PARAMETERS*"-->FunctionTypePARAMETERS[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isPrimitive : boolean
+    isPrimitive : boolean
 
-isInferred : boolean
+    isInferred : boolean
 
-typeOrigin : Origin
+    typeOrigin : Origin
 
-</details>
+</div>
 
 ## AnnotationMember<a id="eannotationmember"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6902,23 +7076,24 @@ typeOrigin : Origin
 
 ### Relationships
 <span class="relationship">[VALUE](#AnnotationMemberVALUE)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### VALUE<a id="AnnotationMemberVALUE"></a>
 ```mermaid
@@ -6927,38 +7102,39 @@ flowchart LR
 AnnotationMember--"VALUE¹"-->AnnotationMemberVALUE[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Component<a id="ecomponent"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -6968,23 +7144,24 @@ isInferred : boolean
 <span class="relationship">[INCOMING_INTERACTIONS](#ComponentINCOMING_INTERACTIONS)</span>
 <span class="relationship">[OUTGOING_INTERACTIONS](#ComponentOUTGOING_INTERACTIONS)</span>
 <span class="relationship">[TRANSLATION_UNITS](#ComponentTRANSLATION_UNITS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### INCOMING_INTERACTIONS<a id="ComponentINCOMING_INTERACTIONS"></a>
 ```mermaid
@@ -7005,38 +7182,39 @@ flowchart LR
 Component--"TRANSLATION_UNITS*"-->ComponentTRANSLATION_UNITS[<a href='#etranslationunitdeclaration'>TranslationUnitDeclaration</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 
 ## Annotation<a id="eannotation"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
@@ -7044,23 +7222,24 @@ isInferred : boolean
 
 ### Relationships
 <span class="relationship">[MEMBERS](#AnnotationMEMBERS)</span>
-<details markdown><summary>Inherited Relationships</summary>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
 
-<span class="inherited-relationship">[EOG](#NodeEOG)</span>
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
-<span class="inherited-relationship">[CDG](#NodeCDG)</span>
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
 
-<span class="inherited-relationship">[DFG](#NodeDFG)</span>
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
 
-<span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
 
-<span class="inherited-relationship">[PDG](#NodePDG)</span>
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
 
-<span class="inherited-relationship">[AST](#NodeAST)</span>
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
 
-<span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
 
-</details>
+</div>
 
 #### MEMBERS<a id="AnnotationMEMBERS"></a>
 ```mermaid
@@ -7069,36 +7248,37 @@ flowchart LR
 Annotation--"MEMBERS*"-->AnnotationMEMBERS[<a href='#eannotationmember'>AnnotationMember</a>]:::outer
 ```
 ### Properties
-<details markdown><summary>Inherited Properties</summary>
-code : String
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
 
-argumentIndex : int
+    argumentIndex : int
 
-file : String
+    file : String
 
-isImplicit : boolean
+    isImplicit : boolean
 
-fullName : String
+    fullName : String
 
-localName : String
+    localName : String
 
-name : String
+    name : String
 
-nameDelimiter : String
+    nameDelimiter : String
 
-comment : String
+    comment : String
 
-artifact : String
+    artifact : String
 
-startLine : int
+    startLine : int
 
-endLine : int
+    endLine : int
 
-startColumn : int
+    startColumn : int
 
-endColumn : int
+    endColumn : int
 
-isInferred : boolean
+    isInferred : boolean
 
-</details>
+</div>
 

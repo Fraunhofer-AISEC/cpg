@@ -1,6 +1,6 @@
 # Specification: Data Flow Graph - Function Summaries
 
-For functions and methods which are part of the analyzed codebase, the CPG can track data flows interprocedurally to some extent.
+For functions and methods which are part of the analyzed codebase, the CPG can track data flows inter-procedurally to some extent.
 However, for all functions and methods which cannot be analyzed, we have no information available.
 For this case, we provide the user a way to specify custom summaries of the data flows through the function.
 To do so, you need to fill a JSON or YAML file as follows:
@@ -27,84 +27,84 @@ An example of a file could look as follows:
 
 === "JSON"
 
-  ```json
-  [
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
-        "methodName": "java.util.List.addAll",
-        "signature": ["int", "java.util.Object"]
+    ```json
+    [
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+          "methodName": "java.util.List.addAll",
+          "signature": ["int", "java.util.Object"]
+        },
+        "dataFlows": [
+          {
+            "from": "param1",
+            "to": "base",
+            "dfgType": "full"
+          }
+        ]
       },
-      "dataFlows": [
-        {
-          "from": "param1",
-          "to": "base",
-          "dfgType": "full"
-        }
-      ]
-    },
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
-        "methodName": "java.util.List.addAll",
-        "signature": ["java.util.Object"]
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+          "methodName": "java.util.List.addAll",
+          "signature": ["java.util.Object"]
+        },
+        "dataFlows": [
+          {
+            "from": "param0",
+            "to": "base",
+            "dfgType": "full"
+          }
+        ]
       },
-      "dataFlows": [
-        {
-          "from": "param0",
-          "to": "base",
-          "dfgType": "full"
-        }
-      ]
-    },
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
-        "methodName": "memcpy"
-      },
-      "dataFlows": [
-        {
-          "from": "param1",
-          "to": "param0",
-          "dfgType": "full"
-        }
-      ]
-    }
-  ]
-  ```
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
+          "methodName": "memcpy"
+        },
+        "dataFlows": [
+          {
+            "from": "param1",
+            "to": "param0",
+            "dfgType": "full"
+          }
+        ]
+      }
+    ]
+    ```
 
 === "YAML"
 
-  ```yml
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-      methodName: java.util.List.addAll
-      signature:
-        - int
-        - java.util.Object
-    dataFlows:
-      - from: param1
-        to: base
-        dfgType: full
-  
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-      methodName: java.util.List.addAll
-      signature:
-        - java.util.Object
-    dataFlows:
-      - from: param0
-        to: base
-        dfgType: full
-
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
-      methodName: memcpy
-    dataFlows:
-      - from: param1
-        to: param0
-        dfgType: full
-  ```
+    ```yaml
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+        methodName: java.util.List.addAll
+        signature:
+          - int
+          - java.util.Object
+        dataFlows:
+          - from: param1
+            to: base
+            dfgType: full
+    
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+        methodName: java.util.List.addAll
+        signature:
+          - java.util.Object
+        dataFlows:
+          - from: param0
+            to: base
+            dfgType: full
+    
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+        methodName: memcpy
+        dataFlows:
+          - from: param1
+            to: param0
+            dfgType: full
+    ```
 
 This file configures the following edges:
 

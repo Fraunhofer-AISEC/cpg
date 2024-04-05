@@ -842,7 +842,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     )
                 }
                 anonymousRecord.addConstructor(constructorDeclaration)
-                ctor.anoymousClass = anonymousRecord
+                ctor.anonymousClass = anonymousRecord
 
                 frontend.scopeManager.addDeclaration(constructorDeclaration)
                 frontend.scopeManager.leaveScope(anonymousRecord)
