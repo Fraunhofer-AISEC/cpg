@@ -381,43 +381,58 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     open fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
-        // No need to do anything, if the list of viable functions is empty
+        // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
+        // result
+        val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
+        if (directMatches.size > 1) {
+            // This is an ambiguous result. Let's return all direct matches
+            return Pair(
+                directMatches.map { it.key }.toSet(),
+                CallResolutionResult.SuccessKind.AMBIGUOUS
+            )
+        } else if (directMatches.size == 1) {
+            // Let's return the single direct match
+            return Pair(
+                setOf(directMatches.first().key),
+                CallResolutionResult.SuccessKind.SUCCESSFUL
+            )
+        }
+
+        // No direct match yet, let's continue with some casting...
+
+        // TODO: Move this code somewhere else once we have a proper template expansion pass
+        // We need to check, whether this language has special handling of templates. In this
+        // case, we need to check, whether a template matches after we have no direct matches
+        if (this is HasTemplates) {
+            result.call.templateParameterEdges = mutableListOf()
+            val (ok, candidates) =
+                this.handleTemplateFunctionCalls(null, result.call, false, result.call.ctx!!, null)
+            if (ok) {
+                return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
+            }
+
+            result.call.templateParameterEdges = null
+        }
+
+        // If the list of viable functions is still empty at this point, the call is unresolved
         if (result.viableFunctions.isEmpty()) {
             return Pair(setOf(), CallResolutionResult.SuccessKind.UNRESOLVED)
         }
 
-        // If we already have only one viable result, we can just go back
-        val single = result.viableFunctions.singleOrNull()
-        if (single != null) {
-            return Pair(setOf(single), CallResolutionResult.SuccessKind.SUCCESSFUL)
-        }
+        // Otherwise, sort it according to a simple ranking based on the total number of
+        // conversions needed. This might not necessarily be the best idea and this is
+        // also not really optimized.
+        val rankings = result.signatureResults.entries.map { Pair(it.value.ranking, it.key) }
 
-        // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
-        // result
-        val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
-        return if (directMatches.size > 1) {
-            // This is an ambiguous result. Let's return all direct matches
-            Pair(directMatches.map { it.key }.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
-        } else if (directMatches.size == 1) {
-            // Let's return the single direct match
-            Pair(setOf(directMatches.first().key), CallResolutionResult.SuccessKind.SUCCESSFUL)
+        // Find the best (lowest) rank and find functions with the specific rank
+        val bestRanking = rankings.minBy { it.first }.first
+        val list = rankings.filter { it.first == bestRanking }.map { it.second }
+        return if (list.size > 1) {
+            // Return the list of best-ranked (hopefully only one). If one then more result has
+            // the same ranking, this result is ambiguous
+            Pair(list.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
         } else {
-            // Otherwise, sort it according to a simple ranking based on the total number of
-            // conversions needed. This might not necessarily be the best idea and this is
-            // also
-            // not really optimized.
-            val rankings = result.signatureResults.entries.map { Pair(it.value.ranking, it.key) }
-
-            // Find the best (lowest) rank and find functions with the specific rank
-            val bestRanking = rankings.minBy { it.first }.first
-            val list = rankings.filter { it.first == bestRanking }.map { it.second }
-            if (list.size > 1) {
-                // Return the list of best-ranked (hopefully only one). If one then more result has
-                // the same ranking, this result is ambiguous
-                Pair(list.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
-            } else {
-                Pair(list.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
-            }
+            Pair(list.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
         }
     }
 }

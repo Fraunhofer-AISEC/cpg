@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -472,10 +473,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(f, f3.invokes[0])
         assertEquals(2, f3.arguments.size)
         assertLocalName("int", f3.arguments[0].type)
-        assertLocalName("int", f3.arguments[1].type)
-        assertTrue(f3.arguments[1] is CastExpression)
-        val castExpression = f3.arguments[1] as CastExpression
-        assertEquals('b', (castExpression.expression as Literal<*>).value)
+        assertLocalName("char", f3.arguments[1].type)
+        assertLiteralValue('b', f3.arguments[1])
         assertEquals(1, f4.invokes.size)
         assertTrue(f4.invokes[0].isInferred)
     }

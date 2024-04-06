@@ -198,30 +198,8 @@ open class CPPLanguage :
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration
     ): List<FunctionDeclaration> {
-        val invocationCandidates = ctx.scopeManager.resolveFunctionLegacy(call).toMutableList()
-        if (invocationCandidates.isEmpty()) {
-            // Check for usage of default args
-            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, ctx))
-        }
-        if (invocationCandidates.isEmpty()) {
-            // Check if the call can be resolved to a function template instantiation. If it can be
-            // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
-            // will do an inferred FunctionDeclaration instead.
-            call.templateParameterEdges = mutableListOf()
-            val (ok, candidates) = handleTemplateFunctionCalls(null, call, false, ctx, currentTU)
-            if (ok) {
-                return candidates
-            }
-
-            call.templateParameterEdges = null
-        }
-        if (invocationCandidates.isEmpty()) {
-            // If we don't find any candidate and our current language is c/c++ we check if there is
-            // a candidate with an implicit cast
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
-        }
-
-        return invocationCandidates
+        val result = ctx.scopeManager.resolveCall(call)
+        return result.bestViable.toList()
     }
 
     /**
@@ -259,7 +237,7 @@ open class CPPLanguage :
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
+        currentTU: TranslationUnitDeclaration?
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
             ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
@@ -318,7 +296,7 @@ open class CPPLanguage :
             // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
             // Otherwise, we could not resolve to a template and no modifications are made
             val functionTemplateDeclaration =
-                holder.startInference(ctx)?.inferFunctionTemplate(templateCall)
+                holder?.startInference(ctx)?.inferFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
             val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges
