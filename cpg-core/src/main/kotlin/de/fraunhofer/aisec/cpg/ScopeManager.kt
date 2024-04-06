@@ -648,7 +648,8 @@ class ScopeManager : ScopeProvider {
                                 // TODO(oxisto): Support multiple return values
                                 val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
                                 returnType == fptrType.returnType &&
-                                    it.hasSignature(fptrType.parameters)
+                                    it.matchesSignature(fptrType.parameters) !=
+                                        IncompatibleSignature
                             }
                             // If our language has first-class functions, we can safely return them
                             // as a reference
@@ -689,7 +690,8 @@ class ScopeManager : ScopeProvider {
 
         val func =
             resolve<FunctionDeclaration>(scope) {
-                it.name.lastPartsMatch(name) && it.hasSignature(call.signature, call.arguments)
+                it.name.lastPartsMatch(name) &&
+                    it.matchesSignature(call.signature) != IncompatibleSignature
             }
 
         return func

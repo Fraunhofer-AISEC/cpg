@@ -391,6 +391,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             // Update the type
             type.recordDeclaration = declaration
 
+            // Make sure the record is registered as a scope itself
+            scopeManager.enterScope(declaration)
+            scopeManager.leaveScope(declaration)
+
             scopeManager.addDeclaration(declaration)
             declaration
         }

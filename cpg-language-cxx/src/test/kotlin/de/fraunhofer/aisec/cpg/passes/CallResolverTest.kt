@@ -102,7 +102,7 @@ class CallResolverTest : BaseTest() {
             for (call in calls.filter { it.signature == signature }) {
                 val target =
                     findByUniquePredicate(methods) { m: FunctionDeclaration ->
-                        m.hasSignature(signature)
+                        m.matchesSignature(signature) != IncompatibleSignature
                     }
                 assertEquals(listOf(target), call.invokes)
             }
@@ -115,7 +115,7 @@ class CallResolverTest : BaseTest() {
 
             val inferredTarget =
                 findByUniquePredicate(methods) { m: FunctionDeclaration ->
-                    m.hasSignature(inferenceSignature)
+                    m.matchesSignature(inferenceSignature) != IncompatibleSignature
                 }
             assertEquals(listOf(inferredTarget), inferredCall.invokes)
             assertTrue(inferredTarget.isInferred)
