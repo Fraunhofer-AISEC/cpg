@@ -35,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.io.File
@@ -301,64 +299,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             }
         } else {
             CastNotPossible
-        }
-    }
-
-    open fun isImplicitCast(
-        type: Type,
-        targetType: Type,
-        hint: HasType?,
-        superHint: HasType?
-    ): Boolean {
-        return false
-    }
-
-    /**
-     * This function checks, if the two supplied signatures are equal. The usual use-case is
-     * comparing the signature arguments of a [CallExpression] (in [signature]) against the
-     * signature of a [FunctionDeclaration] (in [target]). Optionally, a list of [expressions]
-     * (e.g., the actual call arguments) can be supplied as a hint, these will be forwarded to other
-     * comparing functions, such as [isDerivedFrom].
-     */
-    open fun hasSignature(
-        target: FunctionDeclaration,
-        signature: List<Type>,
-        expressions: List<Expression>? = null,
-        neededImplicitCasts: Map<Int, Boolean>? = null,
-    ): Boolean {
-        val targetSignature = target.parameters
-        return if (
-            targetSignature.all { !it.isVariadic } && signature.size < targetSignature.size
-        ) {
-            // TODO: So we don't consider arguments with default values (among others) but then, the
-            //  SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
-            false
-        } else {
-            // signature is a collection of positional arguments, so the order must be preserved
-            for (i in targetSignature.indices) {
-                val declared = targetSignature[i]
-                if (declared.isVariadic) {
-                    // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no matter what comes now
-                    // FIXME: in Java, we could have overloading with different vararg types, in
-                    //  C++ we can't, as vararg types are not defined here anyways)
-                    return true
-                }
-                if (i >= signature.size && this !is HasDefaultArguments) {
-                    // The function accepts more arguments than we have
-                    // TODO: Check if i and everything subsequent could be a default argument
-                    return false
-                }
-                val provided = signature[i]
-                val expression = expressions?.get(i)
-                if (!provided.isDerivedFrom(declared.type, expression, target)) {
-                    return false
-                }
-            }
-
-            // Longer target signatures are only allowed with varargs. If we reach this point, no
-            // vararg has been encountered
-            signature.size == targetSignature.size
         }
     }
 

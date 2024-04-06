@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.matchesSignature
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -99,7 +101,10 @@ internal class StaticImportsTest : BaseTest() {
                 }
                 "b" -> {
                     val bs = methods { it.name.localName == "b" && it.isStatic }
-                    assertEquals(call.invokes, bs { it.hasSignature(call.signature) })
+                    assertEquals(
+                        call.invokes,
+                        bs { it.matchesSignature(call.signature) != IncompatibleSignature }
+                    )
                 }
                 "nonStatic" -> {
                     val nonStatic = findByUniqueName(b.methods, "nonStatic")

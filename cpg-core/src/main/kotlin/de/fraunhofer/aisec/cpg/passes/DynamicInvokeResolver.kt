@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -41,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import java.util.*
 import java.util.function.Consumer
@@ -149,7 +151,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (
                     isLambda &&
                         currentFunction.returnTypes.isEmpty() &&
-                        currentFunction.hasSignature(pointerType.parameters)
+                        currentFunction.matchesSignature(pointerType.parameters) !=
+                            IncompatibleSignature
                 ) {
                     invocationCandidates.add(currentFunction)
                     continue
