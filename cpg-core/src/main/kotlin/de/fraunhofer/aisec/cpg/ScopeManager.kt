@@ -740,7 +740,16 @@ class ScopeManager : ScopeProvider {
         // them.
         result.signatureResults =
             result.candidateFunctions
-                .map { Pair(it, it.matchesSignature(call, call.language is HasDefaultArguments)) }
+                .map {
+                    Pair(
+                        it,
+                        it.matchesSignature(
+                            call.signature,
+                            call.language is HasDefaultArguments,
+                            call
+                        )
+                    )
+                }
                 .filter { it.second is SignatureMatches }
                 .associate { it }
         result.viableFunctions = result.signatureResults.keys
@@ -993,13 +1002,14 @@ data object IncompatibleSignature : SignatureResult()
 
 data class SignatureMatches(override val casts: List<CastResult>) : SignatureResult(casts)
 
-private fun FunctionDeclaration.matchesSignature(
-    call: CallExpression,
+fun FunctionDeclaration.matchesSignature(
+    signature: List<Type>,
     useDefaultArguments: Boolean = false,
+    call: CallExpression? = null,
 ): SignatureResult {
     val casts = mutableListOf<CastResult>()
 
-    var remainingArguments = call.arguments.size
+    var remainingArguments = signature.size
 
     // Loop through all parameters of this function
     for ((i, param) in this.parameters.withIndex()) {
@@ -1010,8 +1020,8 @@ private fun FunctionDeclaration.matchesSignature(
         }
 
         // Try to find a matching call argument by index
-        val arg =
-            call.arguments.getOrNull(i)
+        val type =
+            signature.getOrNull(i)
                 ?: // If the argument is null, we could still have a default argument
                 return if (useDefaultArguments) {
                     val defaultParam = this.defaultParameters[i]
@@ -1028,7 +1038,7 @@ private fun FunctionDeclaration.matchesSignature(
 
         // Check, if we can cast the arg into our target type; and if, yes, what is the "distance"
         // to the base type. We need this to narrow down the type during resolving
-        val match = arg.type.tryCast(param.type, arg, param)
+        val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
         if (match == CastNotPossible) {
             return IncompatibleSignature
         }
