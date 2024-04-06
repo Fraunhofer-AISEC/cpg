@@ -294,7 +294,8 @@ fun Type.isDerivedFrom(
     hint: HasType? = null,
     targetHint: HasType? = null
 ): Boolean {
-    return this.language?.isDerivedFrom(this, targetType, hint, targetHint) ?: false
+    return this.language?.tryCast(this, targetType, hint, targetHint) != CastNotPossible
+    // return this.language?.isDerivedFrom(this, targetType, hint, targetHint) ?: false
 }
 
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {

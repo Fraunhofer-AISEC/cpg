@@ -75,7 +75,7 @@ interface HasTemplates : HasGenerics {
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
+        currentTU: TranslationUnitDeclaration?
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 

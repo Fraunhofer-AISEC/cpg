@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -199,9 +198,7 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(1, calc.invokes.size)
         assertEquals(calcFunctionDeclaration, calc.invokes[0])
-        assertTrue(calc.arguments[0] is CastExpression)
-        assertEquals(2.0, ((calc.arguments[0] as CastExpression).expression as Literal<*>).value)
-        assertLocalName("int", (calc.arguments[0] as CastExpression).castType)
+        assertLiteralValue(2.0, calc.arguments[0])
 
         // Check resolution of doSmth
         val doSmth = findByUniqueName(callExpressions, "doSmth")
@@ -211,9 +208,7 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(1, doSmth.invokes.size)
         assertEquals(doSmthFunctionDeclaration, doSmth.invokes[0])
-        assertTrue(doSmth.arguments[0] is CastExpression)
-        assertEquals(10.0, ((doSmth.arguments[0] as CastExpression).expression as Literal<*>).value)
-        assertLocalName("int", (doSmth.arguments[0] as CastExpression).castType)
+        assertLiteralValue(10.0, doSmth.arguments[0])
     }
 
     @Test
@@ -699,8 +694,6 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(1, calcInt.invokes.size)
         assertEquals(calcOverload, calcInt.invokes[0])
-        assertTrue(calcInt.arguments[0] is CastExpression)
-        assertLocalName("double", (calcInt.arguments[0] as CastExpression).castType)
         val calcDouble =
             findByUniquePredicate(calls) { c: CallExpression ->
                 if (c.location != null) {
