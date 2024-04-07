@@ -283,7 +283,6 @@ class ScopeManager : ScopeProvider {
         // push the new scope
         if (newScope != null) {
             pushScope(newScope)
-            newScope.scopedName = currentNamespace?.toString()
         } else {
             currentScope = scopeMap[nodeToScope]
         }
@@ -402,6 +401,11 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
+        var scope = currentScope
+        if (scope != null && declaration != null) {
+            scope += declaration
+        }
+
         when (declaration) {
             is ProblemDeclaration,
             is IncludeDeclaration -> {
@@ -605,6 +609,20 @@ class ScopeManager : ScopeProvider {
         }
 
         return typedefs.values
+    }
+
+    fun resolveSymbol(name: LocalName, startScope: Scope? = currentScope): List<Declaration> {
+        var scope = startScope
+        while (scope != null) {
+            var list = scope.symbols[name]
+            if (list != null) {
+                return list
+            }
+
+            scope = scope.parent
+        }
+
+        return listOf()
     }
 
     /**

@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
 
+typealias LocalName = String
+
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
  * local name in a flat hierarchy, such as `myVariable`. However, it can also be used to represent
@@ -37,7 +39,7 @@ import java.util.*
  */
 class Name(
     /** The local name (sometimes also called simple name) without any namespace information. */
-    val localName: String,
+    val localName: LocalName,
     /** The parent name, e.g., the namespace this name lives in. */
     val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */

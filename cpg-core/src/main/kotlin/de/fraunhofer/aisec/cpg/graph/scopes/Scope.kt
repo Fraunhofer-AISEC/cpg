@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.graph.LocalName
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.neo4j.ogm.annotation.GeneratedValue
@@ -50,9 +52,6 @@ abstract class Scope(
     /** Required field for object graph mapping. It contains the scope id. */
     @Id @GeneratedValue var id: Long? = null
 
-    /** FQN Name currently valid */
-    var scopedName: String? = null
-
     /** The real new name */
     @Convert(NameConverter::class) var name: Name? = null
 
@@ -67,6 +66,14 @@ abstract class Scope(
     @Transient
     @Relationship(value = "PARENT", direction = Relationship.Direction.INCOMING)
     var children = mutableListOf<Scope>()
+
+    val symbols = mutableMapOf<LocalName, MutableList<Declaration>>()
+
+    operator fun plusAssign(symbol: Declaration) {
+        var list = symbols.computeIfAbsent(symbol.name.localName) { mutableListOf<Declaration>() }
+
+        list += symbol
+    }
 
     @Transient var labelStatements = mutableMapOf<String, LabelStatement>()
 
@@ -97,19 +104,4 @@ abstract class Scope(
         result = 31 * result + (name?.hashCode() ?: 0)
         return result
     }
-
-    /** Returns the [GlobalScope] of this scope by traversing its parents upwards. */
-    val globalScope: Scope?
-        get() {
-            var scope: Scope? = this
-            while (scope !is GlobalScope) {
-                if (scope == null) {
-                    return null
-                }
-
-                scope = scope.parent
-            }
-
-            return scope
-        }
 }

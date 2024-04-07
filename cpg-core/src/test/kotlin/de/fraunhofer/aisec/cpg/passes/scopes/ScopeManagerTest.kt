@@ -106,6 +106,118 @@ internal class ScopeManagerTest : BaseTest() {
     }
 
     @Test
+    fun testSymbolsFunction() {
+        with(TestLanguageFrontend()) {
+            val tu = newTranslationUnitDeclaration("file.cpp")
+            ctx.scopeManager.resetToGlobal(tu)
+
+            val func = newFunctionDeclaration("main")
+            ctx.scopeManager.addDeclaration(func)
+            ctx.scopeManager.enterScope(func)
+
+            // parameter "argc" is scoped to the function
+            val argc = newParameterDeclaration("argc")
+            ctx.scopeManager.addDeclaration(argc)
+
+            val body = newBlock()
+            ctx.scopeManager.enterScope(body)
+
+            val stmt = newDeclarationStatement()
+            // variable "a" is scoped to the block scope
+            val a = newVariableDeclaration("a")
+            stmt.addToPropertyEdgeDeclaration(a)
+            ctx.scopeManager.addDeclaration(a)
+            body += stmt
+
+            val assign = newAssignExpression()
+            assign.lhs = listOf(newReference("a"))
+            assign.rhs = listOf(newReference("argc"))
+            body += assign
+
+            func.body = body
+
+            ctx.scopeManager.leaveScope(body)
+            ctx.scopeManager.leaveScope(func)
+
+            val aRef = tu.refs["a"]
+            assertNotNull(aRef)
+
+            var candidates = ctx.scopeManager.resolveSymbol(aRef.name.localName, aRef.scope)
+            assertEquals(listOf(a), candidates)
+
+            val argcRef = tu.refs["argc"]
+            assertNotNull(argcRef)
+
+            candidates = ctx.scopeManager.resolveSymbol(argcRef.name.localName, argcRef.scope)
+            assertEquals(listOf(argc), candidates)
+        }
+    }
+
+    @Test
+    fun testSymbolsRecord() {
+        with(TestLanguageFrontend()) {
+            val tu = newTranslationUnitDeclaration("file.cpp")
+            ctx.scopeManager.resetToGlobal(tu)
+
+            val myClass = newRecordDeclaration("MyClass", "class")
+            ctx.scopeManager.addDeclaration(myClass)
+            ctx.scopeManager.enterScope(myClass)
+
+            val doSomething = newMethodDeclaration("doSomething")
+            ctx.scopeManager.addDeclaration(doSomething)
+            ctx.scopeManager.enterScope(doSomething)
+            ctx.scopeManager.leaveScope(doSomething)
+
+            ctx.scopeManager.leaveScope(myClass)
+
+            val func = newFunctionDeclaration("main")
+            ctx.scopeManager.addDeclaration(func)
+            ctx.scopeManager.enterScope(func)
+
+            // parameter "argc" is scoped to the function
+            val argc = newParameterDeclaration("argc")
+            ctx.scopeManager.addDeclaration(argc)
+
+            val body = newBlock()
+            ctx.scopeManager.enterScope(body)
+
+            val stmt = newDeclarationStatement()
+            // variable "a" is scoped to the block scope
+            val my = newVariableDeclaration("my", objectType("MyClass"))
+            stmt.addToPropertyEdgeDeclaration(my)
+            ctx.scopeManager.addDeclaration(my)
+            body += stmt
+
+            val memberCall =
+                newMemberCallExpression(
+                    newMemberExpression("doSomething", newReference("my")),
+                )
+            body += memberCall
+
+            func.body = body
+
+            ctx.scopeManager.leaveScope(body)
+            ctx.scopeManager.leaveScope(func)
+
+            val myRef = tu.refs["my"]
+            assertNotNull(myRef)
+
+            var candidates = ctx.scopeManager.resolveSymbol(myRef.name.localName, myRef.scope)
+            assertEquals(listOf(my), candidates)
+
+            val doSomethingRef = tu.refs["doSomething"]
+            assertNotNull(doSomethingRef)
+
+            candidates =
+                ctx.scopeManager.resolveSymbol(
+                    doSomethingRef.name.localName,
+                    ctx.scopeManager.lookupScope(myClass)
+                )
+            assertEquals(listOf(doSomething), candidates)
+        }
+    }
+
+    @Test
     fun testScopeFQN() {
         val s = ScopeManager()
         val frontend =
