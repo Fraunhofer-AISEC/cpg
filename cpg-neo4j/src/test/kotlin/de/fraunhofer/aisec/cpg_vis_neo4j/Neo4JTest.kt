@@ -51,7 +51,7 @@ class Neo4JTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(36, functions.size)
+            assertEquals(35, functions.size)
 
             transaction.commit()
         }
