@@ -269,14 +269,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // Enter the record scope
             parentScope.astNode?.let { frontend.scopeManager.enterScope(it) }
 
-            // We also need to by-pass the scope manager for this, because it will
-            // otherwise add the declaration to the AST element of the named scope (the record
-            // or namespace declaration); in the case of a record declaration to the `methods`
-            // fields. However, since `methods` is an
-            // AST field, (for now) we only want those methods in there, that were actual AST
-            // parents. This is also something that we need to figure out how we want to handle
-            // this.
-            parentScope.valueDeclarations.add(declaration)
+            // We need to set addToAST to false, so that we add the symbol to the name scope, but do
+            // not add the method do the `methods` property of the record declaration. The `methods`
+            // property only holds AST nodes declared directly within the record.
+            frontend.scopeManager.addDeclaration(declaration, addToAST = false)
         } else {
             // Add the declaration via the scope manager
             frontend.scopeManager.addDeclaration(declaration)

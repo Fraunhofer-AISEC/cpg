@@ -51,9 +51,24 @@ class GlobalScope : StructureDeclarationScope(null) {
             structureDeclarations.addAll(other.structureDeclarations)
             valueDeclarations.addAll(other.valueDeclarations)
             typedefs.putAll(other.typedefs)
+
+            // Make sure, the child scopes of the global scope point to the new global scope parent
+            // (this)
             for (child in other.children) {
                 child.parent = this
                 children.add(child)
+            }
+
+            // Merge symbols lists
+            for (symbolList in other.symbols) {
+                var list = symbols.computeIfAbsent(symbolList.key) { mutableListOf() }
+                list += symbolList.value
+
+                // Update the scope property of all nodes that live on the global scope to our new
+                // global scope (this)
+                for (symbol in symbolList.value) {
+                    symbol.scope = this
+                }
             }
         }
 

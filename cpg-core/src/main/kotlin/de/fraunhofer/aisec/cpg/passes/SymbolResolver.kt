@@ -271,10 +271,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         startScope: Scope? = scopeManager.currentScope
     ): Set<Declaration> {
         val (scope, name) = scopeManager.extractScope(nodeWithName, startScope)
-        val list =
-            scopeManager
-                .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
-                .toMutableSet()
+        /*val list =
+        scopeManager
+            .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
+            .toMutableSet()*/
+        val list = scopeManager.resolveSymbol(name.localName, scope).toMutableSet()
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
         val it = list.iterator()
