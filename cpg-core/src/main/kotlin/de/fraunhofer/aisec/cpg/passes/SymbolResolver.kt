@@ -127,8 +127,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return language is HasSuperClasses && reference.name.endsWith(language.superClassKeyword)
     }
 
-    /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
-    protected fun resolveMethodFunctionPointer(
+    /** This function resolves functions that are assigned to function pointers. */
+    protected fun resolveFunctionPointerAssignment(
         reference: Reference,
         type: FunctionPointerType
     ): ValueDeclaration? {
@@ -158,10 +158,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return target
     }
 
-    protected fun handleReference(currentClass: RecordDeclaration?, current: Node?) {
-        val language = current?.language
+    protected fun handleReference(currentClass: RecordDeclaration?, current: Reference) {
+        if (current is MemberExpression) return
 
-        if (current !is Reference || current is MemberExpression) return
+        val language = current.language
+        val resolutionHelper = current.resolutionHelper
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
@@ -172,41 +173,59 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        // For now, we need to ignore reference expressions that are directly embedded into call
-        // expressions, because they are the "callee" property. In the future, we will use this
-        // property to actually resolve the function call. However, there is a special case that
-        // we want to catch already, that is if we are "calling" a reference to a variable. This
-        // can be done in several languages, e.g., in C/C++ as function pointers or in Go as
-        // function references. In this case, we want to resolve the declared reference expression
-        // of this call expression back to its original variable declaration. In the future, we want
-        // to extend this particular code to resolve all callee references to their declarations,
-        // i.e., their function definitions and get rid of the separate CallResolver.
-        var wouldResolveTo: Declaration? = null
-        if (current.resolutionHelper is CallExpression) {
-            // Peek into the declaration, and if it is a variable, we can proceed normally, as we
-            // are running into the special case explained above. Otherwise, we abort here (for
-            // now).
-            wouldResolveTo = scopeManager.resolveReference(current)
-            if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
-                // TODO: not the best place for it and it is somewhat redundant
-                current.candidates = findSymbols(current)
-                return
-            }
-        }
-
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
-        var refersTo = current.refersTo ?: wouldResolveTo ?: scopeManager.resolveReference(current)
+        if (current.refersTo != null) {
+            return
+        }
 
+        // Let's find possible declaration candidates based on our symbol
+        current.candidates = findSymbols(current)
+
+        // There are three scenarios where a reference is used, and we need to differentiate between
+        // them in selecting the best candidate; and also whether selecting is deferred until later
+        // 1) The reference is a direct callee of a call expression. In this case, we defer any kind
+        // of selection to the resolution of the call expression; However, there is a special case
+        // in C++, in which we call a function pointer with the same syntax as a function and the
+        // only differentiation is whether we call a function or a variable. If it's the former, we
+        // can defer, if it's the latter, we need to continue here.
+        if (
+            resolutionHelper is CallExpression &&
+                resolutionHelper.callee == current &&
+                current.candidates?.all { it is FunctionDeclaration } == true
+        ) {
+            return
+        }
+
+        // 2) The reference is used on the right-hand side of an assignment to a function pointer
+        // variable. In this case, we need to select a suitable candidate here, but with a similar
+        // logic to the above case
+        var refersTo: Declaration? = null
+        var helperType = resolutionHelper?.type
+        if (helperType is FunctionPointerType && refersTo == null) {
+            refersTo = resolveFunctionPointerAssignment(current, helperType)
+        } else {
+            // 3) If none of the above is the case, we have a regular reference to "something",
+            // where only one can exist, e.g., a variable. In this, we have a problem, if there are
+            // multiple candidates
+            refersTo = current.candidates?.singleOrNull()
+            if (refersTo == null && current.candidates?.isNotEmpty() == true) {
+                Util.warnWithFileLocation(
+                    current,
+                    log,
+                    "We have an ambiguous result when referring to symbol {} in scope {}. Choosing the first one, but the following analysis might be incorrect",
+                    current.name,
+                    current.scope
+                )
+                refersTo = current.candidates?.firstOrNull()
+            }
+        }
+
+        // Do some more magic we still need to clean up
         var recordDeclType: Type? = null
         if (currentClass != null) {
             recordDeclType = currentClass.toType()
-        }
-
-        val helperType = current.resolutionHelper?.type
-        if (helperType is FunctionPointerType && refersTo == null) {
-            refersTo = resolveMethodFunctionPointer(current, helperType)
         }
 
         // only add new nodes for non-static unknown
@@ -271,25 +290,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         startScope: Scope? = scopeManager.currentScope
     ): Set<Declaration> {
         val (scope, name) = scopeManager.extractScope(nodeWithName, startScope)
-        /*val list =
-        scopeManager
-            .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
-            .toMutableSet()*/
-        val list = scopeManager.resolveSymbol(name.localName, scope).toMutableSet()
+        if (scope == null) {
+            return setOf()
+        }
+
+        // Lookup symbol in name, this will return a list of candidates
+        val candidates = scope[name.localName].toMutableSet()
+
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
-        val it = list.iterator()
+        val it = candidates.iterator()
         while (it.hasNext()) {
             val decl = it.next()
             if (decl is FunctionDeclaration) {
                 val definition = decl.definition
-                if (!decl.isDefinition && definition != null && definition in list) {
+                if (!decl.isDefinition && definition != null && definition in candidates) {
                     it.remove()
                 }
             }
         }
 
-        return list
+        return candidates
     }
 
     /**
@@ -350,11 +371,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun handleMemberExpression(curClass: RecordDeclaration?, current: Node?) {
-        if (current !is MemberExpression) {
-            return
-        }
-
+    protected fun handleMemberExpression(curClass: RecordDeclaration?, current: MemberExpression) {
         // For legacy reasons, method and field resolving is split between the VariableUsageResolver
         // and the CallResolver. Since we are trying to merge these two, the first step was to have
         // the callee/member field of a MemberCallExpression set to a MemberExpression. This means

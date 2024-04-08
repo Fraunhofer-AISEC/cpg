@@ -142,13 +142,13 @@ internal class ScopeManagerTest : BaseTest() {
             val aRef = tu.refs["a"]
             assertNotNull(aRef)
 
-            var candidates = ctx.scopeManager.resolveSymbol(aRef.name.localName, aRef.scope)
+            var candidates = aRef.scope?.resolveSymbol(aRef.name.localName)
             assertEquals(listOf(a), candidates)
 
             val argcRef = tu.refs["argc"]
             assertNotNull(argcRef)
 
-            candidates = ctx.scopeManager.resolveSymbol(argcRef.name.localName, argcRef.scope)
+            candidates = argcRef.scope?.resolveSymbol(argcRef.name.localName)
             assertEquals(listOf(argc), candidates)
         }
     }
@@ -202,17 +202,14 @@ internal class ScopeManagerTest : BaseTest() {
             val myRef = tu.refs["my"]
             assertNotNull(myRef)
 
-            var candidates = ctx.scopeManager.resolveSymbol(myRef.name.localName, myRef.scope)
+            var candidates = myRef.scope?.resolveSymbol(myRef.name.localName)
             assertEquals(listOf(my), candidates)
 
             val doSomethingRef = tu.refs["doSomething"]
             assertNotNull(doSomethingRef)
 
             candidates =
-                ctx.scopeManager.resolveSymbol(
-                    doSomethingRef.name.localName,
-                    ctx.scopeManager.lookupScope(myClass)
-                )
+                ctx.scopeManager.lookupScope(myClass)?.resolveSymbol(doSomethingRef.name.localName)
             assertEquals(listOf(doSomething), candidates)
         }
     }

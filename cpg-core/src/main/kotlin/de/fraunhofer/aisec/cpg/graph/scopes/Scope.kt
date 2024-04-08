@@ -29,9 +29,11 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.graph.LocalName
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity
@@ -75,6 +77,24 @@ abstract class Scope(
         list += symbol
     }
 
+    operator fun get(name: LocalName): List<Declaration> {
+        return resolveSymbol(name)
+    }
+
+    fun resolveSymbol(name: LocalName): List<Declaration> {
+        var scope: Scope? = this
+        while (scope != null) {
+            var list = scope.symbols[name]
+            if (list != null) {
+                return list
+            }
+
+            scope = scope.parent
+        }
+
+        return listOf()
+    }
+
     @Transient var labelStatements = mutableMapOf<String, LabelStatement>()
 
     fun addLabelStatement(labelStatement: LabelStatement) {
@@ -103,5 +123,15 @@ abstract class Scope(
         var result = astNode?.hashCode() ?: 0
         result = 31 * result + (name?.hashCode() ?: 0)
         return result
+    }
+
+    override fun toString(): String {
+        val builder = ToStringBuilder(this, TO_STRING_STYLE)
+
+        if (name?.isNotEmpty() == true) {
+            builder.append("name", name)
+        }
+
+        return builder.toString()
     }
 }

@@ -611,20 +611,6 @@ class ScopeManager : ScopeProvider {
         return typedefs.values
     }
 
-    fun resolveSymbol(name: LocalName, startScope: Scope? = currentScope): List<Declaration> {
-        var scope = startScope
-        while (scope != null) {
-            var list = scope.symbols[name]
-            if (list != null) {
-                return list
-            }
-
-            scope = scope.parent
-        }
-
-        return listOf()
-    }
-
     /**
      * Resolves only references to Values in the current scope, static references to other visible
      * records are not resolved over the ScopeManager.
