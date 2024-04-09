@@ -55,11 +55,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             when (node.op) {
                 is Python.ASTAnd -> "and"
                 is Python.ASTOr -> "or"
-                else -> TODO()
+                else ->
+                    return newProblemExpression(
+                        "Unsupported BoolOp operator " + node.op,
+                        rawNode = node
+                    )
             }
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         if (node.values.size != 2) {
-            TODO("Expected two expressions.")
+            return newProblemExpression(
+                "Expected exactly two expressions but got " + node.values.size,
+                rawNode = node
+            )
         }
         ret.lhs = handle(node.values[0])
         ret.rhs = handle(node.values[1])
