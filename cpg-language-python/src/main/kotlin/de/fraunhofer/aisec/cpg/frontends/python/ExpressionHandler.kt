@@ -45,8 +45,32 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTIfExp -> handleIfExp(node)
             is Python.ASTTuple -> handleTuple(node)
             is Python.ASTList -> handleList(node)
-            else -> TODO()
+            is Python.ASTBoolOp -> handleBoolOp(node)
+            else -> TODO("The expression of class ${node.javaClass} is not supported yet")
         }
+    }
+
+    private fun handleBoolOp(node: Python.ASTBoolOp): Expression {
+        val op =
+            when (node.op) {
+                is Python.ASTAnd -> "and"
+                is Python.ASTOr -> "or"
+                else ->
+                    return newProblemExpression(
+                        "Unsupported BoolOp operator " + node.op,
+                        rawNode = node
+                    )
+            }
+        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
+        if (node.values.size != 2) {
+            return newProblemExpression(
+                "Expected exactly two expressions but got " + node.values.size,
+                rawNode = node
+            )
+        }
+        ret.lhs = handle(node.values[0])
+        ret.rhs = handle(node.values[1])
+        return ret
     }
 
     private fun handleList(node: Python.ASTList): Expression {
@@ -110,7 +134,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTIsNot -> "is not"
                 is Python.ASTIn -> "in"
                 is Python.ASTNotIn -> "not in"
-                else -> TODO()
+                else ->
+                    TODO(
+                        "The comparison operation ${node.ops.first().javaClass} is not supported yet"
+                    )
             }
         val ret = newBinaryOperator(op, rawNode = node)
         ret.lhs = handle(node.left)
@@ -134,7 +161,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTBitXor -> "^"
                 is Python.ASTBitAnd -> "&"
                 is Python.ASTFloorDiv -> "//"
-                else -> TODO()
+                else -> TODO("The binary operation ${node.op.javaClass} is not supported yet")
             }
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         ret.lhs = handle(node.left)
