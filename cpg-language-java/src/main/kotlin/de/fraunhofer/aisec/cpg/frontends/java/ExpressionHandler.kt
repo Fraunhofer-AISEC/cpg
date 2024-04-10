@@ -470,12 +470,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleThisExpression(expr: Expression): Reference {
         val thisExpr = expr.asThisExpr()
-        var qualifiedName: String
-        try {
-            qualifiedName = thisExpr.resolve().qualifiedName
-        } catch (use: UnsolvedSymbolException) {
-            qualifiedName = frontend.scopeManager.currentRecord?.name.toString()
-        }
+        val qualifiedName = frontend.scopeManager.currentRecord?.name.toString()
         val type = this.objectType(qualifiedName)
         var name = thisExpr.toString()
 
