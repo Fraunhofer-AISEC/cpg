@@ -262,6 +262,28 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testDefinitionDeclaration() {
+        val topLevel = File("src/test/resources/c/issue-194")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
+                topLevel.toPath(),
+                true
+            ) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        val declarations = result.functions { it.name.localName == "foo" && !it.isDefinition }
+        assertTrue(declarations.isNotEmpty())
+
+        val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]
+        assertNotNull(definition)
+
+        declarations.forEach { assertEquals(definition, it.definition) }
+    }
+
+    @Test
     @Throws(Exception::class)
     fun testFunctionDeclaration() {
         val file = File("src/test/resources/cxx/functiondecl.cpp")
@@ -281,6 +303,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val args = method.parameters.map { it.name.localName }
         assertEquals(listOf("arg0", "arg1", "arg2", "arg3"), args)
+
+        val function0 = tu.functions[{ it.name.localName == "function0" && it.isDefinition }]
+        assertNotNull(function0)
+
+        val function0DeclOnly =
+            tu.functions[{ it.name.localName == "function0" && !it.isDefinition }]
+        assertNotNull(function0DeclOnly)
+
+        // the declaration should be connected to the definition
+        assertEquals(function0, function0DeclOnly.definition)
 
         method = tu.getDeclarationAs(2, FunctionDeclaration::class.java)
         assertEquals("function0(int)void", method!!.signature)

@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.isDerivedFrom
+import de.fraunhofer.aisec.cpg.wrapState
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -214,8 +215,13 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     }
 
     /**
-     * This function checks, if [type] is derived from [superType]. Optionally, the nodes that hold
-     * the respective type can be supplied as [hint] and [superHint].
+     * This function checks, if [type] is derived from [superType]. Note, this also takes the
+     * [WrapState] of the type into account, which means that pointer types of derived types will
+     * not match with a non-pointer type of its base type. But, if both are pointer types, they will
+     * match.
+     *
+     * Optionally, the nodes that hold the respective type can be supplied as [hint] and
+     * [superHint].
      */
     open fun isDerivedFrom(
         type: Type,
@@ -223,12 +229,24 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         hint: HasType?,
         superHint: HasType?
     ): Boolean {
+        // We can take a shortcut if it is the same type
+        if (type == superType) {
+            return true
+        }
+
+        // We can also take a shortcut: if they are not of the same subclass, they will never
+        // match
+        if (type::class != superType::class) {
+            return false
+        }
+
         // Retrieve all ancestor types of our type (more concretely of the root type)
         val root = type.root
         val superTypes = root.ancestors.map { it.type }
 
-        // Check, if super type (or its root) is in the list
-        return superType.root in superTypes
+        // Check, if super type (or its root) is in the list. Also, the wrap state needs to be the
+        // same
+        return superType.root in superTypes && type.wrapState == superType.wrapState
     }
 
     /**
@@ -260,6 +278,11 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                     // FIXME: in Java, we could have overloading with different vararg types, in
                     //  C++ we can't, as vararg types are not defined here anyways)
                     return true
+                }
+                if (i >= signature.size && this !is HasDefaultArguments) {
+                    // The function accepts more arguments than we have
+                    // TODO: Check if i and everything subsequent could be a default argument
+                    return false
                 }
                 val provided = signature[i]
                 val expression = expressions?.get(i)

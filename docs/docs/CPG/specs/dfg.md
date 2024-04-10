@@ -2,10 +2,6 @@
 
 The Data Flow Graph (DFG) is built as edges between nodes. Each node has a set of incoming data flows (`prevDFG`) and outgoing data flows (`nextDFG`). In the following, we summarize how different types of nodes construct the respective data flows.
 
-{:style="background:#dddddd"}
-[Statement](#estatement)
-
-<span class="child">[Statement](#estatement)</span>
 
 ## CallExpression
 
@@ -48,7 +44,7 @@ Scheme:
 
 Interesting fields:
 
-* `expression: Expression`: The inner expression which has to be casted
+* `expression: Expression`: The inner expression which has to be cast
 
 The value of the `expression` flows to the cast expression.
 Scheme:
@@ -73,38 +69,29 @@ For this reason, if the assignment's ast parent is not a `Block` (i.e., a block 
 If the `lhs` consists of multiple variables (or a tuple), we try to split up the `rhs` by the index. If we can't do this, the whole `rhs` flows to all variables in `lhs`.
 
 Scheme:
-```mermaid
-flowchart LR
-    node([AssignExpression]) -.- rhs(rhs);
+
+* Standard case:
+  ```mermaid
+  flowchart LR
+      node([AssignExpression]) -.- rhs(rhs);
+        rhs -- DFG --> lhs;
+      node([AssignExpression]) -.- lhs(lhs);
+  ```
+* If the assignment happens inside another statement/expression (not inside a `Block`):
+  ```mermaid
+  flowchart LR
+      node([AssignExpression]) -.- lhs(lhs);
+      node([AssignExpression]) -.- rhs(rhs);
       rhs -- DFG --> lhs;
-    node([AssignExpression]) -.- lhs(lhs);
-```
-
-```mermaid
-flowchart LR
-  node([AssignExpression]) -.- lhs(lhs);
-  node([AssignExpression]) -.- rhs(rhs);
-  rhs -- DFG --> lhs;
-  rhs -- DFG --> node;
-```
-
-```mermaid
-flowchart LR
-  A[assignment.rhs] -- DFG --> assignment.lhs;
-  subgraph S[If the ast parent is not a Block
-    direction LR
-    assignment.rhs -- DFG --> assignment;
-  end
-  A --> S;
-```
-
-If size of `lhs` and `rhs` is equal:
-```mermaid
-flowchart LR
-    node([AssignExpression]) -.- rhs("rhs[i]");
-      rhs -- "for all i: DFG[i]" --> lhs;
-    node([AssignExpression]) -.- lhs("lhs[i]");
-```
+      rhs -- DFG --> node;
+  ```
+* Since `lhs` and `rhs` can consist of multiple values, if size of `lhs` and `rhs` is equal, we actually make the DFG-edges for each indexed value:
+  ```mermaid
+  flowchart LR
+      node([AssignExpression]) -.- rhs("rhs[i]");
+        rhs -- "for all i: DFG[i]" --> lhs;
+      node([AssignExpression]) -.- lhs("lhs[i]");
+  ```
 
 ### Case 2: Compound assignment (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
 
@@ -162,6 +149,7 @@ Scheme:
 ## NewExpression
 
 Interesting fields:
+
 * `initializer: Expression`: The initializer of the expression.
 
 The `initializer` flows to the whole expression.
@@ -207,7 +195,7 @@ Scheme:
     thenExpression -.- node;
     elseExpression -.- node;
     elseExpression -- DFG --> node;
-   ```
+  ```
 
 ## Reference
 
@@ -269,7 +257,7 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
     input -- DFG 4 --> R[/Node/];
     R == next read of ==> refersTo;
   ```
-* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!*
+* For compound operators such as `+=, -=, *=, /=`, we have an incoming flow from the last writes to reference on the left hand side of the expression to the lhs. The lhs then flows to the whole expression. Also, the right hand side flows to the whole expression (if it's a read, this is processed separately). The data flows back to the lhs which is marked as the last write to the variable. *Attention: This potentially adds loops and can look like a branch. Needs to be handled with care in subsequent passes/analyses!* Scheme:
   ```mermaid
   flowchart LR
     node -.- rhs;
@@ -283,9 +271,9 @@ The `ControlFlowSensitiveDFGPass` completely changes this behavior and accounts 
     node -- DFG 3 --> lhs;
     R[/Node/] == next read of ==> refersTo;
   ```
-* If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation.
+* If the variable is assigned a value (a binary operator `var = rhs`), the right hand side flows to the variable. This is considered as a write operation. Scheme:
   ```mermaid
-  flowchart LR
+  flowchart LR 
     node -.- rhs;
     node -.- lhs;
     lhs -.- refersTo;
@@ -419,7 +407,7 @@ Scheme:
     returnValue -.- node;
 ```
 ## Branching Statements
-Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision can lead to an implicit data flow via the branching and we therefore draw a dfg edge from the condition, to the branching node.
+Specific statements lead to a branch in the control flow of a program. A value that influences the branching decision can lead to an implicit data flow via the branching, and we therefore draw a dfg edge from the condition, to the branching node.
 
 ### ForEachStatement
 
@@ -430,7 +418,7 @@ Interesting fields:
 
 The value of the iterable flow to the `VariableDeclaration` in the `variable`. Since some languages allow arbitrary logic, we differentiate between two cases:
 
-### Case 1. The `variable` is a `DeclarationStatement`.
+#### Case 1. The `variable` is a `DeclarationStatement`.
 
 This is the case for most languages where we can have only a variable in this place (e.g., `for(e in list)`). Here, we get the declaration(s) in the statement and add the DFG from the iterable to this declaration.
 
@@ -444,7 +432,7 @@ Scheme:
     iterable -- for all i: DFG --> declarations
 ```
 
-### Case 2. The `variable` is another type of `Statement`.
+#### Case 2. The `variable` is another type of `Statement`.
 
 In this case, we assume that the last VariableDeclaration is the one used for looping. We add a DFG edge only to this declaration.
 
@@ -462,8 +450,8 @@ Scheme:
 ### DoStatement
 
 Interesting fields:
-* `condition: Statement`: The condition that is evaluated before making the branching decision
 
+* `condition: Statement`: The condition that is evaluated before making the branching decision
 
 Scheme:
 ```mermaid
@@ -475,6 +463,7 @@ Scheme:
 ### WhileStatement
 
 Interesting fields:
+
 * `condition: Statement`: The condition that is evaluated before making the branching decision
 * `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition
 
@@ -490,6 +479,7 @@ Scheme:
 ### ForStatement
 
 Interesting fields:
+
 * `condition: Statement`: The condition that is evaluated before making the branching decision
 * `conditionDeclaration: Statement`: A declaration containing the condition in the initializer, used instead of the condition.
 
@@ -506,8 +496,9 @@ Scheme:
 ### IfStatement
 
 Interesting fields:
+
 * `condition: Statement`: The condition that is evaluated before making the branching decision
-* `conditionDeclaration: Statement`: A declaration containing the condition in the initialize, used instead of the condition.
+* `conditionDeclaration: Statement`: A declaration with an initializer containing the condition which can be used instead of the condition.
 
 Scheme:
 ```mermaid
@@ -521,6 +512,7 @@ Scheme:
 
 ### SwitchStatement
 Interesting fields:
+
 * `selector: Statement`: The expression that is evaluated before making the branching decision
 * `selectorDeclaration: Statement`: A declaration containing the selector in the initializer, used instead of the selector.
 

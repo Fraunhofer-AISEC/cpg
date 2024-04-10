@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.implicit
-import de.fraunhofer.aisec.cpg.graph.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -45,12 +45,14 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
+@ExecuteBefore(ReplaceCallCastPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
 
         walker.registerHandler(::fixInitializers)
+        walker.registerHandler(::connectDefinitions)
         for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
@@ -88,6 +90,54 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
                     node.initializer = initializer
                     currInitializer.disconnectFromGraph()
+                }
+            }
+        }
+    }
+
+    /**
+     * This function connects a [FunctionDeclaration] that is a definition (i.e., has a body) to
+     * possible declarations of the same function (has [FunctionDeclaration.isDefinition] set to
+     * false) pointing to it by setting the field [FunctionDeclaration.definition].
+     *
+     * This works across the whole [Component].
+     */
+    private fun connectDefinitions(declaration: Node?) {
+        if (declaration !is FunctionDeclaration) {
+            return
+        }
+
+        // We only need to look at functions that are definitions, i.e., have a body
+        if (!declaration.isDefinition) {
+            return
+        }
+
+        var scope = scopeManager.currentScope
+        // This is a rather stupid workaround since because of incorrect scope merging, there exist
+        // multiple instances of "global" scopes...
+        if (scope is GlobalScope) {
+            scope = scopeManager.globalScope
+        }
+        if (scope is ValueDeclarationScope) {
+            // Update the definition
+            val candidates =
+                scope.valueDeclarations.filterIsInstance<FunctionDeclaration>().filter {
+                    // We should only connect methods to methods, functions to functions and
+                    // constructors to constructors.
+                    it::class == declaration::class &&
+                        !it.isDefinition &&
+                        it.name == declaration.name &&
+                        it.hasSignature(declaration.signatureTypes)
+                }
+            for (candidate in candidates) {
+                candidate.definition = declaration
+
+                // Do some additional magic with default parameters, which I do not really
+                // understand
+                for (i in declaration.parameters.indices) {
+                    if (candidate.parameters[i].default != null) {
+                        declaration.parameters[i].default = candidate.parameters[i].default
+                    }
                 }
             }
         }

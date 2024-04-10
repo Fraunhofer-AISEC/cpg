@@ -164,7 +164,7 @@ val queryTreeResult =
     )
 ```
 
-Less detailled:
+Less detailed:
 ```kotlin
 val queryTreeResult =
     result.all<CallExpression>(

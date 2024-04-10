@@ -161,4 +161,24 @@ open class CLanguage :
             )
         return resolveWithImplicitCast(call, initialInvocationCandidates)
     }
+
+    override fun isDerivedFrom(
+        type: Type,
+        superType: Type,
+        hint: HasType?,
+        superHint: HasType?
+    ): Boolean {
+        val match = super.isDerivedFrom(type, superType, hint, superHint)
+        if (match) {
+            return true
+        }
+
+        // As a special rule, a non-nested pointer and array of the same type are completely
+        // interchangeable
+        if (type.root == superType.root && type is PointerType && superType is PointerType) {
+            return true
+        }
+
+        return false
+    }
 }

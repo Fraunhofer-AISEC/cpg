@@ -48,8 +48,8 @@ class ConstructExpression : CallExpression() {
     @PopulatedByPass(SymbolResolver::class)
     var constructor: ConstructorDeclaration? = null
         get() =
-            if (anoymousClass != null) {
-                anoymousClass?.constructors?.firstOrNull()
+            if (anonymousClass != null) {
+                anonymousClass?.constructors?.firstOrNull()
             } else {
                 field
             }
@@ -62,14 +62,14 @@ class ConstructExpression : CallExpression() {
             }
         }
 
-    @AST var anoymousClass: RecordDeclaration? = null
+    @AST var anonymousClass: RecordDeclaration? = null
 
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(SymbolResolver::class)
     var instantiates: Declaration? = null
         get() =
-            if (anoymousClass != null) {
-                anoymousClass
+            if (anonymousClass != null) {
+                anonymousClass
             } else {
                 field
             }

@@ -1,6 +1,6 @@
 # Specification: Data Flow Graph - Function Summaries
 
-For functions and methods which are part of the analyzed codebase, the CPG can track data flows interprocedurally to some extent.
+For functions and methods which are part of the analyzed codebase, the CPG can track data flows inter-procedurally to some extent.
 However, for all functions and methods which cannot be analyzed, we have no information available.
 For this case, we provide the user a way to specify custom summaries of the data flows through the function.
 To do so, you need to fill a JSON or YAML file as follows:
@@ -27,92 +27,94 @@ An example of a file could look as follows:
 
 === "JSON"
 
-  ```json
-  [
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
-        "methodName": "java.util.List.addAll",
-        "signature": ["int", "java.util.Object"]
+    ```json
+    [
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+          "methodName": "java.util.List.addAll",
+          "signature": ["int", "java.util.Object"]
+        },
+        "dataFlows": [
+          {
+            "from": "param1",
+            "to": "base",
+            "dfgType": "full"
+          }
+        ]
       },
-      "dataFlows": [
-        {
-          "from": "param1",
-          "to": "base",
-          "dfgType": "full"
-        }
-      ]
-    },
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
-        "methodName": "java.util.List.addAll",
-        "signature": ["java.util.Object"]
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage",
+          "methodName": "java.util.List.addAll",
+          "signature": ["java.util.Object"]
+        },
+        "dataFlows": [
+          {
+            "from": "param0",
+            "to": "base",
+            "dfgType": "full"
+          }
+        ]
       },
-      "dataFlows": [
-        {
-          "from": "param0",
-          "to": "base",
-          "dfgType": "full"
-        }
-      ]
-    },
-    {
-      "functionDeclaration": {
-        "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
-        "methodName": "memcpy"
-      },
-      "dataFlows": [
-        {
-          "from": "param1",
-          "to": "param0",
-          "dfgType": "full"
-        }
-      ]
-    }
-  ]
-  ```
+      {
+        "functionDeclaration": {
+          "language": "de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage",
+          "methodName": "memcpy"
+        },
+        "dataFlows": [
+          {
+            "from": "param1",
+            "to": "param0",
+            "dfgType": "full"
+          }
+        ]
+      }
+    ]
+    ```
 
 === "YAML"
 
-  ```yml
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-      methodName: java.util.List.addAll
-      signature:
-        - int
-        - java.util.Object
-    dataFlows:
-      - from: param1
-        to: base
-        dfgType: full
-  
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-      methodName: java.util.List.addAll
-      signature:
-        - java.util.Object
-    dataFlows:
-      - from: param0
-        to: base
-        dfgType: full
-
-  - functionDeclaration:
-      language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
-      methodName: memcpy
-    dataFlows:
-      - from: param1
-        to: param0
-        dfgType: full
-  ```
+    ```yaml
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+        methodName: java.util.List.addAll
+        signature:
+          - int
+          - java.util.Object
+        dataFlows:
+          - from: param1
+            to: base
+            dfgType: full
+    
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+        methodName: java.util.List.addAll
+        signature:
+          - java.util.Object
+        dataFlows:
+          - from: param0
+            to: base
+            dfgType: full
+    
+    - functionDeclaration:
+        language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+        methodName: memcpy
+        dataFlows:
+          - from: param1
+            to: param0
+            dfgType: full
+    ```
 
 This file configures the following edges:
+
 * For a method declaration in Java `java.util.List.addAll(int, java.util.Object)`, the parameter 1 flows to the base (i.e., the list object)
 * For a method declaration in Java `java.util.List.addAll(java.util.Object)`, the parameter 0 flows to the base (i.e., the list object)
 * For a function declaration in C `memcpy` (and thus also CXX `std::memcpy`), the parameter 1 flows to parameter 0.
 
 
 Note: If multiple function summaries match a method/function declaration (after the normal matching considering the language, local name of the function/method, signature if applicable and type hierarchy of the base object), we use the following routine to identify ideally a single entry:
+
 1. We filter for existing signatures since it's more precisely specified than the generic "catch all" without a signature-element.
 2. We filter for the most precise class of the base.
 3. If there are still multiple options, we take the longest signature.
