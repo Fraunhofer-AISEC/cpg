@@ -46,7 +46,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTTuple -> handleTuple(node)
             is Python.ASTList -> handleList(node)
             is Python.ASTBoolOp -> handleBoolOp(node)
-            else -> TODO()
+            else -> TODO("The expression of class ${node.javaClass} is not supported yet")
         }
     }
 
@@ -134,7 +134,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTIsNot -> "is not"
                 is Python.ASTIn -> "in"
                 is Python.ASTNotIn -> "not in"
-                else -> TODO()
+                else ->
+                    TODO(
+                        "The comparison operation ${node.ops.first().javaClass} is not supported yet"
+                    )
             }
         val ret = newBinaryOperator(op, rawNode = node)
         ret.lhs = handle(node.left)
@@ -158,7 +161,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTBitXor -> "^"
                 is Python.ASTBitAnd -> "&"
                 is Python.ASTFloorDiv -> "//"
-                else -> TODO()
+                else -> TODO("The binary operation ${node.op.javaClass} is not supported yet")
             }
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         ret.lhs = handle(node.left)

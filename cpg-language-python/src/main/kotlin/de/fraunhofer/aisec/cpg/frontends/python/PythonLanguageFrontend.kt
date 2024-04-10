@@ -87,8 +87,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // Python versions
                 it.exec("commentCode = tokenize.COMMENT")
 
-                val pyCommentCode = (it.getValue("commentCode") as? Long) ?: TODO()
-                val pyTokens = (it.getValue("tokenList") as? ArrayList<*>) ?: TODO()
+                val pyCommentCode =
+                    (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
+                val pyTokens =
+                    (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
                 addCommentsToCPG(tud, pyTokens, pyCommentCode)
             }
             return tud
@@ -249,7 +251,9 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private fun pythonASTtoCPG(pyAST: PyObject, path: String): TranslationUnitDeclaration {
         val pythonASTModule =
             fromPython(pyAST) as? Python.ASTModule
-                ?: TODO() // could be one of "ast.{Module,Interactive,Expression,FunctionType}
+                ?: TODO(
+                    "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
+                ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
         val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
         scopeManager.resetToGlobal(tud)
@@ -408,7 +412,7 @@ fun fromPython(pyObject: Any?): Python.AST {
             "ast.withitem" -> Python.ASTwithitem(pyObject)
 
             // complex numbers
-            "complex" -> TODO()
+            "complex" -> TODO("Complex numbers are not supported yet")
             else -> {
                 TODO("Implement for ${pyObject.getAttr("__class__")}")
             }
