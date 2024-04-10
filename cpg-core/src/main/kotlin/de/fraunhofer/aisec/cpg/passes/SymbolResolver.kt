@@ -318,16 +318,24 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
      * inference was not possible, or if it was turned off in the [InferenceConfiguration].
      */
-    private fun tryRecordInference(
-        type: Type,
-    ): RecordDeclaration? {
+    private fun tryRecordInference(type: Type, locationHint: Node? = null): RecordDeclaration? {
         val kind =
             if (type.language is HasStructs) {
                 "struct"
             } else {
                 "class"
             }
-        val record = type.startInference(ctx)?.inferRecordDeclaration(type, currentTU, kind)
+        // Determine the scope where we want to start our inference
+        var (scope, _) = scopeManager.extractScope(type)
+
+        if (scope !is NameScope) {
+            scope = null
+        }
+
+        val record =
+            (scope?.astNode ?: currentTU)
+                .startInference(ctx)
+                ?.inferRecordDeclaration(type, kind, locationHint)
 
         // update the type's record
         if (record != null) {
@@ -463,7 +471,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (record == null) {
             // We access an unknown field of an unknown record. so we need to handle that along the
             // way as well
-            record = tryRecordInference(base)
+            record = tryRecordInference(base, locationHint = ref)
         }
 
         if (record == null) {
@@ -800,11 +808,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 val root = it.root as? ObjectType
                 var record = root?.recordDeclaration
                 if (root != null && record == null) {
-                    record =
-                        it.startInference(ctx)
-                            ?.inferRecordDeclaration(root, currentTU, locationHint = call)
-                    // update the record declaration
-                    root.recordDeclaration = record
+                    // We access an unknown method of an unknown record. so we need to handle that
+                    // along the way as well
+                    record = tryRecordInference(root, locationHint = call)
                 }
                 record
             }
