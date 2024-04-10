@@ -267,6 +267,10 @@ val Statement.cyclomaticComplexity: Int
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
+                is ForStatement -> {
+                    // add one and include the children
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
                 is IfStatement -> {
                     // add one for each branch (and include the children)
                     stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
