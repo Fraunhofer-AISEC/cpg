@@ -231,11 +231,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         //  this just enables CXX static fields
-        if (
-            refersTo == null &&
-                language != null &&
-                language.namespaceDelimiter in current.name.toString()
-        ) {
+        if (refersTo == null && language != null && current.name.isQualified()) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
@@ -455,7 +451,23 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (member == null && record is EnumDeclaration) {
             member = record.entries[reference.name.localName]
         }
-        return member ?: handleUnknownField(containingClass, reference)
+
+        if (member != null) {
+            return member
+        }
+
+        // This is a little bit of a workaround, but at least this makes sure we are not inferring a
+        // record, where a namespace already exist
+        val (scope, _) = scopeManager.extractScope(reference)
+        if (scope == null) {
+            handleUnknownField(containingClass, reference)
+        } else {
+            log.warn(
+                "We should infer a namespace variable ${reference.name} at this point, but this is not yet implemented."
+            )
+        }
+
+        return null
     }
 
     // TODO(oxisto): Move to inference class
