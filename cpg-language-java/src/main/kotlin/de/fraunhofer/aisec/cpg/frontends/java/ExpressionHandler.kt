@@ -470,8 +470,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleThisExpression(expr: Expression): Reference {
         val thisExpr = expr.asThisExpr()
-        val resolvedValueDeclaration = thisExpr.resolve()
-        val type = this.objectType(resolvedValueDeclaration.qualifiedName)
+        var qualifiedName: String
+        try {
+            qualifiedName = thisExpr.resolve().qualifiedName
+        } catch (use: UnsolvedSymbolException) {
+            qualifiedName = frontend.scopeManager.currentRecord?.name.toString()
+        }
+        val type = this.objectType(qualifiedName)
         var name = thisExpr.toString()
 
         // If the typeName is specified, then this a "qualified this" and we need to handle it
