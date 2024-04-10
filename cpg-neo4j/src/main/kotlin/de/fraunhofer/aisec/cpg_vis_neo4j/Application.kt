@@ -485,7 +485,12 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
-                .useParallelPasses(true)
+                .useParallelPasses(false)
+                .configurePass<ControlFlowSensitiveDFGPass>(
+                    ControlFlowSensitiveDFGPass.Configuration(
+                        maxComplexity = 200,
+                    )
+                )
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
