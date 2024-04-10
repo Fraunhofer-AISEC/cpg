@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -72,17 +71,6 @@ class AssignExpression :
                 field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
             } else {
                 field.forEach { (it as? Reference)?.access = AccessValues.READWRITE }
-
-                if (!isCompoundAssignment) {
-                    // If this is neither a simple nor a compound assignment, probably something
-                    // went wrong, we still model this as a READWRITE, but we indicate a warning to
-                    // the user
-                    Util.warnWithFileLocation(
-                        this,
-                        log,
-                        "Assignment is neither a simple nor a compound assignment. This is suspicious."
-                    )
-                }
             }
         }
 
@@ -110,19 +98,13 @@ class AssignExpression :
             return if (usedAsExpression) rhs.firstOrNull() else null
         }
 
-    private val isSingleValue: Boolean
-        get() {
-            return this.lhs.size == 1 && this.rhs.size == 1
-        }
-
     /**
      * We also support compound assignments in this class, but only if the appropriate compound
-     * operator is set and only if there is a single-value expression on both sides.
+     * operator is set.
      */
     val isCompoundAssignment: Boolean
         get() {
-            return operatorCode in (language?.compoundAssignmentOperators ?: setOf()) &&
-                isSingleValue
+            return operatorCode in (language?.compoundAssignmentOperators ?: setOf())
         }
 
     /**
