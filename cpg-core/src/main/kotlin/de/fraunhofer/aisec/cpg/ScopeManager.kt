@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -1027,39 +1028,51 @@ fun FunctionDeclaration.matchesSignature(
         }
 
         // Try to find a matching call argument by index
-        val type =
-            signature.getOrNull(i)
-                ?: // If the argument is null, we could still have a default argument
-                return if (useDefaultArguments) {
-                    val defaultParam = this.defaultParameters[i]
-                    if (defaultParam != null) {
-                        casts += DirectMatch
-                        remainingArguments--
-                        continue
-                    } else {
-                        IncompatibleSignature
-                    }
-                } else {
-                    IncompatibleSignature
-                }
+        val type = signature.getOrNull(i)
 
-        // Check, if we can cast the arg into our target type; and if, yes, what is the "distance"
-        // to the base type. We need this to narrow down the type during resolving
-        val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
-        if (match == CastNotPossible) {
+        // Yay, we still have arguments/types left
+        if (type != null) {
+            // Check, if we can cast the arg into our target type; and if, yes, what is
+            // the "distance" to the base type. We need this to narrow down the type during
+            // resolving
+            val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
+            if (match == CastNotPossible) {
+                return IncompatibleSignature
+            }
+
+            casts += match
+            remainingArguments--
+        } else {
+            // If the type (argument) is null, this might signal that we have less arguments than
+            // our function signature, so we are likely not a match. But, the function could still
+            // have a default argument (if the language supports it).
+            if (useDefaultArguments) {
+                val defaultParam = this.defaultParameters[i]
+                if (defaultParam != null) {
+                    casts += DirectMatch
+
+                    // We have a matching default parameter, let's decrement the remaining arguments
+                    // and continue matching
+                    remainingArguments--
+                    continue
+                }
+            }
+
+            // We did not have a matching default parameter, or we don't have/support default
+            // parameters, so our matching is done here
             return IncompatibleSignature
         }
-
-        casts += match
-        remainingArguments--
     }
 
     // TODO(oxisto): In some languages, we can also have named parameters, but this is not yet
     //  supported
 
+    // If we still have remaining arguments at the end of the matching check, the signature is
+    // incompatible
     return if (remainingArguments > 0) {
         IncompatibleSignature
     } else {
+        // Otherwise, return the matching cast results
         SignatureMatches(casts)
     }
 }

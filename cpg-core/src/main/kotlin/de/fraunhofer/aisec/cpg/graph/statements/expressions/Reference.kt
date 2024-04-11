@@ -85,13 +85,10 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
      * which holds the arguments and a [Reference] (or [MemberExpression]), which is used as the
      * [CallExpression.callee] and holds the name of the desired function.
      *
-     * Since not all [Reference] are used this way, we intentionally set this to null (rather than
-     * an empty list) as default.
-     *
      * Until we have proper support for AST parents, we need to rely on the [resolutionHelper] to
      * find out if this reference is used as a [CallExpression.callee].
      */
-    var candidates: Set<Declaration>? = null
+    var candidates: Set<Declaration> = setOf()
 
     override var aliases = mutableSetOf<HasAliases>()
 

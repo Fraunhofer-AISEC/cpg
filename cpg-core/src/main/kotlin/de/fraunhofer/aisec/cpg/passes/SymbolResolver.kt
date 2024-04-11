@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -172,6 +173,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
+        // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
+        // resolution, but in future this will also be used in resolving regular references.
+        current.candidates = findSymbols(current)
+
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
         // property to actually resolve the function call. However, there is a special case that
@@ -183,13 +188,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // i.e., their function definitions and get rid of the separate CallResolver.
         var wouldResolveTo: Declaration? = null
         if (current.resolutionHelper is CallExpression) {
-            // Peek into the declaration, and if it is a variable, we can proceed normally, as we
-            // are running into the special case explained above. Otherwise, we abort here (for
-            // now).
-            wouldResolveTo = scopeManager.resolveReference(current)
+            // Peek into the declaration, and if it is only one declaration and a variable, we can
+            // proceed normally, as we are running into the special case explained above. Otherwise,
+            // we abort here (for now).
+            wouldResolveTo = current.candidates.singleOrNull()
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
-                // TODO: not the best place for it and it is somewhat redundant
-                current.candidates = findSymbols(current)
                 return
             }
         }
@@ -516,20 +519,21 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        // Let's do some next generation stuff here, but currently with some restrictions
-        val nextGen =
+        // We are moving towards a new approach to call resolution. However, we cannot use this for
+        // all nodes yet, so we need to use legacy resolution for some
+        val useLegacyResolution =
             when {
-                call.language.isCPP && curClass != null -> false
-                call is MemberCallExpression -> false
-                call is ConstructExpression -> false
-                call.instantiatesTemplate() && call.language is HasTemplates -> false
-                call.callee !is Reference -> false
+                call.language.isCPP && curClass != null -> true
+                call is MemberCallExpression -> true
+                call is ConstructExpression -> true
+                call.instantiatesTemplate() && call.language is HasTemplates -> true
+                call.callee !is Reference -> true
                 else -> {
-                    true
+                    false
                 }
             }
 
-        if (nextGen) {
+        if (!useLegacyResolution) {
             handleCallExpression(call, curClass)
         } else {
             handleCallExpressionLegacy(call, curClass)
@@ -543,22 +547,22 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val result = scopeManager.resolveCall(call)
 
         when (result.success) {
-            CallResolutionResult.SuccessKind.PROBLEMATIC -> {
+            PROBLEMATIC -> {
                 log.error(
                     "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
                 call.invokes = result.bestViable.toList()
             }
-            CallResolutionResult.SuccessKind.AMBIGUOUS -> {
+            AMBIGUOUS -> {
                 log.warn(
                     "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
                 )
                 call.invokes = result.bestViable.toList()
             }
-            CallResolutionResult.SuccessKind.SUCCESSFUL -> {
+            SUCCESSFUL -> {
                 call.invokes = result.bestViable.toList()
             }
-            CallResolutionResult.SuccessKind.UNRESOLVED -> {
+            UNRESOLVED -> {
                 // Resolution has provided no result, we can forward this to the inference system,
                 // if we want. While this is definitely a function, it could still be a function
                 // inside a namespace. We therefore have two possible start points, a namespace
@@ -925,7 +929,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 viableFunctions,
                 signatureResults,
                 setOf(),
-                CallResolutionResult.SuccessKind.UNRESOLVED,
+                UNRESOLVED,
                 call.scope
             )
         val pair = call.language?.bestViableResolution(result)
