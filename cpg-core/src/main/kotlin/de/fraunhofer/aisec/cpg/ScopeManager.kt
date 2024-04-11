@@ -695,13 +695,21 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function extracts a possible scope out of a [Name], e.g. if the name is fully qualified.
-     * This also resolves possible name aliases (e.g. because of imports). It returns a pair of a
-     * scope (if found) as well as the name, which is possibly adjusted for the aliases.
+     * This function extracts a scope for the [Name] in node, e.g. if the name is fully qualified.
+     *
+     * The pair returns the extracted scope and an alias adjusted name. The extracted scope is
+     * responsible for the name (e.g. declares the parent namespace) and the returned name only
+     * differs from the provided name if aliasing was involved at the node location (e.g. because of
+     * imports).
      *
      * Note: Currently only *fully* qualified names are properly resolved. This function will
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
      * `B` points to `A::B`, rather than to `A`.
+     *
+     * @param node the nodes name references a namespace constituted by a scope
+     * @param scope the current scope relevant for the name resolution, e.g. parent of node
+     * @return a pair with the namespace scope of node.name and the alias-free name valid in that
+     *   scope
      */
     fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
         var name: Name = node.name
