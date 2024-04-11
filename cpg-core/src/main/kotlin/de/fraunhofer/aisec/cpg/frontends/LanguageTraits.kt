@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -215,9 +214,7 @@ interface HasAnonymousIdentifier : LanguageTrait {
  * [GlobalScope], i.e., not within a namespace, but directly contained in a
  * [TranslationUnitDeclaration].
  */
-interface HasGlobalVariables : LanguageTrait {
-    val globalVariableScopeClass: Class<out Node>
-}
+interface HasGlobalVariables : LanguageTrait
 
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
