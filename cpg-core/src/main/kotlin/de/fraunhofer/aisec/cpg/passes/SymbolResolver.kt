@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.StructureDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -459,15 +460,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // This is a little bit of a workaround, but at least this makes sure we are not inferring a
         // record, where a namespace already exist
         val (scope, _) = scopeManager.extractScope(reference)
-        if (scope == null) {
+        return if (scope == null) {
             handleUnknownField(containingClass, reference)
         } else {
-            log.warn(
-                "We should infer a namespace variable ${reference.name} at this point, but this is not yet implemented."
-            )
+            // Workaround needed for Java. If we already have a record scope, use the "old"
+            // inference function
+            when (scope) {
+                is RecordScope -> handleUnknownField(containingClass, reference)
+                is NameScope -> {
+                    log.warn(
+                        "We should infer a namespace variable ${reference.name} at this point, but this is not yet implemented."
+                    )
+                    null
+                }
+                else -> {
+                    log.warn(
+                        "We should infer a variable ${reference.name} in ${scope}, but this is not yet implemented."
+                    )
+                    null
+                }
+            }
         }
-
-        return null
     }
 
     // TODO(oxisto): Move to inference class
