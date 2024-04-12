@@ -773,6 +773,10 @@ class ScopeManager : ScopeProvider {
         return result
     }
 
+    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+        return extractScope(node.name, node.location, scope)
+    }
+
     /**
      * This function extracts a scope for the [Name] in node, e.g. if the name is fully qualified.
      *
@@ -789,18 +793,22 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
-        var name: Name = node.name
+    fun extractScope(
+        name: Name,
+        location: PhysicalLocation?,
+        scope: Scope? = currentScope
+    ): Pair<Scope?, Name> {
+        var name = name
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (node.name.isQualified()) {
+        if (name.isQualified()) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            var scopeName = node.name.parent
+            var scopeName = name.parent
 
             // We need to check, whether we have an alias for the scope name in this file
-            val list = aliases[node.location?.artifactLocation]
+            val list = aliases[location?.artifactLocation]
             val alias = list?.firstOrNull { it.to == scopeName }?.from
             if (alias != null) {
                 scopeName = alias
@@ -813,10 +821,21 @@ class ScopeManager : ScopeProvider {
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
+                    // Try again with the using
+                    // TODO: using can also be on a namespace
+                    val test = scope?.globalScope?.using?.singleOrNull()
+                    val fqn = test.fqn(name)
+                    if (fqn != null) {
+                        val pair = extractScope(fqn, location, null)
+                        if (pair.first != null) {
+                            return pair
+                        }
+                    }
+
                     Util.warnWithFileLocation(
-                        node,
+                        location,
                         LOGGER,
-                        "Could not find the scope $scopeName needed to resolve the call ${node.name}"
+                        "Could not find the scope $scopeName needed to resolve the call ${name}"
                     )
                     scope
                 } else {

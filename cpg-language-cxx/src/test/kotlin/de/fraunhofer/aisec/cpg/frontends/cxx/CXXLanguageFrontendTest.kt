@@ -1813,4 +1813,27 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val functions = result.functions { it.name.localName == "foo" && it.isDefinition }
         assertEquals(2, functions.size)
     }
+
+    @Test
+    fun testUsing() {
+        val file = File("src/test/resources/cxx/using.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        val std = result.namespaces["std"]
+        assertNotNull(std)
+
+        val string = std.records["string"]
+        assertNotNull(string)
+
+        val cStr = string.methods["c_str"]
+        assertNotNull(cStr)
+
+        val cStrCall = result.mcalls["c_str"]
+        assertNotNull(cStrCall)
+        assertInvokes(cStrCall, cStr)
+    }
 }

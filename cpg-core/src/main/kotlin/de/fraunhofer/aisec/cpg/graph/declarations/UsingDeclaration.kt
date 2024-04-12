@@ -29,13 +29,12 @@ import java.util.Objects
 
 /** Represents a using directive used to extend the currently valid name scope. */
 class UsingDeclaration : Declaration() {
-    var qualifiedName: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is UsingDeclaration) return false
-        return super.equals(other) && qualifiedName == other.qualifiedName
+        return super.equals(other)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), qualifiedName)
+    override fun hashCode() = Objects.hash(super.hashCode())
 }

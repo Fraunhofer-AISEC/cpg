@@ -159,3 +159,12 @@ fun Name?.fqn(localName: String) =
     } else {
         Name(localName, this, this.delimiter)
     }
+
+fun Name?.fqn(name: Name): Name? {
+    return if (this == null) {
+        null
+    } else {
+        // not really the best way
+        parseName(this.toString() + this.delimiter + name.toString(), this.delimiter)
+    }
+}
