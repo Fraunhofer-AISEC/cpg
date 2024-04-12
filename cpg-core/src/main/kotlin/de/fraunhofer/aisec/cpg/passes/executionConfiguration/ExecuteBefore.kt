@@ -23,13 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.executionConfiguration
+
+import de.fraunhofer.aisec.cpg.passes.Pass
+import kotlin.reflect.KClass
 
 /**
- * Indicates whether this pass should be executed as the first pass. Note: setting this flag for
- * more than one active pass will yield an error. Note: setting this flag will not activate the
- * pass. You must register the pass manually.
+ * Register a dependency for the annotated pass. This ensures that the annotated pass is executed
+ * before [other] pass.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class ExecuteFirst
+@Repeatable
+annotation class ExecuteBefore(val other: KClass<out Pass<*>>)

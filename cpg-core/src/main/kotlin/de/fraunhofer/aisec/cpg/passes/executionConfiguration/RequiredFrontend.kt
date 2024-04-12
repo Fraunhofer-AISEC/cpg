@@ -23,16 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.executionConfiguration
 
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import kotlin.reflect.KClass
 
 /**
- * Register a dependency for the annotated pass. This ensures that the annotated pass is executed
- * before [other] pass.
+ * This annotation can only enable a pass for a given [LanguageFrontend]. The pass's accept function
+ * will not be executed when the current language does not match the required language.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class ExecuteBefore(val other: KClass<out Pass<*>>)
+annotation class RequiredFrontend(val value: KClass<out LanguageFrontend<*, *>>)

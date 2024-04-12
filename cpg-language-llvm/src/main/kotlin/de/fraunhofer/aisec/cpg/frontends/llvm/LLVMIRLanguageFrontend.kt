@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.executionConfiguration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer

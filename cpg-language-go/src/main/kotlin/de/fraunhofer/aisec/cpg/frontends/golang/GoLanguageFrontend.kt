@@ -44,8 +44,8 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
-import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
+import de.fraunhofer.aisec.cpg.passes.executionConfiguration.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.executionConfiguration.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File

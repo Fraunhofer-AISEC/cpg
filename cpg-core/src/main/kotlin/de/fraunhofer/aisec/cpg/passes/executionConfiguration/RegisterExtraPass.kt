@@ -23,15 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.executionConfiguration
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
 
 /**
- * This annotation can only enable a pass for a given [LanguageFrontend]. The pass's accept function
- * will not be executed when the current language does not match the required language.
+ * Register a new default pass required by a frontend. Passes annotated this way are collected by
+ * [TranslationConfiguration.Builder.registerExtraFrontendPasses] and automatically registered in
+ * [TranslationConfiguration.Builder.build], but only if
+ * [TranslationConfiguration.Builder.defaultPasses] was called.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class RequiredFrontend(val value: KClass<out LanguageFrontend<*, *>>)
+@Repeatable
+annotation class RegisterExtraPass(val value: KClass<out Pass<*>>)

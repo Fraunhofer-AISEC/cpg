@@ -38,9 +38,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.order.RequiresLanguageTrait
+import de.fraunhofer.aisec.cpg.passes.executionConfiguration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.executionConfiguration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.executionConfiguration.RequiresLanguageTrait
 
 /**
  * If a [Language] has the trait [HasFunctionalCasts], we cannot distinguish between a

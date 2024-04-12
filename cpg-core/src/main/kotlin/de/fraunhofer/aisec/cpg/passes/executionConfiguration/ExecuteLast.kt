@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.executionConfiguration
 
 /**
  * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
