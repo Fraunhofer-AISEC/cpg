@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -127,83 +126,6 @@ class GoLanguage :
             // https://go.dev/ref/spec#Package_unsafe
             "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this)
         )
-
-    override fun isDerivedFrom(
-        type: Type,
-        targetType: Type,
-        hint: HasType?,
-        targetHint: HasType?
-    ): Boolean {
-        if (
-            type == targetType ||
-                // "any" accepts any type
-                targetType == primitiveType("any") ||
-                // the unsafe.ArbitraryType is a fake type in the unsafe package, that also accepts
-                // any type
-                targetType == primitiveType("unsafe.ArbitraryType")
-        ) {
-            return true
-        }
-
-        // This makes lambda expression works, as long as we have the dedicated a
-        // FunctionPointerType
-        if (type is FunctionPointerType && targetType.underlyingType is FunctionType) {
-            return type == targetType.underlyingType?.reference(PointerType.PointerOrigin.POINTER)
-        }
-
-        // the unsafe.IntegerType is a fake type in the unsafe package, that accepts any integer
-        // type
-        if (type is IntegerType && targetType == primitiveType("unsafe.IntegerType")) {
-            return true
-        }
-
-        // If we encounter an auto type as part of the function declaration, we accept this as any
-        // type
-        if (
-            (type is ObjectType && targetType is AutoType) ||
-                (type is PointerType && type.isArray && targetType.root is AutoType)
-        ) {
-            return true
-        }
-
-        // We accept the "nil" literal for the following super types:
-        // - pointers
-        // - interfaces
-        // - maps
-        // - slices (which we model also as a pointer type)
-        // - channels
-        // - function types
-        if (hint.isNil) {
-            return targetType is PointerType ||
-                targetType.isInterface ||
-                targetType.isMap ||
-                targetType.isChannel ||
-                targetType.underlyingType is FunctionType
-        }
-
-        // We accept all kind of numbers if the literal is part of the call expression
-        if (targetHint is FunctionDeclaration && hint is Literal<*>) {
-            return type is NumericType && targetType is NumericType
-        }
-
-        // We additionally want to emulate the behaviour of Go's interface system here
-        if (targetType.isInterface) {
-            var b = true
-            val target = (type.root as? ObjectType)?.recordDeclaration
-
-            // Our target struct type needs to implement all the functions of the interface
-            // TODO(oxisto): Differentiate on the receiver (pointer vs non-pointer)
-            for (method in targetType.recordDeclaration?.methods ?: listOf()) {
-                if (target?.methods?.firstOrNull { it.signature == method.signature } != null) {
-                    b = false
-                }
-            }
-
-            return b
-        }
-
-        return false
-    }
 
     override fun tryCast(
         type: Type,
