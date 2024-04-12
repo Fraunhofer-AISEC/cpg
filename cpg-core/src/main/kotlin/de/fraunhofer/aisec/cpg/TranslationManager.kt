@@ -395,7 +395,7 @@ private constructor(
         }
 
     class Builder {
-        private var config: TranslationConfiguration = TranslationConfiguration.builder().build()
+        private var config: TranslationConfiguration? = null
 
         fun config(config: TranslationConfiguration): Builder {
             this.config = config
@@ -403,7 +403,7 @@ private constructor(
         }
 
         fun build(): TranslationManager {
-            return TranslationManager(config)
+            return TranslationManager(config ?: TranslationConfiguration.builder().build())
         }
     }
 
