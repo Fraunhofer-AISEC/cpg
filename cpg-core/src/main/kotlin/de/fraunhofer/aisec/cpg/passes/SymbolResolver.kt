@@ -31,17 +31,18 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.StructureDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -231,11 +232,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         //  this just enables CXX static fields
-        if (
-            refersTo == null &&
-                language != null &&
-                language.namespaceDelimiter in current.name.toString()
-        ) {
+        if (refersTo == null && language != null && current.name.isQualified()) {
             recordDeclType = getEnclosingTypeOf(current)
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
@@ -318,16 +315,24 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
      * inference was not possible, or if it was turned off in the [InferenceConfiguration].
      */
-    private fun tryRecordInference(
-        type: Type,
-    ): RecordDeclaration? {
+    private fun tryRecordInference(type: Type, locationHint: Node? = null): RecordDeclaration? {
         val kind =
             if (type.language is HasStructs) {
                 "struct"
             } else {
                 "class"
             }
-        val record = type.startInference(ctx)?.inferRecordDeclaration(type, currentTU, kind)
+        // Determine the scope where we want to start our inference
+        var (scope, _) = scopeManager.extractScope(type)
+
+        if (scope !is NameScope) {
+            scope = null
+        }
+
+        val record =
+            (scope?.astNode ?: currentTU)
+                .startInference(ctx)
+                ?.inferRecordDeclaration(type, kind, locationHint)
 
         // update the type's record
         if (record != null) {
@@ -447,7 +452,35 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (member == null && record is EnumDeclaration) {
             member = record.entries[reference.name.localName]
         }
-        return member ?: handleUnknownField(containingClass, reference)
+
+        if (member != null) {
+            return member
+        }
+
+        // This is a little bit of a workaround, but at least this makes sure we are not inferring a
+        // record, where a namespace already exist
+        val (scope, _) = scopeManager.extractScope(reference, null)
+        return if (scope == null) {
+            handleUnknownField(containingClass, reference)
+        } else {
+            // Workaround needed for Java. If we already have a record scope, use the "old"
+            // inference function
+            when (scope) {
+                is RecordScope -> handleUnknownField(containingClass, reference)
+                is NameScope -> {
+                    log.warn(
+                        "We should infer a namespace variable ${reference.name} at this point, but this is not yet implemented."
+                    )
+                    null
+                }
+                else -> {
+                    log.warn(
+                        "We should infer a variable ${reference.name} in ${scope}, but this is not yet implemented."
+                    )
+                    null
+                }
+            }
+        }
     }
 
     // TODO(oxisto): Move to inference class
@@ -463,7 +496,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (record == null) {
             // We access an unknown field of an unknown record. so we need to handle that along the
             // way as well
-            record = tryRecordInference(base)
+            record = tryRecordInference(base, locationHint = ref)
         }
 
         if (record == null) {
@@ -800,11 +833,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 val root = it.root as? ObjectType
                 var record = root?.recordDeclaration
                 if (root != null && record == null) {
-                    record =
-                        it.startInference(ctx)
-                            ?.inferRecordDeclaration(root, currentTU, locationHint = call)
-                    // update the record declaration
-                    root.recordDeclaration = record
+                    // We access an unknown method of an unknown record. so we need to handle that
+                    // along the way as well
+                    record = tryRecordInference(root, locationHint = call)
                 }
                 record
             }

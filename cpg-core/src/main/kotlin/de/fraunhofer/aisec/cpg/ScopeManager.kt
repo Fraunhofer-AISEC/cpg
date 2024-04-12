@@ -846,9 +846,9 @@ class ScopeManager : ScopeProvider {
      * will also be used as a return value of this function. This can be useful, if you create
      * objects, such as a [Node] inside this scope and want to return it to the calling function.
      */
-    fun <T : Any> withScope(scope: Scope?, init: () -> T): T {
+    fun <T : Any> withScope(scope: Scope?, init: (scope: Scope?) -> T): T {
         val oldScope = jumpTo(scope)
-        val ret = init()
+        val ret = init(scope)
         jumpTo(oldScope)
 
         return ret

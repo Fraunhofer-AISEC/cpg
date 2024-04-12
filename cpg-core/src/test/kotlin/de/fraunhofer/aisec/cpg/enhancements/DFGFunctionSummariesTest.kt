@@ -91,11 +91,9 @@ class DFGFunctionSummariesTest {
                                     val listType = t("test.List")
                                     ctx?.let {
                                         val recordDecl =
-                                            listType
-                                                .startInference(it)
+                                            this@translationUnit.startInference(it)
                                                 ?.inferRecordDeclaration(
                                                     listType,
-                                                    this@translationUnit
                                                 )
                                         listType.recordDeclaration = recordDecl
                                         recordDecl?.addSuperClass(objectType)
@@ -105,11 +103,9 @@ class DFGFunctionSummariesTest {
                                     val specialListType = t("test.SpecialList")
                                     ctx?.let {
                                         val recordDecl =
-                                            specialListType
-                                                .startInference(it)
+                                            this@translationUnit.startInference(it)
                                                 ?.inferRecordDeclaration(
                                                     specialListType,
-                                                    this@translationUnit
                                                 )
                                         specialListType.recordDeclaration = recordDecl
                                         recordDecl?.addSuperClass(listType)
@@ -119,11 +115,9 @@ class DFGFunctionSummariesTest {
                                     val verySpecialListType = t("test.VerySpecialList")
                                     ctx?.let {
                                         val recordDecl =
-                                            specialListType
-                                                .startInference(it)
+                                            this@translationUnit.startInference(it)
                                                 ?.inferRecordDeclaration(
                                                     specialListType,
-                                                    this@translationUnit
                                                 )
                                         specialListType.recordDeclaration = recordDecl
                                         recordDecl?.addSuperClass(listType)

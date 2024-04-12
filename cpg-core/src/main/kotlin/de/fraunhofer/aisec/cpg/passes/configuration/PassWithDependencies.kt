@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -53,10 +53,15 @@ data class PassWithDependencies(
         }
 
     override fun toString(): String {
-        return ToStringBuilder(this, Node.TO_STRING_STYLE)
-            .append("pass", pass.simpleName)
-            .append("softDependencies", softDependencies.map { it.simpleName })
-            .append("hardDependencies", hardDependencies.map { it.simpleName })
-            .toString()
+        val builder = ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", pass.simpleName)
+
+        if (softDependencies.isNotEmpty()) {
+            builder.append("softDependencies", softDependencies.map { it.simpleName })
+        }
+
+        if (hardDependencies.isNotEmpty()) {
+            builder.append("hardDependencies", hardDependencies.map { it.simpleName })
+        }
+        return builder.toString()
     }
 }

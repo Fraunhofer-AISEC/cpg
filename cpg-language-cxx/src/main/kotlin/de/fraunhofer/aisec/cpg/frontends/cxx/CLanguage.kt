@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
@@ -52,9 +50,6 @@ open class CLanguage :
     override val disjunctiveOperators = listOf("||")
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
-
-    override val globalVariableScopeClass: Class<out Node>
-        get() = TranslationUnitDeclaration::class.java
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See
