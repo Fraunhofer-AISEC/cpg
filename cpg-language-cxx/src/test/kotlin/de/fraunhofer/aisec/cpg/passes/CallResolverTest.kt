@@ -37,11 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.io.File
 import java.nio.file.Path
 import java.util.function.Predicate
@@ -104,7 +102,7 @@ class CallResolverTest : BaseTest() {
             for (call in calls.filter { it.signature == signature }) {
                 val target =
                     findByUniquePredicate(methods) { m: FunctionDeclaration ->
-                        m.hasSignature(signature)
+                        m.matchesSignature(signature) != IncompatibleSignature
                     }
                 assertEquals(listOf(target), call.invokes)
             }
@@ -117,7 +115,7 @@ class CallResolverTest : BaseTest() {
 
             val inferredTarget =
                 findByUniquePredicate(methods) { m: FunctionDeclaration ->
-                    m.hasSignature(inferenceSignature)
+                    m.matchesSignature(inferenceSignature) != IncompatibleSignature
                 }
             assertEquals(listOf(inferredTarget), inferredCall.invokes)
             assertTrue(inferredTarget.isInferred)
@@ -200,9 +198,7 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(1, calc.invokes.size)
         assertEquals(calcFunctionDeclaration, calc.invokes[0])
-        assertTrue(calc.arguments[0] is CastExpression)
-        assertEquals(2.0, ((calc.arguments[0] as CastExpression).expression as Literal<*>).value)
-        assertLocalName("int", (calc.arguments[0] as CastExpression).castType)
+        assertLiteralValue(2.0, calc.arguments[0])
 
         // Check resolution of doSmth
         val doSmth = findByUniqueName(callExpressions, "doSmth")
@@ -212,9 +208,7 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(1, doSmth.invokes.size)
         assertEquals(doSmthFunctionDeclaration, doSmth.invokes[0])
-        assertTrue(doSmth.arguments[0] is CastExpression)
-        assertEquals(10.0, ((doSmth.arguments[0] as CastExpression).expression as Literal<*>).value)
-        assertLocalName("int", (doSmth.arguments[0] as CastExpression).castType)
+        assertLiteralValue(10.0, doSmth.arguments[0])
     }
 
     @Test
@@ -240,11 +234,10 @@ class CallResolverTest : BaseTest() {
         val functionDeclaration = multiply.invokes[0]
         assertFalse(functionDeclaration.isInferred)
         assertEquals("int", functionDeclaration.signatureTypes[0].typeName)
-        assertTrue(multiply.arguments[0] is CastExpression)
 
-        val implicitCast = multiply.arguments[0] as CastExpression
-        assertEquals("int", implicitCast.castType.typeName)
-        assertEquals("10.0", implicitCast.expression.code)
+        var arg = multiply.arguments.firstOrNull()
+        assertIs<Literal<*>>(arg)
+        assertLiteralValue(10.0, arg)
 
         // Check implicit cast in case of ambiguous call
         val ambiguousCall = findByUniqueName(callExpressions, "ambiguous_multiply")
@@ -260,12 +253,9 @@ class CallResolverTest : BaseTest() {
                     func.parameters[0].type.name.localName == "float"
             )
         }
-        // Check Cast
-        assertTrue(ambiguousCall.arguments[0] is CastExpression)
-
-        val castExpression = ambiguousCall.arguments[0] as CastExpression
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), castExpression.type)
-        assertEquals("10.0", castExpression.expression.code)
+        arg = ambiguousCall.arguments.firstOrNull()
+        assertIs<Literal<*>>(arg)
+        assertLiteralValue(10.0, arg)
     }
 
     @Test
@@ -305,11 +295,8 @@ class CallResolverTest : BaseTest() {
                 c.code == "display(1);"
             }
 
-        // it will contain two nodes: the definition and the declaration. this is a general
-        // problem, that we need to tackle in the future, how to combine those two. See
-        // https://github.com/Fraunhofer-AISEC/cpg/issues/194
-        assertEquals(2, display1.invokes.size)
-        assertTrue(display1.invokes.contains(displayDeclaration))
+        assertEquals(1, display1.invokes.size)
+        assertTrue(display1.invokes.contains(displayDefinition))
         assertEquals("1", display1.arguments[0].code)
         assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[1]!!))
         assertTrue(displayDeclaration.nextEOG.contains(displayDeclaration.defaultParameters[0]!!))
@@ -330,8 +317,8 @@ class CallResolverTest : BaseTest() {
                 assert(c.code != null)
                 c.code == "display();"
             }
-        assertEquals(2, display.invokes.size)
-        assertTrue(display.invokes.contains(displayDeclaration))
+        assertEquals(1, display.invokes.size)
+        assertTrue(display.invokes.contains(displayDefinition))
         assertEquals(0, display.arguments.size)
 
         val displayCount =
@@ -339,8 +326,8 @@ class CallResolverTest : BaseTest() {
                 assert(c.code != null)
                 c.code == "display(count, '$');"
             }
-        assertEquals(2, display.invokes.size)
-        assertTrue(display.invokes.contains(displayDeclaration))
+        assertEquals(1, display.invokes.size)
+        assertTrue(display.invokes.contains(displayDefinition))
         assertLocalName("count", displayCount.arguments[0])
         assertEquals("'$'", displayCount.arguments[1].code)
 
@@ -349,12 +336,10 @@ class CallResolverTest : BaseTest() {
                 assert(c.code != null)
                 c.code == "display(10.0);"
             }
-        assertEquals(2, display10.invokes.size)
-        assertTrue(display.invokes.contains(displayDeclaration))
+        assertEquals(1, display10.invokes.size)
+        assertTrue(display.invokes.contains(displayDefinition))
         assertEquals(1, display10.arguments.size)
-        assertTrue(display10.arguments[0] is CastExpression)
-        assertEquals("10.0", (display10.arguments[0] as CastExpression).expression.code)
-        assertLocalName("int", (display10.arguments[0] as CastExpression).castType)
+        assertLiteralValue(10.0, display10.arguments[0])
     }
 
     @Test
@@ -709,8 +694,6 @@ class CallResolverTest : BaseTest() {
             }
         assertEquals(1, calcInt.invokes.size)
         assertEquals(calcOverload, calcInt.invokes[0])
-        assertTrue(calcInt.arguments[0] is CastExpression)
-        assertLocalName("double", (calcInt.arguments[0] as CastExpression).castType)
         val calcDouble =
             findByUniquePredicate(calls) { c: CallExpression ->
                 if (c.location != null) {

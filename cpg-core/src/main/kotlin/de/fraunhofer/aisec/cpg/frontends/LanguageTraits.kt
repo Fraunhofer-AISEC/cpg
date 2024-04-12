@@ -75,7 +75,7 @@ interface HasTemplates : HasGenerics {
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
+        currentTU: TranslationUnitDeclaration?
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
@@ -91,20 +91,6 @@ interface HasDefaultArguments : LanguageTrait
  */
 interface HasComplexCallResolution : LanguageTrait {
     /**
-     * A function that can be used to fine-tune resolution of a normal (non-method) [call].
-     *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
-     *
-     * @return a list of [FunctionDeclaration] candidates.
-     */
-    fun refineNormalCallResolution(
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration>
-
-    /**
      * A function that can be used to fine-tune resolution of a method [call].
      *
      * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
@@ -119,22 +105,6 @@ interface HasComplexCallResolution : LanguageTrait {
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
-    ): List<FunctionDeclaration>
-
-    /**
-     * A function to fine-tune the results of [CallResolver.getInvocationCandidatesFromRecord],
-     * which retrieves a list of [FunctionDeclaration] candidates from a [RecordDeclaration].
-     *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
-     *
-     * @return a list of [FunctionDeclaration] candidates.
-     */
-    fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
-        name: String,
-        ctx: TranslationContext
     ): List<FunctionDeclaration>
 }
 
@@ -256,3 +226,9 @@ interface HasGlobalVariables : LanguageTrait {
  * ([ReplaceCallCastPass]) after the initial language frontends are done.
  */
 interface HasFunctionalCasts : LanguageTrait
+
+/**
+ * A language trait that specifies that this language allowed overloading functions, meaning that
+ * multiple functions can share the same name with different parameters.
+ */
+interface HasFunctionOverloading : LanguageTrait

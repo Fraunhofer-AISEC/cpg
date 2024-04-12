@@ -32,11 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * declared in it. This could be a package or other structural elements, like a class. In the latter
  * case, the derived [RecordScope] should be used.
  */
-open class NameScope(node: Node) : StructureDeclarationScope(node) {
+open class NameScope(node: Node?) : StructureDeclarationScope(node) {
 
     init {
         astNode = node
         // Set the name so that we can use it as a namespace later
-        name = node.name
+        name = node?.name
     }
 }

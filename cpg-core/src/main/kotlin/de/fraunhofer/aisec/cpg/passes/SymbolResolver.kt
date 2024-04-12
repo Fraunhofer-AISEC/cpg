@@ -25,12 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.StructureDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -172,6 +173,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
+        // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
+        // resolution, but in future this will also be used in resolving regular references.
+        current.candidates = findSymbols(current)
+
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
         // property to actually resolve the function call. However, there is a special case that
@@ -183,10 +188,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // i.e., their function definitions and get rid of the separate CallResolver.
         var wouldResolveTo: Declaration? = null
         if (current.resolutionHelper is CallExpression) {
-            // Peek into the declaration, and if it is a variable, we can proceed normally, as we
-            // are running into the special case explained above. Otherwise, we abort here (for
-            // now).
-            wouldResolveTo = scopeManager.resolveReference(current)
+            // Peek into the declaration, and if it is only one declaration and a variable, we can
+            // proceed normally, as we are running into the special case explained above. Otherwise,
+            // we abort here (for now).
+            wouldResolveTo = current.candidates.singleOrNull()
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
                 return
             }
@@ -252,6 +257,41 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Did not find a declaration for ${current.name}"
             )
         }
+    }
+
+    /**
+     * This function tries to resolve a [Node.name] to a list of symbols (a symbol represented by a
+     * [Declaration]) starting with [startScope]. This function can return a list of multiple
+     * symbols in order to check for things like function overloading. but it will only return list
+     * of symbols within the same scope; the list cannot be spread across different scopes.
+     *
+     * This means that as soon one or more symbols are found in a "local" scope, these shadow all
+     * other occurrences of the same / symbol in a "higher" scope and only the ones from the lower
+     * ones will be returned.
+     */
+    private fun findSymbols(
+        nodeWithName: Node,
+        startScope: Scope? = scopeManager.currentScope
+    ): Set<Declaration> {
+        val (scope, name) = scopeManager.extractScope(nodeWithName, startScope)
+        val list =
+            scopeManager
+                .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
+                .toMutableSet()
+        // If we have both the definition and the declaration of a function declaration in our list,
+        // we chose only the definition
+        val it = list.iterator()
+        while (it.hasNext()) {
+            val decl = it.next()
+            if (decl is FunctionDeclaration) {
+                val definition = decl.definition
+                if (!decl.isDefinition && definition != null && definition in list) {
+                    it.remove()
+                }
+            }
+        }
+
+        return list
     }
 
     /**
@@ -479,6 +519,78 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
+        // We are moving towards a new approach to call resolution. However, we cannot use this for
+        // all nodes yet, so we need to use legacy resolution for some
+        val useLegacyResolution =
+            when {
+                call.language.isCPP && curClass != null -> true
+                call is MemberCallExpression -> true
+                call is ConstructExpression -> true
+                call.instantiatesTemplate() && call.language is HasTemplates -> true
+                call.callee !is Reference -> true
+                else -> {
+                    false
+                }
+            }
+
+        if (!useLegacyResolution) {
+            handleCallExpression(call, curClass)
+        } else {
+            handleCallExpressionLegacy(call, curClass)
+        }
+    }
+
+    /**
+     * This function tries to resolve the call expression according to the [CallExpression.callee].
+     */
+    private fun handleCallExpression(call: CallExpression, curClass: RecordDeclaration?) {
+        val result = scopeManager.resolveCall(call)
+
+        when (result.success) {
+            PROBLEMATIC -> {
+                log.error(
+                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
+                )
+                call.invokes = result.bestViable.toList()
+            }
+            AMBIGUOUS -> {
+                log.warn(
+                    "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
+                )
+                call.invokes = result.bestViable.toList()
+            }
+            SUCCESSFUL -> {
+                call.invokes = result.bestViable.toList()
+            }
+            UNRESOLVED -> {
+                // Resolution has provided no result, we can forward this to the inference system,
+                // if we want. While this is definitely a function, it could still be a function
+                // inside a namespace. We therefore have two possible start points, a namespace
+                // declaration or a translation unit. Nothing else is allowed (fow now). We can
+                // re-use the information in the ResolutionResult, since this already contains the
+                // actual start scope (e.g. in case the callee has an FQN).
+                var scope = result.actualStartScope
+                if (scope !is NameScope) {
+                    scope = scopeManager.globalScope
+                }
+                val func =
+                    when (val start = scope?.astNode) {
+                        is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
+                        is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
+                        else -> null
+                    }
+                call.invokes = listOfNotNull(func)
+            }
+        }
+
+        // We also set the callee's refersTo
+        (call.callee as? Reference)?.refersTo = call.invokes.firstOrNull()
+    }
+
+    private fun handleCallExpressionLegacy(
+        call: CallExpression,
+        curClass: RecordDeclaration?,
+    ) {
         // At this point, we decide what to do based on the callee property
         val callee = call.callee
 
@@ -498,7 +610,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
                 candidates
             } else {
-                resolveCallee(callee, curClass, call) ?: return
+                resolveCalleeLegacy(callee, curClass, call) ?: return
             }
 
         // If we do not have any candidates at this point, we will infer one.
@@ -523,7 +635,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     val (scope, _) = scopeManager.extractScope(call, scopeManager.globalScope)
 
                     // We have two possible start points, a namespace declaration or a translation
-                    // unit. Nothing else is allowed (fow now)
+                    // unit. Nothing else is allowed (for now)
                     val func =
                         when (val start = scope?.astNode) {
                             is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
@@ -554,7 +666,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *
      * In case a resolution is not possible, `null` can be returned.
      */
-    protected fun resolveCallee(
+    protected fun resolveCalleeLegacy(
         callee: Expression?,
         curClass: RecordDeclaration?,
         call: CallExpression
@@ -590,21 +702,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         curClass: RecordDeclaration?,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        val language = call.language
-
         return if (curClass == null || callee.name.isQualified()) {
-            // Handle function (not method) calls. C++ allows function overloading. Make sure we
-            // have at least the same number of arguments
-            val candidates =
-                if (language is HasComplexCallResolution) {
-                    // Handle CXX normal call resolution externally, otherwise it leads to increased
-                    // complexity
-                    language.refineNormalCallResolution(call, ctx, currentTU)
-                } else {
-                    scopeManager.resolveFunction(call).toMutableList()
-                }
-
-            candidates
+            // We can already forward this to the nextGen resolver. Not quite sure why we ended up
+            // here in the first place
+            val result = ctx.scopeManager.resolveCall(call)
+            result.bestViable.toList()
         } else {
             resolveCalleeByName(callee.name.localName, curClass, call)
         }
@@ -658,7 +760,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     )
                     .toMutableList()
             } else {
-                scopeManager.resolveFunction(call).toMutableList()
+                scopeManager.resolveFunctionLegacy(call).toMutableList()
             }
 
         // Find invokes by supertypes
@@ -784,28 +886,55 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         name: String,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        if (recordDeclaration == null) return listOf()
-
-        return if (call.language is HasComplexCallResolution) {
-            (call.language as HasComplexCallResolution).refineInvocationCandidatesFromRecord(
-                recordDeclaration,
-                call,
-                name,
-                ctx
-            )
-        } else {
-            // We should not directly access the "methods" property of the record declaration,
-            // because depending on the programming language, this only may hold methods that are
-            // declared directly within the original type declaration, but not ones that are
-            // declared "outside" (e.g, like it is possible in Go and C++). Instead, we should
-            // retrieve the scope of the record and look for appropriate declarations.
-            val scope = scopeManager.lookupScope(recordDeclaration) as? StructureDeclarationScope
-
-            // Filter the value declarations for an appropriate method
-            scope?.valueDeclarations?.filterIsInstance<MethodDeclaration>()?.filter {
-                it.name.lastPartsMatch(name) && it.hasSignature(call)
-            } ?: listOf()
+        if (recordDeclaration == null) {
+            return listOf()
         }
+
+        // We should not directly access the "methods" property of the record declaration,
+        // because depending on the programming language, this only may hold methods that are
+        // declared directly within the original type declaration, but not ones that are
+        // declared "outside" (e.g, like it is possible in Go and C++). Instead, we should
+        // retrieve the scope of the record and look for appropriate declarations.
+        val scope = scopeManager.lookupScope(recordDeclaration) as? StructureDeclarationScope
+
+        val candidateFunctions =
+            scope
+                ?.valueDeclarations
+                ?.filterIsInstance<MethodDeclaration>()
+                ?.filter { it.name.lastPartsMatch(name) }
+                ?.toSet<FunctionDeclaration>() ?: setOf()
+
+        // The following code is unfortunately largely a copy/paste from the new resolveCall
+        // function; but resolveCall is not yet completely ready to resolve methods, therefore, we
+        // need to have this duplicate code here, to at least use the new features here.
+        val signatureResults =
+            candidateFunctions
+                .map {
+                    Pair(
+                        it,
+                        it.matchesSignature(
+                            call.signature,
+                            call.language is HasDefaultArguments,
+                            call
+                        )
+                    )
+                }
+                .filter { it.second is SignatureMatches }
+                .associate { it }
+        val viableFunctions = signatureResults.keys
+        val result =
+            CallResolutionResult(
+                call,
+                candidateFunctions,
+                viableFunctions,
+                signatureResults,
+                setOf(),
+                UNRESOLVED,
+                call.scope
+            )
+        val pair = call.language?.bestViableResolution(result)
+
+        return pair?.first?.toList() ?: listOf()
     }
 
     protected fun getInvocationCandidatesFromParents(
@@ -866,34 +995,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         recordDeclaration: RecordDeclaration
     ): ConstructorDeclaration? {
         val signature = constructExpression.signature
-        var constructorCandidate =
-            recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-
-        if (constructorCandidate == null && constructExpression.language is HasDefaultArguments) {
-            // Check for usage of default args
-            constructorCandidate =
-                resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration)
-        }
-        if (constructorCandidate == null && constructExpression.language.isCPP) { // TODO: Fix this
-            // If we don't find any candidate and our current language is c/c++ we check if there is
-            // a candidate with an implicit cast
-            constructorCandidate =
-                resolveWithImplicitCast(constructExpression, recordDeclaration.constructors)
-                    .firstOrNull() as ConstructorDeclaration?
-        }
+        val constructorCandidate =
+            recordDeclaration.constructors.firstOrNull {
+                it.matchesSignature(
+                    signature,
+                    constructExpression.language is HasDefaultArguments,
+                    constructExpression
+                ) != IncompatibleSignature
+            }
 
         return constructorCandidate
             ?: recordDeclaration
                 .startInference(ctx)
                 ?.createInferredConstructor(constructExpression.signature)
-    }
-
-    protected fun getConstructorDeclarationForExplicitInvocation(
-        signature: List<Type>,
-        recordDeclaration: RecordDeclaration
-    ): ConstructorDeclaration? {
-        return recordDeclaration.constructors.firstOrNull { it.hasSignature(signature) }
-            ?: recordDeclaration.startInference(ctx)?.createInferredConstructor(signature)
     }
 
     companion object {
