@@ -61,6 +61,7 @@ repositories {
 
 dependencies {
     // CPG
+    api(projects.cpgCore)
     api(projects.cpgAnalysis)
     api(projects.cpgNeo4j)
 
@@ -72,5 +73,7 @@ dependencies {
     implementation(libs.antlr.runtime)
     implementation(libs.kotlin.coroutines.core)
     implementation(libs.jline)
+
+    testImplementation(testFixtures(projects.cpgCore))
 
 }
