@@ -25,8 +25,8 @@ de.fraunhofer.aisec.cpg.helpers
 de.fraunhofer.aisec.cpg.helpers.annotations
 de.fraunhofer.aisec.cpg.helpers.neo4j
 de.fraunhofer.aisec.cpg.passes
+de.fraunhofer.aisec.cpg.passes.configuration
 de.fraunhofer.aisec.cpg.passes.inference
-de.fraunhofer.aisec.cpg.passes.order
 de.fraunhofer.aisec.cpg.processing
 de.fraunhofer.aisec.cpg.processing.strategy
 de.fraunhofer.aisec.cpg.sarif
