@@ -26,23 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C language. */
 open class CLanguage :
     Language<CXXLanguageFrontend>(),
-    HasComplexCallResolution,
+    // HasComplexCallResolution,
     HasStructs,
     HasFunctionPointers,
     HasQualifier,
@@ -58,9 +50,6 @@ open class CLanguage :
     override val disjunctiveOperators = listOf("||")
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
-
-    override val globalVariableScopeClass: Class<out Node>
-        get() = TranslationUnitDeclaration::class.java
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See
@@ -117,68 +106,48 @@ open class CLanguage :
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
-    override fun refineNormalCallResolution(
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration> {
-        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
-        if (invocationCandidates.isEmpty()) {
-            // Check for implicit casts
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
-        }
-        return invocationCandidates
-    }
-
-    override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
-        possibleContainingTypes: Set<Type>,
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
-        callResolver: SymbolResolver
-    ): List<FunctionDeclaration> = emptyList()
-
-    override fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
-        name: String,
-        ctx: TranslationContext
-    ): List<FunctionDeclaration> = emptyList()
-
-    /**
-     * @param call we want to find invocation targets for by performing implicit casts
-     * @param scopeManager the scope manager used
-     * @return list of invocation candidates by applying implicit casts
-     */
-    protected fun resolveWithImplicitCastFunc(
-        call: CallExpression,
-        ctx: TranslationContext,
-    ): List<FunctionDeclaration> {
-        val initialInvocationCandidates =
-            listOf(
-                *ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray()
-            )
-        return resolveWithImplicitCast(call, initialInvocationCandidates)
-    }
-
     override fun isDerivedFrom(
         type: Type,
-        superType: Type,
+        targetType: Type,
         hint: HasType?,
-        superHint: HasType?
+        targetHint: HasType?
     ): Boolean {
-        val match = super.isDerivedFrom(type, superType, hint, superHint)
+        val match = super.isDerivedFrom(type, targetType, hint, targetHint)
         if (match) {
             return true
         }
 
         // As a special rule, a non-nested pointer and array of the same type are completely
         // interchangeable
-        if (type.root == superType.root && type is PointerType && superType is PointerType) {
+        if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
             return true
         }
 
         return false
+    }
+
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?
+    ): CastResult {
+        val match = super.tryCast(type, targetType, hint, targetHint)
+        if (match != CastNotPossible) {
+            return match
+        }
+
+        // Numeric types can be cast implicitly
+        if (type is NumericType && targetType is NumericType) {
+            return ImplicitCast
+        }
+
+        // As a special rule, a non-nested pointer and array of the same type are completely
+        // interchangeable
+        if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
+            return ImplicitCast
+        }
+
+        return CastNotPossible
     }
 }

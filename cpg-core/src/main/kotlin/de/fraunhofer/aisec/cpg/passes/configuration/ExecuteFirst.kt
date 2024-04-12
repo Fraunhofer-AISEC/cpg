@@ -23,13 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.configuration
 
 /**
- * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
- * than one active pass will yield an error. Note: setting this flag will not activate the pass. You
- * must register the pass manually.
+ * Indicates whether this pass should be executed as the first pass. Note: setting this flag for
+ * more than one active pass will yield an error. Note: setting this flag will not activate the
+ * pass. You must register the pass manually.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class ExecuteLast
+annotation class ExecuteFirst

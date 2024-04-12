@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.isDerivedFrom
-import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import java.util.*
 import org.slf4j.LoggerFactory
 

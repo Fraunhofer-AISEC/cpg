@@ -47,7 +47,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
     /**
-     * Connection to its [FunctionDeclaration]. This will be populated by the [CallResolver]. This
+     * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
      */
     @PopulatedByPass(SymbolResolver::class)

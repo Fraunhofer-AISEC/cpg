@@ -30,21 +30,38 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import de.fraunhofer.aisec.cpg.isDerivedFrom
-import de.fraunhofer.aisec.cpg.wrapState
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+
+/**
+ * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
+ * type into another is successful according to the logic of the [Language].
+ */
+sealed class CastResult(
+    /**
+     * The "distance" from the base type to the target type that is needed when this object needs to
+     * be cast. For example, if the types are the same, the distance is 0. An implicit cast is 1.
+     * The distance from a derived class to its direct super class is also 1. It increments for each
+     * super class in the hierarchy.
+     */
+    open var depthDistance: Int
+)
+
+data object CastNotPossible : CastResult(-1)
+
+data object DirectMatch : CastResult(0)
+
+data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDistance) {
+    companion object : CastResult(1)
+}
 
 /**
  * Represents a programming language. When creating new languages in the CPG, one must derive custom
@@ -215,28 +232,28 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     }
 
     /**
-     * This function checks, if [type] is derived from [superType]. Note, this also takes the
+     * This function checks, if [type] is derived from [targetType]. Note, this also takes the
      * [WrapState] of the type into account, which means that pointer types of derived types will
      * not match with a non-pointer type of its base type. But, if both are pointer types, they will
      * match.
      *
      * Optionally, the nodes that hold the respective type can be supplied as [hint] and
-     * [superHint].
+     * [targetHint].
      */
     open fun isDerivedFrom(
         type: Type,
-        superType: Type,
+        targetType: Type,
         hint: HasType?,
-        superHint: HasType?
+        targetHint: HasType?
     ): Boolean {
         // We can take a shortcut if it is the same type
-        if (type == superType) {
+        if (type == targetType) {
             return true
         }
 
         // We can also take a shortcut: if they are not of the same subclass, they will never
         // match
-        if (type::class != superType::class) {
+        if (type::class != targetType::class) {
             return false
         }
 
@@ -246,54 +263,116 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         // Check, if super type (or its root) is in the list. Also, the wrap state needs to be the
         // same
-        return superType.root in superTypes && type.wrapState == superType.wrapState
+        return targetType.root in superTypes && type.wrapState == targetType.wrapState
+    }
+
+    open fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType? = null,
+        targetHint: HasType? = null
+    ): CastResult {
+        // We can take a shortcut if it is the same type
+        if (type == targetType) {
+            return DirectMatch
+        }
+
+        // We can also take a shortcut: if they are not of the same subclass, they will never
+        // match
+        if (type::class != targetType::class) {
+            return CastNotPossible
+        }
+
+        // Retrieve all ancestor types of our type (more concretely of the root type)
+        val root = type.root
+        val ancestors = root.ancestors
+        val superTypes = ancestors.map(Type.Ancestor::type)
+
+        return if (targetType.root in superTypes) {
+            // Find depth
+            val depth = ancestors.firstOrNull { it.type == targetType.root }?.depth
+            if (depth == null) {
+                // This should not happen
+                CastNotPossible
+            } else {
+                ImplicitCast(depth)
+            }
+        } else {
+            CastNotPossible
+        }
     }
 
     /**
-     * This function checks, if the two supplied signatures are equal. The usual use-case is
-     * comparing the signature arguments of a [CallExpression] (in [signature]) against the
-     * signature of a [FunctionDeclaration] (in [target]). Optionally, a list of [expressions]
-     * (e.g., the actual call arguments) can be supplied as a hint, these will be forwarded to other
-     * comparing functions, such as [isDerivedFrom].
+     * This functions gives the language a chance to refine the results of a
+     * [ScopeManager.resolveCall] by choosing the best viable function(s) out of the set of viable
+     * functions. It can also influence the [CallResolutionResult.SuccessKind] of the resolution,
+     * e.g., if the result is ambiguous.
+     *
+     * The default implementation will follow the following heuristic:
+     * - If the list of [CallResolutionResult.viableFunctions] is empty, we can directly return.
+     * - If we have only one item in [CallResolutionResult.viableFunctions], we can take it.
+     * - Next, we can check for direct matches, meaning that they have a [SignatureResult] that only
+     *   has [DirectMatch] casts.
+     * - Lastly, if we have no direct matches, we need to sort the viable functions using a simple
+     *   ranking. The function(s) will the best (lowest) [SignatureResult.ranking] will be chosen as
+     *   the best. The ranking is determined by the [CastResult.depthDistance] of all cast results
+     *   in the signature results.
      */
-    open fun hasSignature(
-        target: FunctionDeclaration,
-        signature: List<Type>,
-        expressions: List<Expression>? = null,
-    ): Boolean {
-        val targetSignature = target.parameters
-        return if (
-            targetSignature.all { !it.isVariadic } && signature.size < targetSignature.size
-        ) {
-            // TODO: So we don't consider arguments with default values (among others) but then, the
-            //  SymbolResolver (or CXXCallResolverHelper) has a bunch of functions to consider it.
-            false
-        } else {
-            // signature is a collection of positional arguments, so the order must be preserved
-            for (i in targetSignature.indices) {
-                val declared = targetSignature[i]
-                if (declared.isVariadic) {
-                    // Everything that follows is collected by this param, so the signature is
-                    // fulfilled no matter what comes now
-                    // FIXME: in Java, we could have overloading with different vararg types, in
-                    //  C++ we can't, as vararg types are not defined here anyways)
-                    return true
-                }
-                if (i >= signature.size && this !is HasDefaultArguments) {
-                    // The function accepts more arguments than we have
-                    // TODO: Check if i and everything subsequent could be a default argument
-                    return false
-                }
-                val provided = signature[i]
-                val expression = expressions?.get(i)
-                if (!provided.isDerivedFrom(declared.type, expression, target)) {
-                    return false
-                }
+    open fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+        // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
+        // result
+        val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
+        if (directMatches.size > 1) {
+            // This is an ambiguous result. Let's return all direct matches
+            return Pair(
+                directMatches.map { it.key }.toSet(),
+                CallResolutionResult.SuccessKind.AMBIGUOUS
+            )
+        } else if (directMatches.size == 1) {
+            // Let's return the single direct match
+            return Pair(
+                setOf(directMatches.first().key),
+                CallResolutionResult.SuccessKind.SUCCESSFUL
+            )
+        }
+
+        // No direct match yet, let's continue with some casting...
+
+        // TODO: Move this code somewhere else once we have a proper template expansion pass
+        // We need to check, whether this language has special handling of templates. In this
+        // case, we need to check, whether a template matches after we have no direct matches
+        if (this is HasTemplates) {
+            result.call.templateParameterEdges = mutableListOf()
+            val (ok, candidates) =
+                this.handleTemplateFunctionCalls(null, result.call, false, result.call.ctx!!, null)
+            if (ok) {
+                return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
             }
 
-            // Longer target signatures are only allowed with varargs. If we reach this point, no
-            // vararg has been encountered
-            signature.size == targetSignature.size
+            result.call.templateParameterEdges = null
+        }
+
+        // If the list of viable functions is still empty at this point, the call is unresolved
+        if (result.viableFunctions.isEmpty()) {
+            return Pair(setOf(), CallResolutionResult.SuccessKind.UNRESOLVED)
+        }
+
+        // Otherwise, sort it according to a simple ranking based on the total number of
+        // conversions needed. This might not necessarily be the best idea and this is
+        // also not really optimized.
+        val rankings = result.signatureResults.entries.map { Pair(it.value.ranking, it.key) }
+
+        // Find the best (lowest) rank and find functions with the specific rank
+        val bestRanking = rankings.minBy { it.first }.first
+        val list = rankings.filter { it.first == bestRanking }.map { it.second }
+        return if (list.size > 1) {
+            // Return the list of best-ranked (hopefully only one). If one then more result has
+            // the same ranking, this result is ambiguous
+            Pair(list.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
+        } else {
+            Pair(list.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
         }
     }
 }

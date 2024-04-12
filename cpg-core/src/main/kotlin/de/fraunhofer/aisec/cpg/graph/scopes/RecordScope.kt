@@ -29,4 +29,4 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 
 /** Represents the scope of a record or class, most likely created by a [RecordDeclaration]. */
-class RecordScope(node: Node) : NameScope(node)
+class RecordScope(node: Node? = null) : NameScope(node)

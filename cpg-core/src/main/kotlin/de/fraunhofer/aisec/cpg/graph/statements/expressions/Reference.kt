@@ -75,6 +75,21 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
             }
         }
 
+    /**
+     * For some more complex resolutions, such as call resolutions, we need to do a two-step
+     * process:
+     * - First, identify possible candidates with a matching name / symbol
+     * - Second, restrict this set to list to the actual best viable solution
+     *
+     * In case of call resolution, this is additionally split into two nodes: a [CallExpression],
+     * which holds the arguments and a [Reference] (or [MemberExpression]), which is used as the
+     * [CallExpression.callee] and holds the name of the desired function.
+     *
+     * Until we have proper support for AST parents, we need to rely on the [resolutionHelper] to
+     * find out if this reference is used as a [CallExpression.callee].
+     */
+    var candidates: Set<Declaration> = setOf()
+
     override var aliases = mutableSetOf<HasAliases>()
 
     /**

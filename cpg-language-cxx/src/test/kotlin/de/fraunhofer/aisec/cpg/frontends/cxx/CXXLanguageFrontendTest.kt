@@ -262,8 +262,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testDefinitionDeclaration() {
-        val topLevel = File("src/test/resources/c/issue-194")
+    fun testDefinitionDeclarationWithMockStd() {
+        val topLevel = File("src/test/resources/c/foobar")
         val result =
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
@@ -271,6 +271,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 true
             ) {
                 it.registerLanguage<CLanguage>()
+                it.includePath("src/test/resources/c/foobar/std")
             }
         assertNotNull(result)
 
@@ -281,6 +282,41 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(definition)
 
         declarations.forEach { assertEquals(definition, it.definition) }
+
+        // With the "std" lib, we know that size_t is a typedef for an int-type and therefore we can
+        // resolve all the calls
+        val calls = result.calls("foo")
+        calls.forEach { assertInvokes(it, definition) }
+    }
+
+    @Test
+    fun testDefinitionDeclarationWithoutMockStd() {
+        val topLevel = File("src/test/resources/c/foobar")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
+                topLevel.toPath(),
+                true
+            ) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        val declarations =
+            result.functions { it.name.localName == "foo" && !it.isDefinition && !it.isInferred }
+        assertTrue(declarations.isNotEmpty())
+
+        val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]
+        assertNotNull(definition)
+
+        declarations.forEach { assertEquals(definition, it.definition) }
+
+        // without the "std" lib, int will not match with size_t and we will infer a new function;
+        // and this will actually result in a problematic resolution, since C does not allow
+        // function overloading.
+        val inferredDefinition =
+            result.functions[{ it.name.localName == "foo" && !it.isDefinition && it.isInferred }]
+        assertNotNull(inferredDefinition)
     }
 
     @Test
