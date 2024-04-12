@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.passes.executionConfiguration.ReplacePass
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import kotlin.reflect.KClass
 import kotlin.test.*
 

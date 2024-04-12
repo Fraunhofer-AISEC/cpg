@@ -23,19 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.executionConfiguration
-
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.passes.Pass
-import kotlin.reflect.KClass
+package de.fraunhofer.aisec.cpg.passes.configuration
 
 /**
- * Register a new default pass required by a frontend. Passes annotated this way are collected by
- * [TranslationConfiguration.Builder.registerExtraFrontendPasses] and automatically registered in
- * [TranslationConfiguration.Builder.build], but only if
- * [TranslationConfiguration.Builder.defaultPasses] was called.
+ * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
+ * than one active pass will yield an error. Note: setting this flag will not activate the pass. You
+ * must register the pass manually.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class RegisterExtraPass(val value: KClass<out Pass<*>>)
+annotation class ExecuteLast

@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
-import de.fraunhofer.aisec.cpg.passes.executionConfiguration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.util.*
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */

@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.executionConfiguration.*
+import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import java.io.File
 import java.nio.file.Path
