@@ -33,21 +33,9 @@ In order to get familiar with the graph itself, you can use the subproject [cpg-
 
 ### As Library
 
-The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
+The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle.
 
 ```kotlin
-repositories {
-    ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
-        metadataSources {
-            artifact()
-        }
-        patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
-        }
-    }
-}
-
 dependencies {
     val cpgVersion = "8.0.0"
 
@@ -60,6 +48,23 @@ dependencies {
     implementation("de.fraunhofer.aisec", "cpg-core", cpgVersion)
     implementation("de.fraunhofer.aisec", "cpg-language-go", cpgVersion)
     implementation("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)
+}
+```
+
+There are some extra steps necessary for the `cpg-language-cxx` module. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
+```kotlin
+repositories {
+    // This is only needed for the C++ language frontend
+    ivy {
+        setUrl("https://download.eclipse.org/tools/cdt/releases/")
+        metadataSources {
+            artifact()
+        }
+
+        patternLayout {
+            artifact("[organisation].[module]_[revision].[ext]")
+        }
+    }
 }
 ```
 

@@ -23,12 +23,13 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/")
         metadataSources {
             artifact()
         }
+
         patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
+            artifact("[organisation].[module]_[revision].[ext]")
         }
     }
 }
