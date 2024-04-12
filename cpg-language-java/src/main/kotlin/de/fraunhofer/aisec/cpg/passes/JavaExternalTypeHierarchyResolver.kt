@@ -70,22 +70,28 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         // Iterate over all known types and add their (direct) supertypes.
         for (t in HashSet(typeManager.firstOrderTypes)) {
             // TODO: Do we have to check if the type's language is JavaLanguage?
-            val symbol = resolver.tryToSolveType(t.typeName)
-            if (symbol.isSolved) {
-                try {
-                    val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
-                    for (anc in resolvedSuperTypes) {
-                        // Add all resolved supertypes to the type.
-                        val superType = provider.objectType(anc.qualifiedName)
-                        superType.typeOrigin = Type.Origin.RESOLVED
-                        t.superTypes.add(superType)
+            try {
+                val symbol = resolver.tryToSolveType(t.typeName)
+                if (symbol?.isSolved ?: false) {
+                    try {
+                        val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
+                        for (anc in resolvedSuperTypes) {
+                            // Add all resolved supertypes to the type.
+                            val superType = provider.objectType(anc.qualifiedName)
+                            superType.typeOrigin = Type.Origin.RESOLVED
+                            t.superTypes.add(superType)
+                        }
+                    } catch (e: UnsolvedSymbolException) {
+                        // Even if the symbol itself is resolved, "getAncestors()" may throw
+                        // exception.
+                        LOGGER.warn(
+                            "Could not resolve supertypes of ${symbol.correspondingDeclaration}"
+                        )
                     }
-                } catch (e: UnsolvedSymbolException) {
-                    // Even if the symbol itself is resolved, "getAncestors()" may throw exception.
-                    LOGGER.warn(
-                        "Could not resolve supertypes of ${symbol.correspondingDeclaration}"
-                    )
                 }
+            } catch (ie: IllegalArgumentException) {
+                // The type may not exist in the javaparser if it was created as an inference
+                LOGGER.warn("Could not resolve type ${t.typeName}")
             }
         }
     }
