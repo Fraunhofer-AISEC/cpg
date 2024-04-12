@@ -175,10 +175,15 @@ object TestUtils {
     fun analyzeWithCompilationDatabase(
         jsonCompilationDatabase: File,
         usePasses: Boolean,
+        filterComponents: List<String>? = null,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): TranslationResult {
-        return analyze(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
-            val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
+        return analyze(
+            listOf(),
+            jsonCompilationDatabase.parentFile.toPath().toAbsolutePath(),
+            usePasses
+        ) {
+            val db = CompilationDatabase.fromFile(jsonCompilationDatabase, filterComponents)
             if (db.isNotEmpty()) {
                 it.useCompilationDatabase(db)
                 @Suppress("UNCHECKED_CAST")
