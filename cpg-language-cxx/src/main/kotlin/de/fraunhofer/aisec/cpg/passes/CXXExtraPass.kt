@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.implicit
+import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -48,11 +51,13 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @ExecuteBefore(ReplaceCallCastPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
+
     override fun accept(component: Component) {
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
 
         walker.registerHandler(::fixInitializers)
         walker.registerHandler(::connectDefinitions)
+
         for (tu in component.translationUnits) {
             walker.iterate(tu)
         }

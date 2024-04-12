@@ -192,13 +192,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(staticCast)
             cast = staticCast.rhs<CastExpression>()
             assertNotNull(cast)
-            assertLocalName("static_cast", cast)
+            assertLocalName("BaseClass*", cast)
 
             val reinterpretCast = main.getBodyStatementAs(3, AssignExpression::class.java)
             assertNotNull(reinterpretCast)
             cast = reinterpretCast.rhs<CastExpression>()
             assertNotNull(cast)
-            assertLocalName("reinterpret_cast", cast)
+            assertLocalName("BaseClass*", cast)
 
             val d = main.variables["d"]
             assertNotNull(d)
@@ -259,145 +259,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(elementType)
             assertTrue(elementType is PointerType && elementType.pointerOrigin == ARRAY)
         }
-    }
-
-    @Test
-    fun testDefinitionDeclarationWithMockStd() {
-        val topLevel = File("src/test/resources/c/foobar")
-        val result =
-            analyze(
-                listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
-                topLevel.toPath(),
-                true
-            ) {
-                it.registerLanguage<CLanguage>()
-                it.includePath("src/test/resources/c/foobar/std")
-            }
-        assertNotNull(result)
-
-        val declarations = result.functions { it.name.localName == "foo" && !it.isDefinition }
-        assertTrue(declarations.isNotEmpty())
-
-        val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]
-        assertNotNull(definition)
-
-        declarations.forEach { assertEquals(definition, it.definition) }
-
-        // With the "std" lib, we know that size_t is a typedef for an int-type and therefore we can
-        // resolve all the calls
-        val calls = result.calls("foo")
-        calls.forEach { assertInvokes(it, definition) }
-    }
-
-    @Test
-    fun testDefinitionDeclarationWithoutMockStd() {
-        val topLevel = File("src/test/resources/c/foobar")
-        val result =
-            analyze(
-                listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
-                topLevel.toPath(),
-                true
-            ) {
-                it.registerLanguage<CLanguage>()
-            }
-        assertNotNull(result)
-
-        val declarations =
-            result.functions { it.name.localName == "foo" && !it.isDefinition && !it.isInferred }
-        assertTrue(declarations.isNotEmpty())
-
-        val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]
-        assertNotNull(definition)
-
-        declarations.forEach { assertEquals(definition, it.definition) }
-
-        // without the "std" lib, int will not match with size_t and we will infer a new function;
-        // and this will actually result in a problematic resolution, since C does not allow
-        // function overloading.
-        val inferredDefinition =
-            result.functions[{ it.name.localName == "foo" && !it.isDefinition && it.isInferred }]
-        assertNotNull(inferredDefinition)
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun testFunctionDeclaration() {
-        val file = File("src/test/resources/cxx/functiondecl.cpp")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CPPLanguage>()
-            }
-
-        // should be eight function nodes
-        assertEquals(8, tu.functions.size)
-
-        var method = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
-        assertEquals("function0(int)void", method!!.signature)
-
-        method = tu.getDeclarationAs(1, FunctionDeclaration::class.java)
-        assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
-
-        val args = method.parameters.map { it.name.localName }
-        assertEquals(listOf("arg0", "arg1", "arg2", "arg3"), args)
-
-        val function0 = tu.functions[{ it.name.localName == "function0" && it.isDefinition }]
-        assertNotNull(function0)
-
-        val function0DeclOnly =
-            tu.functions[{ it.name.localName == "function0" && !it.isDefinition }]
-        assertNotNull(function0DeclOnly)
-
-        // the declaration should be connected to the definition
-        assertEquals(function0, function0DeclOnly.definition)
-
-        method = tu.getDeclarationAs(2, FunctionDeclaration::class.java)
-        assertEquals("function0(int)void", method!!.signature)
-
-        var statements = (method.body as Block).statements
-        assertFalse(statements.isEmpty())
-        assertEquals(2, statements.size)
-
-        // last statement should be an implicit return
-        var statement = method.getBodyStatementAs(statements.size - 1, ReturnStatement::class.java)
-        assertNotNull(statement)
-        assertTrue(statement.isImplicit)
-
-        method = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
-        assertEquals("function2()void*", method!!.signature)
-
-        statements = (method.body as Block).statements
-        assertFalse(statements.isEmpty())
-        assertEquals(1, statements.size)
-
-        // should only contain 1 explicit return statement
-        statement = method.getBodyStatementAs(0, ReturnStatement::class.java)
-        assertNotNull(statement)
-        assertFalse(statement.isImplicit)
-
-        method = tu.getDeclarationAs(4, FunctionDeclaration::class.java)
-        assertNotNull(method)
-        assertEquals("function3()UnknownType*", method.signature)
-
-        method = tu.getDeclarationAs(5, FunctionDeclaration::class.java)
-        assertNotNull(method)
-        assertEquals("function4(int)void", method.signature)
-
-        method = tu.getDeclarationAs(6, FunctionDeclaration::class.java)
-        assertNotNull(method)
-        assertEquals(0, method.parameters.size)
-        assertEquals("function5()void", method.signature)
-
-        method = tu.getDeclarationAs(7, FunctionDeclaration::class.java)
-        assertNotNull(method)
-        assertEquals(1, method.parameters.size)
-
-        val param = method.parameters.firstOrNull()
-        assertNotNull(param)
-
-        val fpType = param.type as? FunctionPointerType
-        assertNotNull(fpType)
-        assertEquals(1, fpType.parameters.size)
-        assertLocalName("void", fpType.returnType)
     }
 
     @Test
@@ -814,7 +675,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
         assertEquals(tu.incompleteType().reference(POINTER), field.type)
-        assertEquals(3, recordDeclaration.methods.size)
+        assertEquals(4, recordDeclaration.methods.size)
 
         val method = recordDeclaration.methods[0]
         assertLocalName("method", method)

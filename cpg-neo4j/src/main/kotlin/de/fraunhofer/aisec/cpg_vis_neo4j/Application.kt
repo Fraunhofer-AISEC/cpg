@@ -547,7 +547,7 @@ class Application : Callable<Int> {
         }
 
         includesFile?.let { theFile ->
-            log.info("Load includes form file: $theFile")
+            log.info("Load includes from file: $theFile")
             val baseDir = File(theFile.toString()).parentFile?.toString() ?: ""
             theFile
                 .inputStream()

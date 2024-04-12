@@ -235,8 +235,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val parent = name.parent
         if (parent != null) {
             // In this case, the name contains a qualifier, and we can try to check, if we have a
-            // matching name scope for the parent name
-            parentScope = frontend.scopeManager.lookupScope(parent.toString())
+            // matching name scope for the parent name. We also need to take the current namespace
+            // into account
+            parentScope =
+                frontend.scopeManager.lookupScope(
+                    frontend.scopeManager.currentNamespace.fqn(parent.toString()).toString()
+                )
 
             declaration = createFunctionOrMethodOrConstructor(name, parentScope, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {

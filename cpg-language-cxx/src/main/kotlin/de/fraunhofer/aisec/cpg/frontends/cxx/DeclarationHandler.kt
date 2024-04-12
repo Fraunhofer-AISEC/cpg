@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -68,10 +71,32 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTTemplateDeclaration -> handleTemplateDeclaration(node)
             is CPPASTNamespaceDefinition -> handleNamespace(node)
             is CPPASTUsingDirective -> handleUsingDirective(node)
+            is CPPASTAliasDeclaration -> handleAliasDeclaration(node)
+            is CPPASTNamespaceAlias -> handleNamespaceAlias(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    /**
+     * Translates a C++ (namespace
+     * alias)[https://en.cppreference.com/w/cpp/language/namespace_alias] into an alias handled by
+     * the scope manager using [ScopeManager.addAlias] done yet. Since we do not have any node
+     * itself for this concept, we just return an empty [DeclarationSequence], which will then be
+     * ignored in the final graph.
+     */
+    private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): DeclarationSequence {
+        val location = locationOf(ctx)
+
+        val from = parseName(ctx.mappingName.toString())
+        val to = parseName(ctx.alias.toString())
+
+        // Currently, we can only scope the alias to the file location, this is a shortcoming of the
+        // scope manager. In reality, the namespace alias is valid in the current scope block
+        location?.artifactLocation?.let { frontend.scopeManager.addAlias(it, from, to) }
+
+        return DeclarationSequence()
     }
 
     /**
@@ -401,8 +426,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (ctx.isTypedef) {
                 type = frontend.typeOf(declarator, declSpecifierToUse)
 
+                val (nameDecl, _) = declarator.realName()
+
                 // Handle typedefs.
-                val declaration = handleTypedef(declarator, type)
+                val declaration = handleTypedef(nameDecl.name, type)
 
                 sequence.addDeclaration(declaration)
             } else {
@@ -564,11 +591,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return null
     }
 
-    private fun handleTypedef(declarator: IASTDeclarator, type: Type): Declaration {
-        val (nameDecl: IASTDeclarator, _) = declarator.realName()
+    /**
+     * @param aliasName is an [IASTName] that describes the new type name.
+     * @param type is the original type.
+     */
+    private fun handleTypedef(aliasName: IASTName, type: Type): TypedefDeclaration {
+        // C/C++ behaves slightly different when it comes to typedefs in a function or in a record,
+        // such as a class or struct. A typedef in a function (or actually in any block scope) is
+        // scoped to the current block. A  typedef in a record declaration is scoped to the global
+        // scope,
+        // but its alias name is FQN'd.
+        val (scope, doFqn) =
+            if (frontend.scopeManager.currentScope is RecordScope) {
+                Pair(frontend.scopeManager.globalScope, true)
+            } else if (frontend.scopeManager.currentScope is ValueDeclarationScope) {
+                Pair(frontend.scopeManager.currentScope as ValueDeclarationScope, false)
+            } else {
+                TODO()
+            }
+        // TODO(oxisto): What about namespaces?
 
         val declaration =
-            frontend.typeManager.createTypeAlias(frontend, type, frontend.typeOf(nameDecl.name))
+            frontend.newTypedefDeclaration(type, frontend.typeOf(aliasName, doFqn = doFqn))
+
+        frontend.scopeManager.addTypedef(declaration, scope)
 
         // Add the declaration to the current scope
         frontend.scopeManager.addDeclaration(declaration)
@@ -664,6 +710,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         return node
+    }
+
+    /**
+     * Translates a C++ (type alias)[https://en.cppreference.com/w/cpp/language/type_alias] into a
+     * [TypedefDeclaration].
+     */
+    private fun handleAliasDeclaration(ctx: CPPASTAliasDeclaration): TypedefDeclaration {
+        val type = frontend.typeOf(ctx.mappingTypeId)
+
+        return handleTypedef(ctx.alias, type)
     }
 
     private fun addIncludes(

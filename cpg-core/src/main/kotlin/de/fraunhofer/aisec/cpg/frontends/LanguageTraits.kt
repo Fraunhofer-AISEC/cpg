@@ -74,7 +74,8 @@ interface HasTemplates : HasGenerics {
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?
+        currentTU: TranslationUnitDeclaration?,
+        needsExactMatch: Boolean
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
@@ -99,7 +100,7 @@ interface HasComplexCallResolution : LanguageTrait {
      */
     fun refineMethodCallResolution(
         curClass: RecordDeclaration?,
-        possibleContainingTypes: Set<Type>,
+        possibleContainingTypes: List<Type>,
         call: CallExpression,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,

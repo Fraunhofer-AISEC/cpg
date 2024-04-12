@@ -316,11 +316,19 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         // TODO: Move this code somewhere else once we have a proper template expansion pass
         // We need to check, whether this language has special handling of templates. In this
-        // case, we need to check, whether a template matches after we have no direct matches
+        // case, we need to check, whether a template matches directly after we have no direct
+        // matches
         if (this is HasTemplates) {
             result.call.templateParameterEdges = mutableListOf()
             val (ok, candidates) =
-                this.handleTemplateFunctionCalls(null, result.call, false, result.call.ctx!!, null)
+                this.handleTemplateFunctionCalls(
+                    null,
+                    result.call,
+                    false,
+                    result.call.ctx!!,
+                    null,
+                    needsExactMatch = true
+                )
             if (ok) {
                 return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
             }

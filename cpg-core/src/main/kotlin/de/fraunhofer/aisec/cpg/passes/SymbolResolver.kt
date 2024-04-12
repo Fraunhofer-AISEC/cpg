@@ -638,7 +638,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         call,
                         true,
                         ctx,
-                        currentTU
+                        currentTU,
+                        false
                     )
 
                 candidates
@@ -654,7 +655,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (callee is MemberExpression || callee?.name?.isQualified() == false) {
                     getPossibleContainingTypes(call)
                 } else {
-                    setOf()
+                    listOf()
                 }
 
             candidates =
@@ -825,21 +826,29 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param call
      */
     protected fun createMethodDummies(
-        possibleContainingTypes: Set<Type>,
+        possibleContainingTypes: List<Type>,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return possibleContainingTypes
-            .mapNotNull {
+        var records =
+            possibleContainingTypes.mapNotNull {
                 val root = it.root as? ObjectType
-                var record = root?.recordDeclaration
-                if (root != null && record == null) {
-                    // We access an unknown method of an unknown record. so we need to handle that
-                    // along the way as well
-                    record = tryRecordInference(root, locationHint = call)
-                }
-                record
+                root?.recordDeclaration
             }
-            .mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
+
+        // We access an unknown method of an unknown record. so we need to handle that
+        // along the way as well. We prefer the base type
+        if (records.isEmpty()) {
+            records =
+                listOfNotNull(
+                    tryRecordInference(
+                        possibleContainingTypes.firstOrNull()?.root ?: unknownType(),
+                        locationHint = call
+                    )
+                )
+        }
+        records = records.distinct()
+
+        return records.mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
     }
 
     /**
@@ -896,8 +905,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getPossibleContainingTypes(node: Node?): Set<Type> {
-        val possibleTypes = mutableSetOf<Type>()
+    protected fun getPossibleContainingTypes(node: Node?): List<Type> {
+        val possibleTypes = mutableListOf<Type>()
         if (node is MemberCallExpression) {
             node.base?.let { base ->
                 possibleTypes.add(base.type)
@@ -1004,7 +1013,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
     protected fun getOverridingCandidates(
-        possibleSubTypes: Set<Type>,
+        possibleSubTypes: List<Type>,
         declaration: FunctionDeclaration
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy

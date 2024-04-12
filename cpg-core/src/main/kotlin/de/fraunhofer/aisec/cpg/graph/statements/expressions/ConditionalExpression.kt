@@ -72,8 +72,19 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        // Do nothing
-        return false
+        return when (old) {
+            thenExpression -> {
+                thenExpression = new
+                true
+            }
+            elseExpression -> {
+                elseExpression = new
+                true
+            }
+            else -> {
+                false
+            }
+        }
     }
 
     override fun typeChanged(newType: Type, src: HasType) {

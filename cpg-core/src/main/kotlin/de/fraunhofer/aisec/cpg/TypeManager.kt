@@ -28,12 +28,9 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -231,26 +228,6 @@ class TypeManager {
         return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
     }
 
-    /**
-     * Creates a typedef / type alias in the form of a [TypedefDeclaration] to the scope manager and
-     * returns it.
-     *
-     * @param frontend the language frontend
-     * @param rawCode the raw code
-     * @param target the target type
-     * @param alias the alias type
-     * @return the typedef declaration
-     */
-    fun createTypeAlias(
-        frontend: LanguageFrontend<*, *>,
-        target: Type,
-        alias: Type,
-    ): Declaration {
-        val typedef = frontend.newTypedefDeclaration(target, alias)
-        frontend.scopeManager.addTypedef(typedef)
-        return typedef
-    }
-
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
         val applicable = scopeManager.typedefFor(finalToCheck)
@@ -411,8 +388,7 @@ fun Type.wrap(wrapState: WrapState): Type {
     }
 
     if (wrapState.isReference) {
-        wrapState.referenceType?.elementType = type
-        return wrapState.referenceType!!
+        return ReferenceType(this)
     }
 
     return type
