@@ -49,4 +49,22 @@ class CXXInferenceTest {
 
         assertContains(tu.declarations, global)
     }
+
+    @Test
+    fun testInferClassInNamespace() {
+        val file = File("src/test/resources/cxx/inference.cpp")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.loadIncludes(false)
+                it.addIncludesToGraph(false)
+            }
+        assertNotNull(tu)
+
+        val util = tu.namespaces["util"]
+        assertNotNull(util)
+
+        val someClass = util.records["SomeClass"]
+        assertNotNull(someClass)
+    }
 }
