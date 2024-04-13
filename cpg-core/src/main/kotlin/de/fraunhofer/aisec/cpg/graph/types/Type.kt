@@ -189,7 +189,7 @@ abstract class Type : Node {
     override fun hashCode() = Objects.hash(name, language)
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE).append("name", name).toString()
+        return "${this::class.simpleName}(name=$name)"
     }
 
     companion object {

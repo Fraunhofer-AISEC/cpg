@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * Represents a call to a constructor, usually as an initializer.
@@ -79,15 +78,6 @@ class ConstructExpression : CallExpression() {
                 type = objectType(value.name)
             }
         }
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("constructor", constructor)
-            .append("instantiates", instantiates)
-            .append("arguments", arguments)
-            .toString()
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

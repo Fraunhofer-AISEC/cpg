@@ -54,7 +54,7 @@ open class Block : Expression(), StatementHolder {
     var isStaticBlock = false
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
+        return "${this::class.simpleName}(location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

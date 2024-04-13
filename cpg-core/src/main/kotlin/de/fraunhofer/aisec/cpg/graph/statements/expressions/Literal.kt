@@ -41,10 +41,7 @@ class Literal<T> : Expression() {
     @Convert(ValueConverter::class) var value: T? = null
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("value", value)
-            .toString()
+        return "${this::class.simpleName}(value=$name,type=$type,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

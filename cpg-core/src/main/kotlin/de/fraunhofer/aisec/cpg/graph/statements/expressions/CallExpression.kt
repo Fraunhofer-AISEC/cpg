@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -266,7 +265,7 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
+        return "${this::class.simpleName}(name=$name,argument=$arguments,type=$type,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

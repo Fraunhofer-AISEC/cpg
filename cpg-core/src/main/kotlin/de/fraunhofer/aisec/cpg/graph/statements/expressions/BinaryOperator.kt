@@ -106,11 +106,7 @@ open class BinaryOperator :
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("lhs", lhs.name)
-            .append("rhs", rhs.name)
-            .append("operatorCode", operatorCode)
-            .toString()
+        return "${this::class.simpleName}(lhs=$lhs,operatorCode=$operatorCode,rhs=$rhs,type=$type,location=$location)"
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
