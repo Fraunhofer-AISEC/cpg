@@ -286,18 +286,12 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 }
 
 /**
- * Checks, if this [Type] is either derived from or equals to [targetType]. This is forwarded to the
- * [Language] of the [Type] and can be overridden by the individual languages.
+ * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
+ * [WrapState] of the type into account, which means that pointer types of derived types will not
+ * match with a non-pointer type of its base type. But, if both are pointer types, they will match.
+ *
+ * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
-fun Type.isDerivedFrom(
-    targetType: Type,
-    hint: HasType? = null,
-    targetHint: HasType? = null
-): Boolean {
-    return this.language?.tryCast(this, targetType, hint, targetHint) != CastNotPossible
-    // return this.language?.isDerivedFrom(this, targetType, hint, targetHint) ?: false
-}
-
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
     return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
 }

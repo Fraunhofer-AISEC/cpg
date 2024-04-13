@@ -232,7 +232,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     }
 
     /**
-     * This function checks, if [type] is derived from [targetType]. Note, this also takes the
+     * This function checks, if [type] can be cast into [targetType]. Note, this also takes the
      * [WrapState] of the type into account, which means that pointer types of derived types will
      * not match with a non-pointer type of its base type. But, if both are pointer types, they will
      * match.
@@ -240,32 +240,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * Optionally, the nodes that hold the respective type can be supplied as [hint] and
      * [targetHint].
      */
-    open fun isDerivedFrom(
-        type: Type,
-        targetType: Type,
-        hint: HasType?,
-        targetHint: HasType?
-    ): Boolean {
-        // We can take a shortcut if it is the same type
-        if (type == targetType) {
-            return true
-        }
-
-        // We can also take a shortcut: if they are not of the same subclass, they will never
-        // match
-        if (type::class != targetType::class) {
-            return false
-        }
-
-        // Retrieve all ancestor types of our type (more concretely of the root type)
-        val root = type.root
-        val superTypes = root.ancestors.map { it.type }
-
-        // Check, if super type (or its root) is in the list. Also, the wrap state needs to be the
-        // same
-        return targetType.root in superTypes && type.wrapState == targetType.wrapState
-    }
-
     open fun tryCast(
         type: Type,
         targetType: Type,

@@ -25,11 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.isDerivedFrom
+import de.fraunhofer.aisec.cpg.tryCast
 import java.util.HashMap
 import java.util.regex.Pattern
 
@@ -327,7 +328,7 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
         callParameter is ObjectType
     } else if (callParameter is Expression && templateParameter is ParameterDeclaration) {
         callParameter.type == templateParameter.type ||
-            callParameter.type.isDerivedFrom(templateParameter.type)
+            callParameter.type.tryCast(templateParameter.type) != CastNotPossible
     } else {
         false
     }
