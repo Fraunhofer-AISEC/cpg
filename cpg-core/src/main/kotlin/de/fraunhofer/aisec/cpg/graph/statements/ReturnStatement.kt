@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement(), ArgumentHolder {
@@ -50,10 +49,7 @@ class ReturnStatement : Statement(), ArgumentHolder {
         }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("returnValues", returnValues)
-            .toString()
+        return "${this::class.simpleName}(returnValues=$returnValues,location=$location)"
     }
 
     override fun addArgument(expression: Expression) {

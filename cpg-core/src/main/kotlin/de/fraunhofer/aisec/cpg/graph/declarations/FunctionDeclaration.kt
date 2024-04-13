@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
@@ -176,10 +175,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("parameters", parameters)
-            .toString()
+        return "${this::class.simpleName}(name=$name,parameters=$parameters],isDefinition=$isDefinition,location=$location)"
     }
 
     override val eogStarters: List<Node>

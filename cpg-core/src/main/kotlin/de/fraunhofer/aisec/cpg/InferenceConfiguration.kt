@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
-
 /**
  * This class holds configuration options for the inference of certain constructs and auto-guessing
  * when executing language frontends.
@@ -93,13 +90,5 @@ private constructor(
         fun builder(): Builder {
             return Builder()
         }
-    }
-
-    override fun toString(): String {
-        return ToStringBuilder(this, ToStringStyle.JSON_STYLE)
-            .append("guessCastExpressions", guessCastExpressions)
-            .append("inferRecords", inferRecords)
-            .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedSymbols)
-            .toString()
     }
 }

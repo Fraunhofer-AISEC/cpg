@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import org.apache.commons.lang3.builder.ToStringBuilder
-
 interface NumberSet {
     fun min(): Long
 
@@ -71,7 +68,7 @@ class Interval : NumberSet {
     }
 }
 
-class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberSet {
+data class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberSet {
     override fun addValue(value: Long) {
         values.add(value)
     }
@@ -90,22 +87,5 @@ class ConcreteNumberSet(var values: MutableSet<Long> = mutableSetOf()) : NumberS
 
     override fun clear() {
         values.clear()
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ConcreteNumberSet
-
-        return values == other.values
-    }
-
-    override fun hashCode(): Int {
-        return values.hashCode()
-    }
-
-    override fun toString(): String {
-        return ToStringBuilder(this, Node.TO_STRING_STYLE).append(values).toString()
     }
 }

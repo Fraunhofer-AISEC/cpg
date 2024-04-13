@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * Represents access to a member of a [RecordDeclaration], such as `obj.property`. Another common
@@ -51,13 +50,6 @@ class MemberExpression : Reference(), ArgumentHolder, HasBase {
         }
 
     override var operatorCode: String? = null
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("base", base)
-            .toString()
-    }
 
     override fun addArgument(expression: Expression) {
         this.base = expression

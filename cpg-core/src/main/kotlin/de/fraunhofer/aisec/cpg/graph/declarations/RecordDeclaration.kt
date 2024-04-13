@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -160,16 +159,7 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("name", name)
-            .append("kind", kind)
-            .append("superTypeDeclarations", superTypeDeclarations)
-            .append("fields", fields)
-            .append("methods", methods)
-            .append("constructors", constructors)
-            .append("records", records)
-            .toString()
+        return "${this::class.simpleName}(name=$name,kind=$kind,location=$location)"
     }
 
     override val eogStarters: List<Node>

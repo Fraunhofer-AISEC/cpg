@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a conditional loop statement of the form: `while(...){...}`. */
 class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
@@ -50,14 +49,6 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("condition", condition)
-            .append("statement", statement)
-            .toString()
-    }
 
     override fun addArgument(expression: Expression) {
         this.condition = expression

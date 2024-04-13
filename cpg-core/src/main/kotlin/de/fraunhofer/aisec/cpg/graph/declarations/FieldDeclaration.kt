@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -52,11 +51,7 @@ class FieldDeclaration : VariableDeclaration() {
     var modifiers: List<String> = mutableListOf()
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("initializer", initializer)
-            .append("modifiers", modifiers)
-            .toString()
+        return "${this::class.simpleName}(name=$name,type=$type,initializer=$initializer,modifiers=$modifiers,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

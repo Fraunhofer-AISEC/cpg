@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -77,10 +76,7 @@ open class DeclarationStatement : Statement() {
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("declarations", declarations)
-            .toString()
+        return "${this::class.simpleName}(label=$declarations,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

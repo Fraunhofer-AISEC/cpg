@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -119,13 +118,6 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         return if (refersTo?.javaClass?.let { clazz.isAssignableFrom(it) } == true)
             clazz.cast(refersTo)
         else null
-    }
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("refersTo", refersTo)
-            .toString()
     }
 
     override fun typeChanged(newType: Type, src: HasType) {

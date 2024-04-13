@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.stream.Collectors
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
@@ -109,7 +108,7 @@ abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
+        return "${this::class.simpleName}(name=$name,type=$type,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

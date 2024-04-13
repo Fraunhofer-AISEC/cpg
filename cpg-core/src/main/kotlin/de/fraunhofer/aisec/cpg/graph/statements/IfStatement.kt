@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
 class IfStatement : Statement(), BranchingNode, ArgumentHolder {
@@ -58,15 +57,6 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
      * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */
     @AST var elseStatement: Statement? = null
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("condition", condition)
-            .append("thenStatement", thenStatement)
-            .append("elseStatement", elseStatement)
-            .toString()
-    }
 
     override fun addArgument(expression: Expression) {
         this.condition = expression

@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration of a local variable. */
@@ -83,11 +82,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("name", name)
-            .append("location", location)
-            .append("initializer", initializer)
-            .toString()
+        return "${this::class.simpleName}(name=$name,type=$type,initializer=$initializer,location=$location)"
     }
 
     override fun typeChanged(newType: Type, src: HasType) {

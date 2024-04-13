@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** This declaration represents either an include or an import, depending on the language. */
@@ -71,16 +70,6 @@ class IncludeDeclaration : Declaration() {
         val propertyEdge = PropertyEdge(this, problemDeclaration)
         propertyEdge.addProperty(Properties.INDEX, problemEdges.size)
         problemEdges.add(propertyEdge)
-    }
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("name", name)
-            .append("filename", filename)
-            .append("includes", includes)
-            .append("problems", problems)
-            .toString()
     }
 
     override fun equals(other: Any?): Boolean {

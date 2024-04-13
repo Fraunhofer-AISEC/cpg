@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 class EnumDeclaration : RecordDeclaration() {
@@ -37,11 +36,4 @@ class EnumDeclaration : RecordDeclaration() {
     var entryEdges: MutableList<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
 
     var entries by PropertyEdgeDelegate(EnumDeclaration::entryEdges)
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("entries", entries)
-            .toString()
-    }
 }

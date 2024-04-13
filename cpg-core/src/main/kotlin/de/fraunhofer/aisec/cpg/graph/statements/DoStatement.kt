@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a conditional loop statement of the form: `do{...}while(...)`. */
 class DoStatement : Statement(), ArgumentHolder {
@@ -43,13 +42,6 @@ class DoStatement : Statement(), ArgumentHolder {
      * false for the first time. Usually a [Block].
      */
     @AST var statement: Statement? = null
-
-    override fun toString() =
-        ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("condition", condition)
-            .append("statement", statement)
-            .toString()
 
     override fun addArgument(expression: Expression) {
         this.condition = expression

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * A label attached to a statement that is used to change control flow by labeled continue and
@@ -41,14 +40,6 @@ class LabelStatement : Statement(), StatementHolder {
 
     /** Label in the form of a String */
     var label: String? = null
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("subStatement", subStatement)
-            .append("label", label)
-            .toString()
-    }
 
     override var statementEdges: MutableList<PropertyEdge<Statement>>
         get() = subStatement?.let { PropertyEdge.wrap(listOf(it), this) } ?: mutableListOf()
@@ -63,4 +54,8 @@ class LabelStatement : Statement(), StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
+
+    override fun toString(): String {
+        return "${this::class.simpleName}(label=$label,location=$location)"
+    }
 }

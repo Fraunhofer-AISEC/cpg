@@ -44,7 +44,6 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
@@ -412,13 +411,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     }
 
     override fun toString(): String {
-        val builder = ToStringBuilder(this, TO_STRING_STYLE)
-
-        if (name.isNotEmpty()) {
-            builder.append("name", name)
-        }
-
-        return builder.append("location", location).toString()
+        return "${this::class.simpleName}(name=$name,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {

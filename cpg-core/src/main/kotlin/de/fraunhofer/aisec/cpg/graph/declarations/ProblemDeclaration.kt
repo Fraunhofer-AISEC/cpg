@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * A node where the statement could not be translated by the graph. We use ProblemExpressions
@@ -39,10 +38,7 @@ class ProblemDeclaration(
 ) : ValueDeclaration(), ProblemNode {
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("problem", problem)
-            .toString()
+        return "${this::class.simpleName}(problem=$problem,type=$type,location=$location)"
     }
 
     override fun equals(other: Any?): Boolean {
