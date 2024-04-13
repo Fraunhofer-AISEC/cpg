@@ -47,7 +47,6 @@ abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var language: Language<*>? = null
-        get() = super.language
         set(value) {
             // We need to adjust an eventual unknown type, once we know the language
             field = value

@@ -716,6 +716,13 @@ class ScopeManager : ScopeProvider {
                 CallResolutionResult.SuccessKind.UNRESOLVED,
                 startScope,
             )
+        val language = call.language
+
+        if (language == null) {
+            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            return result
+        }
+
         // We can only resolve non-dynamic function calls here that have a reference node to our
         // function
         val callee = call.callee as? Reference ?: return result
@@ -725,7 +732,7 @@ class ScopeManager : ScopeProvider {
 
         // Retrieve a list of possible functions with a matching name
         result.candidateFunctions =
-            callee.candidates?.filterIsInstance<FunctionDeclaration>()?.toSet() ?: setOf()
+            callee.candidates.filterIsInstance<FunctionDeclaration>()?.toSet() ?: setOf()
 
         if (call.language !is HasFunctionOverloading) {
             // If the function does not allow function overloading, and we have multiple candidate
@@ -764,11 +771,9 @@ class ScopeManager : ScopeProvider {
 
         // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
         // the success kind.
-        val pair = call.language?.bestViableResolution(result)
-        if (pair != null) {
-            result.bestViable = pair.first
-            result.success = pair.second
-        }
+        val pair = language.bestViableResolution(result)
+        result.bestViable = pair.first
+        result.success = pair.second
 
         return result
     }
