@@ -361,12 +361,17 @@ open class ValueEvaluator(
     }
 
     protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
-        // Assume that condition is a binary operator
-        if (expr.condition is BinaryOperator) {
-            val lhs = evaluateInternal((expr.condition as? BinaryOperator)?.lhs, depth)
-            val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
+        var condition = expr.condition
 
-            return if (lhs == rhs) {
+        // Assume that condition is a binary operator
+        if (condition is BinaryOperator) {
+            val lhs = evaluateInternal(condition.lhs, depth)
+            val rhs = evaluateInternal(condition.rhs, depth)
+
+            // Compute the effect of the comparison
+            val comparison = computeBinaryOpEffect(lhs, rhs, condition)
+
+            return if (comparison == true) {
                 evaluateInternal(expr.thenExpression, depth + 1)
             } else {
                 evaluateInternal(expr.elseExpression, depth + 1)

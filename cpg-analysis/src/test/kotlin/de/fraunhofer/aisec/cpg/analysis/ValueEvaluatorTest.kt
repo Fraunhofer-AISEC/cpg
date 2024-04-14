@@ -177,7 +177,7 @@ class ValueEvaluatorTest {
         val main = mainClass.functions["main"]
         assertNotNull(main)
 
-        val s = main.refs("s").last()
+        val s = main.refs("s").lastOrNull()
         assertNotNull(s)
 
         var value = s.evaluate()
@@ -186,7 +186,7 @@ class ValueEvaluatorTest {
         value = s.evaluate(MultiValueEvaluator())
         assertEquals(setOf("big!?", "small!?"), value)
 
-        val i = main.refs("i").last()
+        val i = main.refs("i").lastOrNull()
         assertNotNull(i)
 
         value = i.evaluate()
@@ -741,15 +741,15 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleUnary() {
-        with(TestHandler(TestLanguageFrontend())) {
-            val neg = newUnaryOperator("-", false, true)
+        with(TestLanguageFrontend()) {
+            val neg = newUnaryOperator("-", postfix = false, prefix = true)
             neg.input = newLiteral(3, primitiveType("int"))
             assertEquals(-3, ValueEvaluator().evaluate(neg))
 
             neg.input = newLiteral(3.5, primitiveType("double"))
             assertEquals(-3.5, ValueEvaluator().evaluate(neg))
 
-            val plusplus = newUnaryOperator("++", true, false)
+            val plusplus = newUnaryOperator("++", postfix = true, prefix = false)
             plusplus.input = newLiteral(3, primitiveType("int"))
             assertEquals(4, ValueEvaluator().evaluate(plusplus))
 
@@ -759,7 +759,7 @@ class ValueEvaluatorTest {
             plusplus.input = newLiteral(3.5f, primitiveType("float"))
             assertEquals(4.5f, ValueEvaluator().evaluate(plusplus))
 
-            val minusminus = newUnaryOperator("--", true, false)
+            val minusminus = newUnaryOperator("--", postfix = true, prefix = false)
             minusminus.input = newLiteral(3, primitiveType("int"))
             assertEquals(2, ValueEvaluator().evaluate(minusminus))
 
@@ -768,6 +768,25 @@ class ValueEvaluatorTest {
 
             minusminus.input = newLiteral(3.5f, primitiveType("float"))
             assertEquals(2.5f, ValueEvaluator().evaluate(minusminus))
+        }
+    }
+
+    @Test
+    fun handleConditionalExpression() {
+        with(TestLanguageFrontend()) {
+            val a = newVariableDeclaration("a")
+            a.initializer = newLiteral(1)
+
+            val aRef = newReference("a")
+            aRef.refersTo = a
+            aRef.prevDFG = mutableSetOf(a)
+
+            val comparison = newBinaryOperator("!=")
+            comparison.lhs = aRef
+            comparison.rhs = newLiteral(1)
+
+            val cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            assertEquals(1, cond.evaluate())
         }
     }
 }
