@@ -124,7 +124,7 @@ class GraphExamples {
                                 }
                                 declare {
                                     variable("d", t("char")) {
-                                        ase {
+                                        subscriptExpr {
                                             ref("c")
                                             ref("b")
                                         }
@@ -142,7 +142,7 @@ class GraphExamples {
                                     }
                                 }
                                 returnStmt {
-                                    ase {
+                                    subscriptExpr {
                                         ref("c")
                                         literal(0, t("int"))
                                     }

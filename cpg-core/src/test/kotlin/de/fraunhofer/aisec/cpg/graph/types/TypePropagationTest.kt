@@ -324,7 +324,7 @@ class TypePropagationTest {
                                     }
                                 }
                                 returnStmt {
-                                    ase {
+                                    subscriptExpr {
                                         ref("bb")
                                         literal(1)
                                     }
