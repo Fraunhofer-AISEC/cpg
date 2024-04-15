@@ -69,15 +69,33 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     it.rhs
                         .filterIsInstance<CallExpression>()
                         .filter { call ->
-                            call.name.localName == "QuantumCircuit" && call.arguments.size == 2
+                            call.name.localName == "QuantumCircuit" &&
+                                (call.arguments.size == 2 || call.arguments.size == 1)
                         }
                         .flatMap { call ->
-                            it.findTargets(call).map { lhs ->
-                                Triple(
-                                    (lhs as? Reference)?.refersTo,
-                                    (call.arguments[0].evaluate() as? Number)?.toInt(),
-                                    (call.arguments[1].evaluate() as? Number)?.toInt()
-                                )
+                            it.findTargets(call).mapNotNull { lhs ->
+                                if (call.arguments.size == 1 && call.arguments[0] is Literal<*>) {
+                                    Triple(
+                                        (lhs as? Reference)?.refersTo,
+                                        (call.arguments[0].evaluate() as? Number)?.toInt(),
+                                        0
+                                    )
+                                } else if (
+                                    call.arguments.size == 2 &&
+                                        call.arguments[0] is Literal<*> &&
+                                        call.arguments[1] is Literal<*>
+                                ) {
+                                    Triple(
+                                        (lhs as? Reference)?.refersTo,
+                                        (call.arguments[0].evaluate() as? Number)?.toInt(),
+                                        (call.arguments[1].evaluate() as? Number)?.toInt()
+                                    )
+                                } else {
+                                    log.warn(
+                                        "Cannot handle call to QuantumCircuit with arguments ${call.arguments.map { it.type }}! Please implement this feature in the QiskitPass."
+                                    )
+                                    null
+                                }
                             }
                         }
                 }
