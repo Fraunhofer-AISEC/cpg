@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBitRef
@@ -46,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
+import de.fraunhofer.aisec.cpg.query.value
 
 @RequiredFrontend(PythonLanguageFrontend::class)
 @DependsOn(SymbolResolver::class)
@@ -60,39 +60,37 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         val flatAST = SubgraphWalker.flattenAST(comp.translationUnits.first()) // TODO first
 
-        val allQuantumCircuits =
-            flatAST.filter { n ->
-                n is VariableDeclaration &&
-                    n.initializer != null &&
-                    n.initializer is CallExpression &&
-                    (n.initializer as CallExpression).name.localName == "QuantumCircuit"
-            }
-
-        for (circuit in allQuantumCircuits) {
-            var quantumBits = 0
-            var classicBits = 0
-
-            // circuit = QuantumCircuit(1, 2)
-            if (
-                circuit is VariableDeclaration &&
-                    circuit.initializer != null &&
-                    circuit.initializer is CallExpression &&
-                    (circuit.initializer as CallExpression).invokes.isNotEmpty() &&
-                    (circuit.initializer as CallExpression).invokes[0].name.localName ==
-                        "QuantumCircuit" &&
-                    (circuit.initializer as CallExpression).arguments.size == 2
-            ) {
-                val arg0 =
-                    (circuit.initializer as CallExpression).arguments[0] as? Literal<Long> // TODO
-                val arg1 =
-                    (circuit.initializer as CallExpression).arguments[1] as? Literal<Long> // TODO
-                if (arg0 != null && arg1 != null) {
-                    quantumBits = arg0.value!!.toInt() // TODO
-                    classicBits = arg1.value!!.toInt() // TODO
+        val allQuantumCircuits2 =
+            flatAST
+                .mapNotNull {
+                    if (it !is AssignExpression) {
+                        return@mapNotNull null
+                    }
+                    it.rhs
+                        .filterIsInstance<CallExpression>()
+                        .filter { call ->
+                            call.name.localName == "QuantumCircuit" && call.arguments.size == 2
+                        }
+                        .flatMap { call ->
+                            it.findTargets(call).map { lhs ->
+                                Triple(
+                                    (lhs as? Reference)?.refersTo,
+                                    (call.arguments[0].evaluate() as? Number)?.toInt(),
+                                    (call.arguments[1].evaluate() as? Number)?.toInt()
+                                )
+                            }
+                        }
                 }
+                .flatten()
+
+        for ((circuit, quantumBits, classicBits) in allQuantumCircuits2) {
+            if (circuit != null && quantumBits != null && classicBits != null) {
+                // circuit = QuantumCircuit(1, 2)
+                val graphNode = newQuantumCircuit(circuit, quantumBits, classicBits)
+                quantumCircuitsMap[circuit] = graphNode
+            } else {
+                log.warn("Found circuit $circuit but something is null. This shouldn't happen...")
             }
-            val graphNode = newQuantumCircuit(circuit, quantumBits, classicBits)
-            quantumCircuitsMap[circuit] = graphNode
         }
 
         val allQuantumExpressions =
