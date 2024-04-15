@@ -52,6 +52,7 @@ class GlobalScope : StructureDeclarationScope(null) {
 
             // Make sure, the child scopes of the global scope point to the new global scope parent
             // (this)
+            searchPrefixes.addAll(other.searchPrefixes)
             for (child in other.children) {
                 child.parent = this
                 children.add(child)

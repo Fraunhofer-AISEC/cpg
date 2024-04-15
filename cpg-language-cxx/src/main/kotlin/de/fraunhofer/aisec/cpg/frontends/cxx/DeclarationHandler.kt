@@ -120,6 +120,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration = newImportDeclaration(import, rawNode = ctx)
 
         frontend.scopeManager.addDeclaration(declaration)
+        frontend.scopeManager.currentScope?.searchPrefixes?.add(import)
 
         return declaration
     }

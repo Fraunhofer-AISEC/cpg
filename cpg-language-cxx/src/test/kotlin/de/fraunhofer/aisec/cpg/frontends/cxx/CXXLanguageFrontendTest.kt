@@ -1661,6 +1661,15 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
+        // There should be no type "string" anymore, only "std::string"
+        assertFalse(result.finalCtx.typeManager.typeExists("string"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::string"))
+
+        // the same applies to "inner::secret"
+        assertFalse(result.finalCtx.typeManager.typeExists("secret"))
+        assertFalse(result.finalCtx.typeManager.typeExists("inner::secret"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::inner::secret"))
+
         val std = result.namespaces["std"]
         assertNotNull(std)
 

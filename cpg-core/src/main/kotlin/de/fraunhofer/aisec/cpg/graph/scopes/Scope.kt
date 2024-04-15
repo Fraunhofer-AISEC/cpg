@@ -162,6 +162,8 @@ abstract class Scope(
         return result
     }
 
+    val searchPrefixes = mutableListOf<Name>()
+
     /** Returns the [GlobalScope] of this scope by traversing its parents upwards. */
     val globalScope: Scope?
         get() {

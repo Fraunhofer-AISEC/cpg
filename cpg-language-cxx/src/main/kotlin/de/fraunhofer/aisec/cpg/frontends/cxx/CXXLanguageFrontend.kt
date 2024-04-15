@@ -519,24 +519,18 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                         resolveTypeDef = true
                         typeOf(specifier.name)
                     } else {
-                        // Case b: Peek into our symbols. This is most likely limited to our current
-                        // translation unit
-                        resolveTypeDef = true
-
-                        val decl = scopeManager.getRecordForName(Name(name))
-
-                        // We found a symbol, so we can use its name
-                        if (decl != null) {
-                            objectType(decl.name)
+                        // It could be, that this is a parameterized type
+                        val paramType =
+                            typeManager.searchTemplateScopeForDefinedParameterizedTypes(
+                                scopeManager.currentScope,
+                                specifier.name.toString()
+                            )
+                        if (paramType != null) {
+                            paramType
                         } else {
-                            // It could be, that this is a parameterized type
-                            val paramType =
-                                typeManager.searchTemplateScopeForDefinedParameterizedTypes(
-                                    scopeManager.currentScope,
-                                    specifier.name.toString()
-                                )
-                            // Otherwise, we keep it as a local name and hope for the best
-                            paramType ?: typeOf(specifier.name)
+                            // Otherwise, we keep it as a local name and the type normalizer will
+                            // take care of it
+                            typeOf(specifier.name)
                         }
                     }
                 }
