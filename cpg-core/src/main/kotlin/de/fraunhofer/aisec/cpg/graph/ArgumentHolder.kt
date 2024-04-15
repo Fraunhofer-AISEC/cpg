@@ -68,4 +68,6 @@ interface ArgumentHolder : Holder<Expression> {
     operator fun minusAssign(node: Expression) {
         removeArgument(node)
     }
+
+    fun hasArgument(expression: Expression): Boolean
 }

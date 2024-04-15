@@ -25,20 +25,26 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
-import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasGlobalFunctions
+import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
@@ -80,7 +86,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         code: String?,
         isStatic: Boolean,
         signature: List<Type?>,
-        returnType: Type?,
+        incomingReturnType: Type?,
         hint: CallExpression? = null
     ): FunctionDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
@@ -111,10 +117,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 hint,
                 log,
-                "Inferred a new {} declaration {} with parameter types {} in $it",
+                "Inferred a new {} declaration {} with parameter types {} and return types {} in $it",
                 if (inferred is MethodDeclaration) "method" else "function",
                 inferred.name,
-                signature.map { it?.name }
+                signature.map { it?.name },
+                inferred.returnTypes.map { it.name }
             )
 
             // Create parameter declarations and receiver (only for methods).
@@ -124,6 +131,15 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             createInferredParameters(inferred, signature)
 
             // Set the type and return type(s)
+            var returnType =
+                if (
+                    ctx.config.inferenceConfiguration.inferReturnTypes &&
+                        incomingReturnType is UnknownType
+                ) {
+                    inferReturnType(hint)
+                } else {
+                    incomingReturnType
+                }
             returnType?.let { inferred.returnTypes = listOf(it) }
             inferred.type = FunctionType.computeType(inferred)
 
@@ -528,6 +544,52 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         this.scopeManager = ctx.scopeManager
         this.typeManager = ctx.typeManager
     }
+
+    fun inferReturnType(call: CallExpression?): Type {
+        if (call == null) {
+            return unknownType()
+        }
+
+        // Try to find out, if the supplied hint is part of an assignment.  If yes, we can use their
+        // type as the return type of the function
+        var targetType =
+            ctx.currentComponent.assignments.firstOrNull { it.value == call }?.target?.type
+        if (targetType != null && targetType !is UnknownType) {
+            return targetType
+        }
+
+        // Look for an "argument holder". These can be different kind of nodes
+        val holder =
+            ctx.currentComponent.allChildren<ArgumentHolder> { it.hasArgument(call) }.singleOrNull()
+        when (holder) {
+            is UnaryOperator -> {
+                // If it's a boolean operator, the return type is probably a boolean
+                if (holder.operatorCode == "!") {
+                    return call.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
+                        ?: unknownType()
+                }
+                // If it's a numeric operator, return the fist numeric type that we have
+                if (holder.operatorCode in listOf("+", "-", "++", "--")) {
+                    return call.language?.builtInTypes?.values?.firstOrNull { it is NumericType }
+                        ?: unknownType()
+                }
+            }
+            is ConstructExpression -> {
+                return holder.type
+            }
+            is BinaryOperator -> {
+                // If it is on the right side, it's probably the same as on the left-side (and
+                // vice-versa)
+                if (call == holder.rhs) {
+                    return holder.lhs.type
+                } else if (call == holder.lhs) {
+                    return holder.rhs.type
+                }
+            }
+        }
+
+        return unknownType()
+    }
 }
 
 /** Provides information about the inference status of a node. */
@@ -604,4 +666,198 @@ fun RecordDeclaration.inferMethod(
             call.type,
             call
         ) as? MethodDeclaration
+}
+
+fun TranslationContext.tryNamespaceInference(
+    name: Name,
+    locationHint: Node?
+): NamespaceDeclaration? {
+    // Determine the scope where we want to start our inference
+    var (scope, _) = scopeManager.extractScope(name, location = locationHint?.location)
+
+    if (scope !is NameScope) {
+        scope = null
+    }
+
+    var holder = scope?.astNode
+
+    // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
+    // parent record)
+    var parentName = name.parent
+    if (scope == null && parentName != null) {
+        holder = tryParentScopeInference(parentName, locationHint)
+    }
+
+    return (holder ?: scopeManager.globalScope?.astNode)
+        ?.startInference(this)
+        ?.inferNamespaceDeclaration(name, null, locationHint)
+}
+
+/**
+ * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
+ * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ */
+fun TranslationContext.tryRecordInference(
+    type: Type,
+    locationHint: Node? = null
+): RecordDeclaration? {
+    val kind =
+        if (type.language is HasStructs) {
+            "struct"
+        } else {
+            "class"
+        }
+    // Determine the scope where we want to start our inference
+    var (scope, _) = scopeManager.extractScope(type, scope = type.scope)
+
+    if (scope !is NameScope) {
+        scope = null
+    } else if (scope is RecordScope) {
+        // We are asked to infer a record inside another record. While this is not unusual
+        // per-se, it is far more likely that the "correct" way to place our record is in a
+        // parent namespace or even the global scope. This is especially true if we did NOT
+        // infer the parent record, because in this case we can somewhat assume that the
+        // parent's records declaration (e.g. in a C++ header file) is somewhat complete.
+        if (scope.astNode?.isInferred == false) {
+            // It is therefore a better choice to infer it in the parent namespace instead
+            scope = scopeManager.firstScopeOrNull(scope) { it is NameScope && it !is RecordScope }
+        }
+    }
+
+    var holder = scope?.astNode
+
+    // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
+    // parent record)
+    var parentName = type.name.parent
+    if (scope == null && parentName != null) {
+        holder = tryParentScopeInference(parentName, locationHint)
+    }
+
+    val record =
+        (holder ?: scopeManager.globalScope?.astNode)
+            ?.startInference(this)
+            ?.inferRecordDeclaration(type, kind, locationHint)
+
+    // update the type's record. Because types are only unique per scope, we potentially need to
+    // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
+    if (record != null) {
+        typeManager.firstOrderTypes
+            .filter { it.name == record.name }
+            .forEach { it.recordDeclaration = record }
+    }
+
+    return record
+}
+
+/**
+ * Creates an inferred [FunctionDeclaration] for each suitable [Type] (which points to a
+ * [RecordDeclaration]).
+ *
+ * There is a big challenge in this inference: We can not be 100 % sure, whether we really need to
+ * infer a [MethodDeclaration] inside the [RecordDeclaration] or if this is a call to a global
+ * function (if [call] is a simple [CallExpression] and not a [MemberCallExpression]). The reason
+ * behind that is that most languages allow to omit `this` when calling methods in the current
+ * class. So a call to `foo()` inside record `Bar` could either be a call to a global function `foo`
+ * or a call to `Bar::foo`.
+ *
+ * @param possibleContainingTypes
+ * @param call
+ */
+fun TranslationContext.tryMethodInference(
+    possibleContainingTypes: Set<Type>,
+    bestGuess: Type?,
+    call: CallExpression
+): List<FunctionDeclaration> {
+    // We need to decide whether we want to infer a global function or not. We do this with a
+    // simple heuristic. This will of course not be 100 % error-prone, but this is the burden of
+    // inference.
+    // 1a) If the language does not even support functions at a global level, it's easy
+    // 1b) If this is a member call expression, it's also easy
+    var inferGlobalFunction =
+        if (call.language !is HasGlobalFunctions || call is MemberCallExpression) {
+            false
+        } else if (methodExists(bestGuess, call.name.localName)) {
+            // 2) We do a quick check, whether we would have a method with our name in the "best
+            // guess" class. Because if we do, we most likely ended up here because of an
+            // argument type mismatch. Once we use the new call resolution also for member
+            // calls, we have this information more easily available
+            false
+        } else {
+            // 3) Lastly, if we are still undecided, we do a quick check on the current
+            // component,
+            // if we have multiple calls to the same function from across different locations.
+            // This is a bit more expensive, so we leave this as a last resort.
+            // If we encounter "others", there is a high chance this is a global function. Of
+            // course, we could run into a scenario where we have multiple calls to `init()` in
+            // several classes and in all occasions the `this` was left out; but this seems
+            // unlikely
+            var others =
+                currentComponent.calls {
+                    it != call && it.name == call.name && call !is MemberCallExpression
+                }
+            others.isNotEmpty()
+        }
+
+    if (inferGlobalFunction) {
+        var currentTU =
+            scopeManager.currentScope?.globalScope?.astNode as? TranslationUnitDeclaration
+        return listOfNotNull(currentTU?.inferFunction(call, ctx = this))
+    }
+
+    var records =
+        possibleContainingTypes.mapNotNull {
+            val root = it.root as? ObjectType
+            root?.recordDeclaration
+        }
+
+    // We access an unknown method of an unknown record. so we need to handle that
+    // along the way as well. We prefer the base type
+    if (records.isEmpty()) {
+        records =
+            listOfNotNull(
+                tryRecordInference(bestGuess?.root ?: call.unknownType(), locationHint = call)
+            )
+    }
+    records = records.distinct()
+
+    return records.mapNotNull { record -> record.inferMethod(call, ctx = this) }
+}
+
+/**
+ * This function is a necessary evil until we completely switch over member call resolution to the
+ * new call resolver. We need a way to find out if a method with a given name (independently of
+ * their arguments) exists in [type] or in one of their [Type.superTypes]. Because in the new call
+ * resolver we will get a [CallResolutionResult], which contains all candidate and not just the
+ * matching ones.
+ *
+ * This function should solely be used in [tryMethodInference].
+ */
+private fun methodExists(
+    type: Type?,
+    name: String,
+): Boolean {
+    if (type == null) {
+        return false
+    }
+
+    var types = mutableListOf(type)
+    types.addAll(type.superTypes)
+
+    var methods = types.map { it.recordDeclaration }.flatMap { it.methods }
+    return methods.any { it.name.localName == name }
+}
+
+fun TranslationContext.tryParentScopeInference(
+    parentName: Name,
+    locationHint: Node?
+): Declaration? {
+    // At this point, we need to check whether we have any type reference to our parent
+    // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
+    // have a high chance that this is actually a parent record and not a namespace
+    var parentType = typeManager.typeExists(parentName)
+    return if (parentType != null) {
+        tryRecordInference(parentType, locationHint = locationHint)
+    } else {
+        tryNamespaceInference(parentName, locationHint = locationHint)
+    }
 }
