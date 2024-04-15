@@ -772,7 +772,7 @@ class ValueEvaluatorTest {
     }
 
     @Test
-    fun handleConditionalExpression() {
+    fun testHandleConditionalExpression() {
         with(TestLanguageFrontend()) {
             val a = newVariableDeclaration("a")
             a.initializer = newLiteral(1)
@@ -781,12 +781,25 @@ class ValueEvaluatorTest {
             aRef.refersTo = a
             aRef.prevDFG = mutableSetOf(a)
 
-            val comparison = newBinaryOperator("!=")
+            // handle not equals
+            var comparison = newBinaryOperator("!=")
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            val cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            var cond = newConditionalExpression(comparison, newLiteral(2), aRef)
             assertEquals(1, cond.evaluate())
+
+            // handle equals
+            comparison = newBinaryOperator("==")
+            comparison.lhs = aRef
+            comparison.rhs = newLiteral(1)
+
+            cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            assertEquals(2, cond.evaluate())
+
+            // handle invalid
+            cond = newConditionalExpression(newProblemExpression(), newLiteral(2), aRef)
+            assertEquals("{}", cond.evaluate())
         }
     }
 }
