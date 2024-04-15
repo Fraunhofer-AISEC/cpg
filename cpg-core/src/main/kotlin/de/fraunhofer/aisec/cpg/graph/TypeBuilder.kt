@@ -89,8 +89,9 @@ fun Type.ref(): Type {
 
 /**
  * This function returns an [ObjectType] with the given [name]. If a respective [Type] does not yet
- * exist, it will be created In order to avoid unnecessary allocation of simple types, we do a
- * pre-check within this function, whether a built-in type exist with the particular name.
+ * exist (in the current scope), it will be created. In order to avoid unnecessary allocation of
+ * simple types, we do a pre-check within this function, whether a built-in type exist with the
+ * particular name.
  */
 @JvmOverloads
 fun LanguageProvider.objectType(name: CharSequence, generics: List<Type> = listOf()): Type {
@@ -108,12 +109,15 @@ fun LanguageProvider.objectType(name: CharSequence, generics: List<Type> = listO
                 "Could not create type: translation context not available"
             )
 
+    val scope = c.scopeManager.currentScope
+
     synchronized(c.typeManager.firstOrderTypes) {
         // We can try to look up the type by its name and return it, if it already exists.
         var type =
             c.typeManager.firstOrderTypes.firstOrNull {
                 it is ObjectType &&
                     it.name == name &&
+                    it.scope == scope &&
                     it.generics == generics &&
                     it.language == language
             }
@@ -124,9 +128,10 @@ fun LanguageProvider.objectType(name: CharSequence, generics: List<Type> = listO
         // Otherwise, we either need to create the type because of the generics or because we do not
         // know the type yet.
         type = ObjectType(name, generics, false, language)
+        type.scope = scope
 
         // Piping it through register type will ensure that in any case we return the one unique
-        // type object for it.
+        // type object (per scope) for it.
         return c.typeManager.registerType(type)
     }
 }

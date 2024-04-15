@@ -1064,9 +1064,10 @@ class ScopeManager : ScopeProvider {
         name: Name,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val (scope, n) = extractScope(name, location, startScope)
-        val list = scope?.lookupSymbol(n.localName)?.toMutableList() ?: mutableListOf()
+        val list = scope?.lookupSymbol(n.localName, predicate)?.toMutableList() ?: mutableListOf()
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition

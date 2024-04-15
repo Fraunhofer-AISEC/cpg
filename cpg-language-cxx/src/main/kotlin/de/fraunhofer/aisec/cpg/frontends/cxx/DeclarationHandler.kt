@@ -646,21 +646,25 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {
+            // Enums are a bit complicated. Their fully qualified name (in C++) includes the enum
+            // class, so e.g. `MyEnum::THIS'. In order to do that, we need to be in the `MyEnum`
+            // scope when we create it. But, the symbol of the enum can both be resolved using just
+            // the enum constant `THIS` as well as `MyEnum::THIS` (at least in C++11). So we need to
+            // put the symbol both in the outer scope as well as the enum's scope.
+            frontend.scopeManager.enterScope(enum)
             val enumConst =
                 newEnumConstantDeclaration(
                     enumerator.name.toString(),
                     rawNode = enumerator,
                 )
+            frontend.scopeManager.addDeclaration(enumConst)
+            frontend.scopeManager.leaveScope(enum)
 
             // In C/C++, default enums are of type int
             enumConst.type = primitiveType("int")
 
-            // We need to make them visible to the enclosing scope. However, we do NOT
-            // want to add it to the AST of the enclosing scope, but to the AST of the
-            // EnumDeclaration
+            // Also put the symbol in the outer scope (but do not add AST nodes)
             frontend.scopeManager.addDeclaration(enumConst, false)
-
-            entries += enumConst
         }
 
         enum.entries = entries

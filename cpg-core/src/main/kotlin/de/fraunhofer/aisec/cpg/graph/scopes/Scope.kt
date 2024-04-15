@@ -102,8 +102,14 @@ abstract class Scope(
         }
     }
 
-    /** Looks up a list of [Declaration] nodes for the specified [symbol]. */
-    fun lookupSymbol(symbol: Symbol): List<Declaration> {
+    /**
+     * Looks up a list of [Declaration] nodes for the specified [symbol]. Optionally, [predicate]
+     * can be used for additional filtering.
+     */
+    fun lookupSymbol(
+        symbol: Symbol,
+        predicate: ((Declaration) -> Boolean)? = null
+    ): List<Declaration> {
         // First, try to look for the symbol in the current scope
         var scope: Scope? = this
         var list: MutableList<Declaration>? = null
@@ -121,6 +127,11 @@ abstract class Scope(
 
             // We need to resolve any imported symbols
             list.replaceImports(symbol)
+
+            // Filter the list according to the predicate, if we have any
+            if (predicate != null) {
+                list = list.filter(predicate).toMutableList()
+            }
 
             // If we have a hit, we can break the loop
             if (list.isNotEmpty()) {
@@ -206,8 +217,9 @@ private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
         val set = import.importedSymbols[symbol]
         if (set != null) {
             this.addAll(set)
-            this.remove(import)
         }
+
+        this.remove(import)
     }
 }
 

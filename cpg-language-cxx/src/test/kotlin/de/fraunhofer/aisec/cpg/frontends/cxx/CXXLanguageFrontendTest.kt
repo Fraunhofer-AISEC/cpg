@@ -1353,6 +1353,26 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
+    fun testEnumCPP() {
+        val file = File("src/test/resources/cxx/enum.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
+        // but NOT any EnumConstantDeclarations
+        assertEquals(2, tu.declarations.size)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val returnStatement = main.bodyOrNull<ReturnStatement>()
+        assertNotNull(returnStatement)
+        assertNotNull((returnStatement.returnValue as? Reference)?.refersTo)
+    }
+
+    @Test
+    @Throws(Exception::class)
     fun testStruct() {
         val file = File("src/test/resources/c/struct.c")
         val tu =
@@ -1661,36 +1681,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val std = result.namespaces["std"]
-        assertNotNull(std)
+        // There should be no type "string" anymore, only "std::string"
+        assertFalse(result.finalCtx.typeManager.typeExists("string"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::string"))
 
-        val string = std.records["string"]
-        assertNotNull(string)
-
-        val cStr = string.methods["c_str"]
-        assertNotNull(cStr)
-
-        /*val cStrCall = result.mcalls["c_str"]
-        assertNotNull(cStrCall)
-        assertInvokes(cStrCall, cStr)*/
-
-        var scope =
-            result.functions["function1"]?.body?.let {
-                result.finalCtx.scopeManager.lookupScope(it)
-            }
-        assertNotNull(scope)
-
-        var lookup = scope.lookupSymbol("string").singleOrNull()
-        assertEquals(string, lookup)
-
-        scope =
-            result.functions["function2"]?.body?.let {
-                result.finalCtx.scopeManager.lookupScope(it)
-            }
-        assertNotNull(scope)
-
-        lookup = scope.lookupSymbol("string").singleOrNull()
-        assertEquals(string, lookup)
+        // the same applies to "inner::secret"
+        assertFalse(result.finalCtx.typeManager.typeExists("secret"))
+        assertFalse(result.finalCtx.typeManager.typeExists("inner::secret"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::inner::secret"))
     }
 
     @Test

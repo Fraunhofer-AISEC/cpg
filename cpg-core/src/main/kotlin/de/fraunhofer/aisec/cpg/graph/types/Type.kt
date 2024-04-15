@@ -29,10 +29,12 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
@@ -71,6 +73,12 @@ abstract class Type : Node {
         protected set
 
     open var typeOrigin: Origin? = null
+
+    /**
+     * This points to the [DeclaresType] node (most likely a [Declaration]), that declares this
+     * type. At some point this should replace [ObjectType.recordDeclaration].
+     */
+    @PopulatedByPass(TypeResolver::class) var declaredFrom: DeclaresType? = null
 
     constructor() {
         name = Name(EMPTY_NAME, null, language)
@@ -218,7 +226,7 @@ abstract class Type : Node {
             // array
             val operations = mutableListOf<TypeOperation>()
 
-            var type: Type = this as Type
+            var type = this
             while (type is SecondOrderType) {
                 var op =
                     if (type is ReferenceType) {
@@ -276,13 +284,12 @@ fun TypeOperations.apply(root: Type): Type {
     if (this.isNotEmpty()) {
         for (i in this.size - 1 downTo 0) {
             var wrap = this[i]
-            if (wrap == TypeOperation.REFERENCE) {
-                type = ReferenceType(type)
-            } else if (wrap == TypeOperation.ARRAY) {
-                type = type.reference(PointerType.PointerOrigin.ARRAY)
-            } else if (wrap == TypeOperation.POINTER) {
-                type = type.reference(PointerType.PointerOrigin.POINTER)
-            }
+            type =
+                when (wrap) {
+                    TypeOperation.REFERENCE -> ReferenceType(type)
+                    TypeOperation.ARRAY -> type.reference(PointerOrigin.ARRAY)
+                    TypeOperation.POINTER -> type.reference(PointerOrigin.POINTER)
+                }
         }
     }
 
@@ -299,3 +306,8 @@ var Type.recordDeclaration: RecordDeclaration?
             this.recordDeclaration = value
         }
     }
+
+interface DeclaresType {
+
+    val declaredType: Type
+}
