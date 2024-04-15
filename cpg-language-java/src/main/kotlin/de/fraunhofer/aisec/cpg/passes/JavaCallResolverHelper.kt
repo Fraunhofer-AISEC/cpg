@@ -29,12 +29,12 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
 
@@ -57,7 +57,7 @@ class JavaCallResolverHelper {
             curClass: RecordDeclaration,
             scopeManager: ScopeManager
         ): Boolean {
-            // Because the "super" keyword still refers to "this" (but casted to another class), we
+            // Because the "super" keyword still refers to "this" (but cast to another class), we
             // still need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
             if (func is MethodDeclaration) {
@@ -113,7 +113,9 @@ class JavaCallResolverHelper {
         ): RecordDeclaration? {
             val baseName = callee.base.name.parent ?: return null
 
-            val type = curClass.objectType(baseName)
+            val type =
+                callee.ctx?.typeManager?.lookupResolvedType(baseName.toString())
+                    ?: callee.unknownType()
             if (type in curClass.implementedInterfaces) {
                 // Basename is an interface -> BaseName.super refers to BaseName itself
                 return type.recordDeclaration

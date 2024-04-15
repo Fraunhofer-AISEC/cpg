@@ -43,8 +43,8 @@ class Neo4JTest {
     fun testPush() {
         val (application, translationResult) = createTranslationResult()
 
-        // TODO: this was originally 32 nodes, it seems we can now resolve less :(
-        assertEquals(34, translationResult.functions.size)
+        // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
+        assertEquals(36, translationResult.functions.size)
 
         application.pushToNeo4j(translationResult)
 
@@ -55,7 +55,9 @@ class Neo4JTest {
             val functions = session.loadAll(FunctionDeclaration::class.java)
             assertNotNull(functions)
 
-            assertEquals(34, functions.size)
+            // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular
+            // functions
+            assertEquals(36, functions.size)
 
             transaction.commit()
         }

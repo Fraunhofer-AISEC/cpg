@@ -203,9 +203,33 @@ class CXXDeclarationTest {
 
         val manipulateString = result.functions["manipulateString"]
         assertNotNull(manipulateString)
+        assertFalse(manipulateString.isInferred)
+
+        val size = result.functions["size"]
+        assertNotNull(size)
+        assertFalse(size.isInferred)
 
         // We should be able to resolve all calls to manipulateString
-        val calls = result.calls("manipulateString")
+        var calls = result.calls("manipulateString")
         calls.forEach { assertContains(it.invokes, manipulateString) }
+
+        // We should be able to resolve all calls to size
+        calls = result.calls("size")
+        calls.forEach { assertContains(it.invokes, size) }
+    }
+
+    @Test
+    fun testAliasLoop() {
+        val file = File("src/test/resources/cxx/alias_loop.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+        with(result) {
+            val a = result.variables["a"]
+            assertNotNull(a)
+            assertEquals(assertResolvedType("ABC::A"), a.type)
+        }
     }
 }

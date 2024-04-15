@@ -88,6 +88,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
     override fun accept(component: Component) {
+        ctx.currentComponent = component
         walker = ScopedWalker(scopeManager)
 
         walker.registerHandler(::findTemplates)
@@ -222,9 +223,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 recordDeclType.recordDeclaration != null
         ) {
             // Maybe we are referring to a field instead of a local var
-            if (language != null && language.namespaceDelimiter in current.name.toString()) {
-                recordDeclType = getEnclosingTypeOf(current)
-            }
             val field = resolveMember(recordDeclType, current)
             if (field != null) {
                 refersTo = field
@@ -278,45 +276,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
-     * inference was not possible, or if it was turned off in the [InferenceConfiguration].
-     */
-    private fun tryRecordInference(type: Type, locationHint: Node? = null): RecordDeclaration? {
-        val kind =
-            if (type.language is HasStructs) {
-                "struct"
-            } else {
-                "class"
-            }
-        // Determine the scope where we want to start our inference
-        var (scope, _) = scopeManager.extractScope(type)
-
-        if (scope !is NameScope) {
-            scope = null
-        }
-
-        var holder = scope?.astNode
-
-        // If we could not find a scope, but we have an FQN, we can try to infer a namespace
-        var parentName = type.name.parent
-        if (scope == null && parentName != null) {
-            holder = tryNamespaceInference(parentName, type)
-        }
-
-        val record =
-            (holder ?: currentTU)
-                .startInference(ctx)
-                ?.inferRecordDeclaration(type, kind, locationHint)
-
-        // update the type's record
-        if (record != null) {
-            type.recordDeclaration = record
-        }
-
-        return record
-    }
-
-    /**
      * We get the type of the "scope" this node is in. (e.g. for a field, we drop the field's name
      * and have the class)
      */
@@ -325,7 +284,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
-            current.objectType(parentName)
+            var type = current.objectType(parentName)
+            TypeResolver.resolveType(type)
+            type
         } else {
             current.unknownType()
         }
@@ -417,8 +378,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         if (member == null) {
             member =
-                containingClass.superTypes
-                    .flatMap { it.recordDeclaration?.fields ?: listOf() }
+                (containingClass.recordDeclaration?.superTypeDeclarations?.flatMap { it.fields }
+                        ?: listOf())
                     .filter { it.name.localName == reference.name.localName }
                     .map { it.definition }
                     .firstOrNull()
@@ -470,7 +431,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (record == null) {
             // We access an unknown field of an unknown record. so we need to handle that along the
             // way as well
-            record = tryRecordInference(base, locationHint = ref)
+            record = ctx.tryRecordInference(base, locationHint = ref)
         }
 
         if (record == null) {
@@ -815,7 +776,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (records.isEmpty()) {
             records =
                 listOfNotNull(
-                    tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
+                    ctx.tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
                 )
         }
         records = records.distinct()
@@ -1054,11 +1015,69 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
+}
 
-    fun tryNamespaceInference(name: Name, type: Type): NamespaceDeclaration? {
-        return scopeManager.globalScope
-            ?.astNode
-            ?.startInference(ctx)
-            ?.inferNamespaceDeclaration(name, null, type)
+fun TranslationContext.tryNamespaceInference(
+    name: Name,
+    locationHint: Node?
+): NamespaceDeclaration? {
+    return scopeManager.globalScope
+        ?.astNode
+        ?.startInference(this)
+        ?.inferNamespaceDeclaration(name, null, locationHint)
+}
+
+/**
+ * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
+ * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ */
+fun TranslationContext.tryRecordInference(
+    type: Type,
+    locationHint: Node? = null
+): RecordDeclaration? {
+    val kind =
+        if (type.language is HasStructs) {
+            "struct"
+        } else {
+            "class"
+        }
+    // Determine the scope where we want to start our inference
+    var (scope, _) = scopeManager.extractScope(type)
+
+    if (scope !is NameScope) {
+        scope = null
     }
+
+    var holder = scope?.astNode
+
+    // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
+    // parent record)
+    var parentName = type.name.parent
+    if (scope == null && parentName != null) {
+        // At this point, we need to check whether we have any type reference to our parent
+        // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
+        // have a high chance that this is actually a parent record and not a namespace
+        var parentType = typeManager.typeExists(parentName)
+        holder =
+            if (parentType != null) {
+                tryRecordInference(parentType, locationHint = locationHint)
+            } else {
+                tryNamespaceInference(parentName, locationHint = locationHint)
+            }
+    }
+
+    val record =
+        (holder ?: this.scopeManager.globalScope?.astNode)
+            ?.startInference(this)
+            ?.inferRecordDeclaration(type, kind, locationHint)
+
+    // update the type's record. Because types are only unique per scope, we potentially need to
+    // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
+    if (record != null) {
+        typeManager.firstOrderTypes
+            .filter { it.name == record.name }
+            .forEach { it.recordDeclaration = record }
+    }
+
+    return record
 }

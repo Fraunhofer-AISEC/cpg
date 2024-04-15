@@ -125,7 +125,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(decl)
 
         val new = assertIs<NewExpression>(decl.firstAssignment)
-        with(tu) { assertEquals(objectType("p.MyStruct").pointer(), new.type) }
+        with(tu) { assertEquals(assertResolvedType("p.MyStruct").pointer(), new.type) }
 
         val construct = new.initializer as? ConstructExpression
         assertNotNull(construct)
@@ -727,7 +727,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(c)
         with(tu) {
             // type will be inferred from the function declaration
-            assertEquals(objectType("p.MyStruct").pointer(), c.type)
+            assertEquals(assertResolvedType("p.MyStruct").pointer(), c.type)
         }
 
         val newMyStructCall = assertIs<CallExpression>(c.firstAssignment)

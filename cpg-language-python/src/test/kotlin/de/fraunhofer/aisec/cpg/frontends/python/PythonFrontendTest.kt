@@ -49,47 +49,48 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
+        with(tu) {
+            val p = tu.namespaces["literal"]
+            assertNotNull(p)
+            assertLocalName("literal", p)
 
-        val p = tu.namespaces["literal"]
-        assertNotNull(p)
-        assertLocalName("literal", p)
+            val b = p.variables["b"]
+            assertNotNull(b)
+            assertLocalName("b", b)
+            assertEquals(assertResolvedType("bool"), b.type)
+            assertEquals(true, (b.firstAssignment as? Literal<*>)?.value)
 
-        val b = p.variables["b"]
-        assertNotNull(b)
-        assertLocalName("b", b)
-        assertEquals(tu.primitiveType("bool"), b.type)
-        assertEquals(true, (b.firstAssignment as? Literal<*>)?.value)
+            val i = p.variables["i"]
+            assertNotNull(i)
+            assertLocalName("i", i)
+            assertEquals(assertResolvedType("int"), i.type)
+            assertEquals(42L, (i.firstAssignment as? Literal<*>)?.value)
 
-        val i = p.variables["i"]
-        assertNotNull(i)
-        assertLocalName("i", i)
-        assertEquals(tu.primitiveType("int"), i.type)
-        assertEquals(42L, (i.firstAssignment as? Literal<*>)?.value)
+            val f = p.variables["f"]
+            assertNotNull(f)
+            assertLocalName("f", f)
+            assertEquals(assertResolvedType("float"), f.type)
+            assertEquals(1.0, (f.firstAssignment as? Literal<*>)?.value)
 
-        val f = p.variables["f"]
-        assertNotNull(f)
-        assertLocalName("f", f)
-        assertEquals(tu.primitiveType("float"), f.type)
-        assertEquals(1.0, (f.firstAssignment as? Literal<*>)?.value)
+            val c = p.variables["c"]
+            assertNotNull(c)
+            assertLocalName("c", c)
+            // assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"
+            // assertEquals("(3+5j)", (c.firstAssignment as? Literal<*>)?.value) // TODO: this is
+            // currently a binary op
 
-        val c = p.variables["c"]
-        assertNotNull(c)
-        assertLocalName("c", c)
-        // assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"
-        // assertEquals("(3+5j)", (c.firstAssignment as? Literal<*>)?.value) // TODO: this is
-        // currently a binary op
+            val t = p.variables["t"]
+            assertNotNull(t)
+            assertLocalName("t", t)
+            assertEquals(assertResolvedType("str"), t.type)
+            assertEquals("Hello", (t.firstAssignment as? Literal<*>)?.value)
 
-        val t = p.variables["t"]
-        assertNotNull(t)
-        assertLocalName("t", t)
-        assertEquals(tu.primitiveType("str"), t.type)
-        assertEquals("Hello", (t.firstAssignment as? Literal<*>)?.value)
-
-        val n = p.variables["n"]
-        assertNotNull(n)
-        assertLocalName("n", n)
-        assertEquals(tu.objectType("None"), n.type)
-        assertEquals(null, (n.firstAssignment as? Literal<*>)?.value)
+            val n = p.variables["n"]
+            assertNotNull(n)
+            assertLocalName("n", n)
+            assertEquals(assertResolvedType("None"), n.type)
+            assertEquals(null, (n.firstAssignment as? Literal<*>)?.value)
+        }
     }
 
     @Test

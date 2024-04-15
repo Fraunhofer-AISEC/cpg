@@ -46,8 +46,15 @@ open class ObjectType : Type {
     /**
      * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
      * available. This is set by the [TypeResolver].
+     *
+     * This also sets this type's [scope] to the [RecordDeclaration.scope].
      */
-    @PopulatedByPass(TypeResolver::class) var recordDeclaration: RecordDeclaration? = null
+    @PopulatedByPass(TypeResolver::class)
+    var recordDeclaration: RecordDeclaration? = null
+        set(value) {
+            field = value
+            this.scope = value?.scope
+        }
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
     var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
