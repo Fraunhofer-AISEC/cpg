@@ -41,7 +41,8 @@ open class CLanguage :
     HasQualifier,
     HasElaboratedTypeSpecifier,
     HasShortCircuitOperators,
-    HasGlobalVariables {
+    HasGlobalVariables,
+    HasGlobalFunctions {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @Transient override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
-import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
@@ -34,11 +33,13 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
@@ -80,7 +81,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         code: String?,
         isStatic: Boolean,
         signature: List<Type?>,
-        returnType: Type?,
+        incomingReturnType: Type?,
         hint: CallExpression? = null
     ): FunctionDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
@@ -111,10 +112,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 hint,
                 log,
-                "Inferred a new {} declaration {} with parameter types {} in $it",
+                "Inferred a new {} declaration {} with parameter types {} and return types {} in $it",
                 if (inferred is MethodDeclaration) "method" else "function",
                 inferred.name,
-                signature.map { it?.name }
+                signature.map { it?.name },
+                inferred.returnTypes.map { it.name }
             )
 
             // Create parameter declarations and receiver (only for methods).
@@ -124,6 +126,15 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             createInferredParameters(inferred, signature)
 
             // Set the type and return type(s)
+            var returnType =
+                if (
+                    ctx.config.inferenceConfiguration.inferReturnTypes &&
+                        incomingReturnType is UnknownType
+                ) {
+                    inferReturnType(hint)
+                } else {
+                    incomingReturnType
+                }
             returnType?.let { inferred.returnTypes = listOf(it) }
             inferred.type = FunctionType.computeType(inferred)
 
@@ -527,6 +538,52 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     init {
         this.scopeManager = ctx.scopeManager
         this.typeManager = ctx.typeManager
+    }
+
+    fun inferReturnType(call: CallExpression?): Type {
+        if (call == null) {
+            return unknownType()
+        }
+
+        // Try to find out, if the supplied hint is part of an assignment.  If yes, we can use their
+        // type as the return type of the function
+        var targetType =
+            ctx.currentComponent.assignments.firstOrNull { it.value == call }?.target?.type
+        if (targetType != null && targetType !is UnknownType) {
+            return targetType
+        }
+
+        // Look for an "argument holder". These can be different kind of nodes
+        val holder =
+            ctx.currentComponent.allChildren<ArgumentHolder> { it.hasArgument(call) }.singleOrNull()
+        when (holder) {
+            is UnaryOperator -> {
+                // If it's a boolean operator, the return type is probably a boolean
+                if (holder.operatorCode == "!") {
+                    return call.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
+                        ?: unknownType()
+                }
+                // If it's a numeric operator, return the fist numeric type that we have
+                if (holder.operatorCode in listOf("+", "-", "++", "--")) {
+                    return call.language?.builtInTypes?.values?.firstOrNull { it is NumericType }
+                        ?: unknownType()
+                }
+            }
+            is ConstructExpression -> {
+                return holder.type
+            }
+            is BinaryOperator -> {
+                // If it is on the right side, it's probably the same as on the left-side (and
+                // vice-versa)
+                if (call == holder.rhs) {
+                    return holder.lhs.type
+                } else if (call == holder.lhs) {
+                    return holder.rhs.type
+                }
+            }
+        }
+
+        return unknownType()
     }
 }
 
