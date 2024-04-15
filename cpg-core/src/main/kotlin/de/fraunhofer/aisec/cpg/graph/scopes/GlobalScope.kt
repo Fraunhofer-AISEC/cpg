@@ -51,6 +51,7 @@ class GlobalScope : StructureDeclarationScope(null) {
             structureDeclarations.addAll(other.structureDeclarations)
             valueDeclarations.addAll(other.valueDeclarations)
             typedefs.putAll(other.typedefs)
+            searchPrefixes.addAll(other.searchPrefixes)
             for (child in other.children) {
                 child.parent = this
                 children.add(child)

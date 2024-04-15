@@ -58,6 +58,18 @@ class Name(
         (if (parent != null) parent.toString() + delimiter else "") + localName
     }
 
+    val parts: List<String>
+        get() {
+            val internal = mutableListOf<String>()
+            var name: Name? = this
+            while (name != null) {
+                internal += name.localName
+                name = name.parent
+            }
+
+            return internal.reversed()
+        }
+
     public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
 
     /**
@@ -159,3 +171,12 @@ fun Name?.fqn(localName: String) =
     } else {
         Name(localName, this, this.delimiter)
     }
+
+fun Name?.fqn(name: Name): Name {
+    return if (this == null) {
+        name
+    } else {
+        // not really the best way
+        parseName(this.toString() + this.delimiter + name.toString(), this.delimiter)
+    }
+}

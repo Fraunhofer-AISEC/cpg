@@ -80,8 +80,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * [UsingDeclaration]. However, currently, no actual adjustment of available names / scopes is
      * done yet.
      */
-    private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return newUsingDeclaration(qualifiedName = using.qualifiedName.toString(), rawNode = using)
+    private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
+        val name = parseName(ctx.qualifiedName.toString())
+        val using = newUsingDeclaration(name = name, rawNode = ctx)
+
+        frontend.scopeManager.currentScope?.searchPrefixes?.add(name)
+
+        return using
     }
 
     /**
