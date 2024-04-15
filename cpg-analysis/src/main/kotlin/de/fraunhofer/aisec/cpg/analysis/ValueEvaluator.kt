@@ -179,6 +179,7 @@ open class ValueEvaluator(
             "<" -> handleLess(lhsValue, rhsValue, expr)
             "<=" -> handleLEq(lhsValue, rhsValue, expr)
             "==" -> handleEq(lhsValue, rhsValue, expr)
+            "!=" -> handleNEq(lhsValue, rhsValue, expr)
             else -> cannotEvaluate(expr as Node, this)
         }
     }
@@ -293,6 +294,14 @@ open class ValueEvaluator(
     private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) == 0
+        } else {
+            cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return if (lhsValue is Number && rhsValue is Number) {
+            lhsValue.compareTo(rhsValue) != 0
         } else {
             cannotEvaluate(expr, this)
         }
