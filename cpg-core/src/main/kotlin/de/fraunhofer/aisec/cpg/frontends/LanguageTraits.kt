@@ -218,6 +218,14 @@ interface HasAnonymousIdentifier : LanguageTrait {
 interface HasGlobalVariables : LanguageTrait
 
 /**
+ * A language trait, that specifies that this language has global functions directly in the
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a
+ * [TranslationUnitDeclaration]. For example, C++ has global functions, Java and Go do not (as every
+ * function is either in a class or a namespace).
+ */
+interface HasGlobalFunctions : LanguageTrait
+
+/**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
  * [CallExpression] and a [CastExpression], we need to employ an additional pass

@@ -58,7 +58,7 @@ class CXXAmbiguitiesTest {
         assertNotNull(tu)
 
         // make sure we still have only one declaration in the file (the record)
-        assertEquals(1, tu.declarations.size)
+        assertEquals(3, tu.declarations.size)
 
         val myClass = tu.records["MyClass"]
         assertNotNull(myClass)

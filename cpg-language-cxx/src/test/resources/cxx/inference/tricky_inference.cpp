@@ -16,6 +16,8 @@ using json = some::json;
 class wrapper {
 public:
     json* get() {
+        log("get");
+        int i(j.size());
         return &j;
     }
 
@@ -24,14 +26,19 @@ private:
 };
 
 // For some more complexity, let's refer to a sub-class of it
-void iterator(json::iterator& it) {
-    if (!it.hasNext()) {
-       return;
+void loop(json* j) {
+    log("loop");
+
+    for(json::iterator* it = j->begin(); it != j->end(); it = it->next()) {
+        if(!it->isValid()) {
+            // do something
+        }
     }
 }
 
 // And lastly, finally call a method on it, so we can know it's
 // a class.
 void* get_data(json* j) {
+    log("get_data");
     return j->data;
 }
