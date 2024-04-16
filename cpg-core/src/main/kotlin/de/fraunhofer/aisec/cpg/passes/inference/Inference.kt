@@ -454,7 +454,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 origin,
                 log,
-                "Inferring a new namespace declaration {} {}",
+                "Inferring a new namespace declaration {} {} in $it",
                 name,
                 if (path != null) {
                     "with path '$path'"

@@ -44,30 +44,29 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): IncludeDeclaration {
+    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): ImportDeclaration {
         // We set the filename of the include declaration to the package path, i.e., its full path
         // including any module identifiers. This way we can match the include declaration back to
         // the namespace's path and name
         val filename = importSpec.path.value.removeSurrounding("\"").removeSurrounding("`")
 
         // We set the name of the include declaration to the imported name, i.e., the package name
-        val name = importSpec.importName
+        val name = parseName(importSpec.importName)
 
-        val include = newIncludeDeclaration(filename, rawNode = importSpec)
-        include.name = parseName(name)
-
-        val alias = importSpec.name?.name
-        if (alias != null && alias != name) {
-            val location = frontend.locationOf(importSpec)
-
-            // If the name differs from the import name, we have an alias
-            // Add an alias for the package on the current file
-            location?.artifactLocation?.let {
-                frontend.scopeManager.addAlias(it, Name(name), Name(alias))
+        // Check for a possible alias
+        val alias =
+            importSpec.name?.name?.let {
+                if (it != name.localName) {
+                    parseName(it)
+                } else {
+                    null
+                }
             }
-        }
 
-        return include
+        val import = newImportDeclaration(import = name, alias = alias, rawNode = importSpec)
+        import.importURL = filename
+
+        return import
     }
 
     private fun handleTypeSpec(spec: GoStandardLibrary.Ast.TypeSpec): Declaration {
