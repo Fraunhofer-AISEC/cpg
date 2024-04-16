@@ -76,14 +76,50 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleImport(node: Python.ASTImport): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
-            val v =
-                if (imp.asname != null) {
-                    newVariableDeclaration(imp.asname, rawNode = imp) // TODO refers to original????
+            val alias = imp.asname
+            val decl =
+                if (alias != null) {
+                    newImportDeclaration(
+                        parseName(imp.name),
+                        false,
+                        parseName(alias),
+                        rawNode = imp
+                    )
                 } else {
-                    newVariableDeclaration(imp.name, rawNode = imp)
+                    newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                 }
-            frontend.scopeManager.addDeclaration(v)
-            declStmt.addDeclaration(v)
+            frontend.scopeManager.addDeclaration(decl)
+            declStmt.addDeclaration(decl)
+        }
+        return declStmt
+    }
+
+    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
+        val declStmt = newDeclarationStatement(rawNode = node)
+        val module = parseName(node.module)
+        for (imp in node.names) {
+            // We need to differentiate between a wildcard import and an individual symbol.
+            // Wildcards luckily do not have aliases
+            val decl =
+                if (imp.name == "*") {
+                    // In the wildcard case, our "import" is the module name and we set "wildcard"
+                    // to true
+                    newImportDeclaration(module, true, rawNode = imp)
+                } else {
+                    // If we import an individual symbol, we need to FQN the symbol with our module
+                    // name and import that. We also need to take care of any alias
+                    val name = module.fqn(imp.name)
+                    val alias = imp.asname
+                    if (alias != null) {
+                        newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                    } else {
+                        newImportDeclaration(name, false, rawNode = imp)
+                    }
+                }
+
+            // Finally, add our declaration to the scope and the declaration statement
+            frontend.scopeManager.addDeclaration(decl)
+            declStmt.addDeclaration(decl)
         }
         return declStmt
     }
@@ -185,22 +221,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             rhs = listOf(rhs),
             rawNode = node
         )
-    }
-
-    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
-        val declStmt = newDeclarationStatement(rawNode = node)
-        for (stmt in node.names) {
-            val name =
-                if (stmt.asname != null) {
-                    stmt.asname
-                } else {
-                    stmt.name
-                }
-            val decl = newVariableDeclaration(name = name, rawNode = node)
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.addDeclaration(decl)
-        }
-        return declStmt
     }
 
     private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
