@@ -1184,6 +1184,58 @@ class PythonFrontendTest : BaseTest() {
         )
     }
 
+    @Test
+    fun testModules() {
+        val topLevel = Path.of("src", "test", "resources", "python", "modules")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("a.py").toFile(),
+                    topLevel.resolve("b.py").toFile(),
+                    topLevel.resolve("c.py").toFile(),
+                    topLevel.resolve("main.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val aFunc = result.functions["a.func"]
+        assertNotNull(aFunc)
+
+        val bFunc = result.functions["b.func"]
+        assertNotNull(bFunc)
+
+        val cCompletelyDifferentFunc = result.functions["c.completely_different_func"]
+        assertNotNull(cCompletelyDifferentFunc)
+
+        var call = result.calls["a.func"]
+        assertNotNull(call)
+        assertInvokes(call, aFunc)
+
+        call = result.calls["a_func"]
+        assertNotNull(call)
+        assertInvokes(call, aFunc)
+
+        call =
+            result.calls[
+                    { // we need to do select it this way otherwise we will also match "a.func"
+                        it.name.toString() == "func"
+                    }]
+        assertNotNull(call)
+        assertInvokes(call, bFunc)
+
+        call = result.calls["completely_different_func"]
+        assertNotNull(call)
+        assertInvokes(call, cCompletelyDifferentFunc)
+
+        call = result.calls["different.completely_different_func"]
+        assertNotNull(call)
+        assertInvokes(call, cCompletelyDifferentFunc)
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,
