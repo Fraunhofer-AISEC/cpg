@@ -207,8 +207,11 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
+        val manipulateString = result.functions["manipulateString"]
+        assertNotNull(manipulateString)
+
         // We should be able to resolve all calls to manipulateString
         val calls = result.calls("manipulateString")
-        calls.forEach { it.invokes.isNotEmpty() && it.invokes.all { decl -> !decl.isInferred } }
+        calls.forEach { assertContains(it.invokes, manipulateString) }
     }
 }

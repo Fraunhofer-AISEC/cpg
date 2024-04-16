@@ -823,9 +823,9 @@ class GoLanguageFrontendTest : BaseTest() {
         val tu1 = tus[1]
         assertNotNull(tu1)
 
-        val include = tu1.includes["awesome"]
-        assertNotNull(include)
-        assertEquals("example.io/awesome", include.filename)
+        val import = tu1.imports["awesome"]
+        assertNotNull(import)
+        assertEquals("example.io/awesome", import.importURL)
 
         val main = tu1.functions["main.main"]
         assertNotNull(main)
@@ -1017,17 +1017,27 @@ class GoLanguageFrontendTest : BaseTest() {
     fun testBuildTags() {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
         val topLevel = Path.of("src", "test", "resources", "golang", "buildtags")
+
+        // make sure we parse main.go as the last
+        val files =
+            listOf(
+                    "func_darwin.go",
+                    "func_darwin_arm64.go",
+                    "func_ios.go",
+                    "func_linux_arm64.go",
+                    "cmd/buildtags/main.go"
+                )
+                .map { topLevel.resolve(it).toFile() }
+                .toMutableList()
+
+        // add the std lib
+        files += stdLib.resolve("fmt").toFile()
+
         val result =
-            analyze(
-                listOf(
-                    topLevel.resolve("").toFile(),
-                    stdLib.resolve("fmt").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(files, topLevel, true) {
                 it.registerLanguage<GoLanguage>()
                 it.includePath(stdLib)
+                it.useParallelFrontends(false)
                 it.symbols(mapOf("GOOS" to "darwin", "GOARCH" to "arm64"))
             }
 

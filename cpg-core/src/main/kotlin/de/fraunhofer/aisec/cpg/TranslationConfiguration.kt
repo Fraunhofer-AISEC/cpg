@@ -487,7 +487,7 @@ private constructor(
          *
          * This will register
          * - [TypeHierarchyResolver]
-         * - [ImportResolver]
+         * - [JavaImportResolver]
          * - [SymbolResolver]
          * - [DFGPass]
          * - [EvaluationOrderGraphPass]
@@ -499,8 +499,8 @@ private constructor(
          */
         fun defaultPasses(): Builder {
             registerPass<TypeHierarchyResolver>()
-            registerPass<ImportResolver>()
             registerPass<SymbolResolver>()
+            registerPass<ImportResolver>()
             registerPass<DFGPass>()
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG

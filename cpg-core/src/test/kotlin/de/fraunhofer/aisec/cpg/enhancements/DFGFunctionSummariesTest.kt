@@ -301,7 +301,6 @@ class DFGFunctionSummariesTest {
         // DFGPass.connectInferredCallArguments
         val dfgTest = getDfgInferredCall {
             this.registerPass<TypeHierarchyResolver>()
-            registerPass<ImportResolver>()
             registerPass<SymbolResolver>()
             registerPass<DFGPass>()
             registerPass<DynamicInvokeResolver>()

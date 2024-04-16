@@ -1497,7 +1497,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
                 it.registerLanguage<CLanguage>()
                 it.registerPass<TypeHierarchyResolver>()
-                it.registerPass<ImportResolver>()
                 it.registerPass<CXXExtraPass>()
                 it.registerPass<SymbolResolver>()
                 it.registerPass<DFGPass>()
@@ -1543,7 +1542,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
                 it.registerLanguage<CLanguage>()
                 it.registerPass<TypeHierarchyResolver>()
-                it.registerPass<ImportResolver>()
                 it.registerPass<CXXExtraPass>()
                 it.registerPass<SymbolResolver>()
                 it.registerPass<DFGPass>()
@@ -1672,5 +1670,47 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // previously had a loop in our equals method
         val functions = result.functions { it.name.localName == "foo" && it.isDefinition }
         assertEquals(2, functions.size)
+    }
+
+    @Test
+    fun testUsing() {
+        val file = File("src/test/resources/cxx/using.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.inferenceConfiguration(builder().enabled(false).build())
+            }
+        assertNotNull(result)
+
+        val std = result.namespaces["std"]
+        assertNotNull(std)
+
+        val string = std.records["string"]
+        assertNotNull(string)
+
+        val cStr = string.methods["c_str"]
+        assertNotNull(cStr)
+
+        /*val cStrCall = result.mcalls["c_str"]
+        assertNotNull(cStrCall)
+        assertInvokes(cStrCall, cStr)*/
+
+        var scope =
+            result.functions["function1"]?.body?.let {
+                result.finalCtx.scopeManager.lookupScope(it)
+            }
+        assertNotNull(scope)
+
+        var lookup = scope.lookupSymbol("string").singleOrNull()
+        assertEquals(string, lookup)
+
+        scope =
+            result.functions["function2"]?.body?.let {
+                result.finalCtx.scopeManager.lookupScope(it)
+            }
+        assertNotNull(scope)
+
+        lookup = scope.lookupSymbol("string").singleOrNull()
+        assertEquals(string, lookup)
     }
 }
