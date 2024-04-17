@@ -58,7 +58,7 @@ import java.util.function.Consumer
  */
 @DependsOn(SymbolResolver::class)
 @DependsOn(DFGPass::class)
-@DependsOn(ControlFlowSensitiveDFGPass::class, true)
+@DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private lateinit var walker: ScopedWalker
     private var inferDfgForUnresolvedCalls = false
