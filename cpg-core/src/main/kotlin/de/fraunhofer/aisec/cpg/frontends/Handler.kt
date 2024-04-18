@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type

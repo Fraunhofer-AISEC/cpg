@@ -229,13 +229,10 @@ fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): A
 @JvmOverloads
 fun MetadataProvider.newAnnotationMember(
     name: CharSequence?,
-    value: Expression?,
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
     node.applyMetadata(this, name, rawNode, true)
-
-    node.value = value
 
     log(node)
     return node
