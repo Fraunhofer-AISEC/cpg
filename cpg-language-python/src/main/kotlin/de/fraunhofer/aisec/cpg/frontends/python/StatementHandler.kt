@@ -78,19 +78,23 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleWhile(node: Python.ASTWhile): Statement {
+        if (node.orelse.isNotEmpty()) {
+            return newProblemExpression("orelse not supported for while statements", rawNode = node)
+        }
         return newWhileStatement(rawNode = node).withChildren(hasScope = false) {
             it.condition = frontend.expressionHandler.handle(node.test)
             it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-            node.orelse.firstOrNull()?.let { TODO("Not supported") }
         }
     }
 
     private fun handleFor(node: Python.ASTFor): Statement {
+        if (node.orelse.isNotEmpty()) {
+            return newProblemExpression("orelse not supported for for statements", rawNode = node)
+        }
         return newForEachStatement(rawNode = node).withChildren(hasScope = false) {
             it.iterable = frontend.expressionHandler.handle(node.iter)
             it.variable = frontend.expressionHandler.handle(node.target)
             it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-            node.orelse.firstOrNull()?.let { TODO("Not supported") }
         }
     }
 

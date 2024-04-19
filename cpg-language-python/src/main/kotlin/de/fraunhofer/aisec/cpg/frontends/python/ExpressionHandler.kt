@@ -46,7 +46,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTTuple -> handleTuple(node)
             is Python.ASTList -> handleList(node)
             is Python.ASTBoolOp -> handleBoolOp(node)
-            else -> TODO("The expression of class ${node.javaClass} is not supported yet")
+            else ->
+                newProblemExpression(
+                    "The expression of class ${node.javaClass} is not supported yet",
+                    rawNode = node
+                )
         }
     }
 
