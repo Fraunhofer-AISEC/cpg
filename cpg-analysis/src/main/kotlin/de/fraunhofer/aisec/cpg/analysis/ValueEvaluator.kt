@@ -179,6 +179,7 @@ open class ValueEvaluator(
             "<" -> handleLess(lhsValue, rhsValue, expr)
             "<=" -> handleLEq(lhsValue, rhsValue, expr)
             "==" -> handleEq(lhsValue, rhsValue, expr)
+            "!=" -> handleNEq(lhsValue, rhsValue, expr)
             else -> cannotEvaluate(expr as Node, this)
         }
     }
@@ -298,6 +299,14 @@ open class ValueEvaluator(
         }
     }
 
+    private fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return if (lhsValue is Number && rhsValue is Number) {
+            lhsValue.compareTo(rhsValue) != 0
+        } else {
+            cannotEvaluate(expr, this)
+        }
+    }
+
     /**
      * We handle some basic unary operators. These also affect pointers and dereferences for
      * languages that support them.
@@ -361,12 +370,17 @@ open class ValueEvaluator(
     }
 
     protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
-        // Assume that condition is a binary operator
-        if (expr.condition is BinaryOperator) {
-            val lhs = evaluateInternal((expr.condition as? BinaryOperator)?.lhs, depth)
-            val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
+        var condition = expr.condition
 
-            return if (lhs == rhs) {
+        // Assume that condition is a binary operator
+        if (condition is BinaryOperator) {
+            val lhs = evaluateInternal(condition.lhs, depth)
+            val rhs = evaluateInternal(condition.rhs, depth)
+
+            // Compute the effect of the comparison
+            val comparison = computeBinaryOpEffect(lhs, rhs, condition)
+
+            return if (comparison == true) {
                 evaluateInternal(expr.thenExpression, depth + 1)
             } else {
                 evaluateInternal(expr.elseExpression, depth + 1)

@@ -515,7 +515,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 newFieldDeclaration(
                     name.localName,
                     // we will set the type later through the type inference observer
-                    unknownType(),
+                    record.unknownType(),
                     listOf(),
                     null,
                     false,

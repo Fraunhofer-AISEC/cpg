@@ -357,7 +357,7 @@ class Query {
 
                                 declare {
                                     variable("d", t("char")) {
-                                        ase {
+                                        subscriptExpr {
                                             ref("c")
                                             ref("b")
                                         }
@@ -378,7 +378,7 @@ class Query {
                                 }
                             }
                             returnStmt {
-                                ase {
+                                subscriptExpr {
                                     ref("c")
                                     literal(0, t("int"))
                                 }
@@ -420,7 +420,7 @@ class Query {
                                     ref("a") assign
                                         {
                                             ref("a") +
-                                                ase {
+                                                subscriptExpr {
                                                     ref("c")
                                                     ref("i")
                                                 }
@@ -480,7 +480,7 @@ class Query {
                                     ref("a") assign
                                         {
                                             ref("a") +
-                                                ase {
+                                                subscriptExpr {
                                                     ref("c")
                                                     ref("i")
                                                 }
@@ -526,7 +526,7 @@ class Query {
                                     ref("a") assign
                                         {
                                             ref("a") +
-                                                ase {
+                                                subscriptExpr {
                                                     ref("c")
                                                     ref("i")
                                                 }

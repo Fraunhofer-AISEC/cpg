@@ -65,13 +65,13 @@ class ValueEvaluationTests {
                                         ref("i") lt member("length", ref("array")),
                                         ref("i").inc()
                                     ) {
-                                        ase {
+                                        subscriptExpr {
                                             ref("array")
                                             ref("i")
                                         } assign ref("i")
                                     }
                                     memberCall("println", member("out", ref("System"))) {
-                                        ase {
+                                        subscriptExpr {
                                             ref("array")
                                             literal(1, t("int"))
                                         }
@@ -323,7 +323,7 @@ class ValueEvaluationTests {
                                     ref("i") lt literal(6, t("int")),
                                     ref("i").incNoContext()
                                 ) {
-                                    ase {
+                                    subscriptExpr {
                                         ref("array")
                                         ref("i")
                                     } assign ref("i")

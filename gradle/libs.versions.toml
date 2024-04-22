@@ -30,8 +30,8 @@ jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", versi
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.17.0"}
 eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.31.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
-icu4j = { module = "com.ibm.icu:icu4j", version = "74.2"}
-eclipse-cdt-core = { module = "11.5/cdt-11.5.0/plugins/org.eclipse.cdt:core", version = "8.4.0.202402110645"}
+icu4j = { module = "com.ibm.icu:icu4j", version = "75.1"}
+eclipse-cdt-core = { module = "org.eclipse.cdt:core", version = "8.3.1.202309150117"}
 picocli = { module = "info.picocli:picocli", version = "4.7.0"}
 picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
