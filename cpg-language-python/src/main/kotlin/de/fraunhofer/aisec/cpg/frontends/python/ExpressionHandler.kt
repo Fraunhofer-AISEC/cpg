@@ -47,8 +47,23 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTList -> handleList(node)
             is Python.ASTBoolOp -> handleBoolOp(node)
             is Python.ASTSubscript -> handleSubscript(node)
+            is Python.ASTSlice -> handleSlice(node)
             else -> TODO("The expression of class ${node.javaClass} is not supported yet")
         }
+    }
+
+    private fun handleSlice(node: Python.ASTSlice): Expression {
+        val slice = newRangeExpression(rawNode = node)
+        slice.floor = node.lower?.let { frontend.expressionHandler.handle(it) }
+        slice.ceiling = node.upper?.let { frontend.expressionHandler.handle(it) }
+        if (node.step != null) {
+            newProblemExpression(
+                "`step` not yet supported for slices",
+                rawNode = node
+            ) // TODO: attach somewhere...
+        }
+
+        return slice
     }
 
     private fun handleSubscript(node: Python.ASTSubscript): Expression {
