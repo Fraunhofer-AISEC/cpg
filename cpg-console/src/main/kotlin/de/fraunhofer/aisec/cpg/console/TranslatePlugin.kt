@@ -80,6 +80,12 @@ class TranslatePlugin : Plugin {
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage\")" +
                         "                    .defaultPasses()\n" +
+                        "                    .useParallelPasses(false)\n" +
+                        "                    .configurePass<de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass>(\n" +
+                        "                        de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration(\n" +
+                        "                            maxComplexity = 200,\n" +
+                        "                        )\n" +
+                        "                     )\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
                     "val result = analyzer.analyze().get()",

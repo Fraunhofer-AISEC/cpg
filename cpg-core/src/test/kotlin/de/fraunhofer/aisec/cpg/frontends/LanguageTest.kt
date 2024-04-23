@@ -28,15 +28,13 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.pointer
-import de.fraunhofer.aisec.cpg.isDerivedFrom
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import de.fraunhofer.aisec.cpg.tryCast
+import kotlin.test.*
 
 class LanguageTest {
 
     @Test
-    fun testLanguageDerived() {
+    fun testTryCast() {
         with(TestLanguageFrontend()) {
             val baseType = objectType("baseType")
 
@@ -48,20 +46,21 @@ class LanguageTest {
             val pointerMyType = myType.pointer()
 
             // pointer-type and non-pointer types -> will not match in any case
-            var matches = pointerMyType.isDerivedFrom(myType)
-            assertFalse(matches)
+            var matches = pointerMyType.tryCast(myType)
+            assertEquals(CastNotPossible, matches)
 
             // the same type will always match
-            matches = pointerMyType.isDerivedFrom(pointerMyType)
-            assertTrue(matches)
+            matches = pointerMyType.tryCast(pointerMyType)
+            assertEquals(DirectMatch, matches)
 
-            // a pointer to the derived type will match a pointer to its base type
-            matches = pointerMyType.isDerivedFrom(pointerBaseType)
-            assertTrue(matches)
+            // a pointer to the derived type will match a pointer to its base type (using an
+            // implicit cast)
+            matches = pointerMyType.tryCast(pointerBaseType)
+            assertIs<ImplicitCast>(matches)
 
             // non-pointer types as well
-            matches = myType.isDerivedFrom(baseType)
-            assertTrue(matches)
+            matches = myType.tryCast(baseType)
+            assertIs<ImplicitCast>(matches)
         }
     }
 }

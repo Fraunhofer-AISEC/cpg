@@ -111,7 +111,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 hint,
                 log,
-                "Inferred a new {} declaration {} with parameter types {}",
+                "Inferred a new {} declaration {} with parameter types {} in $it",
                 if (inferred is MethodDeclaration) "method" else "function",
                 inferred.name,
                 signature.map { it?.name }
@@ -174,7 +174,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
      * executing the commands in [init] (which needs to create an inferred node of [T]) as well as
      * restoring the previous scope.
      */
-    private fun <T : Declaration> inferInScopeOf(start: Node, init: () -> T): T {
+    private fun <T : Declaration> inferInScopeOf(start: Node, init: (scope: Scope?) -> T): T {
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
     }
 
@@ -359,12 +359,23 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
      */
     fun inferRecordDeclaration(
         type: Type,
-        currentTU: TranslationUnitDeclaration,
         kind: String = "class",
         locationHint: Node? = null
     ): RecordDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferRecords) {
             return null
+        }
+
+        // We assume that the start is either a record, a namespace or the translation unit
+        val record = start as? RecordDeclaration
+        val namespace = start as? NamespaceDeclaration
+        val tu = start as? TranslationUnitDeclaration
+
+        // If all are null, we have the wrong type
+        if (record == null && namespace == null && tu == null) {
+            throw UnsupportedOperationException(
+                "Starting inference with the wrong type of start node"
+            )
         }
 
         if (type !is ObjectType) {
@@ -376,7 +387,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             return null
         }
 
-        return inferInScopeOf(currentTU) {
+        return inferInScopeOf(start) {
             // This could be a class or a struct. We start with a class and may have to fine-tune
             // this later.
             val declaration = newRecordDeclaration(type.typeName, kind)
@@ -385,11 +396,15 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 locationHint,
                 log,
-                "Inferred a new record declaration ${declaration.name} (${declaration.kind})"
+                "Inferred a new record declaration ${declaration.name} (${declaration.kind}) in $it"
             )
 
             // Update the type
             type.recordDeclaration = declaration
+
+            // Make sure the record is registered as a scope itself
+            scopeManager.enterScope(declaration)
+            scopeManager.leaveScope(declaration)
 
             scopeManager.addDeclaration(declaration)
             declaration
@@ -415,7 +430,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 hint,
                 log,
-                "Inferred a new variable declaration {} with type {}",
+                "Inferred a new variable declaration {} with type {} in $it",
                 inferred.name,
                 inferred.type
             )

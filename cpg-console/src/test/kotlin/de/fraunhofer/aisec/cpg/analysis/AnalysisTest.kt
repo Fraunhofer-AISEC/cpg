@@ -25,62 +25,34 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.console.fancyCode
-import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import java.io.File
+import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 
 class AnalysisTest {
     @Test
     fun testOutOfBounds() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/array.cpp"))
-                .defaultPasses()
-                .registerLanguage<CPPLanguage>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = GraphExamples.ArrayCpp()
 
         OutOfBoundsCheck().run(result)
     }
 
     @Test
     fun testNullPointer() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/Array.java"))
-                .defaultPasses()
-                .registerLanguage<JavaLanguage>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = GraphExamples.ArrayJava()
 
         NullPointerCheck().run(result)
     }
 
     @Test
     fun testAttribute() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/Array.java"))
-                .defaultPasses()
-                .registerLanguage<JavaLanguage>()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
+        val result = GraphExamples.ArrayJava()
         val tu = result.components.flatMap { it.translationUnits }.first()
 
         val main = tu.byNameOrNull<FunctionDeclaration>("Array.main", true)

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -33,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsL
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
@@ -105,28 +103,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
                         it.typeName
                     }
                 })
-
-    /**
-     * This function checks, if the supplied [CallExpression] has the same signature as the current
-     * [FunctionDeclaration].
-     */
-    fun hasSignature(call: CallExpression): Boolean {
-        return hasSignature(call.signature, call.arguments)
-    }
-
-    /**
-     * This function checks, if the two supplied signatures are equal. The usual use-case is
-     * comparing the signature arguments of a [CallExpression] (in [targetSignature]) against the
-     * current [FunctionDeclaration]. Optionally, a list of [targetExpressions] (e.g., the actual
-     * call arguments) can be supplied as a hint, these will be forwarded to other comparing
-     * functions, such as [Language.isDerivedFrom].
-     */
-    fun hasSignature(
-        targetSignature: List<Type>,
-        targetExpressions: List<Expression>? = null
-    ): Boolean {
-        return this.language?.hasSignature(this, targetSignature, targetExpressions) ?: false
-    }
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
         return other.name.localName == name.localName &&

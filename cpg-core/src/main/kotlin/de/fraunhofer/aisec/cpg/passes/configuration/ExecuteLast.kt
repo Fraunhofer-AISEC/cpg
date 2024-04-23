@@ -23,15 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
-
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import kotlin.reflect.KClass
+package de.fraunhofer.aisec.cpg.passes.configuration
 
 /**
- * This annotation can only enable a pass for a given [LanguageFrontend]. The pass's accept function
- * will not be executed when the current language does not match the required language.
+ * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
+ * than one active pass will yield an error. Note: setting this flag will not activate the pass. You
+ * must register the pass manually.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class RequiredFrontend(val value: KClass<out LanguageFrontend<*, *>>)
+annotation class ExecuteLast

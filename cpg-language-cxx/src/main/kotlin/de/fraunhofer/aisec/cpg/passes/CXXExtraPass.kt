@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
 /**
  * This [Pass] executes certain C++ specific conversions on initializers, that are only possible
@@ -127,7 +127,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     it::class == declaration::class &&
                         !it.isDefinition &&
                         it.name == declaration.name &&
-                        it.hasSignature(declaration.signatureTypes)
+                        it.signature == declaration.signature
                 }
             for (candidate in candidates) {
                 candidate.definition = declaration

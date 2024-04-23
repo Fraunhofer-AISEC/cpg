@@ -67,6 +67,7 @@ private const val DEFAULT_PORT = 7687
 private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
+private const val DEFAULT_MAX_COMPLEXITY = -1
 
 data class JsonNode(val id: Long, val labels: Set<String>, val properties: Map<String, Any>)
 
@@ -160,6 +161,17 @@ class Application : Callable<Int> {
             ]
     )
     private var depth: Int = DEFAULT_SAVE_DEPTH
+
+    @CommandLine.Option(
+        names = ["--max-complexity-cf-dfg"],
+        description =
+            [
+                "Performance optimisation: " +
+                    "Limit the ControlFlowSensitiveDFGPass to functions with a complexity less than what is specified here. " +
+                    "$DEFAULT_MAX_COMPLEXITY (default) means no limit is used."
+            ]
+    )
+    private var maxComplexity: Int = DEFAULT_MAX_COMPLEXITY
 
     @CommandLine.Option(
         names = ["--load-includes"],
@@ -485,7 +497,15 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
-                .useParallelPasses(true)
+                .useParallelPasses(false)
+
+        if (maxComplexity != -1) {
+            translationConfiguration.configurePass<ControlFlowSensitiveDFGPass>(
+                ControlFlowSensitiveDFGPass.Configuration(
+                    maxComplexity = maxComplexity,
+                )
+            )
+        }
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()

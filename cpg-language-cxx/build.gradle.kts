@@ -52,4 +52,5 @@ dependencies {
     api(libs.eclipse.cdt.core)
 
     testImplementation(libs.junit.params)
+    testImplementation(project(":cpg-analysis"))
 }

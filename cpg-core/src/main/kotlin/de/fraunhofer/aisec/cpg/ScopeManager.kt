@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.HasFirstClassFunctions
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -647,7 +647,8 @@ class ScopeManager : ScopeProvider {
                                 // TODO(oxisto): Support multiple return values
                                 val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
                                 returnType == fptrType.returnType &&
-                                    it.hasSignature(fptrType.parameters)
+                                    it.matchesSignature(fptrType.parameters) !=
+                                        IncompatibleSignature
                             }
                             // If our language has first-class functions, we can safely return them
                             // as a reference
@@ -680,7 +681,7 @@ class ScopeManager : ScopeProvider {
      * @return a list of possible functions
      */
     @JvmOverloads
-    fun resolveFunction(
+    fun resolveFunctionLegacy(
         call: CallExpression,
         startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
@@ -688,20 +689,110 @@ class ScopeManager : ScopeProvider {
 
         val func =
             resolve<FunctionDeclaration>(scope) {
-                it.name.lastPartsMatch(name) && it.hasSignature(call)
+                it.name.lastPartsMatch(name) &&
+                    it.matchesSignature(call.signature) != IncompatibleSignature
             }
 
         return func
     }
 
     /**
-     * This function extracts a possible scope out of a [Name], e.g. if the name is fully qualified.
-     * This also resolves possible name aliases (e.g. because of imports). It returns a pair of a
-     * scope (if found) as well as the name, which is possibly adjusted for the aliases.
+     * This function tries to resolve a [CallExpression] into its matching [FunctionDeclaration] (or
+     * multiple functions, if applicable). The result is returned in the form of a
+     * [CallResolutionResult] which holds detail information about intermediate results as well as
+     * the kind of success the resolution had.
+     *
+     * Note: The [CallExpression.callee] needs to be resolved first, otherwise the call resolution
+     * fails.
+     */
+    fun resolveCall(call: CallExpression, startScope: Scope? = currentScope): CallResolutionResult {
+        val result =
+            CallResolutionResult(
+                call,
+                setOf(),
+                setOf(),
+                mapOf(),
+                setOf(),
+                CallResolutionResult.SuccessKind.UNRESOLVED,
+                startScope,
+            )
+        val language = call.language
+
+        if (language == null) {
+            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            return result
+        }
+
+        // We can only resolve non-dynamic function calls here that have a reference node to our
+        // function
+        val callee = call.callee as? Reference ?: return result
+
+        val (scope, _) = extractScope(callee, startScope)
+        result.actualStartScope = scope
+
+        // Retrieve a list of possible functions with a matching name
+        result.candidateFunctions =
+            callee.candidates.filterIsInstance<FunctionDeclaration>()?.toSet() ?: setOf()
+
+        if (call.language !is HasFunctionOverloading) {
+            // If the function does not allow function overloading, and we have multiple candidate
+            // symbols, the
+            // result is "problematic"
+            if (result.candidateFunctions.size > 1) {
+                result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            }
+        }
+
+        // Filter functions that match the signature of our call, either directly or with casts;
+        // those functions are "viable". Take default arguments into account if the language has
+        // them.
+        result.signatureResults =
+            result.candidateFunctions
+                .map {
+                    Pair(
+                        it,
+                        it.matchesSignature(
+                            call.signature,
+                            call.language is HasDefaultArguments,
+                            call
+                        )
+                    )
+                }
+                .filter { it.second is SignatureMatches }
+                .associate { it }
+        result.viableFunctions = result.signatureResults.keys
+
+        // If we have a "problematic" result, we can stop here. In this case we cannot really
+        // determine anything more.
+        if (result.success == CallResolutionResult.SuccessKind.PROBLEMATIC) {
+            result.bestViable = result.viableFunctions
+            return result
+        }
+
+        // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
+        // the success kind.
+        val pair = language.bestViableResolution(result)
+        result.bestViable = pair.first
+        result.success = pair.second
+
+        return result
+    }
+
+    /**
+     * This function extracts a scope for the [Name] in node, e.g. if the name is fully qualified.
+     *
+     * The pair returns the extracted scope and a name that is adjusted by [aliases]. The extracted
+     * scope is "responsible" for the name (e.g. declares the parent namespace) and the returned
+     * name only differs from the provided name if aliasing was involved at the node location (e.g.
+     * because of imports).
      *
      * Note: Currently only *fully* qualified names are properly resolved. This function will
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
      * `B` points to `A::B`, rather than to `A`.
+     *
+     * @param node the nodes name references a namespace constituted by a scope
+     * @param scope the current scope relevant for the name resolution, e.g. parent of node
+     * @return a pair with the scope of node.name and the alias-adjusted name
      */
     fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
         var name: Name = node.name
@@ -760,9 +851,9 @@ class ScopeManager : ScopeProvider {
      * will also be used as a return value of this function. This can be useful, if you create
      * objects, such as a [Node] inside this scope and want to return it to the calling function.
      */
-    fun <T : Any> withScope(scope: Scope?, init: () -> T): T {
+    fun <T : Any> withScope(scope: Scope?, init: (scope: Scope?) -> T): T {
         val oldScope = jumpTo(scope)
-        val ret = init()
+        val ret = init(scope)
         jumpTo(oldScope)
 
         return ret
@@ -897,4 +988,183 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
+}
+
+/**
+ * [SignatureResult] will be the result of the function [FunctionDeclaration.matchesSignature] which
+ * calculates whether the provided [CallExpression] will match the signature of the current
+ * [FunctionDeclaration].
+ */
+sealed class SignatureResult(open val casts: List<CastResult>? = null) {
+    val ranking: Int
+        get() {
+            var i = 0
+            for (cast in this.casts ?: listOf()) {
+                i += cast.depthDistance
+            }
+            return i
+        }
+
+    val isDirectMatch: Boolean
+        get() {
+            return this.casts?.all { it is DirectMatch } == true
+        }
+}
+
+data object IncompatibleSignature : SignatureResult()
+
+data class SignatureMatches(override val casts: List<CastResult>) : SignatureResult(casts)
+
+fun FunctionDeclaration.matchesSignature(
+    signature: List<Type>,
+    useDefaultArguments: Boolean = false,
+    call: CallExpression? = null,
+): SignatureResult {
+    val casts = mutableListOf<CastResult>()
+
+    var remainingArguments = signature.size
+
+    // Loop through all parameters of this function
+    for ((i, param) in this.parameters.withIndex()) {
+        // Once we are in variadic mode, all arguments match
+        if (param.isVariadic) {
+            remainingArguments = 0
+            break
+        }
+
+        // Try to find a matching call argument by index
+        val type = signature.getOrNull(i)
+
+        // Yay, we still have arguments/types left
+        if (type != null) {
+            // Check, if we can cast the arg into our target type; and if, yes, what is
+            // the "distance" to the base type. We need this to narrow down the type during
+            // resolving
+            val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
+            if (match == CastNotPossible) {
+                return IncompatibleSignature
+            }
+
+            casts += match
+            remainingArguments--
+        } else {
+            // If the type (argument) is null, this might signal that we have less arguments than
+            // our function signature, so we are likely not a match. But, the function could still
+            // have a default argument (if the language supports it).
+            if (useDefaultArguments) {
+                val defaultParam = this.defaultParameters[i]
+                if (defaultParam != null) {
+                    casts += DirectMatch
+
+                    // We have a matching default parameter, let's decrement the remaining arguments
+                    // and continue matching
+                    remainingArguments--
+                    continue
+                }
+            }
+
+            // We did not have a matching default parameter, or we don't have/support default
+            // parameters, so our matching is done here
+            return IncompatibleSignature
+        }
+    }
+
+    // TODO(oxisto): In some languages, we can also have named parameters, but this is not yet
+    //  supported
+
+    // If we still have remaining arguments at the end of the matching check, the signature is
+    // incompatible
+    return if (remainingArguments > 0) {
+        IncompatibleSignature
+    } else {
+        // Otherwise, return the matching cast results
+        SignatureMatches(casts)
+    }
+}
+
+/**
+ * This is the result of [ScopeManager.resolveCall]. It holds all necessary intermediate results
+ * (such as [candidateFunctions], [viableFunctions]) as well as the final result (see [bestViable])
+ * of the call resolution.
+ */
+data class CallResolutionResult(
+    /** The original call expression. */
+    val call: CallExpression,
+
+    /**
+     * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
+     * [SymbolResolver.findSymbols]), more specifically a list of [FunctionDeclaration] nodes.
+     */
+    var candidateFunctions: Set<FunctionDeclaration>,
+
+    /**
+     * A set of functions, that restrict the [candidateFunctions] to those whose signature match.
+     */
+    var viableFunctions: Set<FunctionDeclaration>,
+
+    /**
+     * A helper map to store the [SignatureResult] of each call to
+     * [FunctionDeclaration.matchesSignature] for each function in [viableFunctions].
+     */
+    var signatureResults: Map<FunctionDeclaration, SignatureResult>,
+
+    /**
+     * This set contains the best viable function(s) of the [viableFunctions]. Ideally this is only
+     * one, but because of ambiguities or other factors, this can contain multiple functions.
+     */
+    var bestViable: Set<FunctionDeclaration>,
+
+    /** The kind of success this resolution had. */
+    var success: SuccessKind,
+
+    /**
+     * The actual start scope of the resolution, after [ScopeManager.extractScope] is called on the
+     * callee. This can differ from the original start scope parameter handed to
+     * [ScopeManager.resolveCall] if the callee contains an FQN.
+     */
+    var actualStartScope: Scope?
+) {
+    /**
+     * This enum holds information about the kind of success this call resolution had. For example,
+     * whether it was successful without any errors or if an ambiguous result was returned.
+     */
+    enum class SuccessKind {
+        /**
+         * The call resolution was successful, and we have identified the best viable function(s).
+         *
+         * Ideally, we have only one function in [bestViable], but it could be that we still have
+         * multiple functions in this list. The most common scenario for this is if we have a member
+         * call to an interface, and we know at least partially which implemented classes could be
+         * in the [MemberExpression.base]. In this case, all best viable functions of each of the
+         * implemented classes are contained in [bestViable].
+         */
+        SUCCESSFUL,
+
+        /**
+         * The call resolution was problematic, i.e., some error occurred, or we were running into
+         * an unexpected state. An example would be that we arrive at multiple [candidateFunctions]
+         * for a language that does not have [HasFunctionOverloading].
+         *
+         * We try to store the most accurate result(s) possible in [bestViable].
+         */
+        PROBLEMATIC,
+
+        /**
+         * The call resolution was ambiguous in a way that we cannot decide between one or more
+         * [viableFunctions]. This can happen if we have multiple functions that have the same
+         * [SignatureResult.ranking]. A real compiler could not differentiate between those two
+         * functions and would throw a compile error.
+         *
+         * We store all ambiguous functions in [bestViable].
+         */
+        AMBIGUOUS,
+
+        /**
+         * The call resolution was unsuccessful, we could not find a [bestViable] or even a list of
+         * [viableFunctions] out of the [candidateFunctions].
+         *
+         * [bestViable] is empty in this case.
+         */
+        UNRESOLVED
+    }
 }

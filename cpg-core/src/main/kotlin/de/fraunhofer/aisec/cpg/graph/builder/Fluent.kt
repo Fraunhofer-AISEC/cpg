@@ -307,7 +307,7 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
 }
 
 context(Holder<out Statement>)
-fun LanguageFrontend<*, *>.ase(
+fun LanguageFrontend<*, *>.subscriptExpr(
     init: (SubscriptExpression.() -> Unit)? = null
 ): SubscriptExpression {
     val node = newSubscriptExpression()

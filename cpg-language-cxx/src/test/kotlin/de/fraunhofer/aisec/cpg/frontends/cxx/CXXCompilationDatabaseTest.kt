@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -160,5 +160,57 @@ class CXXCompilationDatabaseTest {
                 .firstOrNull()
                 ?.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
+    }
+
+    @Test
+    fun testVersion() {
+        val versions =
+            mapOf(
+                "cxx20" to 202002L,
+                "cxx17" to 201703L,
+                "cxx14" to 201402L,
+                "cxx11" to 201103L,
+                "cxx98" to 199711L,
+                "c23" to 202311L,
+                "c2x" to 202000L,
+                "c17" to 201710L,
+                "c11" to 201112L,
+                "c99" to 199901L,
+                "c94" to 199409L,
+            )
+
+        val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_cxx_std.json")
+        val result =
+            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        for ((name, version) in versions) {
+            val component = result.components[name]
+            assertNotNull(component, "component $name is missing")
+            val a = component.variables["version"]
+            assertNotNull(a)
+            assertEquals(version, a.evaluate(), "$name should be version $version")
+        }
+    }
+
+    @Test
+    fun testParseDirectory() {
+        val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_bear.json")
+        val result =
+            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
+                it.useUnityBuild(true)
+            }
+        assertNotNull(result)
+
+        val lib1 = result.components["lib1"]
+        assertNotNull(lib1)
+
+        val function = lib1.functions["function"]
+        assertNotNull(function)
     }
 }

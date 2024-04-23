@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import org.slf4j.LoggerFactory
 
 @DependsOn(TypeHierarchyResolver::class)
@@ -70,22 +70,28 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         // Iterate over all known types and add their (direct) supertypes.
         for (t in HashSet(typeManager.firstOrderTypes)) {
             // TODO: Do we have to check if the type's language is JavaLanguage?
-            val symbol = resolver.tryToSolveType(t.typeName)
-            if (symbol.isSolved) {
-                try {
-                    val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
-                    for (anc in resolvedSuperTypes) {
-                        // Add all resolved supertypes to the type.
-                        val superType = provider.objectType(anc.qualifiedName)
-                        superType.typeOrigin = Type.Origin.RESOLVED
-                        t.superTypes.add(superType)
+            try {
+                val symbol = resolver.tryToSolveType(t.typeName)
+                if (symbol?.isSolved ?: false) {
+                    try {
+                        val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
+                        for (anc in resolvedSuperTypes) {
+                            // Add all resolved supertypes to the type.
+                            val superType = provider.objectType(anc.qualifiedName)
+                            superType.typeOrigin = Type.Origin.RESOLVED
+                            t.superTypes.add(superType)
+                        }
+                    } catch (e: UnsolvedSymbolException) {
+                        // Even if the symbol itself is resolved, "getAncestors()" may throw
+                        // exception.
+                        LOGGER.warn(
+                            "Could not resolve supertypes of ${symbol.correspondingDeclaration}"
+                        )
                     }
-                } catch (e: UnsolvedSymbolException) {
-                    // Even if the symbol itself is resolved, "getAncestors()" may throw exception.
-                    LOGGER.warn(
-                        "Could not resolve supertypes of ${symbol.correspondingDeclaration}"
-                    )
                 }
+            } catch (ie: IllegalArgumentException) {
+                // The type may not exist in the javaparser if it was created as an inference
+                LOGGER.warn("Could not resolve type ${t.typeName}")
             }
         }
     }

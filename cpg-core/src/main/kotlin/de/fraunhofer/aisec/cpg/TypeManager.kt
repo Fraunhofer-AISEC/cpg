@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -284,15 +286,14 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 }
 
 /**
- * Checks, if this [Type] is either derived from or equals to [superType]. This is forwarded to the
- * [Language] of the [Type] and can be overridden by the individual languages.
+ * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
+ * [WrapState] of the type into account, which means that pointer types of derived types will not
+ * match with a non-pointer type of its base type. But, if both are pointer types, they will match.
+ *
+ * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
-fun Type.isDerivedFrom(
-    superType: Type,
-    hint: HasType? = null,
-    superHint: HasType? = null
-): Boolean {
-    return this.language?.isDerivedFrom(this, superType, hint, superHint) ?: false
+fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
+    return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
 }
 
 /**
