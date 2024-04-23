@@ -73,7 +73,7 @@ private constructor(
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new global translation context
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager(), null)
+        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)

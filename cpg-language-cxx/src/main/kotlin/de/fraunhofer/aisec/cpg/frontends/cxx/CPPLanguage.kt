@@ -114,7 +114,7 @@ open class CPPLanguage :
      */
     override fun refineMethodCallResolution(
         curClass: RecordDeclaration?,
-        possibleContainingTypes: List<Type>,
+        possibleContainingTypes: Set<Type>,
         call: CallExpression,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,

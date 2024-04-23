@@ -651,11 +651,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (candidates.isEmpty()) {
             // We need to see, whether we have any suitable base (e.g. a class) or not; but only if
             // the call itself is not already scoped (e.g. to a namespace)
-            val suitableBases =
+            val (suitableBases, bestGuess) =
                 if (callee is MemberExpression || callee?.name?.isQualified() == false) {
                     getPossibleContainingTypes(call)
                 } else {
-                    listOf()
+                    Pair(setOf(), null)
                 }
 
             candidates =
@@ -679,7 +679,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
                     listOfNotNull(func)
                 } else {
-                    createMethodDummies(suitableBases, call)
+                    createMethodDummies(suitableBases, bestGuess, call)
                 }
         }
 
@@ -777,7 +777,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         call: CallExpression
     ): List<FunctionDeclaration> {
 
-        val possibleContainingTypes = getPossibleContainingTypes(call)
+        val (possibleContainingTypes, _) = getPossibleContainingTypes(call)
 
         // Find function targets. If our languages has a complex call resolution, we need to take
         // this into account
@@ -826,7 +826,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param call
      */
     protected fun createMethodDummies(
-        possibleContainingTypes: List<Type>,
+        possibleContainingTypes: Set<Type>,
+        bestGuess: Type?,
         call: CallExpression
     ): List<FunctionDeclaration> {
         var records =
@@ -840,10 +841,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (records.isEmpty()) {
             records =
                 listOfNotNull(
-                    tryRecordInference(
-                        possibleContainingTypes.firstOrNull()?.root ?: unknownType(),
-                        locationHint = call
-                    )
+                    tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
                 )
         }
         records = records.distinct()
@@ -905,20 +903,30 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getPossibleContainingTypes(node: Node?): List<Type> {
-        val possibleTypes = mutableListOf<Type>()
-        if (node is MemberCallExpression) {
-            node.base?.let { base ->
+    /**
+     * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
+     * returns a [Pair], where the first element is the set of types and the second is our best
+     * guess.
+     */
+    protected fun getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
+        val possibleTypes = mutableSetOf<Type>()
+        var bestGuess: Type? = null
+        if (call is MemberCallExpression) {
+            call.base?.let { base ->
+                bestGuess = base.type
                 possibleTypes.add(base.type)
                 possibleTypes.addAll(base.assignedTypes)
             }
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so
             // let's add the current class to the possible list
-            scopeManager.currentRecord?.toType()?.let { possibleTypes.add(it) }
+            scopeManager.currentRecord?.toType()?.let {
+                bestGuess = it
+                possibleTypes.add(it)
+            }
         }
 
-        return possibleTypes
+        return Pair(possibleTypes, bestGuess)
     }
 
     fun getInvocationCandidatesFromRecord(
@@ -1013,7 +1021,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
     protected fun getOverridingCandidates(
-        possibleSubTypes: List<Type>,
+        possibleSubTypes: Set<Type>,
         declaration: FunctionDeclaration
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
