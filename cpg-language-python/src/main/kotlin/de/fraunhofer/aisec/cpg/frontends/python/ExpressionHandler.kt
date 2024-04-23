@@ -57,7 +57,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         slice.floor = node.lower?.let { handle(it) }
         slice.ceiling = node.upper?.let { handle(it) }
         slice.third = node.step?.let { handle(it) }
-
         return slice
     }
 
