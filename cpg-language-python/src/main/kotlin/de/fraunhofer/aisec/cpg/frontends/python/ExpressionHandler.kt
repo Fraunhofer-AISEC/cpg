@@ -57,18 +57,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleSlice(node: Python.ASTSlice): Expression {
-        val slice = newRangeExpression(rawNode = node)
-        slice.floor = node.lower?.let { handle(it) }
-        slice.ceiling = node.upper?.let { handle(it) }
-        slice.third = node.step?.let { handle(it) }
-        return slice
+        return newRangeExpression(rawNode = node).withChildren(hasScope = false) { slice ->
+            slice.floor = node.lower?.let { lower -> handle(lower) }
+            slice.ceiling = node.upper?.let { upper -> handle(upper) }
+            slice.third = node.step?.let { step -> handle(step) }
+        }
     }
 
     private fun handleSubscript(node: Python.ASTSubscript): Expression {
-        val subscriptExpression = newSubscriptExpression(rawNode = node)
-        subscriptExpression.arrayExpression = handle(node.value)
-        subscriptExpression.subscriptExpression = handle(node.slice)
-        return subscriptExpression
+        return newSubscriptExpression(rawNode = node).withChildren(hasScope = false) { sub ->
+            sub.arrayExpression = handle(node.value)
+            sub.subscriptExpression = handle(node.slice)
+        }
     }
 
     private fun handleBoolOp(node: Python.ASTBoolOp): Expression {
