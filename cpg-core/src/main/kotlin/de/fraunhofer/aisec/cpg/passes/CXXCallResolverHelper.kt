@@ -26,14 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.tryCast
-import de.fraunhofer.aisec.cpg.wrap
-import de.fraunhofer.aisec.cpg.wrapState
 import java.util.HashMap
 import java.util.regex.Pattern
 
@@ -410,28 +407,6 @@ fun getCallSignature(
         }
     }
     return templateCallSignature
-}
-
-private fun realizeType(
-    language: Language<*>?,
-    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
-    incomingType: Type,
-    initializationSignature: Map<Declaration?, Node?>
-): Type {
-    var type: Type = UnknownType.getUnknownType(language)
-
-    val typeParamDeclaration = parameterizedTypeResolution[incomingType.root]
-    if (typeParamDeclaration != null) {
-        val node = initializationSignature[typeParamDeclaration]
-        if (node is TypeExpression) {
-            // We might need basically exchange the root node, and we can do this using a wrap state
-            val wrapState = incomingType.wrapState
-            val newType = node.type.wrap(wrapState)
-
-            type = newType
-        }
-    }
-    return type
 }
 
 /**

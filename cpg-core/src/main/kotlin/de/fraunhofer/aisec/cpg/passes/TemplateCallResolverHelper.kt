@@ -26,17 +26,20 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordTemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypeParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.wrap
+import de.fraunhofer.aisec.cpg.wrapState
 
 /**
  * Adds the resolved default template arguments recursively to the templateParameter list of the
@@ -208,4 +211,36 @@ fun handleDefaultTemplateParameters(
             }
         }
     }
+}
+
+/**
+ * This function "realizes" a type that is based on a [ParameterizedType] (a template type), based
+ * on the [initializationSignature]. Basically the [incomingType] is either directly a
+ * [ParameterizedType], e.g. `T` or a derived type, such as a [PointerType] (e.g. `T*`). If the
+ * [initializationSignature] specifies that `T` is initialized with a [TypeExpression] pointing to
+ * `int`, we will return a type representing `int` in the first example and `int*` the second
+ * example.
+ */
+internal fun realizeType(
+    language: Language<*>?,
+    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
+    incomingType: Type,
+    initializationSignature: Map<Declaration?, Node?>
+): Type {
+    var type: Type = UnknownType.getUnknownType(language)
+
+    // The root type of our incoming type should be a ParameterizedType. We need to find its
+    // matching TypeParameterDeclaration, to find out how the parameter is initialized.
+    val typeParamDeclaration = parameterizedTypeResolution[incomingType.root]
+    if (typeParamDeclaration != null) {
+        val node = initializationSignature[typeParamDeclaration]
+        if (node is TypeExpression) {
+            // We might need basically exchange the root node, and we can do this using a wrap state
+            val wrapState = incomingType.wrapState
+            val newType = node.type.wrap(wrapState)
+
+            type = newType
+        }
+    }
+    return type
 }
