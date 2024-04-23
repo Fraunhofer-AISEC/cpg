@@ -54,14 +54,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleSlice(node: Python.ASTSlice): Expression {
         val slice = newRangeExpression(rawNode = node)
-        slice.floor = node.lower?.let { frontend.expressionHandler.handle(it) }
-        slice.ceiling = node.upper?.let { frontend.expressionHandler.handle(it) }
-        if (node.step != null) {
-            newProblemExpression(
-                "`step` not yet supported for slices",
-                rawNode = node
-            ) // TODO: attach somewhere...
-        }
+        slice.floor = node.lower?.let { handle(it) }
+        slice.ceiling = node.upper?.let { handle(it) }
+        slice.third = node.step?.let { handle(it) }
 
         return slice
     }
