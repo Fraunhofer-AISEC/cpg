@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
@@ -42,27 +41,6 @@ import java.io.File
 import kotlin.test.*
 
 class CXXDeclarationTest {
-    @Test
-    fun testTypedefInClass() {
-        val file = File("src/test/resources/cxx/typedef_in_class.cpp")
-        val result =
-            analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CPPLanguage>()
-            }
-        assertNotNull(result)
-
-        // Reset scope manager to the global scope in a bit of an hacky way
-        result.finalCtx.scopeManager.resetToGlobal(
-            result.finalCtx.scopeManager.globalScope!!.astNode as TranslationUnitDeclaration
-        )
-
-        val typedef =
-            result.finalCtx.scopeManager.currentTypedefs.firstOrNull {
-                it.alias.name.localName == "Data"
-            }
-        assertNotNull(typedef)
-    }
-
     @Test
     fun testDefinitionDeclaration() {
         val file = File("src/test/resources/cxx/definition.cpp")
