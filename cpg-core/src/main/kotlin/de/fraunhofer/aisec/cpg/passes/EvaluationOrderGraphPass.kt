@@ -158,9 +158,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
-        map[TemplateDeclaration::class.java] = {
-            handleTemplateDeclaration(it as TemplateDeclaration)
-        }
     }
 
     protected fun doNothing() {
@@ -303,10 +300,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         intermediateNodes.addAll(tmpIntermediateNodes)
 
         pushToEOG(node)
-    }
-
-    private fun handleTemplateDeclaration(templateDeclaration: TemplateDeclaration) {
-        // Nothing to do? Should w go through the realizations?
     }
 
     protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
