@@ -46,8 +46,25 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTTuple -> handleTuple(node)
             is Python.ASTList -> handleList(node)
             is Python.ASTBoolOp -> handleBoolOp(node)
+            is Python.ASTSubscript -> handleSubscript(node)
+            is Python.ASTSlice -> handleSlice(node)
             else -> TODO("The expression of class ${node.javaClass} is not supported yet")
         }
+    }
+
+    private fun handleSlice(node: Python.ASTSlice): Expression {
+        val slice = newRangeExpression(rawNode = node)
+        slice.floor = node.lower?.let { handle(it) }
+        slice.ceiling = node.upper?.let { handle(it) }
+        slice.third = node.step?.let { handle(it) }
+        return slice
+    }
+
+    private fun handleSubscript(node: Python.ASTSubscript): Expression {
+        val subscriptExpression = newSubscriptExpression(rawNode = node)
+        subscriptExpression.arrayExpression = handle(node.value)
+        subscriptExpression.subscriptExpression = handle(node.slice)
+        return subscriptExpression
     }
 
     private fun handleBoolOp(node: Python.ASTBoolOp): Expression {
