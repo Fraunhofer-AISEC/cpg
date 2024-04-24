@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.enhancements.types
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
@@ -206,26 +208,45 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testMemberTypeDef() {
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("typedefs.cpp").toFile()),
-                topLevel,
-                true
-            ) {
+        val result =
+            analyze(listOf(topLevel.resolve("typedefs.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val addConst = tu.records["add_const"]
+        val addConst = result.records["add_const"]
         val typeMember1: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember1")
         val typeMember2: ValueDeclaration = findByUniqueName(addConst.fields, "typeMember2")
         assertEquals(typeMember1.type, typeMember2.type)
 
-        val typeMemberOutside = tu.variables["typeMemberOutside"]
+        val typeMemberOutside = result.variables["typeMemberOutside"]
         assertNotEquals(typeMemberOutside?.type, typeMember2.type)
 
-        val cptr1 = tu.variables["cptr1"]
-        val cptr2 = tu.variables["cptr2"]
+        val cptr1 = result.variables["cptr1"]
+        val cptr2 = result.variables["cptr2"]
         assertEquals(cptr1?.type, cptr2?.type)
         assertNotEquals(typeMemberOutside?.type, cptr2?.type)
+    }
+
+    @Test
+    fun testTypedefInClass() {
+        val result =
+            analyze(listOf(topLevel.resolve("typedef_in_class.cpp").toFile()), topLevel, true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        val someDataClass = result.records["SomeDataClass"]
+        assertNotNull(someDataClass)
+
+        val baseClass = result.records["BaseClass"]
+        assertNotNull(baseClass)
+
+        val sizeField = baseClass.fields["size"]
+        assertNotNull(sizeField)
+        assertFalse(sizeField.isInferred)
+
+        val size = result.memberExpressions["size"]
+        assertNotNull(size)
+        assertRefersTo(size, sizeField)
     }
 }

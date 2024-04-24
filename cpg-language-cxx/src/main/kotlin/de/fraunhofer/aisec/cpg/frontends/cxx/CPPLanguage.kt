@@ -177,7 +177,7 @@ open class CPPLanguage :
      * @param templateCall call to instantiate and invoke a function template
      * @param applyInference if the resolution was unsuccessful and applyInference is true the call
      *   will resolve to an instantiation/invocation of an inferred template
-     * @param scopeManager the scope manager used
+     * @param ctx the [TranslationContext] used
      * @param currentTU The current translation unit
      * @return true if resolution was successful, false if not
      */
@@ -186,7 +186,8 @@ open class CPPLanguage :
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?
+        currentTU: TranslationUnitDeclaration?,
+        needsExactMatch: Boolean
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
             ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
@@ -222,7 +223,8 @@ open class CPPLanguage :
                                 initializationSignature
                             ),
                             templateCall,
-                            explicitInstantiation
+                            explicitInstantiation,
+                            needsExactMatch
                         )
                 ) {
                     // Valid Target -> Apply invocation

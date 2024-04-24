@@ -44,6 +44,7 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
         set(value) {
             field = value
             type = value
+            name = value.name
         }
 
     fun setCastOperator(operatorCode: Int) {
