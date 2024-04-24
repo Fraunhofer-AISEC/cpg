@@ -101,10 +101,6 @@ open class ObjectType : Type {
         return unknownType()
     }
 
-    override fun isSimilar(t: Type?): Boolean {
-        return t is ObjectType && generics == t.generics && super.isSimilar(t)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ObjectType) return false

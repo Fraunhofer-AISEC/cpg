@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
@@ -201,6 +201,23 @@ object Util {
     ) {
         log.warn(
             String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            *arguments
+        )
+    }
+
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun warnWithFileLocation(
+        location: PhysicalLocation?,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?
+    ) {
+        log.warn(
+            String.format("%s: %s", PhysicalLocation.locationLink(location), format),
             *arguments
         )
     }

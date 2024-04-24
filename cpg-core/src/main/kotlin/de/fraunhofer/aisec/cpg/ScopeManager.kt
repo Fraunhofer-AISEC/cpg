@@ -30,11 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -89,8 +85,7 @@ class ScopeManager : ScopeProvider {
      * In reality, they can probably be defined at different scopes for other languages, but for now
      * we only allow it for the current file.
      *
-     * This can potentially be used to replace [addTypedef] at some point, which still relies on the
-     * existence of a [LanguageFrontend].
+     * This can potentially be merged with [addTypedef] at some point.
      */
     private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
 
@@ -574,15 +569,13 @@ class ScopeManager : ScopeProvider {
         }
     }
 
-    /** Only used by the [TypeManager], adds typedefs to the current [ValueDeclarationScope]. */
-    fun addTypedef(typedef: TypedefDeclaration) {
-        val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-        if (scope == null) {
-            LOGGER.error("Cannot add typedef. Not in declaration scope.")
-            return
-        }
-
-        scope.addTypedef(typedef)
+    /**
+     * Adds typedefs to a [ValueDeclarationScope]. The language frontend needs to decide on the
+     * scope of the typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set
+     * as default.
+     */
+    fun addTypedef(typedef: TypedefDeclaration, scope: ValueDeclarationScope? = globalScope) {
+        scope?.addTypedef(typedef)
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
@@ -795,33 +788,50 @@ class ScopeManager : ScopeProvider {
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
     fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
-        var name: Name = node.name
+        return extractScope(node.name, node.location, scope)
+    }
+
+    /**
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified.
+     *
+     * The pair returns the extracted scope and a name that is adjusted by [aliases]. The extracted
+     * scope is "responsible" for the name (e.g. declares the parent namespace) and the returned
+     * name only differs from the provided name if aliasing was involved at the node location (e.g.
+     * because of imports).
+     *
+     * Note: Currently only *fully* qualified names are properly resolved. This function will
+     * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
+     * `B` points to `A::B`, rather than to `A`.
+     *
+     * @param name the name
+     * @param scope the current scope relevant for the name resolution, e.g. parent of node
+     * @return a pair with the scope of node.name and the alias-adjusted name
+     */
+    fun extractScope(
+        name: Name,
+        location: PhysicalLocation?,
+        scope: Scope? = currentScope
+    ): Pair<Scope?, Name> {
+        var name = name
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (node.name.isQualified()) {
+        if (name.isQualified()) {
+            // We need to check, whether we have an alias for the name's parent in this file
+            name = resolveParentAlias(name, location)
+
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            var scopeName = node.name.parent
-
-            // We need to check, whether we have an alias for the scope name in this file
-            val list = aliases[node.location?.artifactLocation]
-            val alias = list?.firstOrNull { it.to == scopeName }?.from
-            if (alias != null) {
-                scopeName = alias
-                // Reconstruct the original name with the alias, so we can resolve declarations with
-                // the namespace
-                name = Name(name.localName, alias)
-            }
+            val scopeName = name.parent
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
                     Util.warnWithFileLocation(
-                        node,
+                        location,
                         LOGGER,
-                        "Could not find the scope $scopeName needed to resolve the call ${node.name}"
+                        "Could not find the scope $scopeName needed to resolve $name"
                     )
                     scope
                 } else {
@@ -830,6 +840,26 @@ class ScopeManager : ScopeProvider {
         }
 
         return Pair(s, name)
+    }
+
+    /**
+     * This function resolves a name alias (contained in [aliases]) for the [Name.parent] of the
+     * given [Name].
+     */
+    fun resolveParentAlias(
+        name: Name,
+        location: PhysicalLocation?,
+    ): Name {
+        var newName = name
+        val list = aliases[location?.artifactLocation]
+        val alias = list?.firstOrNull { it.to == name.parent }?.from
+        if (alias != null) {
+            // Reconstruct the original name with the alias, so we can resolve declarations with
+            // the namespace
+            newName = Name(newName.localName, alias, delimiter = newName.delimiter)
+        }
+
+        return newName
     }
 
     /**
@@ -973,9 +1003,43 @@ class ScopeManager : ScopeProvider {
         // a local definition overwrites / shadows one that was there on a higher scope.
         while (current != null) {
             if (current is ValueDeclarationScope) {
-                val decl = current.typedefs[alias]
-                if (decl != null) {
-                    return decl.type
+                // This is a little bit of a hack to support partial FQN resolution at least with
+                // typedefs, but its not really ideal.
+                // And this also should be merged with the scope manager logic when resolving names.
+                //
+                // The better approach would be to harmonize the FQN of all types in one pass before
+                // all this happens.
+                //
+                // This process has several steps:
+                // First, do a quick local lookup, to see if we have a typedef our current scope
+                // (only do this if the name is not qualified)
+                if (!alias.name.isQualified() && current == currentScope) {
+                    var decl = current.typedefs[alias]
+                    if (decl != null) {
+                        return decl.type
+                    }
+                }
+
+                // Next, try to look up the name either by its FQN (if it is qualified) or make it
+                // qualified based on the current namespace
+                val key =
+                    current.typedefs.keys.firstOrNull {
+                        var lookupName = alias.name
+
+                        // If the lookup name is already a FQN, we can use the name directly
+                        lookupName =
+                            if (lookupName.isQualified()) {
+                                lookupName
+                            } else {
+                                // Otherwise, we want to make an FQN out of it using the current
+                                // namespace
+                                currentNamespace?.fqn(lookupName.localName) ?: lookupName
+                            }
+
+                        it.name.lastPartsMatch(lookupName)
+                    }
+                if (key != null) {
+                    return current.typedefs[key]?.type
                 }
             }
 
