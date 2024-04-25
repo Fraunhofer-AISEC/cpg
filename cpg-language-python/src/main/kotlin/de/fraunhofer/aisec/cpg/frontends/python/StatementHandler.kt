@@ -393,7 +393,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return result
     }
 
-    private fun handleArgument(node: Python.ASTarg) {
+    internal fun handleArgument(node: Python.ASTarg) {
         val type = frontend.typeOf(node.annotation)
         val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
 

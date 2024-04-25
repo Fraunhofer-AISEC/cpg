@@ -54,7 +54,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     // val declarationHandler = DeclarationHandler(this)
     // val specificationHandler = SpecificationHandler(this)
-    private var statementHandler = StatementHandler(this)
+    internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
     /**

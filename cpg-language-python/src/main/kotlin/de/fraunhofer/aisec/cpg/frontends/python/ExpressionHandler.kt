@@ -40,6 +40,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTConstant -> handleConstant(node)
             is Python.ASTAttribute -> handleAttribute(node)
             is Python.ASTBinOp -> handleBinOp(node)
+            is Python.ASTUnaryOp -> handleUnaryOp(node)
             is Python.ASTCompare -> handleCompare(node)
             is Python.ASTDict -> handleDict(node)
             is Python.ASTIfExp -> handleIfExp(node)
@@ -48,6 +49,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTBoolOp -> handleBoolOp(node)
             is Python.ASTSubscript -> handleSubscript(node)
             is Python.ASTSlice -> handleSlice(node)
+            is Python.ASTLambda -> handleLambda(node)
+            is Python.ASTSet -> handleSet(node)
             else -> TODO("The expression of class ${node.javaClass} is not supported yet")
         }
     }
@@ -97,6 +100,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.initializers = lst.toList()
+        language?.objectType("list")?.let { ile.type = it }
+        return ile
+    }
+
+    private fun handleSet(node: Python.ASTSet): Expression {
+        val lst = mutableListOf<Expression>()
+        for (e in node.elts) {
+            lst += handle(e)
+        }
+        val ile = newInitializerListExpression(rawNode = node)
+        ile.initializers = lst.toList()
+        language?.objectType("set")?.let { ile.type = it }
         return ile
     }
 
@@ -183,6 +198,20 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         ret.lhs = handle(node.left)
         ret.rhs = handle(node.right)
+        return ret
+    }
+
+    private fun handleUnaryOp(node: Python.ASTUnaryOp): Expression {
+        val op =
+            when (node.op) {
+                is Python.ASTInvert -> "~"
+                is Python.ASTNot -> "not"
+                is Python.ASTUAdd -> "+"
+                is Python.ASTUSub -> "-"
+                else -> TODO("The unary operation ${node.op.javaClass} is not supported yet")
+            }
+        val ret = newUnaryOperator(operatorCode = op, false, false, rawNode = node)
+        ret.input = handle(node.operand)
         return ret
     }
 
@@ -297,5 +326,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             }
         }
         return r
+    }
+
+    private fun handleLambda(node: Python.ASTLambda): Expression {
+        val lambda = newLambdaExpression(node)
+        val function = newFunctionDeclaration("")
+        frontend.scopeManager.enterScope(function)
+        for (arg in node.args.args) {
+            this.frontend.statementHandler.handleArgument(arg)
+        }
+        function.body = handle(node.body)
+        frontend.scopeManager.leaveScope(function)
+        lambda.function = function
+        return lambda
     }
 }
