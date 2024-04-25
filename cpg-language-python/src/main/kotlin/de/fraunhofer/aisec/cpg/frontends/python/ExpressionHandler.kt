@@ -178,23 +178,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleBinOp(node: Python.ASTBinOp): Expression {
-        val op =
-            when (node.op) {
-                is Python.ASTAdd -> "+"
-                is Python.ASTSub -> "-"
-                is Python.ASTMult -> "*"
-                is Python.ASTMatMult -> "*"
-                is Python.ASTDiv -> "/"
-                is Python.ASTMod -> "%"
-                is Python.ASTPow -> "**"
-                is Python.ASTLShift -> "<<"
-                is Python.ASTRShift -> ">>"
-                is Python.ASTBitOr -> "|"
-                is Python.ASTBitXor -> "^"
-                is Python.ASTBitAnd -> "&"
-                is Python.ASTFloorDiv -> "//"
-                else -> TODO("The binary operation ${node.op.javaClass} is not supported yet")
-            }
+        val op = frontend.operatorToString(node.op)
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         ret.lhs = handle(node.left)
         ret.rhs = handle(node.right)

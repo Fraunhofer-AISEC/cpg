@@ -143,7 +143,7 @@ interface Python {
      *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    open class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
         val args: ASTarguments by lazy { "args" of pyObject }
@@ -163,19 +163,7 @@ interface Python {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val name: String by lazy { "name" of pyObject }
-
-        val args: ASTarguments by lazy { "args" of pyObject }
-
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-
-        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
-
-        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
-
-        val type_comment: String? by lazy { "type_comment" of pyObject }
-    }
+    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTFunctionDef(pyObject)
 
     /**
      * ```
@@ -262,7 +250,7 @@ interface Python {
      *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class ASTFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    open class ASTFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val target: ASTBASEexpr by lazy { "target" of pyObject }
         val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
@@ -276,13 +264,7 @@ interface Python {
      *  |  AsyncFor(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class ASTAsyncFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val target: ASTBASEexpr by lazy { "target" of pyObject }
-        val iter: ASTBASEexpr by lazy { "iter" of pyObject }
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
-        val type_comment: String? by lazy { "type_comment" of pyObject }
-    }
+    class ASTAsyncFor(pyObject: PyObject) : ASTFor(pyObject)
 
     /**
      * ```
@@ -314,7 +296,7 @@ interface Python {
      *  |  With(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    open class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val items: ASTwithitem by lazy { "items" of pyObject }
         val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
@@ -326,11 +308,7 @@ interface Python {
      *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class ASTAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val items: ASTwithitem by lazy { "items" of pyObject }
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-        val type_comment: String? by lazy { "type_comment" of pyObject }
-    }
+    class ASTAsyncWith(pyObject: PyObject) : ASTWith(pyObject)
 
     /**
      * ```

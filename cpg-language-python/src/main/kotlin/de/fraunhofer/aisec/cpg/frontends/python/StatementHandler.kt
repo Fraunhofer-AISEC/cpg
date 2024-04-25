@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -46,6 +47,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTPass -> return newEmptyStatement(rawNode = node)
             is Python.ASTImportFrom -> handleImportFrom(node)
             is Python.ASTAssign -> handleAssign(node)
+            is Python.ASTAugAssign -> handleAugAssign(node)
             is Python.ASTReturn -> handleReturn(node)
             is Python.ASTIf -> handleIf(node)
             is Python.ASTAnnAssign -> handleAnnAssign(node)
@@ -136,8 +138,29 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleAssign(node: Python.ASTAssign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         val rhs = frontend.expressionHandler.handle(node.value)
-        if (rhs is List<*>) TODO()
+        if (rhs is List<*>)
+            newAssignExpression(
+                lhs = lhs,
+                rhs =
+                    rhs.map {
+                        (it as? Expression)
+                            ?: newProblemExpression("There was an issue with the argument")
+                    },
+                rawNode = node
+            )
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
+    }
+
+    private fun handleAugAssign(node: Python.ASTAugAssign): Statement {
+        val lhs = frontend.expressionHandler.handle(node.target)
+        val rhs = frontend.expressionHandler.handle(node.value)
+        val op = frontend.operatorToString(node.op) + "="
+        return newAssignExpression(
+            operatorCode = op,
+            lhs = listOf(lhs),
+            rhs = listOf(rhs),
+            rawNode = node
+        )
     }
 
     private fun handleImportFrom(node: Python.ASTImportFrom): Statement {

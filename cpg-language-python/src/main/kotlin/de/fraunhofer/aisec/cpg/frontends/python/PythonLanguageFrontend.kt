@@ -272,6 +272,24 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         return tud
     }
+
+    fun operatorToString(op: Python.ASTBASEoperator) =
+        when (op) {
+            is Python.ASTAdd -> "+"
+            is Python.ASTSub -> "-"
+            is Python.ASTMult -> "*"
+            is Python.ASTMatMult -> "*"
+            is Python.ASTDiv -> "/"
+            is Python.ASTMod -> "%"
+            is Python.ASTPow -> "**"
+            is Python.ASTLShift -> "<<"
+            is Python.ASTRShift -> ">>"
+            is Python.ASTBitOr -> "|"
+            is Python.ASTBitXor -> "^"
+            is Python.ASTBitAnd -> "&"
+            is Python.ASTFloorDiv -> "//"
+            else -> TODO("The binary operation ${op.javaClass} is not supported yet")
+        }
 }
 
 /**
