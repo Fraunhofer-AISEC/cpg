@@ -190,7 +190,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         if (holder != null && outsideOfScope) {
             frontend.scopeManager.leaveScope(holder)
         }
-        
+
         return declaration
     }
 
