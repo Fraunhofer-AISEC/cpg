@@ -658,7 +658,7 @@ interface Python {
      */
     class ASTFormattedValue(pyObject: PyObject) : ASTBASEexpr(pyObject) {
         val value: ASTBASEexpr by lazy { "value" of pyObject }
-        val conversion: Int? by lazy { "value" of pyObject } // TODO: int in Kotlin as well?
+        val conversion: Long? by lazy { "conversion" of pyObject } // TODO: int in Kotlin as well?
         val format_spec: ASTBASEexpr? by lazy { "format_spec" of pyObject }
     }
 

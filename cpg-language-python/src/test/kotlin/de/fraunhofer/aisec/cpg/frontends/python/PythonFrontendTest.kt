@@ -1096,6 +1096,60 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(16.0, result)
     }
 
+    @Test
+    fun testDataTypes() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("datatypes.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+        val namespace = tu.namespaces.singleOrNull()
+        assertNotNull(namespace)
+        val aStmt = namespace.statements[0] as? AssignExpression
+        assertNotNull(aStmt)
+        assertEquals(
+            "list",
+            (aStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+        val bStmt = namespace.statements[1] as? AssignExpression
+        assertNotNull(bStmt)
+        assertEquals(
+            "set",
+            (bStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+        val cStmt = namespace.statements[2] as? AssignExpression
+        assertNotNull(cStmt)
+        assertEquals(
+            "tuple",
+            (cStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+        val dStmt = namespace.statements[3] as? AssignExpression
+        assertNotNull(dStmt)
+        assertEquals(
+            "dict",
+            (dStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+
+        val eStmtRhs =
+            (namespace.statements[4] as? AssignExpression)?.rhs?.singleOrNull() as? BinaryOperator
+        assertNotNull(eStmtRhs)
+        assertEquals("Values of a: ", (eStmtRhs.lhs as? Literal<*>)?.value)
+        val eStmtRhsRhs = (eStmtRhs.rhs as? BinaryOperator)
+        assertNotNull(eStmtRhsRhs)
+        val aRef = eStmtRhsRhs.lhs as? Reference
+        assertEquals("a", aRef?.name?.localName)
+        val eStmtRhsRhsRhs = (eStmtRhsRhs.rhs as? BinaryOperator)
+        assertEquals(" and b: ", (eStmtRhsRhsRhs?.lhs as? Literal<*>)?.value)
+        val bCall = eStmtRhsRhsRhs?.rhs as? CallExpression
+        assertEquals("str", bCall?.name?.localName)
+        assertEquals("b", bCall?.arguments?.singleOrNull()?.name?.localName)
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

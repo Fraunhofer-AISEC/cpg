@@ -69,10 +69,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleFormattedValue(node: Python.ASTFormattedValue): Expression {
         if (node.format_spec != null)
             TODO("Cannot handle formatted value with format_spec ${node.format_spec} yet")
-        if (node.conversion == -1) {
+        if (node.conversion == -1L) {
             // No formatting, just return the value.
             return handle(node.value)
-        } else if (node.conversion == 115) {
+        } else if (node.conversion == 115L) {
             // String representation. wrap in str() call.
             val strCall = newCallExpression(newReference("str"), "str")
             strCall.addArgument(handle(node.value))
@@ -96,7 +96,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             val lastTwo = newBinaryOperator("+")
             lastTwo.rhs = values.last()
             lastTwo.lhs = values[values.size - 2]
-            values.subList(0, values.size - 3).foldRight(lastTwo) { newVal, start ->
+            values.subList(0, values.size - 2).foldRight(lastTwo) { newVal, start ->
                 val nextValue = newBinaryOperator("+")
                 nextValue.rhs = start
                 nextValue.lhs = newVal
