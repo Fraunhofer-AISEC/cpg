@@ -51,8 +51,64 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTSlice -> handleSlice(node)
             is Python.ASTLambda -> handleLambda(node)
             is Python.ASTSet -> handleSet(node)
-            else -> TODO("The expression of class ${node.javaClass} is not supported yet")
+            is Python.ASTFormattedValue -> handleFormattedValue(node)
+            is Python.ASTJoinedStr -> handleJoinedStr(node)
+            is Python.ASTStarred -> handleStarred(node)
+            is Python.ASTNamedExpr,
+            is Python.ASTGeneratorExp,
+            is Python.ASTListComp,
+            is Python.ASTSetComp,
+            is Python.ASTDictComp,
+            is Python.ASTAwait,
+            is Python.ASTYield,
+            is Python.ASTYieldFrom ->
+                TODO("The expression of class ${node.javaClass} is not supported yet")
         }
+    }
+
+    private fun handleFormattedValue(node: Python.ASTFormattedValue): Expression {
+        if (node.format_spec != null)
+            TODO("Cannot handle formatted value with format_spec ${node.format_spec} yet")
+        if (node.conversion == -1) {
+            // No formatting, just return the value.
+            return handle(node.value)
+        } else if (node.conversion == 115) {
+            // String representation. wrap in str() call.
+            val strCall = newCallExpression(newReference("str"), "str")
+            strCall.addArgument(handle(node.value))
+            return strCall
+        }
+        TODO("Cannot handle formatted value with conversion ${node.conversion} yet")
+    }
+
+    private fun handleJoinedStr(node: Python.ASTJoinedStr): Expression {
+        val values = node.values.map(::handle)
+        return if (values.isEmpty()) {
+            newLiteral("", primitiveType("str"))
+        } else if (values.size == 1) {
+            values.first()
+        } else if (values.size == 2) {
+            val lastTwo = newBinaryOperator("+")
+            lastTwo.rhs = values.last()
+            lastTwo.lhs = values[values.size - 2]
+            lastTwo
+        } else {
+            val lastTwo = newBinaryOperator("+")
+            lastTwo.rhs = values.last()
+            lastTwo.lhs = values[values.size - 2]
+            values.subList(0, values.size - 3).foldRight(lastTwo) { newVal, start ->
+                val nextValue = newBinaryOperator("+")
+                nextValue.rhs = start
+                nextValue.lhs = newVal
+                nextValue
+            }
+        }
+    }
+
+    private fun handleStarred(node: Python.ASTStarred): Expression {
+        val unaryOp = newUnaryOperator("*", postfix = false, prefix = false, rawNode = node)
+        unaryOp.input = handle(node.value)
+        return unaryOp
     }
 
     private fun handleSlice(node: Python.ASTSlice): Expression {
@@ -75,11 +131,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             when (node.op) {
                 is Python.ASTAnd -> "and"
                 is Python.ASTOr -> "or"
-                else ->
-                    return newProblemExpression(
-                        "Unsupported BoolOp operator " + node.op,
-                        rawNode = node
-                    )
             }
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         if (node.values.size != 2) {
@@ -168,10 +219,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTIsNot -> "is not"
                 is Python.ASTIn -> "in"
                 is Python.ASTNotIn -> "not in"
-                else ->
-                    TODO(
-                        "The comparison operation ${node.ops.first().javaClass} is not supported yet"
-                    )
             }
         val ret = newBinaryOperator(op, rawNode = node)
         ret.lhs = handle(node.left)
@@ -194,7 +241,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTNot -> "not"
                 is Python.ASTUAdd -> "+"
                 is Python.ASTUSub -> "-"
-                else -> TODO("The unary operation ${node.op.javaClass} is not supported yet")
             }
         val ret = newUnaryOperator(operatorCode = op, false, false, rawNode = node)
         ret.input = handle(node.operand)

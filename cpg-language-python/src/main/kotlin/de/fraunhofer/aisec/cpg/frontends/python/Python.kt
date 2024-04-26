@@ -135,7 +135,7 @@ interface Python {
      *  |  | Continue
      * ```
      */
-    abstract class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
+    sealed class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```
@@ -458,7 +458,7 @@ interface Python {
      *
      * ast.expr = class expr(AST)
      */
-    abstract class ASTBASEexpr(pyObject: PyObject) : AST(pyObject), WithPythonLocation
+    sealed class ASTBASEexpr(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```
@@ -769,7 +769,7 @@ interface Python {
      *  |  boolop = And | Or
      * ```
      */
-    abstract class ASTBASEboolop(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEboolop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -792,7 +792,7 @@ interface Python {
      *  |  cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
      * ```
      */
-    abstract class ASTBASEcmpop(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEcmpop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -880,7 +880,7 @@ interface Python {
      *  |  expr_context = Load | Store | Del
      * ```
      */
-    abstract class ASTBASEexpr_context(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEexpr_context(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -912,7 +912,7 @@ interface Python {
      *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
      * ```
      */
-    abstract class ASTBASEoperator(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEoperator(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1125,7 +1125,7 @@ interface Python {
      *  |  unaryop = Invert | Not | UAdd | USub
      * ```
      */
-    abstract class ASTBASEunaryop(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEunaryop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```

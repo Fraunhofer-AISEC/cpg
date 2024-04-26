@@ -57,7 +57,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTImport -> handleImport(node)
             is Python.ASTBreak -> newBreakStatement(rawNode = node)
             is Python.ASTContinue -> newContinueStatement(rawNode = node)
-            else -> TODO()
+            is Python.ASTAssert,
+            is Python.ASTDelete,
+            is Python.ASTGlobal,
+            is Python.ASTMatch,
+            is Python.ASTNonlocal,
+            is Python.ASTRaise,
+            is Python.ASTTry,
+            is Python.ASTTryStar,
+            is Python.ASTWith ->
+                TODO("The statement of class ${node.javaClass} is not supported yet")
         }
     }
 
