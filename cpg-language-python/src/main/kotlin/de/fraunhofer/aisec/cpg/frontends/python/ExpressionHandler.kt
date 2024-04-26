@@ -100,7 +100,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.initializers = lst.toList()
-        language?.objectType("list")?.let { ile.type = it }
+        ile.type = frontend.objectType("list")
         return ile
     }
 
@@ -111,7 +111,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.initializers = lst.toList()
-        language?.objectType("set")?.let { ile.type = it }
+        ile.type = frontend.objectType("set")
         return ile
     }
 
