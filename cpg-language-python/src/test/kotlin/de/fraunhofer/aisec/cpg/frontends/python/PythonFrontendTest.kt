@@ -1094,6 +1094,76 @@ class PythonFrontendTest : BaseTest() {
 
         val result = a.evaluate(PythonValueEvaluator())
         assertEquals(16.0, result)
+
+        val bAugAssign =
+            tu.allChildren<AssignExpression>().singleOrNull {
+                (it.lhs.singleOrNull() as? Reference)?.name?.localName == "b" &&
+                    it.location?.region?.startLine == 4
+            }
+        assertNotNull(bAugAssign)
+        assertEquals("*=", bAugAssign.operatorCode)
+        assertEquals("b", bAugAssign.lhs.singleOrNull()?.name?.localName)
+        assertEquals(2L, (bAugAssign.rhs.singleOrNull() as? Literal<*>)?.value)
+
+        // c = (not True and False) or True
+        val cAssign =
+            tu.allChildren<AssignExpression>()
+                .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "c" }
+                ?.rhs
+                ?.singleOrNull() as? BinaryOperator
+        assertNotNull(cAssign)
+        assertEquals("or", cAssign.operatorCode)
+        assertEquals(true, (cAssign.rhs as? Literal<*>)?.value)
+        assertEquals("and", (cAssign.lhs as? BinaryOperator)?.operatorCode)
+        assertEquals(false, ((cAssign.lhs as? BinaryOperator)?.rhs as? Literal<*>)?.value)
+        assertEquals("not", ((cAssign.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.operatorCode)
+        assertEquals(
+            true,
+            (((cAssign.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.input as? Literal<*>)?.value
+        )
+
+        // d = ((-5 >> 2) & ~7 | (+4 << 1)) ^ 0xffff
+        val dAssign =
+            tu.allChildren<AssignExpression>()
+                .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "d" }
+                ?.rhs
+                ?.singleOrNull() as? BinaryOperator
+        assertNotNull(dAssign)
+        assertEquals("^", dAssign.operatorCode)
+        assertEquals(0xffffL, (dAssign.rhs as? Literal<*>)?.value)
+        assertEquals("|", (dAssign.lhs as? BinaryOperator)?.operatorCode)
+        assertEquals("<<", ((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.operatorCode)
+        assertEquals(
+            1L,
+            (((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.rhs as? Literal<*>)?.value
+        )
+        assertEquals(
+            "+",
+            (((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.lhs as? UnaryOperator)
+                ?.operatorCode
+        )
+        assertEquals(
+            4L,
+            ((((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.lhs as? UnaryOperator)
+                    ?.input as? Literal<*>)
+                ?.value
+        )
+        val dAssignLhsOfOr = (dAssign.lhs as? BinaryOperator)?.lhs as? BinaryOperator
+        assertNotNull(dAssignLhsOfOr)
+        assertEquals("&", dAssignLhsOfOr.operatorCode)
+        assertEquals("~", (dAssignLhsOfOr.rhs as? UnaryOperator)?.operatorCode)
+        assertEquals(7L, ((dAssignLhsOfOr.rhs as? UnaryOperator)?.input as? Literal<*>)?.value)
+        assertEquals(">>", (dAssignLhsOfOr.lhs as? BinaryOperator)?.operatorCode)
+        assertEquals(2L, ((dAssignLhsOfOr.lhs as? BinaryOperator)?.rhs as? Literal<*>)?.value)
+        assertEquals(
+            "-",
+            ((dAssignLhsOfOr.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.operatorCode
+        )
+        assertEquals(
+            5L,
+            (((dAssignLhsOfOr.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.input as? Literal<*>)
+                ?.value
+        )
     }
 
     @Test
@@ -1148,6 +1218,25 @@ class PythonFrontendTest : BaseTest() {
         val bCall = eStmtRhsRhsRhs?.rhs as? CallExpression
         assertEquals("str", bCall?.name?.localName)
         assertEquals("b", bCall?.arguments?.singleOrNull()?.name?.localName)
+
+        val fStmtRhs =
+            (namespace.statements[5] as? AssignExpression)?.rhs?.singleOrNull()
+                as? SubscriptExpression
+        assertNotNull(fStmtRhs)
+        assertEquals("a", fStmtRhs.arrayExpression.name.localName)
+        assertTrue(fStmtRhs.subscriptExpression is RangeExpression)
+        assertEquals(
+            1L,
+            ((fStmtRhs.subscriptExpression as RangeExpression).floor as? Literal<*>)?.value
+        )
+        assertEquals(
+            3L,
+            ((fStmtRhs.subscriptExpression as RangeExpression).ceiling as? Literal<*>)?.value
+        )
+        assertEquals(
+            2L,
+            ((fStmtRhs.subscriptExpression as RangeExpression).third as? Literal<*>)?.value
+        )
     }
 
     class PythonValueEvaluator : ValueEvaluator() {
