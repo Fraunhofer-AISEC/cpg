@@ -239,9 +239,7 @@ interface Python {
         val target: ASTBASEexpr by lazy { "target" of pyObject }
         val annotation: ASTBASEexpr by lazy { "annotation" of pyObject }
         val value: ASTBASEexpr? by lazy { "value" of pyObject }
-        val simple: Int by lazy {
-            "simple" of pyObject
-        } // TODO: is this an `Int` from Kotlins perspective?
+        val simple: Long by lazy { "simple" of pyObject }
     }
 
     /**
@@ -388,9 +386,7 @@ interface Python {
     class ASTImportFrom(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val module: String? by lazy { "module" of pyObject }
         val names: List<ASTalias> by lazy { "names" of pyObject }
-        val level: Int? by lazy {
-            "level" of pyObject
-        } // TODO: is this an `Int` from Kotlins perspective?
+        val level: Long? by lazy { "level" of pyObject }
     }
 
     /**
@@ -658,7 +654,7 @@ interface Python {
      */
     class ASTFormattedValue(pyObject: PyObject) : ASTBASEexpr(pyObject) {
         val value: ASTBASEexpr by lazy { "value" of pyObject }
-        val conversion: Long? by lazy { "conversion" of pyObject } // TODO: int in Kotlin as well?
+        val conversion: Long? by lazy { "conversion" of pyObject }
         val format_spec: ASTBASEexpr? by lazy { "format_spec" of pyObject }
     }
 
@@ -1207,7 +1203,7 @@ interface Python {
         val target: ASTBASEexpr by lazy { "target" of pyObject }
         val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         val ifs: List<ASTBASEexpr> by lazy { "ifs" of pyObject }
-        val is_async: Int by lazy { "is_async" of pyObject } // TODO: is this an `Int` in Kotlin?
+        val is_async: Long by lazy { "is_async" of pyObject }
     }
 
     /**

@@ -128,11 +128,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             newLiteral("", primitiveType("str"), rawNode = node)
         } else if (values.size == 1) {
             values.first()
-        } else if (values.size == 2) {
-            val lastTwo = newBinaryOperator("+", rawNode = node)
-            lastTwo.rhs = values.last()
-            lastTwo.lhs = values[values.size - 2]
-            lastTwo
         } else {
             val lastTwo = newBinaryOperator("+", rawNode = node)
             lastTwo.rhs = values.last()
