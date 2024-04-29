@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
@@ -33,6 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
  * explicit initializer value.
  */
 class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
-
+    @AST
     override var initializer: Expression? = null
 }

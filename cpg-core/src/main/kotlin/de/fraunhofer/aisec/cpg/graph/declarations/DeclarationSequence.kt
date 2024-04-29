@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
@@ -38,6 +39,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class DeclarationSequence : Declaration(), DeclarationHolder {
     @Relationship(value = "CHILDREN", direction = Relationship.Direction.OUTGOING)
+    @AST
     val childEdges: MutableList<PropertyEdge<Declaration>> = mutableListOf()
 
     val children: List<Declaration> by PropertyEdgeDelegate(DeclarationSequence::childEdges)
