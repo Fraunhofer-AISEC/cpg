@@ -33,6 +33,20 @@ import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, Python.ASTBASEexpr>(::ProblemExpression, frontend) {
+
+    /*
+    Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
+    conversion is an integer:
+        -1: no formatting
+        115: !s string formatting
+        114: !r repr formatting
+        97: !a ascii formatting
+     */
+    private val formattedValConversionNoFormatting = -1L
+    private val formattedValConversionString = 115L
+    private val formattedValConversionRepr = 114L
+    private val formattedValConversionASCII = 97L
+
     override fun handleNode(node: Python.ASTBASEexpr): Expression {
         return when (node) {
             is Python.ASTName -> handleName(node)
@@ -40,6 +54,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTConstant -> handleConstant(node)
             is Python.ASTAttribute -> handleAttribute(node)
             is Python.ASTBinOp -> handleBinOp(node)
+            is Python.ASTUnaryOp -> handleUnaryOp(node)
             is Python.ASTCompare -> handleCompare(node)
             is Python.ASTDict -> handleDict(node)
             is Python.ASTIfExp -> handleIfExp(node)
@@ -48,8 +63,88 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTBoolOp -> handleBoolOp(node)
             is Python.ASTSubscript -> handleSubscript(node)
             is Python.ASTSlice -> handleSlice(node)
-            else -> TODO("The expression of class ${node.javaClass} is not supported yet")
+            is Python.ASTLambda -> handleLambda(node)
+            is Python.ASTSet -> handleSet(node)
+            is Python.ASTFormattedValue -> handleFormattedValue(node)
+            is Python.ASTJoinedStr -> handleJoinedStr(node)
+            is Python.ASTStarred -> handleStarred(node)
+            is Python.ASTNamedExpr,
+            is Python.ASTGeneratorExp,
+            is Python.ASTListComp,
+            is Python.ASTSetComp,
+            is Python.ASTDictComp,
+            is Python.ASTAwait,
+            is Python.ASTYield,
+            is Python.ASTYieldFrom ->
+                newProblemExpression(
+                    "The expression of class ${node.javaClass} is not supported yet",
+                    rawNode = node
+                )
         }
+    }
+
+    private fun handleFormattedValue(node: Python.ASTFormattedValue): Expression {
+        if (node.format_spec != null) {
+            return newProblemExpression(
+                "Cannot handle formatted value with format_spec ${node.format_spec} yet",
+                rawNode = node
+            )
+        }
+        return when (node.conversion) {
+            formattedValConversionNoFormatting -> {
+                // No formatting, just return the value.
+                handle(node.value)
+            }
+            formattedValConversionString -> {
+                // String representation. wrap in str() call.
+                val strCall =
+                    newCallExpression(newReference("str", rawNode = node), "str", rawNode = node)
+                strCall.addArgument(handle(node.value))
+                strCall
+            }
+            formattedValConversionRepr -> {
+                newProblemExpression(
+                    "Cannot handle conversion '114: !r repr formatting', yet.",
+                    rawNode = node
+                )
+            }
+            formattedValConversionASCII -> {
+                newProblemExpression(
+                    "Cannot handle conversion '97: !a ascii formatting', yet.",
+                    rawNode = node
+                )
+            }
+            else ->
+                newProblemExpression(
+                    "Cannot handle formatted value with conversion ${node.conversion} yet",
+                    rawNode = node
+                )
+        }
+    }
+
+    private fun handleJoinedStr(node: Python.ASTJoinedStr): Expression {
+        val values = node.values.map(::handle)
+        return if (values.isEmpty()) {
+            newLiteral("", primitiveType("str"), rawNode = node)
+        } else if (values.size == 1) {
+            values.first()
+        } else {
+            val lastTwo = newBinaryOperator("+", rawNode = node)
+            lastTwo.rhs = values.last()
+            lastTwo.lhs = values[values.size - 2]
+            values.subList(0, values.size - 2).foldRight(lastTwo) { newVal, start ->
+                val nextValue = newBinaryOperator("+")
+                nextValue.rhs = start
+                nextValue.lhs = newVal
+                nextValue
+            }
+        }
+    }
+
+    private fun handleStarred(node: Python.ASTStarred): Expression {
+        val unaryOp = newUnaryOperator("*", postfix = false, prefix = false, rawNode = node)
+        unaryOp.input = handle(node.value)
+        return unaryOp
     }
 
     private fun handleSlice(node: Python.ASTSlice): Expression {
@@ -72,11 +167,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             when (node.op) {
                 is Python.ASTAnd -> "and"
                 is Python.ASTOr -> "or"
-                else ->
-                    return newProblemExpression(
-                        "Unsupported BoolOp operator " + node.op,
-                        rawNode = node
-                    )
             }
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         if (node.values.size != 2) {
@@ -96,7 +186,19 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             lst += handle(e)
         }
         val ile = newInitializerListExpression(rawNode = node)
-        ile.initializers = lst.toList()
+        ile.type = frontend.objectType("list")
+        ile.initializers = lst
+        return ile
+    }
+
+    private fun handleSet(node: Python.ASTSet): Expression {
+        val lst = mutableListOf<Expression>()
+        for (e in node.elts) {
+            lst += handle(e)
+        }
+        val ile = newInitializerListExpression(rawNode = node)
+        ile.type = frontend.objectType("set")
+        ile.initializers = lst
         return ile
     }
 
@@ -106,6 +208,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             lst += handle(e)
         }
         val ile = newInitializerListExpression(rawNode = node)
+        ile.type = frontend.objectType("tuple")
         ile.initializers = lst.toList()
         return ile
     }
@@ -131,6 +234,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     .codeAndLocationFromChildren(node)
         }
         val ile = newInitializerListExpression(rawNode = node)
+        ile.type = frontend.objectType("dict")
         ile.initializers = lst.toList()
         return ile
     }
@@ -151,10 +255,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.ASTIsNot -> "is not"
                 is Python.ASTIn -> "in"
                 is Python.ASTNotIn -> "not in"
-                else ->
-                    TODO(
-                        "The comparison operation ${node.ops.first().javaClass} is not supported yet"
-                    )
             }
         val ret = newBinaryOperator(op, rawNode = node)
         ret.lhs = handle(node.left)
@@ -163,26 +263,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleBinOp(node: Python.ASTBinOp): Expression {
-        val op =
-            when (node.op) {
-                is Python.ASTAdd -> "+"
-                is Python.ASTSub -> "-"
-                is Python.ASTMult -> "*"
-                is Python.ASTMatMult -> "*"
-                is Python.ASTDiv -> "/"
-                is Python.ASTMod -> "%"
-                is Python.ASTPow -> "**"
-                is Python.ASTLShift -> "<<"
-                is Python.ASTRShift -> ">>"
-                is Python.ASTBitOr -> "|"
-                is Python.ASTBitXor -> "^"
-                is Python.ASTBitAnd -> "&"
-                is Python.ASTFloorDiv -> "//"
-                else -> TODO("The binary operation ${node.op.javaClass} is not supported yet")
-            }
+        val op = frontend.operatorToString(node.op)
         val ret = newBinaryOperator(operatorCode = op, rawNode = node)
         ret.lhs = handle(node.left)
         ret.rhs = handle(node.right)
+        return ret
+    }
+
+    private fun handleUnaryOp(node: Python.ASTUnaryOp): Expression {
+        val op = frontend.operatorUnaryToString(node.op)
+        val ret =
+            newUnaryOperator(operatorCode = op, postfix = false, prefix = false, rawNode = node)
+        ret.input = handle(node.operand)
         return ret
     }
 
@@ -297,5 +389,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             }
         }
         return r
+    }
+
+    private fun handleLambda(node: Python.ASTLambda): Expression {
+        val lambda = newLambdaExpression(rawNode = node)
+        val function = newFunctionDeclaration(name = "", rawNode = node)
+        frontend.scopeManager.enterScope(function)
+        for (arg in node.args.args) {
+            this.frontend.statementHandler.handleArgument(arg)
+        }
+        function.body = handle(node.body)
+        frontend.scopeManager.leaveScope(function)
+        lambda.function = function
+        return lambda
     }
 }

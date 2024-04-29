@@ -26,13 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -43,19 +41,35 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
             is Python.ASTFunctionDef -> handleFunctionDef(node)
+            is Python.ASTAsyncFunctionDef -> handleAsyncFunctionDef(node)
             is Python.ASTPass -> return newEmptyStatement(rawNode = node)
             is Python.ASTImportFrom -> handleImportFrom(node)
             is Python.ASTAssign -> handleAssign(node)
+            is Python.ASTAugAssign -> handleAugAssign(node)
             is Python.ASTReturn -> handleReturn(node)
             is Python.ASTIf -> handleIf(node)
             is Python.ASTAnnAssign -> handleAnnAssign(node)
             is Python.ASTExpr -> handleExpressionStatement(node)
             is Python.ASTFor -> handleFor(node)
+            is Python.ASTAsyncFor -> handleAsyncFor(node)
             is Python.ASTWhile -> handleWhile(node)
             is Python.ASTImport -> handleImport(node)
             is Python.ASTBreak -> newBreakStatement(rawNode = node)
             is Python.ASTContinue -> newContinueStatement(rawNode = node)
-            else -> TODO()
+            is Python.ASTAssert,
+            is Python.ASTDelete,
+            is Python.ASTGlobal,
+            is Python.ASTMatch,
+            is Python.ASTNonlocal,
+            is Python.ASTRaise,
+            is Python.ASTTry,
+            is Python.ASTTryStar,
+            is Python.ASTWith,
+            is Python.ASTAsyncWith ->
+                newProblemExpression(
+                    "The statement of class ${node.javaClass} is not supported yet",
+                    rawNode = node
+                )
         }
     }
 
@@ -83,6 +97,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleFor(node: Python.ASTFor): Statement {
+        val ret = newForEachStatement(rawNode = node)
+        ret.iterable = frontend.expressionHandler.handle(node.iter)
+        ret.variable = frontend.expressionHandler.handle(node.target)
+        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        return ret
+    }
+
+    private fun handleAsyncFor(node: Python.ASTAsyncFor): Statement {
         val ret = newForEachStatement(rawNode = node)
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
@@ -136,8 +159,32 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleAssign(node: Python.ASTAssign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         val rhs = frontend.expressionHandler.handle(node.value)
-        if (rhs is List<*>) TODO()
+        if (rhs is List<*>)
+            newAssignExpression(
+                lhs = lhs,
+                rhs =
+                    rhs.map {
+                        (it as? Expression)
+                            ?: newProblemExpression(
+                                "There was an issue with an argument.",
+                                rawNode = node
+                            )
+                    },
+                rawNode = node
+            )
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
+    }
+
+    private fun handleAugAssign(node: Python.ASTAugAssign): Statement {
+        val lhs = frontend.expressionHandler.handle(node.target)
+        val rhs = frontend.expressionHandler.handle(node.value)
+        val op = frontend.operatorToString(node.op) + "="
+        return newAssignExpression(
+            operatorCode = op,
+            lhs = listOf(lhs),
+            rhs = listOf(rhs),
+            rawNode = node
+        )
     }
 
     private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
@@ -218,16 +265,67 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Handle decorators (which are translated into CPG "annotations")
         result.addAnnotations(handleAnnotations(s))
 
-        // Handle arguments
-        if (s.args.posonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`posonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
-                )
-            frontend.scopeManager.addDeclaration(problem)
+        // Handle return type and calculate function type
+        if (result is ConstructorDeclaration) {
+            // Return type of the constructor is always its record declaration type
+            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
+        } else {
+            result.returnTypes = listOf(frontend.typeOf(s.returns))
         }
+        result.type = FunctionType.computeType(result)
+
+        handleArguments(s.args, result, recordDeclaration)
+
+        if (s.body.isNotEmpty()) {
+            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+        }
+
+        frontend.scopeManager.leaveScope(result)
+        frontend.scopeManager.addDeclaration(result)
+
+        return wrapDeclarationToStatement(result)
+    }
+
+    /**
+     * We have to consider multiple things when matching Python's FunctionDef to the CPG:
+     * - A [Python.ASTFunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
+     *   a declaration -> we have to wrap the result in a [DeclarationStatement].
+     * - A [Python.ASTFunctionDef] could be one of
+     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
+     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
+     *       [ConstructorDeclaration]
+     *     - a [FunctionDeclaration] if neither of the above apply
+     *
+     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
+     * `receiver` (most often called `self`).
+     */
+    private fun handleAsyncFunctionDef(
+        s: Python.ASTAsyncFunctionDef,
+        recordDeclaration: RecordDeclaration? = null
+    ): DeclarationStatement {
+        val result =
+            if (recordDeclaration != null) {
+                if (s.name == "__init__") {
+                    newConstructorDeclaration(
+                        name = s.name,
+                        recordDeclaration = recordDeclaration,
+                        rawNode = s
+                    )
+                } else {
+                    newMethodDeclaration(
+                        name = s.name,
+                        recordDeclaration = recordDeclaration,
+                        isStatic = false,
+                        rawNode = s
+                    )
+                }
+            } else {
+                newFunctionDeclaration(name = s.name, rawNode = s)
+            }
+        frontend.scopeManager.enterScope(result)
+
+        // Handle decorators (which are translated into CPG "annotations")
+        result.addAnnotations(handleAnnotations(s))
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -238,18 +336,47 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
         result.type = FunctionType.computeType(result)
 
+        handleArguments(s.args, result, recordDeclaration)
+
+        if (s.body.isNotEmpty()) {
+            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+        }
+
+        frontend.scopeManager.leaveScope(result)
+        frontend.scopeManager.addDeclaration(result)
+
+        return wrapDeclarationToStatement(result)
+    }
+
+    /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */
+    private fun handleArguments(
+        args: Python.ASTarguments,
+        result: FunctionDeclaration,
+        recordDeclaration: RecordDeclaration?
+    ) {
+        // Handle arguments
+        if (args.posonlyargs.isNotEmpty()) {
+            val problem =
+                newProblemDeclaration(
+                    "`posonlyargs` are not yet supported",
+                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = args
+                )
+            frontend.scopeManager.addDeclaration(problem)
+        }
+
         if (recordDeclaration != null) {
             // first argument is the `receiver`
-            if (s.args.args.isEmpty()) {
+            if (args.args.isEmpty()) {
                 val problem =
                     newProblemDeclaration(
                         "Expected a receiver",
                         problemType = ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = s.args
+                        rawNode = args
                     )
                 frontend.scopeManager.addDeclaration(problem)
             } else {
-                val recvPythonNode = s.args.args.first()
+                val recvPythonNode = args.args.first()
                 val tpe = recordDeclaration.toType()
                 val recvNode =
                     newVariableDeclaration(
@@ -269,16 +396,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         if (recordDeclaration != null) {
             // first argument is the receiver
-            for (arg in s.args.args.subList(1, s.args.args.size)) {
+            for (arg in args.args.subList(1, args.args.size)) {
                 handleArgument(arg)
             }
         } else {
-            for (arg in s.args.args) {
+            for (arg in args.args) {
                 handleArgument(arg)
             }
         }
 
-        s.args.vararg?.let {
+        args.vararg?.let {
             val problem =
                 newProblemDeclaration(
                     "`vararg` is not yet supported",
@@ -288,27 +415,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.addDeclaration(problem)
         }
 
-        if (s.args.kwonlyargs.isNotEmpty()) {
+        if (args.kwonlyargs.isNotEmpty()) {
             val problem =
                 newProblemDeclaration(
                     "`kwonlyargs` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
+                    rawNode = args
                 )
             frontend.scopeManager.addDeclaration(problem)
         }
 
-        if (s.args.kw_defaults.isNotEmpty()) {
+        if (args.kw_defaults.isNotEmpty()) {
             val problem =
                 newProblemDeclaration(
                     "`kw_defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
+                    rawNode = args
                 )
             frontend.scopeManager.addDeclaration(problem)
         }
 
-        s.args.kwarg?.let {
+        args.kwarg?.let {
             val problem =
                 newProblemDeclaration(
                     "`kwarg` is not yet supported",
@@ -318,25 +445,61 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.addDeclaration(problem)
         }
 
-        if (s.args.defaults.isNotEmpty()) {
+        if (args.defaults.isNotEmpty()) {
             val problem =
                 newProblemDeclaration(
                     "`defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = s.args
+                    rawNode = args
                 )
             frontend.scopeManager.addDeclaration(problem)
         }
-        // END HANDLE ARGUMENTS
+    }
 
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+    private fun handleAnnotations(
+        node: Python.ASTAsyncFunctionDef
+    ): Collection<de.fraunhofer.aisec.cpg.graph.Annotation> {
+        val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
+        for (decorator in node.decorator_list) {
+            if (decorator !is Python.ASTCall) {
+                TODO()
+            }
+
+            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
+            if (decFuncParsed !is MemberExpression) {
+                TODO()
+            }
+
+            val annotation =
+                newAnnotation(
+                    name =
+                        Name(
+                            localName = decFuncParsed.name.localName,
+                            parent = decFuncParsed.base.name
+                        ),
+                    rawNode = node
+                )
+            for (arg in decorator.args) {
+                val argParsed = frontend.expressionHandler.handle(arg)
+                annotation.members +=
+                    newAnnotationMember(
+                        "annotationArg" + decorator.args.indexOf(arg), // TODO
+                        argParsed,
+                        rawNode = arg
+                    )
+            }
+            for (keyword in decorator.keywords) {
+                annotation.members +=
+                    newAnnotationMember(
+                        name = keyword.arg,
+                        value = frontend.expressionHandler.handle(keyword.value),
+                        rawNode = keyword
+                    )
+            }
+
+            annotations += annotation
         }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
-        return wrapDeclarationToStatement(result)
+        return annotations
     }
 
     private fun handleAnnotations(
@@ -393,7 +556,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return result
     }
 
-    private fun handleArgument(node: Python.ASTarg) {
+    internal fun handleArgument(node: Python.ASTarg) {
         val type = frontend.typeOf(node.annotation)
         val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
 
