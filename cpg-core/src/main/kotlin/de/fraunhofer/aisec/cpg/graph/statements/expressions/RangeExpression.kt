@@ -55,20 +55,17 @@ import java.util.*
 class RangeExpression : Expression() {
 
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
-    @AST
-    var floor: Expression? = null
+    @AST var floor: Expression? = null
 
     /** The upper bound ("ceiling") of the range. This index is usually *exclusive*. */
-    @AST
-    var ceiling: Expression? = null
+    @AST var ceiling: Expression? = null
 
     /**
      * Some languages offer a third value. The meaning depends completely on the language. For
      * example, Python allows specifying a step, while Go allows to control the underlying array's
      * capacity (not length).
      */
-    @AST
-    var third: Expression? = null
+    @AST var third: Expression? = null
 
     /** The operator code that separates the range elements. Common cases are `:` or `...` */
     var operatorCode = ":"
