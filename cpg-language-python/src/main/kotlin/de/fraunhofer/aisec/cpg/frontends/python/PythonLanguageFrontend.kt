@@ -288,7 +288,14 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             is Python.ASTBitXor -> "^"
             is Python.ASTBitAnd -> "&"
             is Python.ASTFloorDiv -> "//"
-            else -> TODO("The binary operation ${op.javaClass} is not supported yet")
+        }
+
+    fun operatorUnaryToString(op: Python.ASTBASEunaryop) =
+        when (op) {
+            is Python.ASTInvert -> "~"
+            is Python.ASTNot -> "not"
+            is Python.ASTUAdd -> "+"
+            is Python.ASTUSub -> "-"
         }
 }
 

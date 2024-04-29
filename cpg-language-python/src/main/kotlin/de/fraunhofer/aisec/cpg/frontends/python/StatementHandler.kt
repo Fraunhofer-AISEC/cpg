@@ -66,7 +66,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTTry,
             is Python.ASTTryStar,
             is Python.ASTWith ->
-                TODO("The statement of class ${node.javaClass} is not supported yet")
+                newProblemExpression(
+                    "The statement of class ${node.javaClass} is not supported yet",
+                    rawNode = node
+                )
         }
     }
 
@@ -153,7 +156,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 rhs =
                     rhs.map {
                         (it as? Expression)
-                            ?: newProblemExpression("There was an issue with the argument")
+                            ?: newProblemExpression(
+                                "There was an issue with an argument.",
+                                rawNode = node
+                            )
                     },
                 rawNode = node
             )

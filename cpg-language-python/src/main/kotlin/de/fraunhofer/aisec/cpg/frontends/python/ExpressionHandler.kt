@@ -33,6 +33,20 @@ import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, Python.ASTBASEexpr>(::ProblemExpression, frontend) {
+
+    /*
+    Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
+    conversion is an integer:
+        -1: no formatting
+        115: !s string formatting
+        114: !r repr formatting
+        97: !a ascii formatting
+     */
+    private val formattedValConversionNoFormatting = -1L
+    private val formattedValConversionString = 115L
+    private val formattedValConversionRepr = 114L
+    private val formattedValConversionASCII = 97L
+
     override fun handleNode(node: Python.ASTBASEexpr): Expression {
         return when (node) {
             is Python.ASTName -> handleName(node)
@@ -62,38 +76,65 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTAwait,
             is Python.ASTYield,
             is Python.ASTYieldFrom ->
-                TODO("The expression of class ${node.javaClass} is not supported yet")
+                newProblemExpression(
+                    "The expression of class ${node.javaClass} is not supported yet",
+                    rawNode = node
+                )
         }
     }
 
     private fun handleFormattedValue(node: Python.ASTFormattedValue): Expression {
-        if (node.format_spec != null)
-            TODO("Cannot handle formatted value with format_spec ${node.format_spec} yet")
-        if (node.conversion == -1L) {
-            // No formatting, just return the value.
-            return handle(node.value)
-        } else if (node.conversion == 115L) {
-            // String representation. wrap in str() call.
-            val strCall = newCallExpression(newReference("str"), "str")
-            strCall.addArgument(handle(node.value))
-            return strCall
+        if (node.format_spec != null) {
+            return newProblemExpression(
+                "Cannot handle formatted value with format_spec ${node.format_spec} yet",
+                rawNode = node
+            )
         }
-        TODO("Cannot handle formatted value with conversion ${node.conversion} yet")
+        return when (node.conversion) {
+            formattedValConversionNoFormatting -> {
+                // No formatting, just return the value.
+                handle(node.value)
+            }
+            formattedValConversionString -> {
+                // String representation. wrap in str() call.
+                val strCall =
+                    newCallExpression(newReference("str", rawNode = node), "str", rawNode = node)
+                strCall.addArgument(handle(node.value))
+                strCall
+            }
+            formattedValConversionRepr -> {
+                newProblemExpression(
+                    "Cannot handle conversion '114: !r repr formatting', yet.",
+                    rawNode = node
+                )
+            }
+            formattedValConversionASCII -> {
+                newProblemExpression(
+                    "Cannot handle conversion '97: !a ascii formatting', yet.",
+                    rawNode = node
+                )
+            }
+            else ->
+                newProblemExpression(
+                    "Cannot handle formatted value with conversion ${node.conversion} yet",
+                    rawNode = node
+                )
+        }
     }
 
     private fun handleJoinedStr(node: Python.ASTJoinedStr): Expression {
         val values = node.values.map(::handle)
         return if (values.isEmpty()) {
-            newLiteral("", primitiveType("str"))
+            newLiteral("", primitiveType("str"), rawNode = node)
         } else if (values.size == 1) {
             values.first()
         } else if (values.size == 2) {
-            val lastTwo = newBinaryOperator("+")
+            val lastTwo = newBinaryOperator("+", rawNode = node)
             lastTwo.rhs = values.last()
             lastTwo.lhs = values[values.size - 2]
             lastTwo
         } else {
-            val lastTwo = newBinaryOperator("+")
+            val lastTwo = newBinaryOperator("+", rawNode = node)
             lastTwo.rhs = values.last()
             lastTwo.lhs = values[values.size - 2]
             values.subList(0, values.size - 2).foldRight(lastTwo) { newVal, start ->
@@ -235,14 +276,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleUnaryOp(node: Python.ASTUnaryOp): Expression {
-        val op =
-            when (node.op) {
-                is Python.ASTInvert -> "~"
-                is Python.ASTNot -> "not"
-                is Python.ASTUAdd -> "+"
-                is Python.ASTUSub -> "-"
-            }
-        val ret = newUnaryOperator(operatorCode = op, false, false, rawNode = node)
+        val op = frontend.operatorUnaryToString(node.op)
+        val ret =
+            newUnaryOperator(operatorCode = op, postfix = false, prefix = false, rawNode = node)
         ret.input = handle(node.operand)
         return ret
     }
@@ -361,8 +397,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleLambda(node: Python.ASTLambda): Expression {
-        val lambda = newLambdaExpression(node)
-        val function = newFunctionDeclaration("")
+        val lambda = newLambdaExpression(rawNode = node)
+        val function = newFunctionDeclaration(name = "", rawNode = node)
         frontend.scopeManager.enterScope(function)
         for (arg in node.args.args) {
             this.frontend.statementHandler.handleArgument(arg)
