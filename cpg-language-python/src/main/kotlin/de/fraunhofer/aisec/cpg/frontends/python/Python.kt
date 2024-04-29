@@ -143,7 +143,7 @@ interface Python {
      *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    open class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    sealed class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
         val args: ASTarguments by lazy { "args" of pyObject }
@@ -248,7 +248,7 @@ interface Python {
      *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    open class ASTFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    sealed class ASTFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val target: ASTBASEexpr by lazy { "target" of pyObject }
         val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
@@ -294,7 +294,7 @@ interface Python {
      *  |  With(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    open class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    sealed class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val items: ASTwithitem by lazy { "items" of pyObject }
         val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
