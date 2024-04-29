@@ -60,7 +60,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleImport(node: Python.ASTImport): Statement {
-        return newDeclarationStatement(rawNode = node).withChildren {
+        return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
             for (imp in node.names) {
                 val v =
                     if (imp.asname != null) {
