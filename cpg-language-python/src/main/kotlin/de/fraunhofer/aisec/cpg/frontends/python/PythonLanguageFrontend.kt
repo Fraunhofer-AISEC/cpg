@@ -54,7 +54,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     // val declarationHandler = DeclarationHandler(this)
     // val specificationHandler = SpecificationHandler(this)
-    private var statementHandler = StatementHandler(this)
+    internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
     /**
@@ -272,6 +272,31 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             }
         return tud
     }
+
+    fun operatorToString(op: Python.ASTBASEoperator) =
+        when (op) {
+            is Python.ASTAdd -> "+"
+            is Python.ASTSub -> "-"
+            is Python.ASTMult -> "*"
+            is Python.ASTMatMult -> "*"
+            is Python.ASTDiv -> "/"
+            is Python.ASTMod -> "%"
+            is Python.ASTPow -> "**"
+            is Python.ASTLShift -> "<<"
+            is Python.ASTRShift -> ">>"
+            is Python.ASTBitOr -> "|"
+            is Python.ASTBitXor -> "^"
+            is Python.ASTBitAnd -> "&"
+            is Python.ASTFloorDiv -> "//"
+        }
+
+    fun operatorUnaryToString(op: Python.ASTBASEunaryop) =
+        when (op) {
+            is Python.ASTInvert -> "~"
+            is Python.ASTNot -> "not"
+            is Python.ASTUAdd -> "+"
+            is Python.ASTUSub -> "-"
+        }
 }
 
 /**

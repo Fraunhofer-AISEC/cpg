@@ -135,15 +135,12 @@ interface Python {
      *  |  | Continue
      * ```
      */
-    abstract class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
+    sealed class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
-    /**
-     * ```
-     * ast.FunctionDef = class FunctionDef(stmt)
-     *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
-     * ```
+    /*
+    FunctionDef and AsyncFunctionDef have the same fields. They differ according to the Python grammar, but making them inherent from a mutual class allows us to remove duplicate code.
      */
-    class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    abstract class ASTFunctionOrAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
         val args: ASTarguments by lazy { "args" of pyObject }
@@ -156,6 +153,13 @@ interface Python {
 
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
+    /**
+     * ```
+     * ast.FunctionDef = class FunctionDef(stmt)
+     *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
+     * ```
+     */
+    class ASTFunctionDef(pyObject: PyObject) : ASTFunctionOrAsyncFunctionDef(pyObject)
 
     /**
      * ```
@@ -163,19 +167,7 @@ interface Python {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val name: String by lazy { "name" of pyObject }
-
-        val args: ASTarguments by lazy { "args" of pyObject }
-
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-
-        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
-
-        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
-
-        val type_comment: String? by lazy { "type_comment" of pyObject }
-    }
+    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTFunctionOrAsyncFunctionDef(pyObject)
 
     /**
      * ```
@@ -251,9 +243,7 @@ interface Python {
         val target: ASTBASEexpr by lazy { "target" of pyObject }
         val annotation: ASTBASEexpr by lazy { "annotation" of pyObject }
         val value: ASTBASEexpr? by lazy { "value" of pyObject }
-        val simple: Int by lazy {
-            "simple" of pyObject
-        } // TODO: is this an `Int` from Kotlins perspective?
+        val simple: Long by lazy { "simple" of pyObject }
     }
 
     /**
@@ -327,8 +317,10 @@ interface Python {
      * ```
      */
     class ASTAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val items: ASTwithitem by lazy { "items" of pyObject }
+        val target: ASTBASEexpr by lazy { "target" of pyObject }
+        val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
@@ -410,9 +402,7 @@ interface Python {
     class ASTImportFrom(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val module: String? by lazy { "module" of pyObject }
         val names: List<ASTalias> by lazy { "names" of pyObject }
-        val level: Int? by lazy {
-            "level" of pyObject
-        } // TODO: is this an `Int` from Kotlins perspective?
+        val level: Long? by lazy { "level" of pyObject }
     }
 
     /**
@@ -480,7 +470,7 @@ interface Python {
      *
      * ast.expr = class expr(AST)
      */
-    abstract class ASTBASEexpr(pyObject: PyObject) : AST(pyObject), WithPythonLocation
+    sealed class ASTBASEexpr(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
      * ```
@@ -680,7 +670,7 @@ interface Python {
      */
     class ASTFormattedValue(pyObject: PyObject) : ASTBASEexpr(pyObject) {
         val value: ASTBASEexpr by lazy { "value" of pyObject }
-        val conversion: Int? by lazy { "value" of pyObject } // TODO: int in Kotlin as well?
+        val conversion: Long? by lazy { "conversion" of pyObject }
         val format_spec: ASTBASEexpr? by lazy { "format_spec" of pyObject }
     }
 
@@ -791,7 +781,7 @@ interface Python {
      *  |  boolop = And | Or
      * ```
      */
-    abstract class ASTBASEboolop(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEboolop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -814,7 +804,7 @@ interface Python {
      *  |  cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
      * ```
      */
-    abstract class ASTBASEcmpop(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEcmpop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -902,7 +892,7 @@ interface Python {
      *  |  expr_context = Load | Store | Del
      * ```
      */
-    abstract class ASTBASEexpr_context(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEexpr_context(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -934,7 +924,7 @@ interface Python {
      *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
      * ```
      */
-    abstract class ASTBASEoperator(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEoperator(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1147,7 +1137,7 @@ interface Python {
      *  |  unaryop = Invert | Not | UAdd | USub
      * ```
      */
-    abstract class ASTBASEunaryop(pyObject: PyObject) : AST(pyObject)
+    sealed class ASTBASEunaryop(pyObject: PyObject) : AST(pyObject)
 
     /**
      * ```
@@ -1229,7 +1219,7 @@ interface Python {
         val target: ASTBASEexpr by lazy { "target" of pyObject }
         val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         val ifs: List<ASTBASEexpr> by lazy { "ifs" of pyObject }
-        val is_async: Int by lazy { "is_async" of pyObject } // TODO: is this an `Int` in Kotlin?
+        val is_async: Long by lazy { "is_async" of pyObject }
     }
 
     /**
