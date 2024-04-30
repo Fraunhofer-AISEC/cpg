@@ -1266,7 +1266,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cxx/parenthesis.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.inferenceConfiguration(builder().guessCastExpressions(true).build())
                 it.registerLanguage<CPPLanguage>()
             }
         val main = tu.functions["main"]
@@ -1674,4 +1673,5 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val functions = result.functions { it.name.localName == "foo" && it.isDefinition }
         assertEquals(2, functions.size)
     }
+
 }

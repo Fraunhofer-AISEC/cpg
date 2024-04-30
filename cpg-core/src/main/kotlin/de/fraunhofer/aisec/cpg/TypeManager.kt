@@ -225,7 +225,11 @@ class TypeManager {
     }
 
     fun typeExists(name: String): Boolean {
-        return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
+        return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
+    }
+
+    fun typeOf(name: Name): Type? {
+        return firstOrderTypes.firstOrNull { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
