@@ -385,21 +385,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTUnaryExpression.op_bracketedPrimary -> {
                 // If this expression is NOT part of a call expression and contains a "name" or
                 // something similar, we want to keep the information that this is an expression
-                // wrapped in parentheses. The easiest way to do this is to create a cast
-                // expression.
+                // wrapped in parentheses. The best way to do this is to create a unary expression
                 if (ctx.operand is IASTIdExpression && ctx.parent !is IASTFunctionCallExpression) {
-                    val cast = newCastExpression(rawNode = ctx)
-                    cast.setCastOperator(0)
-                    // We only set the name of the cast expression here. It is important to not
-                    // create a new type here, because we do not know if this is really a type or
-                    // not. We need to find this out in the CXXExtraPass.
-                    cast.name = parseName((ctx.operand as IASTIdExpression).name.toString())
-                    // The expression member can only be filled by the parent call
+                    val op = newUnaryOperator("()", postfix = true, prefix = true, rawNode = ctx)
                     if (input != null) {
-                        cast.expression = input
+                        op.input = input
                     }
-                    cast.location = frontend.locationOf(ctx)
-                    return cast
+                    return op
                 }
 
                 // In all other cases, e.g., if the parenthesis is nested or part of a function

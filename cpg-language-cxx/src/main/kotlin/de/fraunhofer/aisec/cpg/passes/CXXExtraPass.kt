@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -59,6 +56,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.registerHandler(::fixInitializers)
         walker.registerHandler { _, parent, node ->
             when (node) {
+                is UnaryOperator -> removeBracketOperators(node, parent)
                 is BinaryOperator -> convertOperators(node, parent)
             }
         }
@@ -70,48 +68,67 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
+     * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
+     * are [CastExpression] nodes or just simply brackets with no syntactic value. The
+     * [CastExpression] conversion is done in [convertOperators], but in this function we are trying
+     * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
+     * the graph.
+     */
+    private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
+        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name.toString())) {
+            // It was really just parenthesis around an identifier, but we can only make this
+            // distinction now.
+            //
+            // In theory, we could just keep this meaningless unary expression, but it in order
+            // to reduce nodes, we unwrap the reference and exchange it in the arguments of the
+            // binary op
+            walker.replaceArgument(parent, node, node.input)
+        }
+    }
+
+    /**
      * In C++ there is an ambiguity between the combination of a cast + unary operator or a binary
-     * operator where some arguments are wrapped in parenthesis. This function tries to resolve
-     * this. Note: This is done especially for the C++ frontend. [ReplaceCallCastPass.handleCall]
-     * handles the more general case (which also applies to C++), in which a cast and a call are
+     * operator where some arguments are wrapped in parentheses. This function tries to resolve
+     * this.
+     *
+     * Note: This is done especially for the C++ frontend. [ReplaceCallCastPass.handleCall] handles
+     * the more general case (which also applies to C++), in which a cast and a call are
      * indistinguishable and need to be resolved once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
-        val cast = binOp.lhs
-        if (cast is CastExpression) {
-            // We need to check, if the supposed cast expression is really referring to a type or
-            // not
-            val type = typeManager.typeOf(cast.name)
-            if (type != null) {
-                // If the name of the cast expression is really a type, then this is really a unary
-                // expression instead of a binary operator. We need to perform the following steps:
+        val castOrNothing = binOp.lhs
+        val language = castOrNothing.language
+        if (
+            language != null && castOrNothing is UnaryOperator && castOrNothing.operatorCode == "()"
+        ) {
+            // We need to check, if the expression in parentheses is really referring to a type or
+            // not. A common example is code like `(long) &addr`. We could end up parsing this as a
+            // binary operator with the left-hand side of `(long)`, an operator code `&` and a rhs
+            // of `addr`.
+            if (typeManager.typeExists(castOrNothing.input.name.toString())) {
+                // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
+                // is really a cast and our binary operator is really a unary operator `&addr`.
+                // We need to perform the following steps:
+                // * create a cast expression out of the ()-unary operator, with the type that is
+                //   referred to in the op.
+                val cast = newCastExpression().codeAndLocationFrom(castOrNothing)
+                cast.language = language
+                cast.castType = language.objectType(castOrNothing.input.name)
+
                 // * create a unary operator with the rhs of the binary operator (and the same
                 //   operator code)
-                // * set this unary operator as the "expression" of the cast
-                // * actually set the type of cast, since before we only set the name (so we do not
-                //   accidentally create the type)
-                // * replace the binary operator with the cast expression in the parent argument
-                //   holder
                 val unaryOp =
                     newUnaryOperator(binOp.operatorCode ?: "", postfix = false, prefix = true)
                         .codeAndLocationFrom(binOp.rhs)
+                unaryOp.language = language
                 unaryOp.input = binOp.rhs
 
-                // disconnect the old expression
-                cast.expression.disconnectFromGraph()
-                // set the unary operator as the new expression
+                // * set the unary operator as the "expression" of the cast
                 cast.expression = unaryOp
-                cast.type = type
-                cast.castType = type
 
-                // replace the node in the parent of the bin/unary op
+                // * replace the binary operator with the cast expression in the parent argument
+                //   holder
                 walker.replaceArgument(parent, binOp, cast)
-            } else {
-                // Otherwise, the supposed cast expression was really just parenthesis around an
-                // identifier, but we can only make this distinction now. In this case we can just
-                // unwrap the reference and exchange the cast expression in the arguments of the
-                // binary op
-                walker.replaceArgument(binOp, cast, cast.expression)
             }
         }
     }
