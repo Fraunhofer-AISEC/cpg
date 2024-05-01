@@ -1673,5 +1673,4 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val functions = result.functions { it.name.localName == "foo" && it.isDefinition }
         assertEquals(2, functions.size)
     }
-
 }
