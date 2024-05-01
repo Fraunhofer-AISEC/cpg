@@ -39,7 +39,6 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class DeclarationSequence : Declaration(), DeclarationHolder {
     @Relationship(value = "CHILDREN", direction = Relationship.Direction.OUTGOING)
-    @AST
     val childEdges: MutableList<PropertyEdge<Declaration>> = mutableListOf()
 
     val children: List<Declaration> by PropertyEdgeDelegate(DeclarationSequence::childEdges)
