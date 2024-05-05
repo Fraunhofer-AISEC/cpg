@@ -131,7 +131,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                alreadySeen.add(Pair(k, v))
+                if (!alreadySeen.add(Pair(k, v))) {
+                    continue
+                }
                 if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
                     // We are reachable from all the branches of a branching node. Add this parent
                     // to the worklist or update an existing entry. Also consider already existing
