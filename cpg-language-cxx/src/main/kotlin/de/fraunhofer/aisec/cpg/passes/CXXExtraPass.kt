@@ -97,52 +97,53 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * indistinguishable and need to be resolved once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
-        val castOrNothing = binOp.lhs
-        val language = castOrNothing.language
+        val fakeUnaryOp = binOp.lhs
+        val language = fakeUnaryOp.language as? CLanguage
+        // We need to check, if the expression in parentheses is really referring to a type or
+        // not. A common example is code like `(long) &addr`. We could end up parsing this as a
+        // binary operator with the left-hand side of `(long)`, an operator code `&` and a rhs
+        // of `addr`.
         if (
-            language != null && castOrNothing is UnaryOperator && castOrNothing.operatorCode == "()"
+            language != null &&
+                fakeUnaryOp is UnaryOperator &&
+                fakeUnaryOp.operatorCode == "()" &&
+                typeManager.typeExists(fakeUnaryOp.input.name.toString())
         ) {
-            // We need to check, if the expression in parentheses is really referring to a type or
-            // not. A common example is code like `(long) &addr`. We could end up parsing this as a
-            // binary operator with the left-hand side of `(long)`, an operator code `&` and a rhs
-            // of `addr`.
-            if (typeManager.typeExists(castOrNothing.input.name.toString())) {
-                // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
-                // is really a cast and our binary operator is really a unary operator `&addr`.
-                // We need to perform the following steps:
-                // * create a cast expression out of the ()-unary operator, with the type that is
-                //   referred to in the op.
-                val cast = newCastExpression().codeAndLocationFrom(castOrNothing)
-                cast.language = language
-                cast.castType = language.objectType(castOrNothing.input.name)
+            // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
+            // is really a cast and our binary operator is really a unary operator `&addr`.
+            // We need to perform the following steps:
+            // * create a cast expression out of the ()-unary operator, with the type that is
+            //   referred to in the op.
+            val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
+            cast.language = language
+            cast.castType = language.objectType(fakeUnaryOp.input.name)
 
-                // * create a unary operator with the rhs of the binary operator (and the same
-                //   operator code).
-                // * in the unlikely case that the binary operator cannot actually be used as a
-                //   unary operator, we abort this. This should not happen, but we might never know
-                val opCode = binOp.operatorCode ?: ""
-                if (opCode !in ((language as? CLanguage)?.unaryOperators ?: listOf())) {
-                    log.error(
-                        "We tried to convert a binary operator into a unary operator, but the list of " +
-                            "operator codes does not allow that. This is suspicious and the translation " +
-                            "probably was incorrect"
-                    )
-                    return
-                }
-
-                val unaryOp =
-                    newUnaryOperator(opCode, postfix = false, prefix = true)
-                        .codeAndLocationFrom(binOp.rhs)
-                unaryOp.language = language
-                unaryOp.input = binOp.rhs
-
-                // * set the unary operator as the "expression" of the cast
-                cast.expression = unaryOp
-
-                // * replace the binary operator with the cast expression in the parent argument
-                //   holder
-                walker.replaceArgument(parent, binOp, cast)
+            // * create a unary operator with the rhs of the binary operator (and the same
+            //   operator code).
+            // * in the unlikely case that the binary operator cannot actually be used as a
+            //   unary operator, we abort this. This should not happen, but we might never know
+            val opCode = binOp.operatorCode ?: ""
+            if (opCode !in language.unaryOperators) {
+                log.error(
+                    "We tried to convert a binary operator into a unary operator, but the list of " +
+                        "operator codes does not allow that. This is suspicious and the translation " +
+                        "probably was incorrect"
+                )
+                return
             }
+
+            val unaryOp =
+                newUnaryOperator(opCode, postfix = false, prefix = true)
+                    .codeAndLocationFrom(binOp.rhs)
+            unaryOp.language = language
+            unaryOp.input = binOp.rhs
+
+            // * set the unary operator as the "expression" of the cast
+            cast.expression = unaryOp
+
+            // * replace the binary operator with the cast expression in the parent argument
+            //   holder
+            walker.replaceArgument(parent, binOp, cast)
         }
     }
 
