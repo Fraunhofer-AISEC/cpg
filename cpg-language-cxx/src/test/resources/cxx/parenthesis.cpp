@@ -12,11 +12,13 @@ int main() {
 
 	// this is a binary operation, even though it has parenthesis.
 	// The added parenthesis are just for more confusion
-	addr = ((addr)) & count;
-	addr = (long) & count;
+	addr = ((addr)) &count;
+
+	// this is the same as in line 11, just with a different type
+	addr = (long) &count;
 
     // this is a complex combination of cast and binary operation
-	addr = (long)&addr + 1;
+	addr = (long) &addr + 1;
 
 	// finally, a more complex example of unary operators and casts
 	char* outptr, key;

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -116,9 +117,21 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 cast.castType = language.objectType(castOrNothing.input.name)
 
                 // * create a unary operator with the rhs of the binary operator (and the same
-                //   operator code)
+                //   operator code).
+                // * in the unlikely case that the binary operator cannot actually be used as a
+                //   unary operator, we abort this. This should not happen, but we might never know
+                val opCode = binOp.operatorCode ?: ""
+                if (opCode !in ((language as? CLanguage)?.unaryOperators ?: listOf())) {
+                    log.error(
+                        "We tried to convert a binary operator into a unary operator, but the list of " +
+                            "operator codes does not allow that. This is suspicious and the translation " +
+                            "probably was incorrect"
+                    )
+                    return
+                }
+
                 val unaryOp =
-                    newUnaryOperator(binOp.operatorCode ?: "", postfix = false, prefix = true)
+                    newUnaryOperator(opCode, postfix = false, prefix = true)
                         .codeAndLocationFrom(binOp.rhs)
                 unaryOp.language = language
                 unaryOp.input = binOp.rhs
