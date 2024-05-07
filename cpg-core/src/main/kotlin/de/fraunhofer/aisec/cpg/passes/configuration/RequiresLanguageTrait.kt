@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.passes.configuration
 
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
 import kotlin.reflect.KClass
 
 /**
- * Register a dependency for the annotated pass. This ensures that the annotated pass is executed
- * before [other] pass.
+ * This annotation can only enable a pass if its target language implements a given [LanguageTrait].
+ *
+ * This annotation is [Repeatable]. In this case, all specified language traits must exist on the
+ * [Language].
  */
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class ExecuteBefore(val other: KClass<out Pass<*>>)
+@Repeatable annotation class RequiresLanguageTrait(val value: KClass<out LanguageTrait>)

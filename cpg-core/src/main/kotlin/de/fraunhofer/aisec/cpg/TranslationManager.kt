@@ -177,7 +177,21 @@ private constructor(
                     }
                 }
             if (ctx.config.useUnityBuild) {
-                val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
+                // If we only have C files in the list, we need to make sure that our unity build is
+                // also a .c file
+                val cFiles = list.filter { it.extension == "c" }
+                val cOnly = cFiles.size == list.size
+
+                val tmpFile =
+                    Files.createTempFile(
+                            "compile",
+                            if (cOnly) {
+                                ".c"
+                            } else {
+                                ".cpp"
+                            }
+                        )
+                        .toFile()
                 tmpFile.deleteOnExit()
 
                 PrintWriter(tmpFile).use { writer ->
@@ -249,7 +263,13 @@ private constructor(
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
-            val ctx = TranslationContext(globalCtx.config, ScopeManager(), globalCtx.typeManager)
+            val ctx =
+                TranslationContext(
+                    globalCtx.config,
+                    ScopeManager(),
+                    globalCtx.typeManager,
+                    component
+                )
             parallelContexts.add(ctx)
 
             val future =
@@ -303,6 +323,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         for (sourceLocation in sourceLocations) {
+            ctx.currentComponent = component
             val f = parse(component, ctx, sourceLocation)
             if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
@@ -395,7 +416,7 @@ private constructor(
         }
 
     class Builder {
-        private var config: TranslationConfiguration = TranslationConfiguration.builder().build()
+        private var config: TranslationConfiguration? = null
 
         fun config(config: TranslationConfiguration): Builder {
             this.config = config
@@ -403,7 +424,7 @@ private constructor(
         }
 
         fun build(): TranslationManager {
-            return TranslationManager(config)
+            return TranslationManager(config ?: TranslationConfiguration.builder().build())
         }
     }
 

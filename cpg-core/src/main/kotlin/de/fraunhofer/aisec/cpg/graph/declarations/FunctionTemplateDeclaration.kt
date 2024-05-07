@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
@@ -40,6 +41,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
+    @AST
     private val realizationEdges: MutableList<PropertyEdge<FunctionDeclaration>> = ArrayList()
 
     val realization: List<FunctionDeclaration> by

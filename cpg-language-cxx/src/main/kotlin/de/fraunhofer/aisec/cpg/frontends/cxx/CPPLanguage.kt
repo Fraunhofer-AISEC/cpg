@@ -46,7 +46,8 @@ open class CPPLanguage :
     HasStructs,
     HasClasses,
     HasUnknownType,
-    HasFunctionalCasts {
+    HasFunctionalCasts,
+    HasFunctionOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
@@ -127,21 +128,10 @@ open class CPPLanguage :
             )
         }
         if (invocationCandidates.isEmpty()) {
-            // Check for usage of default args
-            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, ctx))
-        }
-        if (invocationCandidates.isEmpty()) {
-            val (ok, candidates) =
-                handleTemplateFunctionCalls(curClass, call, false, ctx, currentTU)
-            if (ok) {
-                return candidates
-            }
-
-            call.templateParameterEdges = null
-        }
-        if (invocationCandidates.isEmpty()) {
-            // Check for usage of implicit cast
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
+            // This could be a regular function call that somehow ends up here because of weird
+            // complexity of the old call resolver
+            val result = ctx.scopeManager.resolveCall(call)
+            invocationCandidates.addAll(result.bestViable)
         }
 
         // Make sure, that our invocation candidates for member call expressions are really METHODS,
@@ -154,91 +144,29 @@ open class CPPLanguage :
         return invocationCandidates
     }
 
-    override fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
-        name: String,
-        ctx: TranslationContext
-    ): List<FunctionDeclaration> {
-        val invocationCandidate =
-            mutableListOf<FunctionDeclaration>(
-                *recordDeclaration.methods
-                    .filter { m -> m.name.lastPartsMatch(name) && m.hasSignature(call.signature) }
-                    .toTypedArray()
-            )
-        if (invocationCandidate.isEmpty()) {
-            // Search for possible invocation with defaults args
-            invocationCandidate.addAll(
-                resolveWithDefaultArgs(
-                    call,
-                    recordDeclaration.methods.filter { m ->
-                        m.name.lastPartsMatch(name) /*&& !m.isImplicit()*/ &&
-                            call.signature.size < m.signatureTypes.size
-                    }
-                )
-            )
-        }
-        if (invocationCandidate.isEmpty()) {
-            // Search for possible invocation with implicit cast
-            invocationCandidate.addAll(
-                resolveWithImplicitCast(
-                    call,
-                    recordDeclaration.methods.filter { m ->
-                        m.name.lastPartsMatch(name) /*&& !m.isImplicit()*/
-                    }
-                )
-            )
-        }
-        return invocationCandidate
-    }
-
-    override fun refineNormalCallResolution(
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration> {
-        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
-        if (invocationCandidates.isEmpty()) {
-            // Check for usage of default args
-            invocationCandidates.addAll(resolveWithDefaultArgsFunc(call, ctx))
-        }
-        if (invocationCandidates.isEmpty()) {
-            // Check if the call can be resolved to a function template instantiation. If it can be
-            // resolver, we resolve the call. Otherwise, there won't be an inferred template, we
-            // will do an inferred FunctionDeclaration instead.
-            call.templateParameterEdges = mutableListOf()
-            val (ok, candidates) = handleTemplateFunctionCalls(null, call, false, ctx, currentTU)
-            if (ok) {
-                return candidates
-            }
-
-            call.templateParameterEdges = null
-        }
-        if (invocationCandidates.isEmpty()) {
-            // If we don't find any candidate and our current language is c/c++ we check if there is
-            // a candidate with an implicit cast
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?
+    ): CastResult {
+        val match = super.tryCast(type, targetType, hint, targetHint)
+        if (match != CastNotPossible) {
+            return match
         }
 
-        return invocationCandidates
-    }
+        // In C++, it is possible to have conversion constructors. We will not have full support for
+        // them yet, but at least we should have some common cases here, such as const char* to
+        // std::string
+        if (
+            type is PointerType &&
+                type.elementType.typeName == "char" &&
+                targetType.typeName == "std::string"
+        ) {
+            return DirectMatch
+        }
 
-    /**
-     * @param call we want to find invocation targets for by adding the default arguments to the
-     *   signature
-     * @param scopeManager the scope manager used
-     * @return list of invocation candidates that have matching signature when considering default
-     *   arguments
-     */
-    private fun resolveWithDefaultArgsFunc(
-        call: CallExpression,
-        ctx: TranslationContext
-    ): List<FunctionDeclaration> {
-        val invocationCandidates =
-            ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).filter {
-                call.signature.size < it.signatureTypes.size
-            }
-        return resolveWithDefaultArgs(call, invocationCandidates)
+        return CastNotPossible
     }
 
     override val startCharacter = '<'
@@ -249,7 +177,7 @@ open class CPPLanguage :
      * @param templateCall call to instantiate and invoke a function template
      * @param applyInference if the resolution was unsuccessful and applyInference is true the call
      *   will resolve to an instantiation/invocation of an inferred template
-     * @param scopeManager the scope manager used
+     * @param ctx the [TranslationContext] used
      * @param currentTU The current translation unit
      * @return true if resolution was successful, false if not
      */
@@ -258,7 +186,8 @@ open class CPPLanguage :
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
+        currentTU: TranslationUnitDeclaration?,
+        needsExactMatch: Boolean
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
             ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
@@ -294,7 +223,8 @@ open class CPPLanguage :
                                 initializationSignature
                             ),
                             templateCall,
-                            explicitInstantiation
+                            explicitInstantiation,
+                            needsExactMatch
                         )
                 ) {
                     // Valid Target -> Apply invocation
@@ -317,7 +247,7 @@ open class CPPLanguage :
             // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
             // Otherwise, we could not resolve to a template and no modifications are made
             val functionTemplateDeclaration =
-                holder.startInference(ctx)?.inferFunctionTemplate(templateCall)
+                holder?.startInference(ctx)?.inferFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
             val edges = templateCall.templateParameterEdges
             // Set instantiation propertyEdges

@@ -30,14 +30,17 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.isDerivedFrom
+import de.fraunhofer.aisec.cpg.matchesSignature
+import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
 
 /**
@@ -136,14 +139,14 @@ class DFGFunctionSummaries {
                             (functionDecl as? MethodDeclaration)
                                 ?.recordDeclaration
                                 ?.toType()
-                                ?.isDerivedFrom(entryRecord) == true) &&
+                                ?.tryCast(entryRecord) != CastNotPossible) &&
                         // The parameter types have to match
                         (it.signature == null ||
-                            functionDecl.hasSignature(
+                            functionDecl.matchesSignature(
                                 it.signature.map { signatureType ->
                                     functionDecl.objectType(signatureType)
                                 }
-                            ))
+                            ) != IncompatibleSignature)
                 } else {
                     false
                 }

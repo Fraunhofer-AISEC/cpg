@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -226,27 +225,7 @@ class TypeManager {
     }
 
     fun typeExists(name: String): Boolean {
-        return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
-    }
-
-    /**
-     * Creates a typedef / type alias in the form of a [TypedefDeclaration] to the scope manager and
-     * returns it.
-     *
-     * @param frontend the language frontend
-     * @param rawCode the raw code
-     * @param target the target type
-     * @param alias the alias type
-     * @return the typedef declaration
-     */
-    fun createTypeAlias(
-        frontend: LanguageFrontend<*, *>,
-        target: Type,
-        alias: Type,
-    ): Declaration {
-        val typedef = frontend.newTypedefDeclaration(target, alias)
-        frontend.scopeManager.addTypedef(typedef)
-        return typedef
+        return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -284,15 +263,14 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 }
 
 /**
- * Checks, if this [Type] is either derived from or equals to [superType]. This is forwarded to the
- * [Language] of the [Type] and can be overridden by the individual languages.
+ * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
+ * [WrapState] of the type into account, which means that pointer types of derived types will not
+ * match with a non-pointer type of its base type. But, if both are pointer types, they will match.
+ *
+ * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
-fun Type.isDerivedFrom(
-    superType: Type,
-    hint: HasType? = null,
-    superHint: HasType? = null
-): Boolean {
-    return this.language?.isDerivedFrom(this, superType, hint, superHint) ?: false
+fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
+    return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
 }
 
 /**
@@ -410,8 +388,7 @@ fun Type.wrap(wrapState: WrapState): Type {
     }
 
     if (wrapState.isReference) {
-        wrapState.referenceType?.elementType = type
-        return wrapState.referenceType!!
+        return ReferenceType(this)
     }
 
     return type

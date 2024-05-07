@@ -23,20 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
-
-import de.fraunhofer.aisec.cpg.passes.Pass
-import kotlin.reflect.KClass
+package de.fraunhofer.aisec.cpg.passes.configuration
 
 /**
- * Register a dependency for the annotated pass. This ensures that:
- * - the annotated pass is executed after its dependency when `softDependency` is `false`:
- * - the dependency is added to the list of active passes even if not manually specified by the user
- *   when `softDependency`is true:
- * - the dependency is not added to the list of active passes - the order is only enforced if the
- *   user manually adds the pass
+ * Indicates whether this pass should be executed as the first pass. Note: setting this flag for
+ * more than one active pass will yield an error. Note: setting this flag will not activate the
+ * pass. You must register the pass manually.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-@Repeatable
-annotation class DependsOn(val value: KClass<out Pass<*>>, val softDependency: Boolean = false)
+annotation class ExecuteFirst

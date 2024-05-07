@@ -39,6 +39,8 @@ class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     @AST
     private var defaultValue: Expression? = null
 
+    var modifiers: List<String> = mutableListOf()
+
     override var default: Expression?
         get() = defaultValue
         set(value) {

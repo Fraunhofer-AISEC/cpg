@@ -27,6 +27,7 @@ We provide the following shortcuts to gain a quick overview of relevant types of
 nodes:
 
 Starting from node `n`...
+
 * ...get all function/method calls with `n.calls`
 * ...get all member calls (i.e., calls which are called on an object or class)
   with `n.mcalls`
@@ -45,6 +46,7 @@ Starting from node `n`...
 
 The lists you get here can be quite long and it's a good idea to filter them. To
 do so, we provide different operators:
+
 * To retrieve a single element, you can use the `[]` (get) operator and specify
   your criterion inside the brackets.
 * To retrieve a single element and get an exception if there are multiple

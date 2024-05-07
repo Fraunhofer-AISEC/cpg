@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
@@ -41,8 +42,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.isDerivedFrom
-import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
+import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import org.slf4j.LoggerFactory
 
@@ -610,7 +611,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val catchParam = catchClause.parameter
                 if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
-                } else if (throwType.isDerivedFrom(catchParam.type)) {
+                } else if (throwType.tryCast(catchParam.type) != CastNotPossible) {
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.order
+package de.fraunhofer.aisec.cpg.frontends.cxx
 
-/**
- * Indicates whether this pass should be executed as the last pass. Note: setting this flag for more
- * than one active pass will yield an error. Note: setting this flag will not activate the pass. You
- * must register the pass manually.
- */
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
-annotation class ExecuteLast
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.graph.casts
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+
+class CXXExpressionTest {
+    @Test
+    fun testExplicitTypeConversion() {
+        val file = File("src/test/resources/cxx/explicit_type_conversion.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // We should have two calls (int and myint64)
+        val casts = tu.casts
+        assertEquals(2, casts.size)
+        assertEquals(listOf("int", "myint64"), casts.map { it.name.localName })
+    }
+}

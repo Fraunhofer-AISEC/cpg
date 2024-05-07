@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -75,7 +74,8 @@ interface HasTemplates : HasGenerics {
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
+        currentTU: TranslationUnitDeclaration?,
+        needsExactMatch: Boolean
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
@@ -91,20 +91,6 @@ interface HasDefaultArguments : LanguageTrait
  */
 interface HasComplexCallResolution : LanguageTrait {
     /**
-     * A function that can be used to fine-tune resolution of a normal (non-method) [call].
-     *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
-     *
-     * @return a list of [FunctionDeclaration] candidates.
-     */
-    fun refineNormalCallResolution(
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration>
-
-    /**
      * A function that can be used to fine-tune resolution of a method [call].
      *
      * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
@@ -119,22 +105,6 @@ interface HasComplexCallResolution : LanguageTrait {
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
-    ): List<FunctionDeclaration>
-
-    /**
-     * A function to fine-tune the results of [CallResolver.getInvocationCandidatesFromRecord],
-     * which retrieves a list of [FunctionDeclaration] candidates from a [RecordDeclaration].
-     *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
-     *
-     * @return a list of [FunctionDeclaration] candidates.
-     */
-    fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
-        name: String,
-        ctx: TranslationContext
     ): List<FunctionDeclaration>
 }
 
@@ -245,9 +215,7 @@ interface HasAnonymousIdentifier : LanguageTrait {
  * [GlobalScope], i.e., not within a namespace, but directly contained in a
  * [TranslationUnitDeclaration].
  */
-interface HasGlobalVariables : LanguageTrait {
-    val globalVariableScopeClass: Class<out Node>
-}
+interface HasGlobalVariables : LanguageTrait
 
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
@@ -256,3 +224,9 @@ interface HasGlobalVariables : LanguageTrait {
  * ([ReplaceCallCastPass]) after the initial language frontends are done.
  */
 interface HasFunctionalCasts : LanguageTrait
+
+/**
+ * A language trait that specifies that this language allowed overloading functions, meaning that
+ * multiple functions can share the same name with different parameters.
+ */
+interface HasFunctionOverloading : LanguageTrait
