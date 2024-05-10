@@ -36,7 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateCX
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateH
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateS
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateSdg
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateT
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateTdg
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateX
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateY
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateZ
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMeasurement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -132,12 +138,54 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
                     newGate = newQuantumGateH(expr, currentCircuit, quBitRef)
                 }
+                "s" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateS(expr, currentCircuit, quBitRef)
+                }
+                "sdg" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateSdg(expr, currentCircuit, quBitRef)
+                }
+                "t" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateT(expr, currentCircuit, quBitRef)
+                }
+                "tdg" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateTdg(expr, currentCircuit, quBitRef)
+                }
                 "x" -> {
                     val idx = getArgAsInt(expr as MemberCallExpression, 0)
                     val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
 
                     val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
                     newGate = newQuantumGateX(expr, currentCircuit, quBitRef)
+                }
+                "y" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateY(expr, currentCircuit, quBitRef)
+                }
+                "z" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 0)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate = newQuantumGateZ(expr, currentCircuit, quBitRef)
                 }
                 "cx" -> {
                     val idx0 = getArgAsInt(expr as MemberCallExpression, 0)

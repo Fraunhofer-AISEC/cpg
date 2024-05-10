@@ -133,12 +133,96 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newQuantumGateS(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateS {
+        val node = QuantumGateS(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumGateSdg(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateSdg {
+        val node = QuantumGateSdg(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumGateT(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateT {
+        val node = QuantumGateT(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumGateTdg(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateTdg {
+        val node = QuantumGateTdg(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newQuantumGateX(
         cpgNode: Node? = null,
         quantumCircuit: QuantumCircuit,
         quantumBit0: QuantumBitReference
     ): QuantumGateX {
         val node = QuantumGateX(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumGateY(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateY {
+        val node = QuantumGateY(cpgNode, quantumCircuit, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumGateZ(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference
+    ): QuantumGateZ {
+        val node = QuantumGateZ(cpgNode, quantumCircuit, quantumBit0)
         quantumBit0.refersToQubit.relevantForGates.add(node)
         quantumCircuit.operations.add(node)
         NodeBuilder.log(node)

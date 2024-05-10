@@ -91,4 +91,18 @@ class OpenQASMFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
     }
+
+    @Test
+    fun testMoreOperations() {
+        val topLevel = Path.of("src", "test", "resources", "openqasm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("more_operations.qasm").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<OpenQasmLanguage>()
+            }
+        assertNotNull(tu)
+    }
 }
