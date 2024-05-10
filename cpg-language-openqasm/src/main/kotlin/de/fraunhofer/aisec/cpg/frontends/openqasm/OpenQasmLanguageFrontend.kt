@@ -296,16 +296,13 @@ class OpenQasmLanguageFrontend(
         }
     }
 
-    private fun handleIndexedIdentifier(IndexedIdentifier: IndexedIdentifierNode): Expression {
-        var name = IndexedIdentifier.identifier.payload
-        name += "["
-        name +=
-            ((IndexedIdentifier.indexOperators.first() as IndexOperatorNode)?.exprs?.first()
-                    as? DecimalIntegerLiteralExpressionNode)
-                ?.payload
-                ?: TODO()
-        name += "]"
-        return newReference(name, rawNode = IndexedIdentifier)
+    private fun handleIndexedIdentifier(indexedIdentifier: IndexedIdentifierNode): Expression {
+        var name = indexedIdentifier.identifier.payload
+        (indexedIdentifier.indexOperators.firstOrNull()?.exprs?.firstOrNull()
+                as? DecimalIntegerLiteralExpressionNode)
+            ?.payload
+            ?.let { name += "[$it]" }
+        return newReference(name, rawNode = indexedIdentifier)
     }
 
     private fun handleGateStatement(stmt: GateStatementNode): Statement {
