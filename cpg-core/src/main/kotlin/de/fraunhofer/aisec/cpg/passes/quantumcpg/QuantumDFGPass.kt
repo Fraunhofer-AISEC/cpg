@@ -59,7 +59,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     }
                 }
 
-            for (qubit in circuit.quantumBits!!) {
+            for (qubit in circuit.quantumBits ?: arrayOf()) {
 
                 if (operationIsRelevantForQubit(firstQuantumGate, qubit)) {
                     worklist.add(firstQuantumGate as? QuantumOperation ?: TODO())
@@ -106,10 +106,12 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
             is QuantumMeasure -> {
-                currentOperation.cBit.refersToClassicBit.references.forEach {
-                    // Really ugly hack to account for having multiple refs to the bit
-                    currentOperation.quBit.addNextDFG(it)
-                }
+                ((currentOperation.cBit as? ClassicBitReference)?.refersToClassicBit as? ClassicBit)
+                    ?.references
+                    ?.forEach {
+                        // Really ugly hack to account for having multiple refs to the bit
+                        currentOperation.quBit.addNextDFG(it)
+                    }
             }
             is ClassicIf -> {
                 val thenStmt = currentOperation.thenStatement

@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.quantumcpg
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import org.slf4j.LoggerFactory
 
 /** Builder for construction code property graph nodes. */
@@ -86,7 +88,7 @@ object QuantumNodeBuilder {
     fun newClassicBitRef(
         cpgNode: Node? = null,
         quantumCircuit: QuantumCircuit,
-        classicBit: ClassicBit,
+        classicBit: Declaration,
     ): ClassicBitReference {
         val node =
             ClassicBitReference(
@@ -95,7 +97,7 @@ object QuantumNodeBuilder {
                 classicBit,
             )
         NodeBuilder.log(node)
-        classicBit.references.add(node)
+        (classicBit as? ClassicBit)?.references?.add(node)
         return node
     }
 
@@ -247,11 +249,30 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newQuantumGateToffoli(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        quantumBit0: QuantumBitReference,
+        quantumBit1: QuantumBitReference,
+        quantumBit2: QuantumBitReference
+    ): QuantumToffoliGate {
+        val node =
+            QuantumToffoliGate(cpgNode, quantumCircuit, quantumBit0, quantumBit1, quantumBit2)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumBit1.refersToQubit.relevantForGates.add(node)
+        quantumBit2.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newQuantumMeasurement(
         cpgNode: Node? = null,
         quantumCircuit: QuantumCircuit,
         qubit: QuantumBitReference,
-        classicBit: ClassicBitReference
+        classicBit: Expression
     ): QuantumMeasure {
         val node = QuantumMeasure(cpgNode, quantumCircuit, qubit, classicBit)
         qubit.refersToQubit.relevantForGates.add(node)

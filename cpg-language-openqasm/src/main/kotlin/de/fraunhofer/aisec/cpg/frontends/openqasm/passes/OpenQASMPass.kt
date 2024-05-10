@@ -28,15 +28,13 @@ package de.fraunhofer.aisec.cpg.frontends.openqasm.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumBit
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumBitRef
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumCircuit
-import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumOperation
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
@@ -79,94 +77,160 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                 "h" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateH(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateH(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "s" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateS(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateS(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "sdg" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateSdg(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateSdg(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "t" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateT(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateT(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "tdg" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateTdg(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateTdg(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "x" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateX(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateX(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "y" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateY(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef =
+                            newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateY(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "z" -> {
                     val quBit = getArgAsQubit(quantumCircuit, expr.arguments[0])
 
-                    val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit)
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumGateZ(expr, quantumCircuit, quBitRef)
+                    quBit?.let {
+                        val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, it)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumGateZ(expr, quantumCircuit, quBitRef)
+                    }
                 }
                 "cx" -> {
                     val quBit0 = getArgAsQubit(quantumCircuit, expr.arguments[0])
                     val quBit1 = getArgAsQubit(quantumCircuit, expr.arguments[1])
 
-                    val quBitRef0 = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit0)
+                    val quBitRef0 =
+                        quBit0?.let { newQuantumBitRef(expr.arguments[0], quantumCircuit, it) }
 
-                    val quBitRef1 = newQuantumBitRef(expr.arguments.first(), quantumCircuit, quBit1)
+                    val quBitRef1 =
+                        quBit1?.let { newQuantumBitRef(expr.arguments[1], quantumCircuit, it) }
 
                     newOperation =
-                        QuantumNodeBuilder.newQuantumGateCX(
-                            expr,
-                            quantumCircuit,
-                            quBitRef0,
-                            quBitRef1
-                        )
+                        quBitRef0?.let {
+                            quBitRef1?.let { it1 ->
+                                QuantumNodeBuilder.newQuantumGateCX(expr, quantumCircuit, it, it1)
+                            }
+                        }
+                }
+                "ccx" -> {
+                    val quBit0 = getArgAsQubit(quantumCircuit, expr.arguments[0])
+                    val quBit1 = getArgAsQubit(quantumCircuit, expr.arguments[1])
+                    val quBit2 = getArgAsQubit(quantumCircuit, expr.arguments[2])
+
+                    val quBitRef0 =
+                        quBit0?.let { newQuantumBitRef(expr.arguments[0], quantumCircuit, it) }
+
+                    val quBitRef1 =
+                        quBit1?.let { newQuantumBitRef(expr.arguments[1], quantumCircuit, it) }
+                    val quBitRef2 =
+                        quBit2?.let { newQuantumBitRef(expr.arguments[2], quantumCircuit, it) }
+
+                    newOperation =
+                        quBitRef0?.let { it0 ->
+                            quBitRef1?.let { it1 ->
+                                quBitRef2?.let { it2 ->
+                                    QuantumNodeBuilder.newQuantumGateToffoli(
+                                        expr,
+                                        quantumCircuit,
+                                        it0,
+                                        it1,
+                                        it2
+                                    )
+                                }
+                            }
+                        }
                 }
                 "draw" -> {}
                 "measure" -> {
                     val qubit = getArgAsQubit(quantumCircuit, expr.arguments[0])
                     if (expr.arguments[1] !is Reference) TODO()
-                    val name = "Bit " + expr.arguments[1].name[2]
+                    val name = "Bit " + expr.arguments[1].name
                     val classicBitList =
                         quantumCircuit.classicBits?.filter { it.name == Name(name) }
-                    if (classicBitList?.size != 1) TODO()
-                    val classicBit = classicBitList.first()
+                    val classicBit: Declaration =
+                        classicBitList?.singleOrNull()
+                            ?: newProblemDeclaration(
+                                "Measuring to Bit with name ${name} led to ${classicBitList?.size} results"
+                            )
 
-                    newOperation =
-                        QuantumNodeBuilder.newQuantumMeasurement(
-                            expr,
-                            quantumCircuit,
-                            newQuantumBitRef(expr, quantumCircuit, qubit),
-                            newClassicBitRef(expr, quantumCircuit, classicBit)
-                        )
+                    qubit?.let {
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumMeasurement(
+                                expr,
+                                quantumCircuit,
+                                newQuantumBitRef(expr, quantumCircuit, it),
+                                newClassicBitRef(expr, quantumCircuit, classicBit)
+                            )
+                    }
                 }
-                else -> TODO("not implemented")
+                else -> {
+                    val argQuBits =
+                        expr.arguments.mapNotNull { arg ->
+                            getArgAsQubit(quantumCircuit, arg)?.let { qubit ->
+                                newQuantumBitRef(arg, quantumCircuit, qubit)
+                            }
+                        }
+
+                    UnknownQuantumGate(expr, quantumCircuit, *argQuBits.toTypedArray())
+                }
             }
 
             // save the gate to the graph
@@ -177,13 +241,14 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         }
     }
 
-    private fun getArgAsQubit(circuit: QuantumCircuit, ref: Node): QuantumBit {
-        // TODO not really correct.... Find a solution for the naming problem...
+    private fun getArgAsQubit(circuit: QuantumCircuit, ref: Node): QuantumBit? {
         if (ref !is Reference) TODO()
-        val name = "Qubit " + ref.name[2]
-        val qubit = circuit.quantumBits?.filter { it.name == Name(name) }
-        if (qubit?.size != 1) TODO()
-        return qubit.first()
+        val name =
+            "Qubit " +
+                ref.name // TODO: Ideally, the name should be some FQN and differ between different
+        // custom gates.
+        val qubit = circuit.quantumBits?.singleOrNull { it.name == Name(name) }
+        return qubit
     }
 
     override fun cleanup() {
