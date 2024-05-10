@@ -244,8 +244,8 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private fun getArgAsQubit(circuit: QuantumCircuit, ref: Node): QuantumBit? {
         if (ref !is Reference) TODO()
         val name =
-            "Qubit " +
-                ref.name // TODO: Ideally, the name should be some FQN and differ between different
+            "Qubit " + ref.name[2] // TODO: Ideally, the name should be some FQN and differ between
+        // different
         // custom gates.
         val qubit = circuit.quantumBits?.singleOrNull { it.name == Name(name) }
         return qubit
