@@ -248,6 +248,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         if (refersTo != null) {
             current.refersTo = refersTo
+            resolveType(current.type)
         } else {
             Util.warnWithFileLocation(
                 current,
@@ -255,6 +256,23 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Did not find a declaration for ${current.name}"
             )
         }
+    }
+
+    private fun resolveType(type: Type) {
+        when (type) {
+            is TypeReference -> resolveTypeReference(type)
+            is PointerType -> resolveType(type.elementType)
+            is ReferenceType -> resolveType(type.elementType)
+        }
+    }
+
+    private fun resolveTypeReference(type: TypeReference) {
+        // TODO(oxisto): merge this somehow with resolveReference
+        // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
+        // resolution, but in future this will also be used in resolving regular references.
+        type.candidates = scopeManager.findSymbols(type.name, startScope = type.scope).toSet()
+
+        type.refersTo = type.candidates.filterIsInstance<DeclaresType>().singleOrNull()
     }
 
     /**

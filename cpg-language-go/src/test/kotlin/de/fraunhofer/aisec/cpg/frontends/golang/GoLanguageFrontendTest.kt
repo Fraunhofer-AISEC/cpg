@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.TypeReference
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -253,7 +254,7 @@ class GoLanguageFrontendTest : BaseTest() {
             )
         assertNotNull(composite)
         assertIs<InitializerListExpression>(composite)
-        assertIs<ObjectType>(composite.type)
+        assertIs<TypeReference>(composite.type)
         assertLocalName("MyStruct", composite.type)
 
         var keyValue = composite.initializers<KeyValueExpression>(0)
@@ -272,7 +273,7 @@ class GoLanguageFrontendTest : BaseTest() {
             )
         assertNotNull(composite)
         assertIs<InitializerListExpression>(composite)
-        assertIs<ObjectType>(composite.type)
+        assertIs<TypeReference>(composite.type)
         assertLocalName("MyStruct", composite.type)
 
         keyValue = composite.initializers<KeyValueExpression>(0)

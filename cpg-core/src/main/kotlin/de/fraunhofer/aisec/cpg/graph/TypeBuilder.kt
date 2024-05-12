@@ -87,7 +87,11 @@ fun Type.ref(): Type {
     return c.typeManager.registerType(type)
 }
 
-fun LanguageProvider.typeReference(name: CharSequence, generics: List<Type> = listOf()): Type {
+fun LanguageProvider.typeReference(
+    name: CharSequence,
+    generics: List<Type> = listOf(),
+    rawNode: Any? = null
+): Type {
     // First, we check, whether this is a built-in type, to avoid necessary allocations of simple
     // types
     val builtIn = language?.getSimpleTypeOf(name.toString())
@@ -95,7 +99,8 @@ fun LanguageProvider.typeReference(name: CharSequence, generics: List<Type> = li
         return builtIn
     }
 
-    var type = TypeReference(name, generics, language)
+    val type = TypeReference(name, generics, language)
+    type.applyMetadata(this, name, rawNode = rawNode)
 
     return type
 }

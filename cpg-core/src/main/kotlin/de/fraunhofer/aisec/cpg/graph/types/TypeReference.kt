@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * This class represents a usage of a [Type]. This class should primarily be used in all nodes that
@@ -39,10 +41,18 @@ class TypeReference(name: CharSequence, generics: List<Type>, language: Language
 
     var refersTo: DeclaresType? = null
 
+    var candidates: Set<Declaration> = setOf()
+
     val referringType: Type?
         get() {
             return refersTo?.declaringType
         }
+
+    override var superTypes: MutableSet<Type>
+        get() {
+            return referringType?.superTypes ?: mutableSetOf()
+        }
+        set(_) {}
 
     override var typeOrigin: Origin?
         get() {
@@ -55,11 +65,11 @@ class TypeReference(name: CharSequence, generics: List<Type>, language: Language
         set(_) {}
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        TODO("Not yet implemented")
+        return PointerType(this, pointer)
     }
 
     override fun dereference(): Type {
-        TODO("Not yet implemented")
+        return unknownType()
     }
 
     override fun equals(other: Any?): Boolean {

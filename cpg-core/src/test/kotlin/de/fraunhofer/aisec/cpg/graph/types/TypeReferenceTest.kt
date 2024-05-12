@@ -27,15 +27,16 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.typeReference
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
+import kotlin.test.*
 
 class TypeReferenceTest {
     @Test
     fun testTypeReferences() {
         with(TestLanguageFrontend()) {
+            scopeManager.resetToGlobal(null)
+
             // construct our type
             val myClass = newRecordDeclaration("MyClass", kind = "class")
             val type = myClass.declaringType
@@ -49,6 +50,8 @@ class TypeReferenceTest {
             // assert symmetric equals
             assertEquals(ref, type)
             assertEquals(type, ref)
+
+            assertTrue(ref.scope is GlobalScope)
         }
     }
 }

@@ -53,7 +53,7 @@ abstract class Type : Node {
     /** All direct supertypes of this type. */
     @PopulatedByPass(TypeHierarchyResolver::class)
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
-    var superTypes = mutableSetOf<Type>()
+    open var superTypes = mutableSetOf<Type>()
         protected set
 
     var isPrimitive = false
@@ -248,7 +248,11 @@ abstract class Type : Node {
 /** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
 var Type.recordDeclaration: RecordDeclaration?
     get() {
-        return (this as? ObjectType)?.recordDeclaration
+        return when (this) {
+            is ObjectType -> this.recordDeclaration
+            is TypeReference -> this.refersTo as? RecordDeclaration
+            else -> null
+        }
     }
     set(value) {
         if (this is ObjectType) {

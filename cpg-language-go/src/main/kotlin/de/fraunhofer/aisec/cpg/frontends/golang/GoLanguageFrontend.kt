@@ -243,16 +243,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         val cpgType =
             when (type) {
                 is GoStandardLibrary.Ast.Ident -> {
-                    val name: String =
-                        if (isBuiltinType(type.name)) {
-                            // Definitely not an FQN type
-                            type.name
-                        } else {
-                            // FQN'ize this name (with the current file)
-                            "${currentFile?.name?.name}.${type.name}" // this.File.Name.Name
-                        }
-
-                    objectType(name)
+                    if (isBuiltinType(type.name)) {
+                        // Definitely not an FQN type
+                        primitiveType(type.name)
+                    } else {
+                        typeReference(type.name)
+                    }
                 }
                 is GoStandardLibrary.Ast.SelectorExpr -> {
                     // This is a FQN type
