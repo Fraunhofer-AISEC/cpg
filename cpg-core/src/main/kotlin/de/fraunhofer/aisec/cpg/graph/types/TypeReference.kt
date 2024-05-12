@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.DeclaresType
 
 /**
  * This class represents a usage of a [Type]. This class should primarily be used in all nodes that
@@ -35,11 +36,42 @@ import de.fraunhofer.aisec.cpg.frontends.Language
  */
 class TypeReference(name: CharSequence, generics: List<Type>, language: Language<*>?) :
     Type(name, generics, language) {
+
+    var refersTo: DeclaresType? = null
+
+    val referringType: Type?
+        get() {
+            return refersTo?.declaringType
+        }
+
+    override var typeOrigin: Origin?
+        get() {
+            return if (refersTo == null) {
+                Origin.UNRESOLVED
+            } else {
+                Origin.RESOLVED
+            }
+        }
+        set(_) {}
+
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         TODO("Not yet implemented")
     }
 
     override fun dereference(): Type {
         TODO("Not yet implemented")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Type) return false
+
+        // If this reference is unresolved, we can compare it directly to other type references.  If
+        // it is resolved, we need to delegate the equals to our referredType
+        return referringType?.equals(other) ?: super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        return referringType?.hashCode() ?: super.hashCode()
     }
 }

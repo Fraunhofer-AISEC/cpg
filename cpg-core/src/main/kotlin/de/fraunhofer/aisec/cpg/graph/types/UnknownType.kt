@@ -57,6 +57,7 @@ class UnknownType private constructor() : Type() {
     override fun hashCode() = Objects.hash(super.hashCode())
 
     override fun equals(other: Any?): Boolean {
+        if (typeReferenceEquals(other)) return true
         return other is UnknownType
     }
 

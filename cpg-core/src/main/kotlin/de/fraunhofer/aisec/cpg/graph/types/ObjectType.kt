@@ -86,6 +86,7 @@ open class ObjectType : Type {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        if (typeReferenceEquals(other)) return true
         if (other !is ObjectType) return false
         if (!super.equals(other)) return false
         return isPrimitive == other.isPrimitive

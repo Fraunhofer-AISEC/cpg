@@ -74,6 +74,7 @@ class ReferenceType : Type, SecondOrderType {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        if (typeReferenceEquals(other)) return true
         if (other !is ReferenceType) return false
         return super.equals(other) && elementType == other.elementType
     }

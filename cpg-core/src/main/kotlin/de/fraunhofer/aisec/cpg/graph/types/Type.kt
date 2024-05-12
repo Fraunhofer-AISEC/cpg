@@ -197,6 +197,8 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        if (typeReferenceEquals(other)) return true
+
         return other is Type &&
             generics == other.generics &&
             propertyEqualsList(genericsPropertyEdges, other.genericsPropertyEdges) &&
@@ -253,3 +255,20 @@ var Type.recordDeclaration: RecordDeclaration?
             this.recordDeclaration = value
         }
     }
+
+/**
+ * In order to achieve symmetric equals, we need to peek whether the "other" is a type. reference,
+ * and if yes, we need to compare with its referringType instead.
+ *
+ * This function needs to be called in all [Type.equals] functions and their overrides like this:
+ * ```
+ * if (typeReferenceEquals(other)) return true
+ * ```
+ */
+fun Type.typeReferenceEquals(other: Any?): Boolean {
+    if (other is TypeReference) {
+        return other.referringType?.equals(this) ?: false
+    }
+
+    return false
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,30 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import java.util.*
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.typeReference
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
-/** This type collects all kind of numeric types. */
-open class NumericType(
-    typeName: CharSequence = "",
-    val bitWidth: Int? = null,
-    language: Language<*>? = null,
-    val modifier: Modifier = Modifier.SIGNED
-) : ObjectType(typeName, listOf(), true, language) {
-    /**
-     * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
-     * neither of the signed/unsigned option.
-     */
-    enum class Modifier {
-        SIGNED,
-        UNSIGNED,
-        NOT_APPLICABLE
+class TypeReferenceTest {
+    @Test
+    fun testTypeReferences() {
+        with(TestLanguageFrontend()) {
+            // construct our type
+            val myClass = newRecordDeclaration("MyClass", kind = "class")
+            val type = myClass.declaringType
+
+            // construct a type reference
+            val ref = typeReference("MyClass")
+            assertIs<TypeReference>(ref)
+            // mock type resolution
+            ref.refersTo = myClass
+
+            // assert symmetric equals
+            assertEquals(ref, type)
+            assertEquals(type, ref)
+        }
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (typeReferenceEquals(other)) return true
-        return super.equals(other) && this.modifier == (other as? NumericType)?.modifier
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), generics, modifier, isPrimitive)
 }

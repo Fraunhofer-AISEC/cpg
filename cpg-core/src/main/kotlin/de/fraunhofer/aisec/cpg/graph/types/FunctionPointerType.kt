@@ -89,6 +89,7 @@ class FunctionPointerType : Type {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        if (typeReferenceEquals(other)) return true
         if (other !is FunctionPointerType) return false
         return super.equals(other) &&
             parameters == other.parameters &&

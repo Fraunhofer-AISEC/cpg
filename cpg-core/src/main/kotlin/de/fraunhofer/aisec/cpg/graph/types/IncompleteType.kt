@@ -52,6 +52,7 @@ class IncompleteType : Type {
     }
 
     override fun equals(other: Any?): Boolean {
+        if (typeReferenceEquals(other)) return true
         return other is IncompleteType
     }
 
