@@ -31,6 +31,10 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
@@ -55,29 +59,39 @@ abstract class Type : Node {
     var isPrimitive = false
         protected set
 
+    @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
+    var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
+        private set
+
+    var generics by PropertyEdgeDelegate(Type::genericsPropertyEdges)
+        private set
+
     open var typeOrigin: Origin? = null
 
     constructor() {
         name = Name(EMPTY_NAME, null, language)
+        genericsPropertyEdges = ArrayList()
     }
 
-    constructor(typeName: String?) {
-        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
-        typeOrigin = Origin.UNRESOLVED
-    }
-
-    constructor(type: Type?) {
+    constructor(type: Type?, generics: List<Type>? = listOf(), language: Language<*>? = null) {
         type?.name?.let { name = it.clone() }
+        this.language = language
+        this.genericsPropertyEdges = wrap(generics ?: listOf(), this)
         typeOrigin = type?.typeOrigin
     }
 
-    constructor(typeName: CharSequence, language: Language<*>?) {
+    constructor(
+        typeName: CharSequence,
+        generics: List<Type>? = listOf(),
+        language: Language<*>? = null
+    ) {
         name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
             } else {
                 language.parseName(typeName)
             }
+        this.genericsPropertyEdges = wrap(generics ?: listOf(), this)
         this.language = language
         typeOrigin = Origin.UNRESOLVED
     }
@@ -183,10 +197,14 @@ abstract class Type : Node {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return other is Type && name == other.name && language == other.language
+        return other is Type &&
+            generics == other.generics &&
+            propertyEqualsList(genericsPropertyEdges, other.genericsPropertyEdges) &&
+            name == other.name &&
+            language == other.language
     }
 
-    override fun hashCode() = Objects.hash(name, language)
+    override fun hashCode() = Objects.hash(name, language, generics)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE).append("name", name).toString()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,21 +26,20 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
- * This type represents a [Type] that uses auto-inference (usually from an initializer) to determine
- * it's actual type. It is commonly used in dynamically typed languages or in languages that have a
- * special keyword, such as `auto` in C++.
- *
- * Note: This is intentionally a distinct type and not the [UnknownType].
+ * This class represents a usage of a [Type]. This class should primarily be used in all nodes that
+ * implement [HasType] because usually during the translation phase, we do not know the exact type
+ * (i.e., its FQN). Therefore, this class should be in the [HasType.type], with one of the very few
+ * exceptions being types in a [Language.builtInTypes].
  */
-class AutoType(override var language: Language<*>?) : Type("auto", language = language) {
+class TypeReference(name: CharSequence, generics: List<Type>, language: Language<*>?) :
+    Type(name, generics, language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        TODO("Not yet implemented")
     }
 
     override fun dereference(): Type {
-        return unknownType()
+        TODO("Not yet implemented")
     }
 }

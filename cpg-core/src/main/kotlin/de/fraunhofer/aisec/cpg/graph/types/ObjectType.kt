@@ -28,15 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
@@ -49,22 +44,13 @@ open class ObjectType : Type {
      */
     @PopulatedByPass(TypeResolver::class) var recordDeclaration: RecordDeclaration? = null
 
-    @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
-    var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
-        private set
-
-    var generics by PropertyEdgeDelegate(ObjectType::genericsPropertyEdges)
-        private set
-
     constructor(
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
         language: Language<*>?
-    ) : super(typeName, language) {
-        this.genericsPropertyEdges = wrap(generics, this)
+    ) : super(typeName, generics, language) {
         isPrimitive = primitive
-        this.language = language
     }
 
     constructor(
@@ -72,15 +58,12 @@ open class ObjectType : Type {
         generics: List<Type>,
         primitive: Boolean,
         language: Language<*>?
-    ) : super(type) {
-        this.language = language
-        this.genericsPropertyEdges = wrap(generics, this)
+    ) : super(type, generics, language) {
         isPrimitive = primitive
     }
 
     /** Empty default constructor for use in Neo4J persistence. */
     constructor() : super() {
-        genericsPropertyEdges = ArrayList()
         isPrimitive = false
     }
 
@@ -105,10 +88,8 @@ open class ObjectType : Type {
         if (this === other) return true
         if (other !is ObjectType) return false
         if (!super.equals(other)) return false
-        return generics == other.generics &&
-            propertyEqualsList(genericsPropertyEdges, other.genericsPropertyEdges) &&
-            isPrimitive == other.isPrimitive
+        return isPrimitive == other.isPrimitive
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), generics, isPrimitive)
+    override fun hashCode() = Objects.hash(super.hashCode(), isPrimitive)
 }

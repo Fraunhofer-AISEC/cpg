@@ -57,7 +57,7 @@ class FunctionPointerType : Type {
         parameters: List<Type> = listOf(),
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
-    ) : super(EMPTY_NAME, language) {
+    ) : super(EMPTY_NAME, language = language) {
         parametersPropertyEdge = wrap(parameters, this)
         this.returnType = returnType
     }

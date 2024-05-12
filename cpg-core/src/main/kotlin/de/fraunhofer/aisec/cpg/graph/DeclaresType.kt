@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,24 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.types
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
-/**
- * This type represents a [Type] that uses auto-inference (usually from an initializer) to determine
- * it's actual type. It is commonly used in dynamically typed languages or in languages that have a
- * special keyword, such as `auto` in C++.
- *
- * Note: This is intentionally a distinct type and not the [UnknownType].
- */
-class AutoType(override var language: Language<*>?) : Type("auto", language = language) {
-    override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        return PointerType(this, pointer)
-    }
-
-    override fun dereference(): Type {
-        return unknownType()
-    }
+/** Denotes that this node (most likely a [Declaration]) declares the type in [declaringType]. */
+interface DeclaresType {
+    /** The type, this node declares. */
+    val declaringType: Type
 }

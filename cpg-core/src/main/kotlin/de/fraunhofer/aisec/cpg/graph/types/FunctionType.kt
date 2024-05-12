@@ -43,7 +43,7 @@ constructor(
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
     language: Language<*>? = null
-) : Type(typeName, language) {
+) : Type(typeName, language = language) {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType

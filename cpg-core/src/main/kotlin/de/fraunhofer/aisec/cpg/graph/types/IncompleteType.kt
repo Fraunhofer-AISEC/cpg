@@ -37,7 +37,7 @@ import java.util.*
  * unknown size apart from void. Therefore, this Type is not called VoidType
  */
 class IncompleteType : Type {
-    constructor() : super("void", null)
+    constructor() : super("void")
 
     constructor(type: Type?) : super(type)
 

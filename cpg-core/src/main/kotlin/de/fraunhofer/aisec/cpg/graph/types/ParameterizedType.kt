@@ -32,14 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
  * ParameterizedTypes describe types, that are passed as parameters to classes, e.g. uninitialized
  * generics in the graph are represented as [ParameterizedType] nodes.
  */
-class ParameterizedType : Type {
-    constructor(type: Type) : super(type) {
-        language = type.language
-    }
-
-    constructor(typeName: String?, language: Language<*>?) : super(typeName) {
-        this.language = language
-    }
+class ParameterizedType(typeName: CharSequence, language: Language<*>?) :
+    Type(typeName, language = language) {
 
     override fun reference(pointer: PointerOrigin?): Type {
         return PointerType(this, pointer)

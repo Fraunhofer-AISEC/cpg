@@ -87,6 +87,19 @@ fun Type.ref(): Type {
     return c.typeManager.registerType(type)
 }
 
+fun LanguageProvider.typeReference(name: CharSequence, generics: List<Type> = listOf()): Type {
+    // First, we check, whether this is a built-in type, to avoid necessary allocations of simple
+    // types
+    val builtIn = language?.getSimpleTypeOf(name.toString())
+    if (builtIn != null) {
+        return builtIn
+    }
+
+    var type = TypeReference(name, generics, language)
+
+    return type
+}
+
 /**
  * This function returns an [ObjectType] with the given [name]. If a respective [Type] does not yet
  * exist, it will be created In order to avoid unnecessary allocation of simple types, we do a
