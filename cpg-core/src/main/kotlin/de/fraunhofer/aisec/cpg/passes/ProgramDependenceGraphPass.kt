@@ -101,7 +101,9 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
 
         while (worklist.isNotEmpty()) {
             val currentStatus = worklist.removeFirst()
-            alreadySeenNodes.add(currentStatus)
+            if (!alreadySeenNodes.add(currentStatus)) {
+                continue
+            }
             val nextEOG = currentStatus.nextEOG.filter { it != through }
             if (nextEOG.isEmpty()) {
                 // This path always flows through "through" or has not seen "to", so we're good
