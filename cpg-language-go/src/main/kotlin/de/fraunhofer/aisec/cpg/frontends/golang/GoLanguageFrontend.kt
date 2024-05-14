@@ -247,6 +247,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                         // Definitely not an FQN type
                         primitiveType(type.name)
                     } else {
+                        // objectType("${currentFile?.name?.name}.${type.name}")
                         typeReference(type.name)
                     }
                 }
@@ -492,7 +493,10 @@ val Type?.underlyingType: Type?
  */
 val Type?.namedType: Boolean
     get() {
-        return this is ObjectType && this.recordDeclaration?.kind == "type"
+        return this is ObjectType && this.recordDeclaration?.kind == "type" ||
+            this is TypeReference &&
+                this.referringType is ObjectType &&
+                (this.referringType as ObjectType).recordDeclaration?.kind == "type"
     }
 
 val Type.isInterface: Boolean

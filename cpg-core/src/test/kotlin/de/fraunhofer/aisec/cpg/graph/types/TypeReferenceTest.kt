@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ref
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.typeReference
 import kotlin.test.*
@@ -52,6 +53,19 @@ class TypeReferenceTest {
             assertEquals(type, ref)
 
             assertTrue(ref.scope is GlobalScope)
+
+            val p = ref.reference(PointerType.PointerOrigin.POINTER)
+            assertNotNull(p)
+
+            val p2 = ref.reference(PointerType.PointerOrigin.POINTER)
+            assertNotNull(p2)
+
+            assertEquals(p, p2)
+
+            val set = mutableSetOf<Type>()
+            set.add(p)
+            set.add(p2)
+            println(set)
         }
     }
 }

@@ -57,6 +57,7 @@ class TypeManager {
 
     val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
     val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    val references: MutableList<TypeReference> = Collections.synchronizedList(mutableListOf())
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -196,6 +197,10 @@ class TypeManager {
         // Skip as they should be unique to each class and not globally unique
         if (t is ParameterizedType) {
             return t
+        }
+
+        if (t is TypeReference) {
+            references += t
         }
 
         if (t.isFirstOrderType) {

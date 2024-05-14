@@ -111,6 +111,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(DFGPass::class)
 @DependsOn(ImportResolver::class)
+@DependsOn(TypeResolver::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker

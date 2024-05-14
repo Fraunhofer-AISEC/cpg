@@ -99,8 +99,17 @@ fun LanguageProvider.typeReference(
         return builtIn
     }
 
+    // Otherwise, we need to create a new type and register it at the type manager
+    val c =
+        (this as? ContextProvider)?.ctx
+            ?: throw TranslationException(
+                "Could not create type: translation context not available"
+            )
+
     val type = TypeReference(name, generics, language)
     type.applyMetadata(this, name, rawNode = rawNode)
+
+    c.typeManager.registerType(type)
 
     return type
 }
