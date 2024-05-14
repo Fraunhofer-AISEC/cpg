@@ -290,10 +290,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.last()
-        // If add doesn't work, it means we already checked this node
-        if (!alreadySeenNodes.add(currentNode)) {
-            continue
-        }
+
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
         if (currentNode.nextFullDFG.isEmpty()) {
@@ -325,7 +322,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
                     indexedPath.all {
                         it.first == 0 || currentNode != currentPath[it.first - 1]
                     }) &&
-                    (findAllPossiblePaths ||
+                    ((findAllPossiblePaths && currentPath.count { it == next } <= 2) ||
                         (next !in alreadySeenNodes && worklist.none { next in it }))
             ) {
                 worklist.add(nextPath)
