@@ -332,7 +332,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         typeDecl: T,
         recordDeclaration: RecordDeclaration,
     ) {
-        // TODO: 'this' identifier for multiple instances?
         for (decl in typeDecl.members) {
             (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
                 handle(it) // will be added via the scopemanager
