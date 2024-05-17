@@ -487,7 +487,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             is PrimitiveType -> primitiveType(type.asString())
             is ClassOrInterfaceType ->
                 objectType(
-                    type.nameAsString,
+                    type.nameWithScope,
                     type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf()
                 )
             is ReferenceType -> objectType(type.asString())
