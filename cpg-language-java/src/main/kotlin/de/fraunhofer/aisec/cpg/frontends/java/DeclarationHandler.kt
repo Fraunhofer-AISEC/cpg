@@ -207,12 +207,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
-            // to
-            // store
+            // to store
             // a "this" reference to the outer class, so methods can use a "qualified this"
             // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
-            // reference
-            // is stored as an implicit field.
+            // reference is stored as an implicit field.
             processInnerRecord(recordDeclaration)
         }
         return recordDeclaration
@@ -318,12 +316,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
-            // to
-            // store
+            // to store
             // a "this" reference to the outer class, so methods can use a "qualified this"
             // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
-            // reference
-            // is stored as an implicit field.
+            // reference is stored as an implicit field.
             processInnerRecord(enumDeclaration)
         }
         return enumDeclaration
@@ -415,16 +411,19 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.expressionHandler.handle(it)
                         as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 }
+            // TODO: This call resolution in the frontend might fail, in particular if we haven't
+            // processed the constructor yet. Should be cleaned up in the future but requires
+            // changes to the starting points of call/symbol resolution.
             val matchingConstructor =
                 currentEnum?.constructors?.singleOrNull {
                     it.matchesSignature(arguments.map { it.type }).isDirectMatch
                 }
-            matchingConstructor?.let {
-                val constructExpr = newConstructExpression(matchingConstructor.name)
-                arguments.forEach { constructExpr.addArgument(it) }
-                constructExpr.constructor = matchingConstructor
-                result.initializer = constructExpr
-            }
+
+            val constructExpr =
+                newConstructExpression(matchingConstructor?.name ?: currentEnum?.name)
+            arguments.forEach { constructExpr.addArgument(it) }
+            matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
+            result.initializer = constructExpr
         }
         return result
     }
