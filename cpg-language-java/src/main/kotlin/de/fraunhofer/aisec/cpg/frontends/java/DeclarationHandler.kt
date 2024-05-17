@@ -235,8 +235,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     fun handleFieldDeclaration(
         fieldDecl: com.github.javaparser.ast.body.FieldDeclaration
-    ): FieldDeclaration? {
-        var fieldDeclaration: FieldDeclaration? = null
+    ): DeclarationSequence {
+        val declarationSequence = DeclarationSequence()
 
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
 
@@ -282,7 +282,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     type.typeOrigin = Type.Origin.GUESSED
                 }
             }
-            fieldDeclaration =
+            val fieldDeclaration =
                 this.newFieldDeclaration(
                     variable.name.asString(),
                     type,
@@ -292,8 +292,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 )
             frontend.scopeManager.addDeclaration(fieldDeclaration)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
+            declarationSequence.addDeclaration(fieldDeclaration)
         }
-        return fieldDeclaration
+        return declarationSequence
     }
 
     fun handleEnumDeclaration(
