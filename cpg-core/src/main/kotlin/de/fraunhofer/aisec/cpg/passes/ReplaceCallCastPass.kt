@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -133,6 +130,11 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     cast.expression = call.arguments.single()
     cast.name = cast.castType.name
 
+    replaceArgument(parent, call, cast)
+}
+
+context(ContextProvider)
+fun SubgraphWalker.ScopedWalker.replaceArgument(parent: Node?, old: Expression, new: Expression) {
     if (parent !is ArgumentHolder) {
         Pass.log.error(
             "Parent AST node of call expression is not an argument holder. Cannot convert to cast expression. Further analysis might not be entirely accurate."
@@ -140,15 +142,15 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
         return
     }
 
-    val success = parent.replaceArgument(call, cast)
+    val success = parent.replaceArgument(old, new)
     if (!success) {
         Pass.log.error(
-            "Replacing call expression with cast expression was not successful. Further analysis might not be entirely accurate."
+            "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
         )
     } else {
-        call.disconnectFromGraph()
+        old.disconnectFromGraph()
 
         // Make sure to inform the walker about our change
-        this.registerReplacement(call, cast)
+        this.registerReplacement(old, new)
     }
 }
