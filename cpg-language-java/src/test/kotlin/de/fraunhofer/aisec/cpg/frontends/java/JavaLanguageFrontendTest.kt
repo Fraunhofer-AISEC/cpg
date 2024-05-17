@@ -873,6 +873,23 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(constructor.parameters["value"])
         assertNotNull(constructor.bodyOrNull<AssignExpression>(0))
 
+        val entryOne = enum.entries.singleOrNull { it.name.localName == "VALUE_ONE" }
+        assertEquals(
+            1,
+            ((entryOne?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
+                    as? Literal<*>)
+                ?.value
+        )
+        assertEquals(constructor, (entryOne?.initializer as? ConstructExpression)?.constructor)
+        val entryTwo = enum.entries.singleOrNull { it.name.localName == "VALUE_TWO" }
+        assertEquals(
+            2,
+            ((entryTwo?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
+                    as? Literal<*>)
+                ?.value
+        )
+        assertEquals(constructor, (entryTwo?.initializer as? ConstructExpression)?.constructor)
+
         val mainMethod = enum.methods["main"]
         assertNotNull(mainMethod)
         assertNotNull(mainMethod.parameters["args"])
