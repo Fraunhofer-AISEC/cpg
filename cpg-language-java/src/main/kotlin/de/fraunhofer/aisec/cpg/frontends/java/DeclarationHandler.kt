@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.matchesSignature
 import java.util.function.Supplier
 import kotlin.collections.set
 
@@ -206,12 +207,10 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
-            // to
-            // store
+            // to store
             // a "this" reference to the outer class, so methods can use a "qualified this"
             // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
-            // reference
-            // is stored as an implicit field.
+            // reference is stored as an implicit field.
             processInnerRecord(recordDeclaration)
         }
         return recordDeclaration
@@ -310,22 +309,20 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         frontend.scopeManager.enterScope(enumDeclaration)
 
+        processRecordMembers(enumDecl, enumDeclaration)
+
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
         enumDeclaration.entries = entries
-
-        processRecordMembers(enumDecl, enumDeclaration)
 
         frontend.scopeManager.leaveScope(enumDeclaration)
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
-            // to
-            // store
+            // to store
             // a "this" reference to the outer class, so methods can use a "qualified this"
             // (OuterClass.this.someFunction()). This is the same as the java compiler does. The
-            // reference
-            // is stored as an implicit field.
+            // reference is stored as an implicit field.
             processInnerRecord(enumDeclaration)
         }
         return enumDeclaration
@@ -408,7 +405,30 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumConstantDeclaration(
         enumConstDecl: com.github.javaparser.ast.body.EnumConstantDeclaration
     ): EnumConstantDeclaration {
-        return this.newEnumConstantDeclaration(enumConstDecl.nameAsString, rawNode = enumConstDecl)
+        val currentEnum = frontend.scopeManager.currentRecord
+        val result =
+            this.newEnumConstantDeclaration(enumConstDecl.nameAsString, rawNode = enumConstDecl)
+        if (enumConstDecl.arguments.isNotEmpty()) {
+            val arguments =
+                enumConstDecl.arguments.mapNotNull {
+                    frontend.expressionHandler.handle(it)
+                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                }
+            // TODO: This call resolution in the frontend might fail, in particular if we haven't
+            // processed the constructor yet. Should be cleaned up in the future but requires
+            // changes to the starting points of call/symbol resolution.
+            val matchingConstructor =
+                currentEnum?.constructors?.singleOrNull {
+                    it.matchesSignature(arguments.map { it.type }).isDirectMatch
+                }
+
+            val constructExpr =
+                newConstructExpression(matchingConstructor?.name ?: currentEnum?.name)
+            arguments.forEach { constructExpr.addArgument(it) }
+            matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
+            result.initializer = constructExpr
+        }
+        return result
     }
 
     fun /* TODO refine return type*/ handleAnnotationDeclaration(
