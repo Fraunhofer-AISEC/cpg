@@ -29,6 +29,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 class MultiplicativeAsteriskExpressionNode(
     location: PhysicalLocation,
-    val lhs: ExpressionNode,
-    val rhs: ExpressionNode
-) : MultiplicativeExpressionNode(location)
+    lhs: ExpressionNode,
+    rhs: ExpressionNode
+) : MultiplicativeExpressionNode(location, lhs, rhs)

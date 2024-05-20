@@ -27,4 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.openqasm.astnodes
 
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
-abstract class MultiplicativeExpressionNode(location: PhysicalLocation) : ExpressionNode(location)
+abstract class MultiplicativeExpressionNode(
+    location: PhysicalLocation,
+    val lhs: ExpressionNode,
+    val rhs: ExpressionNode
+) : ExpressionNode(location)

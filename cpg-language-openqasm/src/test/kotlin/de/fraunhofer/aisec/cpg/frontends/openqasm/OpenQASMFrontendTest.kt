@@ -105,4 +105,18 @@ class OpenQASMFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
     }
+
+    @Test
+    fun testRotation() {
+        val topLevel = Path.of("src", "test", "resources", "openqasm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("rotation.qasm").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<OpenQasmLanguage>()
+            }
+        assertNotNull(tu)
+    }
 }

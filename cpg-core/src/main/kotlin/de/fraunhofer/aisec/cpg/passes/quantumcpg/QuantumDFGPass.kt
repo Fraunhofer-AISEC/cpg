@@ -105,6 +105,9 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     connectQubitWithNextOperation(currentOperation.quBit1, nextOperation)
                 }
             }
+            is QuantumRotationGate -> {
+                connectQubitWithNextOperation(currentOperation.quantumBit, nextOperation)
+            }
             is QuantumMeasure -> {
                 ((currentOperation.cBit as? ClassicBitReference)?.refersToClassicBit as? ClassicBit)
                     ?.references
@@ -209,6 +212,9 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is QuantumMeasure -> {
                 op.quBit.refersToQubit == qubit
             }
+            is QuantumRotationGate -> {
+                op.quantumBit.refersToQubit == qubit
+            }
             is ClassicIf -> {
                 // Check condition
                 val thenStmt = op.thenStatement as? QuantumOperation ?: TODO()
@@ -233,6 +239,9 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
                 is QuantumGateH -> {
                     // nothing to do
+                }
+                is QuantumRotationGate -> {
+                    op.theta.addNextDFG(op.quantumBit)
                 }
                 is QuantumMeasure -> {
                     // data flow from qubit to classic bit

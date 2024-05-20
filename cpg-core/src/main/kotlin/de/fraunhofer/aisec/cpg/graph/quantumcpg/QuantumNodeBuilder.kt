@@ -233,6 +233,51 @@ object QuantumNodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newQuantumRotationXGate(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        theta: Node,
+        quantumBit0: QuantumBitReference
+    ): QuantumRotationXGate {
+        val node = QuantumRotationXGate(cpgNode, quantumCircuit, theta, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumRotationYGate(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        theta: Node,
+        quantumBit0: QuantumBitReference
+    ): QuantumRotationYGate {
+        val node = QuantumRotationYGate(cpgNode, quantumCircuit, theta, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newQuantumRotationZGate(
+        cpgNode: Node? = null,
+        quantumCircuit: QuantumCircuit,
+        theta: Node,
+        quantumBit0: QuantumBitReference
+    ): QuantumRotationZGate {
+        val node = QuantumRotationZGate(cpgNode, quantumCircuit, theta, quantumBit0)
+        quantumBit0.refersToQubit.relevantForGates.add(node)
+        quantumCircuit.operations.add(node)
+        NodeBuilder.log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newQuantumGateCX(
         cpgNode: Node? = null,
         quantumCircuit: QuantumCircuit,

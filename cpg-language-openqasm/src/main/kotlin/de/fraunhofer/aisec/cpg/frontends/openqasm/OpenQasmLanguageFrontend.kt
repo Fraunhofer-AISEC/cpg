@@ -36,7 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newClassicIf
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType
@@ -103,6 +105,39 @@ class OpenQasmLanguageFrontend(
         scopeManager.addDeclaration(nsd)
 
         return tu
+    }
+
+    private fun handleExpression(expr: ExpressionNode): Expression {
+        return when (expr) {
+            is MultiplicativeExpressionNode -> handleMultiplicativeExpressionNode(expr)
+            is IdentifierNode -> handleIdentifierNode(expr)
+            is DecimalIntegerLiteralExpressionNode -> handleInteger(expr)
+            else -> TODO()
+        }
+    }
+
+    private fun handleInteger(expr: DecimalIntegerLiteralExpressionNode): Expression {
+        return newLiteral(expr.payload, rawNode = expr)
+    }
+
+    private fun handleIdentifierNode(expr: IdentifierNode): Reference {
+        return newReference(expr.payload, rawNode = expr)
+    }
+
+    private fun handleMultiplicativeExpressionNode(expr: MultiplicativeExpressionNode): Expression {
+        val operator =
+            when (expr) {
+                is MultiplicativeSlashExpressionNode -> "/"
+                is MultiplicativePercentExpressionNode -> "%"
+                is MultiplicativeAsteriskExpressionNode -> "*"
+                else -> {
+                    TODO("Unknown multiplicative operator $expr")
+                }
+            }
+        val binOp = newBinaryOperator(operator, rawNode = expr)
+        binOp.lhs = handleExpression(expr.lhs)
+        binOp.rhs = handleExpression(expr.rhs)
+        return binOp
     }
 
     private fun handleStatement(stmt: StatementNode): Statement {
@@ -276,11 +311,16 @@ class OpenQasmLanguageFrontend(
         return collector
     }
 
-    private fun handleGateCall(stmt: GateCallStatementNode): Statement {
+    private fun handleGateCall(stmt: GateCallStatementNode): CallExpression {
         // handle gate call as function call
 
         val callee = newReference(stmt.identifier?.payload, rawNode = stmt)
         val call = newCallExpression(callee, rawNode = stmt)
+        if (stmt.exprList != null) {
+            for (e in stmt.exprList) {
+                call.addArgument(handleExpression(e))
+            }
+        }
         if (stmt.gateOperandList != null) {
             for (p in stmt.gateOperandList.payload) {
                 call.addArgument(handleCallArg(p))

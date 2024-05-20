@@ -153,6 +153,48 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                             QuantumNodeBuilder.newQuantumGateZ(expr, quantumCircuit, quBitRef)
                     }
                 }
+                "rx" -> {
+                    val quBit = getArgAsQubit(quantumCircuit, expr.arguments[1])
+
+                    quBit?.let {
+                        val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, it)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumRotationXGate(
+                                expr,
+                                quantumCircuit,
+                                expr.arguments[0],
+                                quBitRef
+                            )
+                    }
+                }
+                "ry" -> {
+                    val quBit = getArgAsQubit(quantumCircuit, expr.arguments[1])
+
+                    quBit?.let {
+                        val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, it)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumRotationYGate(
+                                expr,
+                                quantumCircuit,
+                                expr.arguments[0],
+                                quBitRef
+                            )
+                    }
+                }
+                "rz" -> {
+                    val quBit = getArgAsQubit(quantumCircuit, expr.arguments[1])
+
+                    quBit?.let {
+                        val quBitRef = newQuantumBitRef(expr.arguments.first(), quantumCircuit, it)
+                        newOperation =
+                            QuantumNodeBuilder.newQuantumRotationZGate(
+                                expr,
+                                quantumCircuit,
+                                expr.arguments[0],
+                                quBitRef
+                            )
+                    }
+                }
                 "cx" -> {
                     val quBit0 = getArgAsQubit(quantumCircuit, expr.arguments[0])
                     val quBit1 = getArgAsQubit(quantumCircuit, expr.arguments[1])

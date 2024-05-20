@@ -44,6 +44,9 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGat
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateY
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumGateZ
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumMeasurement
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumRotationXGate
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumRotationYGate
+import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumRotationZGate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.order.DependsOn
@@ -186,6 +189,30 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
                     val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
                     newGate = newQuantumGateZ(expr, currentCircuit, quBitRef)
+                }
+                "rx" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 1)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate =
+                        newQuantumRotationXGate(expr, currentCircuit, expr.arguments[0], quBitRef)
+                }
+                "ry" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 1)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate =
+                        newQuantumRotationYGate(expr, currentCircuit, expr.arguments[0], quBitRef)
+                }
+                "rz" -> {
+                    val idx = getArgAsInt(expr as MemberCallExpression, 1)
+                    val quBit = currentCircuit.quantumBits?.get(idx) ?: continue
+
+                    val quBitRef = newQuantumBitRef(expr.arguments.first(), currentCircuit, quBit)
+                    newGate =
+                        newQuantumRotationZGate(expr, currentCircuit, expr.arguments[0], quBitRef)
                 }
                 "cx" -> {
                     val idx0 = getArgAsInt(expr as MemberCallExpression, 0)

@@ -625,8 +625,39 @@ class OpenQASMParser(private val tokens: List<Token>) {
         }
     }
 
-    private fun handleCallExpression(): ExpressionNode {
-        TODO()
+    private fun handleCallExpression(): CallExpressionNode {
+        val currentToken = tokens[idx]
+        val idtoken = currentToken as? IdentifierToken ?: TODO()
+        val identifierNode = IdentifierNode(idtoken.location, idtoken.payload)
+        idx++
+        eat(LParenToken::class)
+        val args = mutableListOf<ExpressionNode>()
+        var endLine = idtoken.location.region.endLine
+        var endColumn = idtoken.location.region.endColumn
+        while (tokens[idx] !is RParenToken) {
+            if (tokens[idx] is CommaToken) {
+                // Consume COMMA
+                idx++
+            } else {
+                val argument = handleExpression()
+                args.add(argument)
+                endLine = argument.location.region.endLine
+                endColumn = argument.location.region.endColumn
+            }
+        }
+        eat(RParenToken::class)
+        // TODO: This is not 100% accurate but should be good enough for now.
+        val location =
+            PhysicalLocation(
+                idtoken.location.artifactLocation.uri,
+                Region(
+                    idtoken.location.region.startLine,
+                    idtoken.location.region.startColumn,
+                    endLine,
+                    endColumn
+                )
+            )
+        return CallExpressionNode(location, identifierNode, args)
     }
 
     private fun handleDurationOfExpression(): ExpressionNode {
@@ -1165,7 +1196,17 @@ class OpenQASMParser(private val tokens: List<Token>) {
 
     private fun exprListHelper(): List<ExpressionNode> {
         // could be an empty list
-        TODO()
+        val exprList = mutableListOf<ExpressionNode>()
+        while (tokens[idx] !is RParenToken) {
+            if (tokens[idx] is CommaToken) {
+                // Consume COMMA
+                idx++
+            } else {
+                val argument = handleExpression()
+                exprList.add(argument)
+            }
+        }
+        return exprList
     }
 
     private fun handleAssignmentStatement(identifier: IdentifierNode): StatementNode {
@@ -1176,17 +1217,18 @@ class OpenQASMParser(private val tokens: List<Token>) {
         // either callExpression or literalExpression
         val currentToken = tokens[idx]
         val nextToken: Token = tokens[idx + 1]
-        if (nextToken is LParenToken) {
+        /*if (nextToken is LParenToken) {
             // callExpression
+
+            return handleCallExpression()
+        } else {*/
+        val idtoken = currentToken as? IdentifierToken
+        idx++
+        if (idtoken == null) {
             TODO()
-        } else {
-            val idtoken = currentToken as? IdentifierToken
-            idx++
-            if (idtoken == null) {
-                TODO()
-            }
-            return IdentifierNode(idtoken.location, idtoken.payload)
         }
+        return IdentifierNode(idtoken.location, idtoken.payload)
+        // }
     }
 
     private fun handleIncludeStmt(): IncludeStatementNode {
@@ -1214,8 +1256,23 @@ class OpenQASMParser(private val tokens: List<Token>) {
 
         val identifierToken = handleIdentifier()
 
+        val args = mutableListOf<ExpressionNode>()
         if (tokens[idx] is LParenToken) {
-            TODO()
+            eat(LParenToken::class)
+            var endLine = identifierToken.location.region.endLine
+            var endColumn = identifierToken.location.region.endColumn
+            while (tokens[idx] !is RParenToken) {
+                if (tokens[idx] is CommaToken) {
+                    // Consume COMMA
+                    idx++
+                } else {
+                    val argument = handleExpression()
+                    args.add(argument)
+                    endLine = argument.location.region.endLine
+                    endColumn = argument.location.region.endColumn
+                }
+            }
+            eat(RParenToken::class)
         }
 
         val identifierList = handleIdentifierList()
