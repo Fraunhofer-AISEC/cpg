@@ -105,6 +105,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val nodes =
                 tu.allEOGStarters.filter {
                     it.prevEOG.isEmpty() ||
+                        // TODO: This ugly check should ideally not be necessary but it happens when
+                        // an eog-starter depends on some child. Not sure why this is required
+                        // though...
                         it.allChildren<Node>().let { astChildren ->
                             it.prevEOG.all { eog -> eog in astChildren }
                         }
