@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
+package de.fraunhofer.aisec.cpg.graph.scopes
 
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 
-/** Represents a using directive used to extend the currently valid name scope. */
-class UsingDeclaration : Declaration() {
-    var qualifiedName: String? = null
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is UsingDeclaration) return false
-        return super.equals(other) && qualifiedName == other.qualifiedName
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), qualifiedName)
-}
+/**
+ * Represents a scope that is only visible in the current file. This is usually used in programming
+ * languages for file-level imports.
+ *
+ * The only supported AST node is a [TranslationUnitDeclaration].
+ */
+class FileScope(astNode: TranslationUnitDeclaration?) : Scope(astNode)

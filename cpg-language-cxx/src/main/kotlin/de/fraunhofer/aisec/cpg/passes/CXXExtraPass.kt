@@ -210,14 +210,13 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (scope is ValueDeclarationScope) {
             // Update the definition
             val candidates =
-                scope.valueDeclarations.filterIsInstance<FunctionDeclaration>().filter {
+                scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
                     // We should only connect methods to methods, functions to functions and
                     // constructors to constructors.
                     it::class == declaration::class &&
                         !it.isDefinition &&
-                        it.name == declaration.name &&
                         it.signature == declaration.signature
-                }
+                } ?: emptyList()
             for (candidate in candidates) {
                 candidate.definition = declaration
 

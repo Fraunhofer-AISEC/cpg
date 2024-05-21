@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 
@@ -109,6 +110,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(DFGPass::class)
+@DependsOn(ImportResolver::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker
@@ -123,9 +125,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler { _, parent, node ->
+        walker.registerHandler { _, _, node ->
             when (node) {
-                is IncludeDeclaration -> handleInclude(node)
+                is ImportDeclaration -> handleImportDeclaration(node)
                 is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
@@ -392,18 +394,22 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * include.
      */
     // TODO: Somehow, this gets called twice?!
-    private fun handleInclude(include: IncludeDeclaration) {
+    private fun handleImportDeclaration(import: ImportDeclaration) {
         // If the namespace is included as _, we can ignore it, as its only included as a runtime
         // dependency
-        if (include.name.localName == "_") {
+        if (import.name.localName == "_") {
             return
         }
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
-                it.name == include.name && it.path == include.filename
+            scopeManager.findSymbols(import.name, null).filter {
+                it is NamespaceDeclaration && it.path == import.importURL
             }
+
+        scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
+            it.name == import.name && it.path == import.importURL
+        }
 
         // If not, we can infer a namespace declaration, so we can bundle all inferred function
         // declarations in there
@@ -411,7 +417,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             scopeManager.globalScope
                 ?.astNode
                 ?.startInference(ctx)
-                ?.inferNamespaceDeclaration(include.name, include.filename, include)
+                ?.inferNamespaceDeclaration(import.name, import.importURL, import)
         }
     }
 

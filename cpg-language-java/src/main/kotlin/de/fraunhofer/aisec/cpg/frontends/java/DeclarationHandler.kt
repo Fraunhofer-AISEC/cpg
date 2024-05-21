@@ -179,7 +179,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         classInterDecl: ClassOrInterfaceDeclaration
     ): RecordDeclaration {
         // TODO: support other kinds, such as interfaces
-        val fqn = classInterDecl.nameAsString
+        val fqn = classInterDecl.fullyQualifiedName.orElse(classInterDecl.nameAsString)
 
         // Todo adapt name using a new type of scope "Namespace/Package scope"
 

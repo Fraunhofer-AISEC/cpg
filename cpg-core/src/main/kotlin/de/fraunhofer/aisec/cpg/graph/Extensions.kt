@@ -566,6 +566,10 @@ val Node?.records: List<RecordDeclaration>
 val Node?.namespaces: List<NamespaceDeclaration>
     get() = this.allChildren()
 
+/** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
+val Node?.imports: List<ImportDeclaration>
+    get() = this.allChildren()
+
 /** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
 val Node?.variables: List<VariableDeclaration>
     get() = this.allChildren()
