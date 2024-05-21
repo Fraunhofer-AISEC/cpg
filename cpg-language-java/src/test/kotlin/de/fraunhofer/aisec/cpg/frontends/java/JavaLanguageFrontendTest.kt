@@ -299,8 +299,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val fields = recordDeclaration.fields.map { it.name.localName }.toSet()
         assertTrue(fields.containsAll(setOf("field", "field1", "field2")))
 
-        assertEquals(1, (recordDeclaration.fields["field1"]?.initializer as? Literal<*>)?.value)
-        assertEquals(2, (recordDeclaration.fields["field2"]?.initializer as? Literal<*>)?.value)
+        assertLiteralValue(1, recordDeclaration.fields["field1"]?.initializer)
+        assertLiteralValue(2, recordDeclaration.fields["field2"]?.initializer)
 
         val method = recordDeclaration.methods[0]
         assertNotNull(method)
