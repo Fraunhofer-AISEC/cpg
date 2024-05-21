@@ -408,7 +408,7 @@ interface Python {
      * ```
      */
     class ASTImportFrom(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val module: String by lazy { "module" of pyObject }
+        val module: String? by lazy { "module" of pyObject }
         val names: List<ASTalias> by lazy { "names" of pyObject }
         val level: Long? by lazy { "level" of pyObject }
     }
