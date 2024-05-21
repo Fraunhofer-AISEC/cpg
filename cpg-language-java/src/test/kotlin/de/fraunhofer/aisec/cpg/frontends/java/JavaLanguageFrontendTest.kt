@@ -288,7 +288,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
-        // TODO: Use GraphExamples here as well.
         assertNotNull(tu)
 
         val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
@@ -297,8 +296,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(recordDeclaration)
 
-        val fields = recordDeclaration.fields.map { it.name.localName }
-        assertTrue(fields.contains("field"))
+        val fields = recordDeclaration.fields.map { it.name.localName }.toSet()
+        assertTrue(fields.containsAll(setOf("field", "field1", "field2")))
+
+        assertLiteralValue(1, recordDeclaration.fields["field1"]?.initializer)
+        assertLiteralValue(2, recordDeclaration.fields["field2"]?.initializer)
 
         val method = recordDeclaration.methods[0]
         assertNotNull(method)

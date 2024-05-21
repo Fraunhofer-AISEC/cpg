@@ -235,62 +235,66 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     fun handleFieldDeclaration(
         fieldDecl: com.github.javaparser.ast.body.FieldDeclaration
-    ): FieldDeclaration {
+    ): DeclarationSequence {
+        val declarationSequence = DeclarationSequence()
 
-        // TODO: can  field have more than one variable?
-        val variable = fieldDecl.getVariable(0)
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
-        val initializer =
-            variable.initializer
-                .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
-                .orElse(null) as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        var type: Type
-        try {
-            // Resolve type first with ParameterizedType
-            type =
-                frontend.typeManager.getTypeParameter(
-                    frontend.scopeManager.currentRecord,
-                    variable.resolve().type.describe()
-                ) ?: frontend.typeOf(variable.resolve().type)
-        } catch (e: UnsolvedSymbolException) {
-            val t = frontend.recoverTypeFromUnsolvedException(e)
-            if (t == null) {
-                log.warn("Could not resolve type for {}", variable)
-                type = frontend.typeOf(variable.type)
-            } else {
-                type = this.objectType(t)
-                type.typeOrigin = Type.Origin.GUESSED
+
+        for (variable in fieldDecl.variables) {
+            val initializer =
+                variable.initializer
+                    .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
+                    .orElse(null)
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+            var type: Type
+            try {
+                // Resolve type first with ParameterizedType
+                type =
+                    frontend.typeManager.getTypeParameter(
+                        frontend.scopeManager.currentRecord,
+                        variable.resolve().type.describe()
+                    ) ?: frontend.typeOf(variable.resolve().type)
+            } catch (e: UnsolvedSymbolException) {
+                val t = frontend.recoverTypeFromUnsolvedException(e)
+                if (t == null) {
+                    log.warn("Could not resolve type for {}", variable)
+                    type = frontend.typeOf(variable.type)
+                } else {
+                    type = this.objectType(t)
+                    type.typeOrigin = Type.Origin.GUESSED
+                }
+            } catch (e: UnsupportedOperationException) {
+                val t = frontend.recoverTypeFromUnsolvedException(e)
+                if (t == null) {
+                    log.warn("Could not resolve type for {}", variable)
+                    type = frontend.typeOf(variable.type)
+                } else {
+                    type = this.objectType(t)
+                    type.typeOrigin = Type.Origin.GUESSED
+                }
+            } catch (e: IllegalArgumentException) {
+                val t = frontend.recoverTypeFromUnsolvedException(e)
+                if (t == null) {
+                    log.warn("Could not resolve type for {}", variable)
+                    type = frontend.typeOf(variable.type)
+                } else {
+                    type = this.objectType(t)
+                    type.typeOrigin = Type.Origin.GUESSED
+                }
             }
-        } catch (e: UnsupportedOperationException) {
-            val t = frontend.recoverTypeFromUnsolvedException(e)
-            if (t == null) {
-                log.warn("Could not resolve type for {}", variable)
-                type = frontend.typeOf(variable.type)
-            } else {
-                type = this.objectType(t)
-                type.typeOrigin = Type.Origin.GUESSED
-            }
-        } catch (e: IllegalArgumentException) {
-            val t = frontend.recoverTypeFromUnsolvedException(e)
-            if (t == null) {
-                log.warn("Could not resolve type for {}", variable)
-                type = frontend.typeOf(variable.type)
-            } else {
-                type = this.objectType(t)
-                type.typeOrigin = Type.Origin.GUESSED
-            }
+            val fieldDeclaration =
+                this.newFieldDeclaration(
+                    variable.name.asString(),
+                    type,
+                    modifiers,
+                    initializer,
+                    rawNode = fieldDecl
+                )
+            frontend.scopeManager.addDeclaration(fieldDeclaration)
+            frontend.processAnnotations(fieldDeclaration, fieldDecl)
+            declarationSequence.addDeclaration(fieldDeclaration)
         }
-        val fieldDeclaration =
-            this.newFieldDeclaration(
-                variable.name.asString(),
-                type,
-                modifiers,
-                initializer,
-                rawNode = fieldDecl
-            )
-        frontend.scopeManager.addDeclaration(fieldDeclaration)
-        frontend.processAnnotations(fieldDeclaration, fieldDecl)
-        return fieldDeclaration
+        return declarationSequence
     }
 
     fun handleEnumDeclaration(
@@ -329,7 +333,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         typeDecl: T,
         recordDeclaration: RecordDeclaration,
     ) {
-        // TODO: 'this' identifier for multiple instances?
         for (decl in typeDecl.members) {
             (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
                 handle(it) // will be added via the scopemanager
