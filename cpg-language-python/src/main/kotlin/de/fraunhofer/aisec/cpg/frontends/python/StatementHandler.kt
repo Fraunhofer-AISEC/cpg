@@ -96,7 +96,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
-        val module = parseName(node.module)
+        val module =
+            node.module?.let { parseName(it) }
+                ?: return newProblemExpression("not supporting 'from . import' syntax yet")
         for (imp in node.names) {
             // We need to differentiate between a wildcard import and an individual symbol.
             // Wildcards luckily do not have aliases
