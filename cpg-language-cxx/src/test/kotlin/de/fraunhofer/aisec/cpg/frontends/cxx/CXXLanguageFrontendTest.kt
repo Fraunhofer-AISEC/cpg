@@ -217,7 +217,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         with(tu) {
             assertNotNull(main)
 
@@ -1085,9 +1085,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val function =
-            declaration.byNameOrNull<FunctionDeclaration>("testExpressionInExpressionList")
-        assertEquals("testExpressionInExpressionList()int", function!!.signature)
+        val function = declaration.functions["testExpressionInExpressionList"]
+        assertNotNull(function)
+        assertEquals("testExpressionInExpressionList()int", function.signature)
 
         val locals = function.body?.locals
         assertNotNull(locals)
@@ -1299,16 +1299,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
-        val classT = tu.byNameOrNull<RecordDeclaration>("T")
+        val classT = tu.records["T"]
         assertNotNull(classT)
 
         val classTFoo = classT.methods.firstOrNull()
         assertNotNull(classTFoo)
 
-        val classTReturn = classTFoo.bodyOrNull<ReturnStatement>()
+        val classTReturn = classTFoo.returns.firstOrNull()
         assertNotNull(classTReturn)
 
         val classTReturnMemberExpression = classTReturn.returnValue as? MemberExpression
@@ -1317,7 +1317,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classTThisExpression = classTReturnMemberExpression.base as? Reference
         assertEquals(classTThisExpression?.refersTo, classTFoo.receiver)
 
-        val classS = tu.byNameOrNull<RecordDeclaration>("S")
+        val classS = tu.records["S"]
         assertNotNull(classS)
 
         val classSFoo = classS.methods.firstOrNull()
@@ -1391,10 +1391,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val typedefs = tu.ctx?.scopeManager?.typedefFor(objectType("MyStruct"))
             assertLocalName("__myStruct", typedefs)
 
-            val main = tu.byNameOrNull<FunctionDeclaration>("main")
+            val main = tu.functions["main"]
             assertNotNull(main)
 
-            val call = main.bodyOrNull<CallExpression>()
+            val call = main.calls.firstOrNull()
             assertNotNull(call)
             assertTrue(call.invokes.isNotEmpty())
 
@@ -1424,7 +1424,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             myClass.methods[{ it.name.localName == "target" && it.parameters.size == 1 }]
         assertNotNull(targetSingleParam)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
         // three variables (the class object and two function pointers)

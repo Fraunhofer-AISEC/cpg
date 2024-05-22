@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
@@ -145,29 +146,6 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
     return this.filter { it.name.lastPartsMatch(lookup) }
-}
-
-public inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
-    name: String,
-    fqn: Boolean = false
-): T? {
-    var base = this
-    var lookup = name
-
-    // lets do a _very_ simple FQN lookup
-    // TODO(oxisto): we could do this with a for-loop for multiple nested levels
-    if (fqn && name.contains(".")) {
-        // take the most left one
-        val baseName = name.split(".")[0]
-
-        base =
-            this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                (it as Node).name.lastPartsMatch(baseName)
-            } ?: return null
-        lookup = name.split(".")[1]
-    }
-
-    return base.declarations.filterIsInstance<T>().firstOrNull { it.name.lastPartsMatch(lookup) }
 }
 
 @Deprecated(message = "legacy")
@@ -610,6 +588,10 @@ val Node?.ifs: List<IfStatement>
 
 /** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
 val Node?.labels: List<LabelStatement>
+    get() = this.allChildren()
+
+/** Returns all [ReturnStatement] child edges in this graph, starting with this [Node]. */
+val Node?.returns: List<ReturnStatement>
     get() = this.allChildren()
 
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */

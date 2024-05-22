@@ -134,6 +134,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         }
     }
 
+    @Deprecated(message = "legacy stuff")
     fun <T> getBodyStatementAs(i: Int, clazz: Class<T>): T? {
         if (body is Block) {
             val statement = (body as Block).statements[i]

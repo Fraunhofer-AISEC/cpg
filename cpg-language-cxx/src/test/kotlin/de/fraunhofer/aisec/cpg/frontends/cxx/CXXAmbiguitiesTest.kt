@@ -26,16 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -65,18 +60,15 @@ class CXXAmbiguitiesTest {
         // make sure we still have only one declaration in the file (the record)
         assertEquals(1, tu.declarations.size)
 
-        val myClass = tu.byNameOrNull<RecordDeclaration>("MyClass")
-
+        val myClass = tu.records["MyClass"]
         assertNotNull(myClass)
 
-        val someFunction = myClass.byNameOrNull<MethodDeclaration>("someFunction")
-
+        val someFunction = myClass.methods["someFunction"]
         assertNotNull(someFunction)
 
         // CDT now (incorrectly) thinks the first line is a declaration statement, when in reality
         // it should be a CallExpression. But we cannot fix that at the moment
-        val crazy = someFunction.bodyOrNull<DeclarationStatement>(0)
-
+        val crazy = someFunction.allChildren<DeclarationStatement>().firstOrNull()
         assertNotNull(crazy) // if we ever fix it, this will FAIL
 
         val problem = crazy.singleDeclaration as? ProblemDeclaration
@@ -97,10 +89,10 @@ class CXXAmbiguitiesTest {
             }
         assertNotNull(tu)
 
-        val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+        val mainFunc = tu.functions["main"]
         assertNotNull(mainFunc)
 
-        val fooFunc = tu.byNameOrNull<FunctionDeclaration>("foo")
+        val fooFunc = tu.functions["foo"]
         assertNotNull(fooFunc)
 
         // First two Statements are CallExpressions
@@ -137,13 +129,13 @@ class CXXAmbiguitiesTest {
             }
         assertNotNull(tu)
 
-        val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+        val mainFunc = tu.functions["main"]
         assertNotNull(mainFunc)
 
-        val classA = tu.byNameOrNull<RecordDeclaration>("A")
+        val classA = tu.records["A"]
         assertNotNull(classA)
 
-        val structB = tu.byNameOrNull<RecordDeclaration>("B")
+        val structB = tu.records["B"]
         assertNotNull(structB)
     }
 }

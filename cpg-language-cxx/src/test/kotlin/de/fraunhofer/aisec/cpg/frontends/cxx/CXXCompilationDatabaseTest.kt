@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -54,23 +53,27 @@ class CXXCompilationDatabaseTest {
             val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             assertNotNull(tu)
 
-            val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+            val mainFunc = tu.functions["main"]
             assertNotNull(mainFunc)
 
-            val func1 = tu.byNameOrNull<FunctionDeclaration>("func1")
+            val func1 = tu.functions["func1"]
             assertNotNull(func1)
             assertEquals(func1.isInferred, false)
-            val func2 = tu.byNameOrNull<FunctionDeclaration>("func2")
+
+            val func2 = tu.functions["func2"]
             assertNotNull(func2)
             assertEquals(func2.isInferred, false)
-            val sysFunc = tu.byNameOrNull<FunctionDeclaration>("sys_func")
+
+            val sysFunc = tu.functions["sys_func"]
             assertNotNull(sysFunc)
             assertEquals(sysFunc.isInferred, false)
 
             val s0 = mainFunc.getBodyStatementAs(0, CallExpression::class.java)
             assertNotNull(s0)
+
             val arg1 = s0.arguments[1]
             assert(arg1 is Literal<*>)
+
             val lit = arg1 as Literal<*>
             assertEquals(lit.value, "hi")
 
@@ -108,7 +111,7 @@ class CXXCompilationDatabaseTest {
         assertNotNull(tu)
         assertNotNull(tu)
 
-        val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+        val mainFunc = tu.functions["main"]
         assertNotNull(mainFunc)
 
         val s0 = mainFunc.getBodyStatementAs(0, ReturnStatement::class.java)
@@ -132,14 +135,14 @@ class CXXCompilationDatabaseTest {
 
         for (tu in tus) {
             val value = ref[File(tu.name.toString()).name]
-            val mainFunc = tu.byNameOrNull<FunctionDeclaration>("main")
+            val mainFunc = tu.functions["main"]
             assertNotNull(mainFunc)
 
-            val s0 = mainFunc.getBodyStatementAs(0, Literal::class.java)
+            val s0 = mainFunc.literals.getOrNull(0)
             assertNotNull(s0)
             assertEquals(value, s0.value)
 
-            val s1 = mainFunc.getBodyStatementAs(1, Literal::class.java)
+            val s1 = mainFunc.literals.getOrNull(1)
             assertNotNull(s1)
             assertEquals(value, s1.value)
         }
@@ -154,11 +157,7 @@ class CXXCompilationDatabaseTest {
                 it.registerLanguage<CLanguage>()
             }
 
-        val main =
-            result.components
-                .flatMap { it.translationUnits }
-                .firstOrNull()
-                ?.byNameOrNull<FunctionDeclaration>("main")
+        val main = result.functions["main"]
         assertNotNull(main)
     }
 

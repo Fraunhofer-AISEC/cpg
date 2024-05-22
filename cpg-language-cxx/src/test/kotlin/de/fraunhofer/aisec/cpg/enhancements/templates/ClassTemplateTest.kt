@@ -509,7 +509,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(1, array.fields.size)
         assertEquals(mArray, array.fields[0])
 
-        val receiver = array.byNameOrNull<MethodDeclaration>("GetSize")?.receiver
+        val receiver = array.methods["GetSize"]?.receiver
         assertNotNull(receiver)
 
         val arrayType = ((receiver.type as? PointerType)?.elementType) as? ObjectType

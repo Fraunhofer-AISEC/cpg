@@ -28,10 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import java.io.File
@@ -51,7 +50,7 @@ class CXXResolveTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
         val aFoo = main.bodyOrNull<MemberCallExpression>(0)
@@ -107,7 +106,7 @@ class CXXResolveTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
         val foo = main.bodyOrNull<CallExpression>(0)
