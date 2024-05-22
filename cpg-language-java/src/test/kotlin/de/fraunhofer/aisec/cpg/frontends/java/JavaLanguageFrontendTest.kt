@@ -290,7 +290,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
 
         val recordDeclaration =
             namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
@@ -360,7 +360,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(declaration)
 
-        val namespaceDeclaration = declaration.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespaceDeclaration = declaration.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
@@ -412,7 +412,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
@@ -464,7 +464,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
@@ -507,10 +507,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
-        val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = namespaceDeclaration.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         val main = record.methods[0]
@@ -541,7 +541,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu = declarations[0]
         assertNotNull(tu)
 
-        val record = tu.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = tu.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         var annotations: List<Annotation> = record.annotations
@@ -583,7 +583,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
-        val record = tu.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = tu.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         val func = record.methods.stream().findFirst().orElse(null)
@@ -623,10 +623,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         val tu =
             findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
-        val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
+        val namespace = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespace)
 
-        val record = namespace.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = namespace.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         val constructor = record.constructors[0]

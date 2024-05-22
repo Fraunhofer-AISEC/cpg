@@ -269,7 +269,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val function = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val function = declaration.declarations<FunctionDeclaration>(0)
         assertNotNull(function)
 
         val functionBody = function.body
@@ -294,8 +294,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements =
-            declaration.getDeclarationAs(0, FunctionDeclaration::class.java)?.statements
+        val statements = declaration.declarations<FunctionDeclaration>(0)?.statements
         assertNotNull(statements)
         assertEquals(6, statements.size)
 
@@ -328,8 +327,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements =
-            declaration.getDeclarationAs(0, FunctionDeclaration::class.java)?.statements
+        val statements = declaration.declarations<FunctionDeclaration>(0)?.statements
         assertNotNull(statements)
 
         val ifStatement = statements[0] as IfStatement
@@ -374,7 +372,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         with(tu) {
-            val function = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+            val function = tu.declarations<FunctionDeclaration>(0)
             val statements = function?.statements
             assertNotNull(statements)
             statements.forEach(
@@ -514,7 +512,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val functionDecl = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val functionDecl = declaration.declarations<FunctionDeclaration>(0)
         val statements = functionDecl?.statements
         assertNotNull(statements)
         assertTrue(statements[1] is BinaryOperator)
@@ -528,7 +526,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = unit.getDeclarationAs(0, FunctionDeclaration::class.java)?.statements
+        val statements = unit.declarations<FunctionDeclaration>(0)?.statements
         assertNotNull(statements)
 
         var line = -1
@@ -736,7 +734,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         )
         assertTrue(inlineConstructor.hasBody())
 
-        val constructorDefinition = tu.getDeclarationAs(3, ConstructorDeclaration::class.java)
+        val constructorDefinition = tu.declarations<ConstructorDeclaration>(3)
         assertNotNull(constructorDefinition)
         assertEquals(1, constructorDefinition.parameters.size)
         assertEquals(tu.primitiveType("int"), constructorDefinition.parameters[0].type)
@@ -857,7 +855,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
 
         // x y = { 1, 2 };
-        val y = tu.getDeclarationAs(1, VariableDeclaration::class.java)
+        val y = tu.declarations<VariableDeclaration>(1)
         assertNotNull(y)
         assertLocalName("y", y)
 
@@ -874,7 +872,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(2, b.value)
 
         // int z[] = { 2, 3, 4 };
-        val z = tu.getDeclarationAs(2, VariableDeclaration::class.java)
+        val z = tu.declarations<VariableDeclaration>(2)
         assertNotNull(z)
         with(tu) { assertEquals(primitiveType("int").array(), z.type) }
 
@@ -897,7 +895,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(tu)
         with(tu) {
             // get the main method
-            val main = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
+            val main = tu.declarations<FunctionDeclaration>(3)
             val statement = main!!.body as Block
 
             // Integer i
@@ -958,7 +956,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val fdecl = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val fdecl = declaration.declarations<FunctionDeclaration>(0)
         val body = fdecl!!.body as Block
         val expected: MutableMap<String?, Region> = HashMap()
         expected["cout << \"bla\";"] = Region(4, 3, 4, 17)

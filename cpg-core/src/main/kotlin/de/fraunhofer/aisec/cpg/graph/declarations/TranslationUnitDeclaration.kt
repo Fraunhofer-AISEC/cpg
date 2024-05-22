@@ -70,21 +70,6 @@ class TranslationUnitDeclaration :
     val namespaces: List<NamespaceDeclaration>
         get() = unwrap(namespaceEdges)
 
-    /**
-     * Returns the i-th declaration as a specific class, if it can be cast
-     *
-     * @param i the index
-     * @param clazz the class
-     * @param <T> the type of the class
-     * @return the declaration or null, if it can not be cast to the class </T>
-     */
-    fun <T : Declaration?> getDeclarationAs(i: Int, clazz: Class<T>): T? {
-        val declaration = declarationEdges[i].end
-        return if (declaration.javaClass.isAssignableFrom(clazz))
-            clazz.cast(declarationEdges[i].end)
-        else null
-    }
-
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is IncludeDeclaration) {
             addIfNotContains(includeEdges, declaration)

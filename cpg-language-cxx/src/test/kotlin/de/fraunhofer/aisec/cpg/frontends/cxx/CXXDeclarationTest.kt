@@ -129,10 +129,10 @@ class CXXDeclarationTest {
         // should be eight function nodes
         assertEquals(8, tu.functions.size)
 
-        var method = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+        var method = tu.declarations<FunctionDeclaration>(0)
         assertEquals("function0(int)void", method!!.signature)
 
-        method = tu.getDeclarationAs(1, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(1)
         assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
         val args = method.parameters.map { it.name.localName }
@@ -148,7 +148,7 @@ class CXXDeclarationTest {
         // the declaration should be connected to the definition
         assertEquals(function0, function0DeclOnly.definition)
 
-        method = tu.getDeclarationAs(2, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(2)
         assertEquals("function0(int)void", method!!.signature)
 
         var statements = (method.body as Block).statements
@@ -160,7 +160,7 @@ class CXXDeclarationTest {
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 
-        method = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(3)
         assertEquals("function2()void*", method!!.signature)
 
         statements = (method.body as Block).statements
@@ -172,20 +172,20 @@ class CXXDeclarationTest {
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 
-        method = tu.getDeclarationAs(4, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(4)
         assertNotNull(method)
         assertEquals("function3()UnknownType*", method.signature)
 
-        method = tu.getDeclarationAs(5, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(5)
         assertNotNull(method)
         assertEquals("function4(int)void", method.signature)
 
-        method = tu.getDeclarationAs(6, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(6)
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
 
-        method = tu.getDeclarationAs(7, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(7)
         assertNotNull(method)
         assertEquals(1, method.parameters.size)
 
