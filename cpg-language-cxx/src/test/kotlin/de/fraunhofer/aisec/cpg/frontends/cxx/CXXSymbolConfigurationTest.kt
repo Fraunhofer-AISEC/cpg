@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 internal class CXXSymbolConfigurationTest : BaseTest() {
@@ -54,10 +53,10 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                     )
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val funcDecl = main.iterator().next()
+        val funcDecl = main
         var binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator::class.java)
         assertNotNull(binaryOperator)
 
@@ -93,10 +92,10 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                     TranslationContext(config, ScopeManager(), TypeManager())
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val funcDecl = main.iterator().next()
+        val funcDecl = main
         var binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator::class.java)
         assertNotNull(binaryOperator)
 

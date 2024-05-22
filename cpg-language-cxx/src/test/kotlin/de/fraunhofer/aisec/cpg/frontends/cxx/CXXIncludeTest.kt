@@ -29,10 +29,8 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.methods
-import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -54,24 +52,17 @@ internal class CXXIncludeTest : BaseTest() {
         }
         assertEquals(6, tu.declarations.size)
 
-        val someClass =
-            tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java).iterator().next()
+        val someClass = tu.records["SomeClass"]
         assertNotNull(someClass)
 
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val someClassConstructor =
-            tu.getDeclarationsByName("SomeClass::SomeClass", ConstructorDeclaration::class.java)
-                .iterator()
-                .next()
+        val someClassConstructor = someClass.constructors["SomeClass::SomeClass"]
         assertNotNull(someClassConstructor)
         assertEquals(someClass, someClassConstructor.recordDeclaration)
 
-        val doSomething =
-            tu.getDeclarationsByName("SomeClass::DoSomething", MethodDeclaration::class.java)
-                .iterator()
-                .next()
+        val doSomething = tu.methods["SomeClass::DoSomething"]?.definition as? MethodDeclaration
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 
@@ -95,10 +86,10 @@ internal class CXXIncludeTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val someClass = tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java)
-        assertFalse(someClass.isEmpty())
+        val someClass = tu.records["SomeClass"]
+        assertNotNull(someClass)
 
-        val decl = someClass.iterator().next().constructors[0]
+        val decl = someClass.constructors[0]
         assertEquals("SomeClass();", decl.code)
 
         val location = decl.location

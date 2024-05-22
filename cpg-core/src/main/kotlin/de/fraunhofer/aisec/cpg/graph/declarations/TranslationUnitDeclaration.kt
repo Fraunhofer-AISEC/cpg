@@ -85,29 +85,6 @@ class TranslationUnitDeclaration :
         else null
     }
 
-    /**
-     * Returns a non-null, possibly empty `Set` of the declaration of a specified type and clazz.
-     *
-     * The set may contain more than one element if a declaration exists in the [ ] itself and in an
-     * included header file.
-     *
-     * @param name the name to search for
-     * @param clazz the declaration class, such as [FunctionDeclaration].
-     * @param <T> the type of the declaration
-     * @return a `Set` containing the declarations, if any. </T>
-     */
-    fun <T : Declaration?> getDeclarationsByName(name: String, clazz: Class<T>): Set<T> {
-        return declarationEdges
-            .map { it.end }
-            .filter { it.name.toString() == name }
-            .filterIsInstance(clazz)
-            .toSet()
-    }
-
-    fun getIncludeByName(name: String): IncludeDeclaration? {
-        return includeEdges.map { it.end }.firstOrNull { it.name.toString() == name }
-    }
-
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is IncludeDeclaration) {
             addIfNotContains(includeEdges, declaration)

@@ -59,10 +59,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val decl = main.iterator().next()
+        val decl = main
         val ls = decl.variables["ls"]
         assertNotNull(ls)
         assertEquals(tu.objectType("std::vector", listOf(tu.objectType("int"))), ls.type)
@@ -94,10 +94,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val tryStatement = main.iterator().next().getBodyStatementAs(0, TryStatement::class.java)
+        val tryStatement = main.getBodyStatementAs(0, TryStatement::class.java)
         assertNotNull(tryStatement)
 
         val catchClauses = tryStatement.catchClauses
@@ -130,11 +130,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        val main = tu.functions["main"]
         with(tu) {
             assertNotNull(main)
 
-            val funcDecl = main.iterator().next()
+            val funcDecl = main
             val i = funcDecl.variables["i"]
             assertNotNull(i)
 
@@ -756,8 +756,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertFalse(constructorDeclaration.isDefinition)
         assertEquals(constructorDefinition, constructorDeclaration.definition)
 
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.functions["main"]
         assertNotNull(main)
 
         val methodCallWithConstant = main.getBodyStatementAs(2, CallExpression::class.java)
@@ -1133,23 +1132,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val firstNamespace =
-            tu.getDeclarationsByName("FirstNamespace", NamespaceDeclaration::class.java)
-                .iterator()
-                .next()
+        val firstNamespace = tu.namespaces["FirstNamespace"]
         assertNotNull(firstNamespace)
 
-        val someClass =
-            firstNamespace
-                .getDeclarationsByName("FirstNamespace::SomeClass", RecordDeclaration::class.java)
-                .iterator()
-                .next()
+        val someClass = firstNamespace.records["SomeClass"]
         assertNotNull(someClass)
 
-        val anotherClass =
-            tu.getDeclarationsByName("AnotherClass", RecordDeclaration::class.java)
-                .iterator()
-                .next()
+        val anotherClass = tu.records["AnotherClass"]
         assertNotNull(anotherClass)
     }
 
@@ -1176,13 +1165,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val tu = declarations[0]
         assertNotNull(tu)
 
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.functions["main"]
         assertNotNull(main)
         assertLocalName("function_attribute", main.annotations[0])
 
-        val someClass =
-            tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java).iterator().next()
+        val someClass = tu.records["SomeClass"]
         assertNotNull(someClass)
         assertLocalName("record_attribute", someClass.annotations[0])
 
@@ -1235,8 +1222,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.functions["main"]
         assertNotNull(main)
 
         val body = main.body as Block
@@ -1363,8 +1349,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // but NOT any EnumConstantDeclarations
         assertEquals(2, tu.declarations.size)
 
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.functions["main"]
         assertNotNull(main)
 
         val returnStatement = main.bodyOrNull<ReturnStatement>()
