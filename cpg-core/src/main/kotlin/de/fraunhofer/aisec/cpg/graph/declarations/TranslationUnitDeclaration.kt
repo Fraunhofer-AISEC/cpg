@@ -130,8 +130,8 @@ class TranslationUnitDeclaration :
             val list = mutableListOf<Node>()
             // Add all top-level declarations
             list += declarations
-            // Add all top-level statements
-            list += statements
+            // Add the TU itself, so that we can catch any static statements in the TU
+            list += this
 
             return list
         }
