@@ -32,9 +32,6 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -771,14 +768,15 @@ class GoLanguageFrontendTest : BaseTest() {
         val main = tu.functions["main.main"]
         assertNotNull(main)
 
-        val f = main.bodyOrNull<ForStatement>()
+        val f = main.forLoops.firstOrNull()
         assertNotNull(f)
+
         assertTrue(f.condition is BinaryOperator)
         assertTrue(f.statement is Block)
         assertTrue(f.initializerStatement is AssignExpression)
         assertTrue(f.iterationStatement is UnaryOperator)
 
-        val each = main.bodyOrNull<ForEachStatement>()
+        val each = main.forEachLoops.firstOrNull()
         assertNotNull(each)
 
         val bytes = assertIs<Reference>(each.iterable)
@@ -871,15 +869,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(j)
         assertEquals("comment before parameter2", j.comment)
 
-        val assign = main.bodyOrNull<AssignExpression>()
+        val assign = main.assigns.firstOrNull()
         assertNotNull(assign)
         assertEquals("comment before assignment", assign.comment)
 
-        val declStmt = main.bodyOrNull<DeclarationStatement>()
+        val declStmt = main.allChildren<DeclarationStatement>().firstOrNull()
         assertNotNull(declStmt)
         assertEquals("comment before declaration", declStmt.comment)
 
-        val s = mainNamespace.byNameOrNull<RecordDeclaration>("main.s")
+        val s = mainNamespace.records["main.s"]
         assertNotNull(s)
         assertEquals("comment before struct", s.comment)
 
@@ -896,13 +894,13 @@ class GoLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<GoLanguage>()
             }
 
-        val mainPackage = tu.byNameOrNull<NamespaceDeclaration>("main")
+        val mainPackage = tu.namespaces["main"]
         assertNotNull(mainPackage)
 
-        val main = mainPackage.byNameOrNull<FunctionDeclaration>("main")
+        val main = mainPackage.functions["main"]
         assertNotNull(main)
 
-        val assign = main.bodyOrNull<AssignExpression>()
+        val assign = main.assigns.firstOrNull()
         assertNotNull(assign)
         assertEquals(1, assign.rhs.size)
 

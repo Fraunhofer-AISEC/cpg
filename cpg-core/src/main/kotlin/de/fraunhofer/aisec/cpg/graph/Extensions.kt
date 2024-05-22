@@ -27,16 +27,18 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.astParent
 
 /**
@@ -145,7 +147,7 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
     return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
-inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
+public inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
     name: String,
     fqn: Boolean = false
 ): T? {
@@ -168,18 +170,10 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
     return base.declarations.filterIsInstance<T>().firstOrNull { it.name.lastPartsMatch(lookup) }
 }
 
-@Throws(DeclarationNotFound::class)
-inline fun <reified T : Declaration> DeclarationHolder.byName(
-    name: String,
-    fqn: Boolean = false
-): T {
-    return byNameOrNull(name, fqn)
-        ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
-}
-
+@Deprecated(message = "legacy")
 /**
- * This inline function returns the `n`-th body statement (in AST order) as specified in T or `null`
- * if it does not exist or the type does not match.
+ * This inline function returns the `n`-th body statement (in AST order) cast as T or `null` if it
+ * does not exist or the type does not match.
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
@@ -578,12 +572,48 @@ val Node?.variables: List<VariableDeclaration>
 val Node?.literals: List<Literal<*>>
     get() = this.allChildren()
 
+/** Returns all [Block] child edges in this graph, starting with this [Node]. */
+val Node?.blocks: List<Block>
+    get() = this.allChildren()
+
 /** Returns all [Reference] children in this graph, starting with this [Node]. */
 val Node?.refs: List<Reference>
     get() = this.allChildren()
 
 /** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
 val Node?.memberExpressions: List<MemberExpression>
+    get() = this.allChildren()
+
+/** Returns all [Statement] child edges in this graph, starting with this [Node]. */
+val Node?.statements: List<Statement>
+    get() = this.allChildren()
+
+/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+val Node?.forLoops: List<ForStatement>
+    get() = this.allChildren()
+
+/** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
+val Node?.forEachLoops: List<ForEachStatement>
+    get() = this.allChildren()
+
+/** Returns all [SwitchStatement] child edges in this graph, starting with this [Node]. */
+val Node?.switches: List<SwitchStatement>
+    get() = this.allChildren()
+
+/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+val Node?.whileLoops: List<WhileStatement>
+    get() = this.allChildren()
+
+/** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
+val Node?.ifs: List<IfStatement>
+    get() = this.allChildren()
+
+/** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
+val Node?.labels: List<LabelStatement>
+    get() = this.allChildren()
+
+/** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
+val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */

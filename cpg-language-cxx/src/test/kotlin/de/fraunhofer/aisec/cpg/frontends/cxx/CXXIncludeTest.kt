@@ -66,7 +66,7 @@ internal class CXXIncludeTest : BaseTest() {
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 
-        val returnStatement = doSomething.getBodyStatementAs(0, ReturnStatement::class.java)
+        val returnStatement = doSomething.body<ReturnStatement>(0)
         assertNotNull(returnStatement)
 
         val ref = returnStatement.returnValue as Reference

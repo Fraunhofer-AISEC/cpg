@@ -28,9 +28,6 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -46,16 +43,21 @@ class MultiValueEvaluatorTest {
     fun testSingleValue() {
         val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
-        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val b = main.variables["b"]
         assertNotNull(b)
 
         var value = b.evaluate()
         assertEquals(2, value)
 
-        val printB = main.bodyOrNull<CallExpression>()
+        val printB =
+            main.calls[
+                    {
+                        it.name.localName == "println" &&
+                            it.arguments.firstOrNull()?.name?.localName == "b"
+                    }]
         assertNotNull(printB)
 
         val evaluator = MultiValueEvaluator()
@@ -73,55 +75,55 @@ class MultiValueEvaluatorTest {
         assertEquals(value.min(), value.max())
         assertEquals(2, value.min())
 
-        val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration
+        val c = main.variables["c"]
         assertNotNull(c)
 
         value = evaluator.evaluate(c)
         assertEquals(3, value)
 
-        val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
+        val d = main.variables["d"]
         assertNotNull(d)
 
         value = evaluator.evaluate(d)
         assertEquals(2, value)
 
-        val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
+        val e = main.variables["e"]
         assertNotNull(e)
         value = evaluator.evaluate(e)
         assertEquals(3.5, value)
 
-        val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
+        val f = main.variables["f"]
         assertNotNull(f)
         value = evaluator.evaluate(f)
         assertEquals(10, value)
 
-        val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
+        val g = main.variables["g"]
         assertNotNull(g)
         value = evaluator.evaluate(g) as ConcreteNumberSet
         assertEquals(value.min(), value.max())
         assertEquals(-3, value.min())
 
-        val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
+        val i = main.variables["i"]
         assertNotNull(i)
         value = evaluator.evaluate(i)
         assertFalse(value as Boolean)
 
-        val j = main.bodyOrNull<DeclarationStatement>(9)?.singleDeclaration
+        val j = main.variables["j"]
         assertNotNull(j)
         value = evaluator.evaluate(j)
         assertFalse(value as Boolean)
 
-        val k = main.bodyOrNull<DeclarationStatement>(10)?.singleDeclaration
+        val k = main.variables["k"]
         assertNotNull(k)
         value = evaluator.evaluate(k)
         assertFalse(value as Boolean)
 
-        val l = main.bodyOrNull<DeclarationStatement>(11)?.singleDeclaration
+        val l = main.variables["l"]
         assertNotNull(l)
         value = evaluator.evaluate(l)
         assertFalse(value as Boolean)
 
-        val m = main.bodyOrNull<DeclarationStatement>(12)?.singleDeclaration
+        val m = main.variables["m"]
         assertNotNull(m)
         value = evaluator.evaluate(m)
         assertFalse(value as Boolean)
@@ -131,10 +133,10 @@ class MultiValueEvaluatorTest {
     fun testMultipleValues() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
-        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val b = main.variables["b"]
         assertNotNull(b)
 
         var printB = main.calls("println")[0]
@@ -176,10 +178,10 @@ class MultiValueEvaluatorTest {
     fun testLoop() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("loop")
-        assertNotNull(main)
+        val loop = tu.functions["loop"]
+        assertNotNull(loop)
 
-        val forLoop = main.bodyOrNull<ForStatement>()
+        val forLoop = loop.forLoops.firstOrNull()
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()

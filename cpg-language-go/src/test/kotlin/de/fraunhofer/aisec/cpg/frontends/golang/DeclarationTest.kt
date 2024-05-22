@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.assertFullName
 import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -55,14 +54,14 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
+        val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val myStruct = main.byNameOrNull<RecordDeclaration>("main.MyStruct")
+        val myStruct = main.records["main.MyStruct"]
         assertNotNull(myStruct)
 
         // Receiver should be null since its unnamed
-        val myFunc = myStruct.byNameOrNull<MethodDeclaration>("MyFunc")
+        val myFunc = myStruct.methods["MyFunc"]
         assertNotNull(myFunc)
         assertNull(myFunc.receiver)
     }
@@ -80,11 +79,11 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
+        val main = tu.namespaces["main"]
         assertNotNull(main)
 
         // Parameter should be there but not have a name
-        val myGlobalFunc = main.byNameOrNull<FunctionDeclaration>("MyGlobalFunc")
+        val myGlobalFunc = main.functions["MyGlobalFunc"]
         assertNotNull(myGlobalFunc)
 
         val param = myGlobalFunc.parameters.firstOrNull()
@@ -188,13 +187,13 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.byNameOrNull<NamespaceDeclaration>("main")
+        val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val myInterface = main.byNameOrNull<RecordDeclaration>("main.MyInterface")
+        val myInterface = main.records["main.MyInterface"]
         assertNotNull(myInterface)
 
-        val myOtherInterface = main.byNameOrNull<RecordDeclaration>("main.MyOtherInterface")
+        val myOtherInterface = main.records["main.MyOtherInterface"]
         assertNotNull(myOtherInterface)
 
         // MyOtherInterface should be in the superClasses and superTypeDeclarations of MyInterface,

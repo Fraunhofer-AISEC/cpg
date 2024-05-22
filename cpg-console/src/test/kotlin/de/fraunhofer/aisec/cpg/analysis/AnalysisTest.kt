@@ -26,9 +26,8 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.console.fancyCode
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.body
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
@@ -55,7 +54,7 @@ class AnalysisTest {
         val result = GraphExamples.ArrayJava()
         val tu = result.components.flatMap { it.translationUnits }.first()
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("Array.main", true)
+        val main = tu.functions["Array.main"]
         assertNotNull(main)
         val call = main.body<CallExpression>(0)
 

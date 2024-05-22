@@ -25,17 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
@@ -55,9 +50,9 @@ class SizeEvaluatorTest {
 
     @Test
     fun testArraySize() {
-        val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
+        val mainClass = tu.records["MainClass"]
         assertNotNull(mainClass)
-        val main = mainClass.byNameOrNull<MethodDeclaration>("main")
+        val main = mainClass.methods["main"]
         assertNotNull(main)
 
         val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
@@ -67,7 +62,7 @@ class SizeEvaluatorTest {
         var value = evaluator.evaluate(array)
         assertEquals(3, value)
 
-        val printCall = main.bodyOrNull<CallExpression>(0)
+        val printCall = main.calls["println"]
         assertNotNull(printCall)
 
         value = evaluator.evaluate(printCall.arguments.firstOrNull()) as Int
@@ -76,9 +71,10 @@ class SizeEvaluatorTest {
 
     @Test
     fun testArraySizeFromSubscript() {
-        val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
+        val mainClass = tu.records["MainClass"]
         assertNotNull(mainClass)
-        val main = mainClass.byNameOrNull<MethodDeclaration>("main")
+
+        val main = mainClass.methods["main"]
         assertNotNull(main)
 
         val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
@@ -88,7 +84,7 @@ class SizeEvaluatorTest {
         var value = evaluator.evaluate(array)
         assertEquals(3, value)
 
-        val forLoop = main.bodyOrNull<ForStatement>(0)
+        val forLoop = main.forLoops.firstOrNull()
         assertNotNull(forLoop)
 
         val subscriptExpr =
@@ -102,11 +98,13 @@ class SizeEvaluatorTest {
 
     @Test
     fun testStringSize() {
-        val mainClass = tu.byNameOrNull<RecordDeclaration>("MainClass")
+        val mainClass = tu.records["MainClass"]
         assertNotNull(mainClass)
-        val main = mainClass.byNameOrNull<MethodDeclaration>("main")
+
+        val main = mainClass.methods["main"]
         assertNotNull(main)
-        val printCall = main.bodyOrNull<CallExpression>(1)
+
+        val printCall = main.calls("println").getOrNull(1)
         assertNotNull(printCall)
 
         val evaluator = SizeEvaluator()

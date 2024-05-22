@@ -212,7 +212,7 @@ internal class ClassTemplateTest : BaseTest() {
         val pair = findByUniqueName(result.records, "Pair")
         val paramN = findByUniqueName(result.parameters, "N")
         val n = findByUniqueName(result.fields, "n")
-        val receiver = pair.byNameOrNull<ConstructorDeclaration>("Pair")?.receiver
+        val receiver = pair.constructors["Pair"]?.receiver
         assertNotNull(receiver)
 
         val pairConstructorDecl =

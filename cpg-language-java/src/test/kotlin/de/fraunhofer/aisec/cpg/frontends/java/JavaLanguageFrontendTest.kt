@@ -57,10 +57,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 it.registerLanguage(JavaLanguage())
             }
 
-        val declaration = tu.byNameOrNull<RecordDeclaration>("LargeNegativeNumber")
+        val declaration = tu.records["LargeNegativeNumber"]
         assertNotNull(declaration)
 
-        val main = declaration.byNameOrNull<MethodDeclaration>("main")
+        val main = declaration.methods["main"]
         assertNotNull(main)
 
         val a = main.variables["a"]
@@ -682,10 +682,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val compiling = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        val compiling = tu.namespaces["compiling"]
         assertNotNull(compiling)
 
-        val recordDeclaration = compiling.byNameOrNull<RecordDeclaration>("MySimpleClass")
+        val recordDeclaration = compiling.records["MySimpleClass"]
         assertNotNull(recordDeclaration)
     }
 

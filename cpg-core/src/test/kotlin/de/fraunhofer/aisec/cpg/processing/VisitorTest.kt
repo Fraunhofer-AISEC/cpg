@@ -28,13 +28,11 @@ package de.fraunhofer.aisec.cpg.processing
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.records
+import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
@@ -71,14 +69,15 @@ class VisitorTest : BaseTest() {
     /** Visits all nodes along EOG. */
     @Test
     fun testAllEogNodeVisitor() {
-        val nodeList: MutableList<Node> = ArrayList()
-        // val recordDeclaration = namespace?.getDeclarationAs(0, RecordDeclaration::class.java)
-        assertNotNull(recordDeclaration)
+        var record = recordDeclaration
+        assertNotNull(record)
 
-        val method = recordDeclaration!!.byNameOrNull<MethodDeclaration>("method")
+        val nodeList: MutableList<Node> = ArrayList()
+        val method = record.methods["method"]
         assertNotNull(method)
 
-        val firstStmt = method.bodyOrNull<Statement>()
+        // the "first" statement includes the block itself, so we need to get index 1 instead of 0
+        val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.statements.Statement>(0)
         assertNotNull(firstStmt)
 
         firstStmt.accept(
