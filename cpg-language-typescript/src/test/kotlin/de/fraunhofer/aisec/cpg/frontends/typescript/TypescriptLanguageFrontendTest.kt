@@ -29,13 +29,11 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -129,8 +127,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val doJsx =
-            tu.getDeclarationsByName("doJsx", FunctionDeclaration::class.java).iterator().next()
+        val doJsx = tu.functions["doJsx"]
         assertNotNull(doJsx)
 
         val returnStatement = doJsx.getBodyStatementAs(0, ReturnStatement::class.java)
@@ -159,10 +156,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val function =
-            tu.getDeclarationsByName("handleSubmit", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+        val function = tu.functions["handleSubmit"]
         assertNotNull(function)
 
         val preventDefault = function.getBodyStatementAs(0, MemberCallExpression::class.java)
@@ -264,7 +258,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val user = tu.getDeclarationsByName("User", RecordDeclaration::class.java).iterator().next()
+        val user = tu.records["User"]
         assertNotNull(user)
         assertEquals("interface", user.kind)
         assertLocalName("User", user)
@@ -276,9 +270,8 @@ class TypeScriptLanguageFrontendTest {
         assertLocalName("lastName", lastName)
         assertEquals(tu.primitiveType("string"), lastName.type)
 
-        val usersState =
-            tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
-        assertNotNull(user)
+        val usersState = tu.records["UsersState"]
+        assertNotNull(usersState)
         assertEquals("interface", usersState.kind)
         assertLocalName("UsersState", usersState)
 
@@ -290,8 +283,7 @@ class TypeScriptLanguageFrontendTest {
         assertIs<PointerType>(users.type)
         assertLocalName("User[]", users.type)
 
-        val usersComponent =
-            tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()
+        val usersComponent = tu.records["Users"]
         assertNotNull(usersComponent)
         assertLocalName("Users", usersComponent)
         assertEquals(1, usersComponent.constructors.size)
@@ -327,8 +319,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val loginForm =
-            tu.getDeclarationsByName("LoginForm", VariableDeclaration::class.java).iterator().next()
+        val loginForm = tu.variables["LoginForm"]
         assertNotNull(loginForm)
 
         val lambdaFunction = (loginForm.initializer as? LambdaExpression)?.function
@@ -356,8 +347,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val myClass =
-            tu.getDeclarationsByName("MyClass", RecordDeclaration::class.java).iterator().next()
+        val myClass = tu.records["MyClass"]
         assertNotNull(myClass)
         assertLocalName("awesome", myClass.annotations.firstOrNull())
 
@@ -431,11 +421,11 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(componentTU)
         assertNotNull(functionTu)
 
-        val users = componentTU.byNameOrNull<RecordDeclaration>("Users")
+        val users = componentTU.records["Users"]
         assertNotNull(users)
         assertEquals("Comment on a record", users.comment)
 
-        val i = users.constructors.first()
+        val i = users.constructors.firstOrNull()
         assertNotNull(i)
         assertEquals("Comment on constructor", i.comment)
 
@@ -443,16 +433,15 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(j)
         assertEquals("Multiline comment inside of a file", j.comment)
 
-        var function = functionTu.byNameOrNull<FunctionDeclaration>("someFunction")
+        var function = functionTu.functions["someFunction"]
         assertNotNull(function)
         assertEquals("Block comment on a function", function.comment)
 
-        val variableDeclaration =
-            SubgraphWalker.flattenAST(function).filterIsInstance<DeclarationStatement>().first()
+        val variableDeclaration = function.allChildren<DeclarationStatement>().firstOrNull()
         assertNotNull(variableDeclaration)
         assertEquals("Comment on a variable", variableDeclaration.comment)
 
-        function = functionTu.byNameOrNull("someOtherFunction")
+        function = functionTu.functions["someOtherFunction"]
         assertNotNull(function)
         assertEquals("Comment on a Function", function.comment)
     }
