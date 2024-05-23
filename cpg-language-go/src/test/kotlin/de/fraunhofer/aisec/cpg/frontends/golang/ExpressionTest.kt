@@ -26,8 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -54,14 +52,10 @@ class ExpressionTest {
         val mainFunc = main.functions["main"]
         assertNotNull(mainFunc)
 
-        val f =
-            (mainFunc.bodyOrNull<DeclarationStatement>(0))?.singleDeclaration
-                as? VariableDeclaration
+        val f = mainFunc.variables["f"]
         assertNotNull(f)
 
-        val s =
-            (mainFunc.bodyOrNull<DeclarationStatement>(1))?.singleDeclaration
-                as? VariableDeclaration
+        val s = mainFunc.variables["s"]
         assertNotNull(s)
 
         val cast = s.initializer as? CastExpression

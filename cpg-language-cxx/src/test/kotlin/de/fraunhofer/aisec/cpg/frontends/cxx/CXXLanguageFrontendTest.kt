@@ -64,7 +64,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(tu.objectType("std::vector", listOf(tu.objectType("int"))), ls.type)
         assertLocalName("ls", ls)
 
-        val forEachStatement = decl.getBodyStatementAs(1, ForEachStatement::class.java)
+        val forEachStatement = decl.forEachLoops.firstOrNull()
         assertNotNull(forEachStatement)
 
         // should loop over ls
@@ -93,7 +93,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val tryStatement = main.getBodyStatementAs(0, TryStatement::class.java)
+        val tryStatement = main.trys.firstOrNull()
         assertNotNull(tryStatement)
 
         val catchClauses = tryStatement.catchClauses
@@ -184,13 +184,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(cast)
             assertEquals(objectType("BaseClass").pointer(), cast.castType)
 
-            val staticCast = main.getBodyStatementAs(2, AssignExpression::class.java)
+            val staticCast = main.bodyOrNull<AssignExpression>(2)
             assertNotNull(staticCast)
             cast = staticCast.rhs<CastExpression>()
             assertNotNull(cast)
             assertLocalName("BaseClass*", cast)
 
-            val reinterpretCast = main.getBodyStatementAs(3, AssignExpression::class.java)
+            val reinterpretCast = main.bodyOrNull<AssignExpression>(3)
             assertNotNull(reinterpretCast)
             cast = reinterpretCast.rhs<CastExpression>()
             assertNotNull(cast)
@@ -753,7 +753,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val methodCallWithConstant = main.getBodyStatementAs(2, CallExpression::class.java)
+        val methodCallWithConstant = main.calls("method").getOrNull(1)
         assertNotNull(methodCallWithConstant)
 
         val arg = methodCallWithConstant.arguments[0]

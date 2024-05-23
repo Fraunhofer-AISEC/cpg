@@ -36,11 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.astParent
+import kotlin.math.absoluteValue
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -148,19 +150,29 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
     return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
-@Deprecated(message = "legacy")
 /**
  * This inline function returns the `n`-th body statement (in AST order) cast as T or `null` if it
  * does not exist or the type does not match.
  *
+ * `n` can also be negative; in this case `-1` corresponds to the last statement, `-2` to the second
+ * to last and so on.
+ *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    return if (this.body is Block) {
-        return (body as? Block)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+    var body = this.body
+    return if (body is Block) {
+        var statements = body.statements
+        var idx =
+            if (n < 0) {
+                statements.size - n.absoluteValue
+            } else {
+                n
+            }
+        return statements.getOrNull(idx) as? T
     } else {
-        if (n == 0 && this.body is T) {
-            this.body as T
+        if (n == 0 && body is T) {
+            body
         } else {
             return null
         }
@@ -568,6 +580,10 @@ val Node?.statements: List<Statement>
 
 /** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
 val Node?.forLoops: List<ForStatement>
+    get() = this.allChildren()
+
+/** Returns all [TryStatement] child edges in this graph, starting with this [Node]. */
+val Node?.trys: List<TryStatement>
     get() = this.allChildren()
 
 /** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */

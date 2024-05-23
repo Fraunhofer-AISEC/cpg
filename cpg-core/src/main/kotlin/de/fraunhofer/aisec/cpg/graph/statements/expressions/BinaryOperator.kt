@@ -72,6 +72,7 @@ open class BinaryOperator :
             }
         }
 
+    @Deprecated(message = "Use lhs<T>() instead")
     fun <T : Expression?> getLhsAs(clazz: Class<T>): T? {
         return if (clazz.isInstance(lhs)) clazz.cast(lhs) else null
     }
@@ -93,6 +94,7 @@ open class BinaryOperator :
         lhs.unregisterTypeObserver(this)
     }
 
+    @Deprecated(message = "Use rhs<T>() instead")
     fun <T : Expression?> getRhsAs(clazz: Class<T>): T? {
         return if (clazz.isInstance(rhs)) clazz.cast(rhs) else null
     }

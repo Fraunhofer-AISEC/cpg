@@ -58,7 +58,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         assertNotNull(main)
 
         val funcDecl = main
-        var binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator::class.java)
+        var binaryOperator = funcDecl.bodyOrNull<BinaryOperator>(0)
         assertNotNull(binaryOperator)
 
         // without additional symbols, the first line will look like a reference (to something we do
@@ -67,7 +67,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         assertNotNull(dre)
         assertLocalName("HELLO_WORLD", dre)
 
-        binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
+        binaryOperator = funcDecl.bodyOrNull<BinaryOperator>(1)
         assertNotNull(binaryOperator)
 
         // without additional symbols, the second line will look like a function call (to something
@@ -97,7 +97,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         assertNotNull(main)
 
         val funcDecl = main
-        var binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator::class.java)
+        var binaryOperator = funcDecl.bodyOrNull<BinaryOperator>(0)
         assertNotNull(binaryOperator)
 
         // should be a literal now
@@ -105,19 +105,19 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         assertNotNull(literal)
         assertEquals("Hello World", literal.value)
 
-        binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator::class.java)
+        binaryOperator = funcDecl.bodyOrNull<BinaryOperator>(1)
         assertNotNull(binaryOperator)
 
         // should be expanded to another binary operation 1+1
-        val add = binaryOperator.getRhsAs(BinaryOperator::class.java)
+        val add = binaryOperator.rhs<BinaryOperator>()
         assertNotNull(add)
         assertEquals("+", add.operatorCode)
 
-        val literal2 = add.getLhsAs(Literal::class.java)
+        val literal2 = add.lhs<Literal<Int>>()
         assertNotNull(literal2)
         assertEquals(2, literal2.value)
 
-        val literal1 = add.getRhsAs(Literal::class.java)
+        val literal1 = add.rhs<Literal<Int>>()
         assertNotNull(literal1)
         assertEquals(1, literal1.value)
     }

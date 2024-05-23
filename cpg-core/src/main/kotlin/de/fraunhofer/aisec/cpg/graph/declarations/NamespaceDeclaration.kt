@@ -61,18 +61,7 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
      */
     var path: String? = null
 
-    /**
-     * Returns a non-null, possibly empty `Set` of the declaration of a specified type and clazz.
-     *
-     * @param name the name to search for
-     * @param clazz the declaration class, such as [FunctionDeclaration].
-     * @param <T> the type of the declaration
-     * @return a `Set` containing the declarations, if any. </T>
-     */
-    fun <T : Declaration> getDeclarationsByName(name: String, clazz: Class<T>): Set<T> {
-        return declarations.filterIsInstance(clazz).filter { it.name.toString() == name }.toSet()
-    }
-
+    @Deprecated(message = "legacy stuff")
     fun <T> getDeclarationAs(i: Int, clazz: Class<T>): T {
         return clazz.cast(declarations[i])
     }

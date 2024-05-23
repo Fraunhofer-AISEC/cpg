@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.test.*
@@ -117,7 +116,7 @@ class TypeScriptLanguageFrontendTest {
         val doJsx = tu.functions["doJsx"]
         assertNotNull(doJsx)
 
-        val returnStatement = doJsx.getBodyStatementAs(0, ReturnStatement::class.java)
+        val returnStatement = doJsx.returns.firstOrNull()
         assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
@@ -142,17 +141,13 @@ class TypeScriptLanguageFrontendTest {
         val function = tu.functions["handleSubmit"]
         assertNotNull(function)
 
-        val preventDefault = function.getBodyStatementAs(0, MemberCallExpression::class.java)
+        val preventDefault = function.mcalls["preventDefault"]
         assertNotNull(preventDefault)
-
         assertLocalName("preventDefault", preventDefault)
         assertLocalName("event", preventDefault.base)
 
-        val apiUrl =
-            function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration
-                as? VariableDeclaration
+        val apiUrl = function.variables["apiUrl"]
         assertNotNull(apiUrl)
-
         assertLocalName("apiUrl", apiUrl)
 
         val literalInitializer = apiUrl.initializer as? Literal<*>
@@ -160,11 +155,8 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("/api/v1/groups", literalInitializer.value)
 
-        val token =
-            function.getBodyStatementAs(2, DeclarationStatement::class.java)?.singleDeclaration
-                as? VariableDeclaration
+        val token =function.variables["token"]
         assertNotNull(token)
-
         assertLocalName("token", token)
 
         val callInitializer = token.initializer as? CallExpression
@@ -175,7 +167,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("access_token", stringArg.value)
 
-        val chainedCall = function.getBodyStatementAs(3, MemberCallExpression::class.java)
+        val chainedCall = function.bodyOrNull<MemberCallExpression>(3)
         assertNotNull(chainedCall)
 
         val fetch = chainedCall.base as? CallExpression
@@ -276,7 +268,7 @@ class TypeScriptLanguageFrontendTest {
         val render = usersComponent.methods["render"]
         assertNotNull(render)
 
-        val returnStatement = render.getBodyStatementAs(1, ReturnStatement::class.java)
+        val returnStatement = render.returns.firstOrNull()
         assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
@@ -308,10 +300,7 @@ class TypeScriptLanguageFrontendTest {
         val lambdaFunction = (loginForm.initializer as? LambdaExpression)?.function
         assertNotNull(lambdaFunction)
 
-        val declStatement = lambdaFunction.getBodyStatementAs(3, DeclarationStatement::class.java)
-        assertNotNull(declStatement)
-
-        val validateForm = declStatement.singleDeclaration as? FunctionDeclaration
+        val validateForm = lambdaFunction.functions["validateForm"]
         assertNotNull(validateForm)
         assertLocalName("validateForm", validateForm)
     }

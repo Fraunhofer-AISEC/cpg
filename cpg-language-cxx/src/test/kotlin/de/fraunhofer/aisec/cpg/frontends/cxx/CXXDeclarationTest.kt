@@ -150,7 +150,7 @@ class CXXDeclarationTest {
         assertEquals(2, statements.size)
 
         // last statement should be an implicit return
-        var statement = method.getBodyStatementAs(statements.size - 1, ReturnStatement::class.java)
+        var statement = method.bodyOrNull<ReturnStatement>(-1)
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 
@@ -162,7 +162,7 @@ class CXXDeclarationTest {
         assertEquals(1, statements.size)
 
         // should only contain 1 explicit return statement
-        statement = method.getBodyStatementAs(0, ReturnStatement::class.java)
+        statement = method.returns.singleOrNull()
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 

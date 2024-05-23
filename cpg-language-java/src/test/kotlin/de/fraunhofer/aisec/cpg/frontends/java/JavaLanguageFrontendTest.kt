@@ -99,7 +99,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val ls = main.variables["ls"]
         assertNotNull(ls)
 
-        val forStatement = main.getBodyStatementAs(2, ForStatement::class.java)
+        val forStatement = main.forLoops.firstOrNull()
         assertNotNull(forStatement)
 
         // initializer is an expression list
@@ -126,11 +126,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val ls = main.variables["ls"]
         assertNotNull(ls)
 
-        val forEachStatement = main.getBodyStatementAs(1, ForEachStatement::class.java)
+        val forEachStatement = main.forEachLoops.firstOrNull()
         assertNotNull(forEachStatement)
 
         // should loop over ls
-        assertEquals(ls, (forEachStatement.iterable as? Reference)?.refersTo)
+        assertRefersTo(forEachStatement.iterable as Expression?, ls)
 
         // should declare String s
         val s = forEachStatement.variable
@@ -216,63 +216,49 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.methods[0]
 
         // int i = 1;
-        val i =
-            (main.getBodyStatementAs(0, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val i = main.variables["i"]
         assertNotNull(i)
         var literal = i.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(1, literal.value)
 
         // String s = "string";
-        val s =
-            (main.getBodyStatementAs(1, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val s = main.variables["s"]
         assertNotNull(s)
         literal = s.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals("string", literal.value)
 
         // boolean b = true;
-        val b =
-            (main.getBodyStatementAs(2, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val b = main.variables["b"]
         assertNotNull(b)
         literal = b.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(true, literal.value)
 
         // char c = '0';
-        val c =
-            (main.getBodyStatementAs(3, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val c = main.variables["c"]
         assertNotNull(c)
         literal = c.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals('0', literal.value)
 
         // double d = 1.0;
-        val d =
-            (main.getBodyStatementAs(4, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val d = main.variables["d"]
         assertNotNull(d)
         literal = d.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(1.0, literal.value)
 
         // long l = 1L;
-        val l =
-            (main.getBodyStatementAs(5, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val l = main.variables["l"]
         assertNotNull(l)
         literal = l.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(1L, literal.value)
 
         // Object o = null;
-        val o =
-            (main.getBodyStatementAs(6, DeclarationStatement::class.java))?.singleDeclaration
-                as? VariableDeclaration
+        val o = main.variables["o"]
         assertNotNull(o)
         literal = o.initializer as? Literal<*>
         assertNotNull(literal)
@@ -367,10 +353,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(main)
 
         // e = new ExtendedClass()
-        var stmt = main.getBodyStatementAs(0, DeclarationStatement::class.java)
-        assertNotNull(stmt)
-
-        val e = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
+        val e = main.variables["e"]
+        assertNotNull(e)
         // This test can be simplified once we solved the issue with inconsistently used simple
         // names
         // vs. fully qualified names.
@@ -380,10 +364,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         )
 
         // b = (BaseClass) e
-        stmt = main.getBodyStatementAs(1, DeclarationStatement::class.java)
-        assertNotNull(stmt)
-
-        val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
+        val b = main.variables["b"]
+        assertNotNull(b)
         assertTrue(
             b.type.name.localName == "BaseClass" || b.type.name.toString() == "cast.BaseClass"
         )
@@ -628,7 +610,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(record)
 
         val constructor = record.constructors[0]
-        val op = constructor.getBodyStatementAs(0, AssignExpression::class.java)
+        val op = constructor.bodyOrNull<AssignExpression>(0)
         assertNotNull(op)
 
         val lhs = op.lhs<MemberExpression>()
@@ -786,7 +768,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val forIterator = forEachClass.methods["forIterator"]
         assertNotNull(forIterator)
 
-        val forEach = forIterator.bodyOrNull<ForEachStatement>()
+        val forEach = forIterator.forEachLoops.firstOrNull()
         assertNotNull(forEach)
 
         val loopVariable = (forEach.variable as? DeclarationStatement)?.singleDeclaration

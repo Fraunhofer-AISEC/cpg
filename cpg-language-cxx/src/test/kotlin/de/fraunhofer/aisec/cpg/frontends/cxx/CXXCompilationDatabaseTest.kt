@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.*
@@ -68,7 +67,7 @@ class CXXCompilationDatabaseTest {
             assertNotNull(sysFunc)
             assertEquals(sysFunc.isInferred, false)
 
-            val s0 = mainFunc.getBodyStatementAs(0, CallExpression::class.java)
+            val s0 = mainFunc.bodyOrNull<CallExpression>(0)
             assertNotNull(s0)
 
             val arg1 = s0.arguments[1]
@@ -77,23 +76,23 @@ class CXXCompilationDatabaseTest {
             val lit = arg1 as Literal<*>
             assertEquals(lit.value, "hi")
 
-            val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
+            val s1 = mainFunc.bodyOrNull<CallExpression>(1)
             assertNotNull(s1)
-            assertEquals(func1, s1.invokes.iterator().next())
+            assertInvokes(s1, func1)
 
-            val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
+            val s2 = mainFunc.bodyOrNull<CallExpression>(2)
             assertNotNull(s2)
-            assertEquals(func2, s2.invokes.iterator().next())
+            assertInvokes(s2, func2)
 
-            val s3 = mainFunc.getBodyStatementAs(3, CallExpression::class.java)
+            val s3 = mainFunc.bodyOrNull<CallExpression>(3)
             assertNotNull(s3)
-            assertEquals(sysFunc, s3.invokes.iterator().next())
+            assertInvokes(s3, sysFunc)
 
-            val s4 = mainFunc.getBodyStatementAs(4, Literal::class.java)
+            val s4 = mainFunc.bodyOrNull<Literal<*>>(4)
             assertNotNull(s4)
             assertEquals(s4.value, 1)
 
-            val s5 = mainFunc.getBodyStatementAs(5, Literal::class.java)
+            val s5 = mainFunc.bodyOrNull<Literal<*>>(5)
             assertNotNull(s5)
             assertEquals(s5.value, 2)
         }
@@ -114,7 +113,7 @@ class CXXCompilationDatabaseTest {
         val mainFunc = tu.functions["main"]
         assertNotNull(mainFunc)
 
-        val s0 = mainFunc.getBodyStatementAs(0, ReturnStatement::class.java)
+        val s0 = mainFunc.returns.firstOrNull()
         assertNotNull(s0)
 
         val retVal = s0.returnValue as Literal<*>
