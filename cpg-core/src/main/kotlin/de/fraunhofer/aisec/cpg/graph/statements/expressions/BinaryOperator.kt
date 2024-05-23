@@ -71,7 +71,7 @@ open class BinaryOperator :
                 )
             }
         }
-    
+
     private fun connectNewLhs(lhs: Expression) {
         lhs.registerTypeObserver(this)
         if (lhs is Reference && "=" == operatorCode) {
