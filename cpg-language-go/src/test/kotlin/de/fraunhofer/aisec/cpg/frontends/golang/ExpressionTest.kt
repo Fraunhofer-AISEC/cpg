@@ -25,16 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -44,7 +39,7 @@ class ExpressionTest {
     fun testCastExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
                 true
@@ -82,11 +77,7 @@ class ExpressionTest {
     fun testSliceExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("slices.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("slices.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -143,11 +134,7 @@ class ExpressionTest {
     fun testSendStmt() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("chan.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("chan.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -179,7 +166,7 @@ class ExpressionTest {
     fun testShortAssign() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("short_assign.go").toFile()),
                 topLevel,
                 true

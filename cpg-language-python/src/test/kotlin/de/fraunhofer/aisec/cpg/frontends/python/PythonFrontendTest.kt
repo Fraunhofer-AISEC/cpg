@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -39,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.math.pow
 import kotlin.test.*
@@ -48,11 +45,7 @@ class PythonFrontendTest : BaseTest() {
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("literal.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -103,11 +96,7 @@ class PythonFrontendTest : BaseTest() {
     fun testFunctionDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -199,11 +188,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("if.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("if.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -233,7 +218,7 @@ class PythonFrontendTest : BaseTest() {
     fun testSimpleClass() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("simple_class.py").toFile()),
                 topLevel,
                 true
@@ -287,11 +272,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIfExpr() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("ifexpr.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("ifexpr.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -333,7 +314,7 @@ class PythonFrontendTest : BaseTest() {
     fun testFields() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_fields.py").toFile()),
                 topLevel,
                 true
@@ -395,7 +376,7 @@ class PythonFrontendTest : BaseTest() {
     fun testSelf() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_self.py").toFile()),
                 topLevel,
                 true
@@ -461,7 +442,7 @@ class PythonFrontendTest : BaseTest() {
     fun testCtor() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_ctor.py").toFile()),
                 topLevel,
                 true
@@ -513,11 +494,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue432() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue432.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue432.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -620,11 +597,7 @@ class PythonFrontendTest : BaseTest() {
     fun testVarsAndFields() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("vars.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("vars.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -714,11 +687,7 @@ class PythonFrontendTest : BaseTest() {
     fun testRegionInCPG() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("literal.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -739,7 +708,7 @@ class PythonFrontendTest : BaseTest() {
     fun testMultiLevelMemberCall() { // TODO
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
                 topLevel,
                 true
@@ -775,11 +744,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue598() { // test for added functionality: "while" and "break"
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue598.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue598.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -816,11 +781,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue615() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue615.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue615.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -886,11 +847,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue473() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue473.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue473.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -938,11 +895,7 @@ class PythonFrontendTest : BaseTest() {
     fun testCommentMatching() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("comments.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("comments.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
             }
         assertNotNull(tu)
@@ -986,7 +939,7 @@ class PythonFrontendTest : BaseTest() {
     fun testAnnotations() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("annotations.py").toFile()),
                 topLevel,
                 true
@@ -1004,11 +957,7 @@ class PythonFrontendTest : BaseTest() {
     fun testForLoop() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("forloop.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("forloop.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -1080,11 +1029,7 @@ class PythonFrontendTest : BaseTest() {
     fun testArithmetics() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("calc.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("calc.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -1170,7 +1115,7 @@ class PythonFrontendTest : BaseTest() {
     fun testDataTypes() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("datatypes.py").toFile()),
                 topLevel,
                 true

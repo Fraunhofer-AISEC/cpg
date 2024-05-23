@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Test
 import org.junit.jupiter.api.assertThrows
 

@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -34,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -43,11 +42,7 @@ class TypeScriptLanguageFrontendTest {
     fun testFunction() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.ts").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.ts").toFile()), topLevel, true) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
@@ -80,11 +75,7 @@ class TypeScriptLanguageFrontendTest {
     fun testJSFunction() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.js").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.js").toFile()), topLevel, true) {
                 it.registerLanguage<JavaScriptLanguage>()
             }
 
@@ -117,11 +108,7 @@ class TypeScriptLanguageFrontendTest {
     fun testJSX() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("simple.jsx").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("simple.jsx").toFile()), topLevel, true) {
                 it.registerLanguage<JavaScriptLanguage>()
             }
 
@@ -146,11 +133,7 @@ class TypeScriptLanguageFrontendTest {
     fun testComplexCall() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("fetch.ts").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fetch.ts").toFile()), topLevel, true) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
@@ -248,7 +231,7 @@ class TypeScriptLanguageFrontendTest {
     fun testReact() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
                 true
@@ -309,7 +292,7 @@ class TypeScriptLanguageFrontendTest {
     fun testReactFunctionComponent() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("function-component.tsx").toFile()),
                 topLevel,
                 true
@@ -337,7 +320,7 @@ class TypeScriptLanguageFrontendTest {
     fun testDecorators() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("decorator.ts").toFile()),
                 topLevel,
                 true
@@ -371,11 +354,7 @@ class TypeScriptLanguageFrontendTest {
     fun testLambda() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("lambda.js").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("lambda.js").toFile()), topLevel, true) {
                 it.registerLanguage<JavaScriptLanguage>()
             }
 
@@ -402,7 +381,7 @@ class TypeScriptLanguageFrontendTest {
     fun testComments() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val componentTU =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
                 true
@@ -410,11 +389,7 @@ class TypeScriptLanguageFrontendTest {
                 it.registerLanguage<TypeScriptLanguage>()
             }
         val functionTu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.ts").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.ts").toFile()), topLevel, true) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 

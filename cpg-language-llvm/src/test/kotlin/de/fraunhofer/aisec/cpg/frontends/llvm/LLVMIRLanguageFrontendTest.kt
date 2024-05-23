@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 import kotlin.test.Test
@@ -56,7 +57,7 @@ class LLVMIRLanguageFrontendTest {
     fun testVectorPoison() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("vector_poison.ll").toFile()),
                 topLevel,
                 true
@@ -85,7 +86,7 @@ class LLVMIRLanguageFrontendTest {
     fun testIntegerOps() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("integer_ops.ll").toFile()),
                 topLevel,
                 true
@@ -129,11 +130,7 @@ class LLVMIRLanguageFrontendTest {
     fun testIdentifiedStruct() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("struct.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
@@ -220,7 +217,7 @@ class LLVMIRLanguageFrontendTest {
     fun testSwitchCase() { // TODO: Update the test
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("switch_case.ll").toFile()),
                 topLevel,
                 true
@@ -279,11 +276,7 @@ class LLVMIRLanguageFrontendTest {
     fun testBrStatements() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("br.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("br.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
@@ -357,7 +350,7 @@ class LLVMIRLanguageFrontendTest {
     fun testAtomicrmw() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
@@ -397,7 +390,7 @@ class LLVMIRLanguageFrontendTest {
     fun testCmpxchg() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
@@ -452,7 +445,7 @@ class LLVMIRLanguageFrontendTest {
     fun testExtractvalue() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
@@ -476,7 +469,7 @@ class LLVMIRLanguageFrontendTest {
     fun testLiteralStruct() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("literal_struct.ll").toFile()),
                 topLevel,
                 true
@@ -516,7 +509,7 @@ class LLVMIRLanguageFrontendTest {
     fun testVariableScope() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("global_local_var.ll").toFile()),
                 topLevel,
                 true
@@ -567,11 +560,7 @@ class LLVMIRLanguageFrontendTest {
     fun testAlloca() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("alloca.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("alloca.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
@@ -611,7 +600,7 @@ class LLVMIRLanguageFrontendTest {
     fun testUndefInsertvalue() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("undef_insertvalue.ll").toFile()),
                 topLevel,
                 true
@@ -666,7 +655,7 @@ class LLVMIRLanguageFrontendTest {
     fun testTryCatch() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("try_catch.ll").toFile()),
                 topLevel,
                 true
@@ -720,11 +709,7 @@ class LLVMIRLanguageFrontendTest {
     fun testLoopPhi() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("loopPhi.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("loopPhi.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
         val main = tu.functions["loopPhi"]
@@ -735,11 +720,7 @@ class LLVMIRLanguageFrontendTest {
     fun testPhi() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("phi.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("phi.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
         val main = tu.functions["main"]
@@ -793,11 +774,7 @@ class LLVMIRLanguageFrontendTest {
     fun testVectorOperations() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("vector.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("vector.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
         val main = tu.functions["main"]
@@ -903,11 +880,7 @@ class LLVMIRLanguageFrontendTest {
     fun testFence() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("fence.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fence.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
         val main = tu.functions["main"]
@@ -933,7 +906,7 @@ class LLVMIRLanguageFrontendTest {
     fun testExceptions() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("exceptions.ll").toFile()),
                 topLevel,
                 true

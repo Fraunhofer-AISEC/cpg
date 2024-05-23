@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.processing
 
-import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
@@ -34,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.test.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 import kotlin.test.Test

@@ -25,18 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
-import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -45,11 +40,7 @@ class DeclarationTest {
     fun testUnnamedReceiver() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("unnamed.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("unnamed.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -70,11 +61,7 @@ class DeclarationTest {
     fun testUnnamedParameter() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("unnamed.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("unnamed.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -95,11 +82,7 @@ class DeclarationTest {
     fun testStruct() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("struct.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -178,11 +161,7 @@ class DeclarationTest {
     fun testEmbeddedInterface() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("embed.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("embed.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -206,11 +185,7 @@ class DeclarationTest {
     fun testMultipleDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("declare.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("declare.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -270,7 +245,7 @@ class DeclarationTest {
     fun testTypeConstraints() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_constraints.go").toFile()),
                 topLevel,
                 true
@@ -290,11 +265,7 @@ class DeclarationTest {
     fun testConst() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("const.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("const.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -335,7 +306,7 @@ class DeclarationTest {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
         val topLevel = Path.of("src", "test", "resources", "golang")
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     topLevel.resolve("importalias.go").toFile(),
                     stdLib.resolve("fmt").toFile(),
@@ -370,7 +341,7 @@ class DeclarationTest {
     fun testFuncOptions() {
         val topLevel = Path.of("src", "test", "resources", "golang", "options")
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     topLevel.resolve("srv_option.go").toFile(),
                     topLevel.resolve("srv.go").toFile(),

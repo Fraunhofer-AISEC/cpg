@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

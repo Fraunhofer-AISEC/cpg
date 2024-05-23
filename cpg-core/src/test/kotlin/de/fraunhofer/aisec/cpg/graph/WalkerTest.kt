@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.test.*
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import kotlin.test.Test

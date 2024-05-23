@@ -25,18 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
-import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
 
@@ -122,7 +116,7 @@ class CXXDeclarationTest {
     fun testFunctionDeclaration() {
         val file = File("src/test/resources/cxx/functiondecl.cpp")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
 

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 internal class ScopeManagerTest : BaseTest() {

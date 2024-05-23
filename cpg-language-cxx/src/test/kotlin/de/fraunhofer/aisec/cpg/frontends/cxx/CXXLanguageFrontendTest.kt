@@ -27,11 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
-import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -43,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.nio.file.Path
 import java.util.*

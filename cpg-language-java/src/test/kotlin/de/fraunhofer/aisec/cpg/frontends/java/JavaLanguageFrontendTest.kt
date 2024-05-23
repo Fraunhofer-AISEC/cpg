@@ -26,11 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -40,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.math.BigInteger
 import java.nio.file.Files
@@ -806,7 +804,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/Issue1444.java")
 
         val result =
-            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+            analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage(JavaLanguage())
             }
         val record = result.records["Operators"]

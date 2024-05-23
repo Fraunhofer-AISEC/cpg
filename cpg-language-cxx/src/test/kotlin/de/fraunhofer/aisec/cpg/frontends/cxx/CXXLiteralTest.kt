@@ -25,15 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.math.BigInteger
 import kotlin.test.*

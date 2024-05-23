@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance

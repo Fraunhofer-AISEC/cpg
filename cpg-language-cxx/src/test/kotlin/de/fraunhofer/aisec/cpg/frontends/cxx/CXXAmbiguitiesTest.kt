@@ -25,16 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class CXXAmbiguitiesTest {
@@ -51,7 +51,7 @@ class CXXAmbiguitiesTest {
     fun testCallVsFunctionDeclaration() {
         val file = File("src/test/resources/call_me_crazy.h")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
@@ -84,7 +84,7 @@ class CXXAmbiguitiesTest {
     fun testFunctionCallOrTypeCast() {
         val file = File("src/test/resources/function_ptr_or_type_cast.c")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
             }
         assertNotNull(tu)
@@ -95,21 +95,24 @@ class CXXAmbiguitiesTest {
         val fooFunc = tu.functions["foo"]
         assertNotNull(fooFunc)
 
-        // First two Statements are CallExpressions
-        val s1 = mainFunc.getBodyStatementAs(1, CallExpression::class.java)
-        assertNotNull(s1)
-        assertEquals(fooFunc, s1.invokes.iterator().next())
+        val body = mainFunc.body
+        assertIs<Block>(body)
 
-        val s2 = mainFunc.getBodyStatementAs(2, CallExpression::class.java)
-        assertNotNull(s2)
-        assertEquals(fooFunc, s2.invokes.iterator().next())
+        // First two Statements after declaration statement are CallExpressions
+        val s1 = body.statements.getOrNull(1)
+        assertIs<CallExpression>(s1)
+        assertInvokes(s1, fooFunc)
+
+        val s2 = body.statements.getOrNull(2)
+        assertIs<CallExpression>(s2)
+        assertInvokes(s2, fooFunc)
 
         // Last two Statements are CastExpressions
-        val s3 = mainFunc.getBodyStatementAs(3, CastExpression::class.java)
-        assertNotNull(s3)
+        val s3 = body.statements.getOrNull(3)
+        assertIs<CastExpression>(s3)
 
-        val s4 = mainFunc.getBodyStatementAs(4, CastExpression::class.java)
-        assertNotNull(s4)
+        val s4 = body.statements.getOrNull(4)
+        assertIs<CastExpression>(s4)
     }
 
     /**
@@ -124,7 +127,7 @@ class CXXAmbiguitiesTest {
     fun testMethodOrFunction() {
         val file = File("src/test/resources/method_or_function_call.cpp")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
         assertNotNull(tu)

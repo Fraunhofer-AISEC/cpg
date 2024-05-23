@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.APPLICATION_LOCAL_NAME
 import de.fraunhofer.aisec.cpg.frontends.golang.Project.Companion.buildProject
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -53,7 +52,7 @@ class IntegrationTest {
         assertNotNull(app.firstOrNull { it.endsWith("fmt/print.go") })
 
         val tus =
-            TestUtils.analyzeWithBuilder(
+            analyzeWithBuilder(
                 TranslationConfiguration.builder()
                     .softwareComponents(project.components)
                     .symbols(project.symbols)

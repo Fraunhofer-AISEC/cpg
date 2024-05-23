@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,7 +46,7 @@ class CXXCompilationDatabaseTest {
         for (path in ccs) {
             val cc = File(path)
             val result =
-                TestUtils.analyzeWithCompilationDatabase(cc, true) {
+                analyzeWithCompilationDatabase(cc, true) {
                     it.registerLanguage<CPPLanguage>()
                     it.registerLanguage<CLanguage>()
                 }
@@ -103,7 +103,7 @@ class CXXCompilationDatabaseTest {
     fun testCompilationDatabaseSimple() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_simple.json")
         val result =
-            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+            analyzeWithCompilationDatabase(cc, true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
@@ -125,7 +125,7 @@ class CXXCompilationDatabaseTest {
     fun testCompilationDatabaseMultiTUs() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_multi_tus.json")
         val result =
-            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+            analyzeWithCompilationDatabase(cc, true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
@@ -152,7 +152,7 @@ class CXXCompilationDatabaseTest {
     fun testCompilationDatabaseArch() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_arch.json")
         val result =
-            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+            analyzeWithCompilationDatabase(cc, true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
@@ -180,7 +180,7 @@ class CXXCompilationDatabaseTest {
 
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_cxx_std.json")
         val result =
-            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+            analyzeWithCompilationDatabase(cc, true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }
@@ -199,7 +199,7 @@ class CXXCompilationDatabaseTest {
     fun testParseDirectory() {
         val cc = File("src/test/resources/cxxCompilationDatabase/compile_commands_bear.json")
         val result =
-            TestUtils.analyzeWithCompilationDatabase(cc, true) {
+            analyzeWithCompilationDatabase(cc, true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
                 it.useUnityBuild(true)
