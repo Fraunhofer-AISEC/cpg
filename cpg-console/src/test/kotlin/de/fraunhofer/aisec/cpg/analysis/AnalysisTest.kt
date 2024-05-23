@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -56,7 +55,8 @@ class AnalysisTest {
 
         val main = tu.functions["Array.main"]
         assertNotNull(main)
-        val call = main.body<CallExpression>(0)
+        val call = main.calls.firstOrNull()
+        assertNotNull(call)
 
         var code = call.fancyCode(showNumbers = false)
 

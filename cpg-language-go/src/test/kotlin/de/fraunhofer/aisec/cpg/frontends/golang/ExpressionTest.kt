@@ -145,12 +145,12 @@ class ExpressionTest {
             assertNotNull(ch)
             assertEquals(objectType("chan", generics = listOf(primitiveType("int"))), ch.type)
 
-            val binOp = main.bodyOrNull<BinaryOperator>()
+            val binOp = main.bodyOrNull<BinaryOperator>(2)
             assertNotNull(binOp)
             assertRefersTo(binOp.lhs, ch)
             assertRefersTo(binOp.rhs, v)
 
-            val unaryOp = main.bodyOrNull<UnaryOperator>()
+            val unaryOp = main.bodyOrNull<UnaryOperator>(3)
             assertNotNull(unaryOp)
             assertRefersTo(unaryOp.input, ch)
         }

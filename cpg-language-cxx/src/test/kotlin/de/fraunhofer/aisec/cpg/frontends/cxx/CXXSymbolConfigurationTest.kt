@@ -63,7 +63,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
 
         // without additional symbols, the first line will look like a reference (to something we do
         // not know)
-        val dre = binaryOperator.getRhsAs(Reference::class.java)
+        val dre = binaryOperator.rhs<Reference>()
         assertNotNull(dre)
         assertLocalName("HELLO_WORLD", dre)
 
@@ -72,7 +72,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
 
         // without additional symbols, the second line will look like a function call (to something
         // we do not know)
-        val call = binaryOperator.getRhsAs(CallExpression::class.java)
+        val call = binaryOperator.rhs<CallExpression>()
         assertNotNull(call)
         assertLocalName("INCREASE", call)
     }
@@ -101,7 +101,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         assertNotNull(binaryOperator)
 
         // should be a literal now
-        val literal = binaryOperator.getRhsAs(Literal::class.java)
+        val literal = binaryOperator.rhs<Literal<String>>()
         assertNotNull(literal)
         assertEquals("Hello World", literal.value)
 
