@@ -117,7 +117,7 @@ class CXXResolveTest {
         assertFalse(func.isInferred)
         assertFalse(func is MethodDeclaration)
 
-        val cFoo = main.bodyOrNull<MemberCallExpression>(0)
+        val cFoo = main.bodyOrNull<MemberCallExpression>(2)
         assertNotNull(cFoo)
 
         func = cFoo.invokes.firstOrNull()

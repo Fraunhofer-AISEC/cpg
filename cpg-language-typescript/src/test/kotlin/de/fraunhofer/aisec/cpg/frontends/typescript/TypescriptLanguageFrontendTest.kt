@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -155,7 +154,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("/api/v1/groups", literalInitializer.value)
 
-        val token =function.variables["token"]
+        val token = function.variables["token"]
         assertNotNull(token)
         assertLocalName("token", token)
 

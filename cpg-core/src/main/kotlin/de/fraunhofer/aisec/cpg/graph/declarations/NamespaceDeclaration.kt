@@ -61,11 +61,6 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
      */
     var path: String? = null
 
-    @Deprecated(message = "legacy stuff")
-    fun <T> getDeclarationAs(i: Int, clazz: Class<T>): T {
-        return clazz.cast(declarations[i])
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is NamespaceDeclaration) return false

@@ -275,9 +275,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
+        assertNotNull(namespaceDeclaration)
 
-        val recordDeclaration =
-            namespaceDeclaration?.getDeclarationAs(0, RecordDeclaration::class.java)
+        val recordDeclaration = namespaceDeclaration.records["SimpleClass"]
         assertNotNull(recordDeclaration)
 
         val fields = recordDeclaration.fields.map { it.name.localName }.toSet()
@@ -347,7 +347,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val namespaceDeclaration = declaration.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
-        val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = namespaceDeclaration.records["Cast"]
         assertNotNull(record)
         val main = record.methods[0]
         assertNotNull(main)
@@ -395,7 +395,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
-        val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = namespaceDeclaration.records["Arrays"]
         assertNotNull(record)
 
         val main = record.methods[0]
@@ -447,7 +447,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
-        val record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration::class.java)
+        val record = namespaceDeclaration.records["FieldAccess"]
         assertNotNull(record)
 
         val main = record.methods[0]
