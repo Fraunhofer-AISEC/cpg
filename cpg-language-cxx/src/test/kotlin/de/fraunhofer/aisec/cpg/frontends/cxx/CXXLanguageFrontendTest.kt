@@ -184,13 +184,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(cast)
             assertEquals(objectType("BaseClass").pointer(), cast.castType)
 
-            val staticCast = main.bodyOrNull<AssignExpression>(2)
+            val staticCast = main.assigns.getOrNull(0)
             assertNotNull(staticCast)
             cast = staticCast.rhs<CastExpression>()
             assertNotNull(cast)
             assertLocalName("BaseClass*", cast)
 
-            val reinterpretCast = main.bodyOrNull<AssignExpression>(3)
+            val reinterpretCast = main.assigns.getOrNull(0)
             assertNotNull(reinterpretCast)
             cast = reinterpretCast.rhs<CastExpression>()
             assertNotNull(cast)

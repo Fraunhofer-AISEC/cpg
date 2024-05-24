@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
@@ -64,7 +63,7 @@ internal class CXXIncludeTest : BaseTest() {
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 
-        val returnStatement = doSomething.body<ReturnStatement>(0)
+        val returnStatement = doSomething.returns.firstOrNull()
         assertNotNull(returnStatement)
 
         val ref = returnStatement.returnValue as Reference
