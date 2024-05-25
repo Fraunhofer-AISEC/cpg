@@ -10,6 +10,7 @@ plugins {
     `maven-publish`
     kotlin("jvm")
     id("org.jetbrains.dokka")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 java {
@@ -116,11 +117,4 @@ tasks.test {
         }
     }
     maxHeapSize = "4048m"
-}
-
-tasks.jacocoTestReport {
-    reports {
-        xml.required.set(true)
-    }
-    dependsOn(tasks.test) // tests are required to run before generating the report
 }
