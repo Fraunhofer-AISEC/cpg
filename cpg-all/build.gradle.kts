@@ -27,14 +27,6 @@ dependencies {
     kover(projects.cpgNeo4j)
 }
 
-kover {
-    currentProject {
-        instrumentation {
-            disabledForTestTasks.add("performanceTest")
-        }
-    }
-}
-
 val sonar = tasks.getByPath(":sonar")
 sonar.dependsOn(tasks.named("koverHtmlReport"))
 sonar.dependsOn(tasks.named("koverXmlReport"))

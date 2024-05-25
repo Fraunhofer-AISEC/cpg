@@ -131,3 +131,11 @@ val performanceTest = tasks.register<Test>("performanceTest") {
 
     shouldRunAfter(tasks.test)
 }
+
+kover {
+    currentProject {
+        instrumentation {
+            disabledForTestTasks.add("performanceTest")
+        }
+    }
+}
