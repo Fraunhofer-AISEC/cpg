@@ -27,6 +27,15 @@ dependencies {
     kover(projects.cpgNeo4j)
 }
 
+kover {
+    currentProject {
+        instrumentation {
+            excludedClasses.add("de.fraunhofer.aisec.cpg.PerformanceRegressionTest")
+            excludedClasses.add("de.fraunhofer.aisec.cpg.graph.WalkerTest")
+        }
+    }
+}
+
 val sonar = tasks.getByPath(":sonar")
 sonar.dependsOn(tasks.named("koverHtmlReport"))
 sonar.dependsOn(tasks.named("koverXmlReport"))
