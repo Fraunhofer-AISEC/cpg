@@ -71,13 +71,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar sonar \
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar sonar performanceTest \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar performanceTest
           fi
         id: build
         env:

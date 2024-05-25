@@ -44,8 +44,10 @@ import java.time.temporal.ChronoUnit
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertTimeout
 
+@Tag("performance")
 class PerformanceRegressionTest {
     /**
      * This test demonstrates two performance bottlenecks.

@@ -115,6 +115,19 @@ tasks.test {
         if (!project.hasProperty("integration")) {
             excludeTags("integration")
         }
+        excludeTags("performance")
     }
     maxHeapSize = "4048m"
+}
+
+val performanceTest = tasks.register<Test>("performanceTest") {
+    description = "Runs performance tests."
+    group = "verification"
+    useJUnitPlatform() {
+        includeTags("performance")
+    }
+
+    maxHeapSize = "4048m"
+
+    shouldRunAfter(tasks.test)
 }

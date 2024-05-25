@@ -30,8 +30,7 @@ dependencies {
 kover {
     currentProject {
         instrumentation {
-            excludedClasses.add("de.fraunhofer.aisec.cpg.PerformanceRegressionTest")
-            excludedClasses.add("de.fraunhofer.aisec.cpg.graph.WalkerTest")
+            disabledForTestTasks.add("performanceTest")
         }
     }
 }
