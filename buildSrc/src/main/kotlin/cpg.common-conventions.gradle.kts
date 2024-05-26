@@ -112,12 +112,23 @@ tasks.withType<KotlinCompile> {
 //
 tasks.test {
     useJUnitPlatform() {
-        if (!project.hasProperty("integration")) {
-            excludeTags("integration")
-        }
+        excludeTags("integration")
         excludeTags("performance")
     }
+
     maxHeapSize = "4048m"
+}
+
+val integrationTest = tasks.register<Test>("integrationTest") {
+    description = "Runs integration tests."
+    group = "verification"
+    useJUnitPlatform() {
+        includeTags("integration")
+    }
+
+    maxHeapSize = "4048m"
+
+    shouldRunAfter(tasks.test)
 }
 
 val performanceTest = tasks.register<Test>("performanceTest") {
