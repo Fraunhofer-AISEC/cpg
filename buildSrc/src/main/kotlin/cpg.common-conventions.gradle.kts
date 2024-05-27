@@ -1,5 +1,8 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.services.BuildService;
+import org.gradle.api.services.BuildServiceParameters;
+import org.gradle.api.services.BuildServiceParameters.None;
 
 plugins {
     id("cpg.formatting-conventions")
@@ -117,6 +120,7 @@ tasks.test {
     }
 
     maxHeapSize = "4048m"
+    shouldRunAfter(performanceTest)
 }
 
 val integrationTest = tasks.register<Test>("integrationTest") {
@@ -138,9 +142,11 @@ val performanceTest = tasks.register<Test>("performanceTest") {
         includeTags("performance")
     }
 
+    maxParallelForks = 1
+
     maxHeapSize = "4048m"
 
-    shouldRunAfter(tasks.test)
+    usesService(provider)
 }
 
 kover {
@@ -150,3 +156,11 @@ kover {
         }
     }
 }
+
+abstract class LimitExecutionService : BuildService<BuildServiceParameters.None> {
+
+}
+
+val provider = project.getGradle().getSharedServices().registerIfAbsent<LimitExecutionService, BuildServiceParameters.None>("limit", LimitExecutionService::class.java, {
+    getMaxParallelUsages().set(0)
+})
