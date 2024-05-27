@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -37,7 +37,7 @@ class CXXInferenceTest {
     fun testGlobals() {
         val file = File("src/test/resources/cxx/inference.cpp")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.loadIncludes(false)
                 it.addIncludesToGraph(false)
@@ -54,7 +54,7 @@ class CXXInferenceTest {
     fun testInferClassInNamespace() {
         val file = File("src/test/resources/cxx/inference.cpp")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.loadIncludes(false)
                 it.addIncludesToGraph(false)

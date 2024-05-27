@@ -25,16 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
-import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test

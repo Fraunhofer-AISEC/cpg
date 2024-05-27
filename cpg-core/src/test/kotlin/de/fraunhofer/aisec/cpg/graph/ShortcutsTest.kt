@@ -29,13 +29,12 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -51,8 +50,8 @@ class ShortcutsTest {
             result.components
                 .flatMap { it.translationUnits }
                 .first()
-                .byNameOrNull<RecordDeclaration>("Dataflow")
-                ?.byNameOrNull<MethodDeclaration>("print")
+                .records["Dataflow"]
+                .methods["print"]
 
         val (fulfilled, failed) =
             toStringCall.followNextFullDFGEdgesUntilHit { it == printDecl?.parameters?.first() }
@@ -68,7 +67,8 @@ class ShortcutsTest {
         val expected = mutableListOf<CallExpression>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
+
+        val main = classDecl.methods["main"]
         assertNotNull(main)
         expected.add(
             ((((main.body as Block).statements[0] as DeclarationStatement).declarations[0]
@@ -80,7 +80,7 @@ class ShortcutsTest {
         expected.add((main.body as Block).statements[2] as MemberCallExpression)
         expected.add((main.body as Block).statements[3] as MemberCallExpression)
 
-        val print = classDecl.byNameOrNull<MethodDeclaration>("print")
+        val print = classDecl.methods["print"]
         assertNotNull(print)
         expected.add(print.bodyOrNull(0)!!)
         expected.add(print.bodyOrNull<CallExpression>(0)?.arguments?.get(0) as CallExpression)
@@ -103,7 +103,8 @@ class ShortcutsTest {
         val expected = mutableListOf<CallExpression>()
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
+
+        val main = classDecl.methods["main"]
         assertNotNull(main)
         expected.add((main.body as Block).statements[1] as MemberCallExpression)
         assertTrue(expected.containsAll(actual))
@@ -115,19 +116,20 @@ class ShortcutsTest {
         val expected = mutableListOf<FunctionDeclaration>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val print = classDecl.byNameOrNull<MethodDeclaration>("print")
+
+        val print = classDecl.methods["print"]
         assertNotNull(print)
         expected.add(print)
 
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
         expected.add(magic)
 
-        val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
+        val magic2 = classDecl.methods["magic2"]
         assertNotNull(magic2)
         expected.add(magic2)
 
-        val main = classDecl.byNameOrNull<MethodDeclaration>("main")
+        val main = classDecl.methods["main"]
         assertNotNull(main)
         val actual = main.callees
 
@@ -175,8 +177,10 @@ class ShortcutsTest {
         val expected = mutableListOf<Node>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
+
         val ifStatement = (magic.body as Block).statements[0] as IfStatement
 
         val actual = ifStatement.controls()
@@ -236,7 +240,8 @@ class ShortcutsTest {
         val expected = mutableListOf<Node>()
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         // get the statement attr = 3;
@@ -257,7 +262,8 @@ class ShortcutsTest {
     fun testFollowPrevDFGEdgesUntilHit() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic2 = classDecl.byNameOrNull<MethodDeclaration>("magic2")
+
+        val magic2 = classDecl.methods["magic2"]
         assertNotNull(magic2)
 
         val aAssignment2 =
@@ -272,7 +278,7 @@ class ShortcutsTest {
         assertEquals(0, paramPassed2.failed.size)
         assertEquals(5, (paramPassed2.fulfilled[0].last() as? Literal<*>)?.value)
 
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val attrAssignment =
@@ -292,7 +298,8 @@ class ShortcutsTest {
     fun testFollowPrevEOGEdgesUntilHit() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val attrAssignment =
@@ -315,7 +322,8 @@ class ShortcutsTest {
     fun testFollowNextEOGEdgesUntilHit() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val ifCondition =
@@ -336,7 +344,8 @@ class ShortcutsTest {
     fun testFollowPrevDFGEdges() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val magic = classDecl.byNameOrNull<MethodDeclaration>("magic")
+
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val attrAssignment =

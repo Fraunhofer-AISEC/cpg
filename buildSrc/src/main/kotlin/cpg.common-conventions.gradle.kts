@@ -1,5 +1,8 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.services.BuildService;
+import org.gradle.api.services.BuildServiceParameters;
+import org.gradle.api.services.BuildServiceParameters.None;
 
 plugins {
     id("cpg.formatting-conventions")
@@ -10,6 +13,7 @@ plugins {
     `maven-publish`
     kotlin("jvm")
     id("org.jetbrains.dokka")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 java {
@@ -111,16 +115,51 @@ tasks.withType<KotlinCompile> {
 //
 tasks.test {
     useJUnitPlatform() {
-        if (!project.hasProperty("integration")) {
-            excludeTags("integration")
-        }
+        excludeTags("integration")
+        excludeTags("performance")
     }
+
     maxHeapSize = "4048m"
+    shouldRunAfter(performanceTest)
 }
 
-tasks.jacocoTestReport {
-    reports {
-        xml.required.set(true)
+val integrationTest = tasks.register<Test>("integrationTest") {
+    description = "Runs integration tests."
+    group = "verification"
+    useJUnitPlatform() {
+        includeTags("integration")
     }
-    dependsOn(tasks.test) // tests are required to run before generating the report
+
+    maxHeapSize = "4048m"
+
+    shouldRunAfter(tasks.test)
 }
+
+val performanceTest = tasks.register<Test>("performanceTest") {
+    description = "Runs performance tests."
+    group = "verification"
+    useJUnitPlatform() {
+        includeTags("performance")
+    }
+
+    maxHeapSize = "4048m"
+
+    usesService(provider)
+}
+
+kover {
+    currentProject {
+        instrumentation {
+            disabledForTestTasks.add("performanceTest")
+        }
+    }
+}
+
+// this should limit the performance test to non-parallel but does not work yet
+abstract class LimitExecutionService : BuildService<BuildServiceParameters.None> {
+
+}
+
+val provider = project.getGradle().getSharedServices().registerIfAbsent<LimitExecutionService, BuildServiceParameters.None>("limit", LimitExecutionService::class.java, {
+    getMaxParallelUsages().set(0)
+})

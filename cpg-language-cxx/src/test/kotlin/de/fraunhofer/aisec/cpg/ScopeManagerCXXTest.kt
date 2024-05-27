@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.BeforeTest
 import kotlin.test.Test

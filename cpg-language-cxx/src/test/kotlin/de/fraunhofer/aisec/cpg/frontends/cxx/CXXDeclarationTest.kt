@@ -25,18 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
-import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
 
@@ -122,17 +116,17 @@ class CXXDeclarationTest {
     fun testFunctionDeclaration() {
         val file = File("src/test/resources/cxx/functiondecl.cpp")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
 
         // should be eight function nodes
         assertEquals(8, tu.functions.size)
 
-        var method = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+        var method = tu.declarations<FunctionDeclaration>(0)
         assertEquals("function0(int)void", method!!.signature)
 
-        method = tu.getDeclarationAs(1, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(1)
         assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
         val args = method.parameters.map { it.name.localName }
@@ -148,7 +142,7 @@ class CXXDeclarationTest {
         // the declaration should be connected to the definition
         assertEquals(function0, function0DeclOnly.definition)
 
-        method = tu.getDeclarationAs(2, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(2)
         assertEquals("function0(int)void", method!!.signature)
 
         var statements = (method.body as Block).statements
@@ -156,11 +150,11 @@ class CXXDeclarationTest {
         assertEquals(2, statements.size)
 
         // last statement should be an implicit return
-        var statement = method.getBodyStatementAs(statements.size - 1, ReturnStatement::class.java)
+        var statement = method.bodyOrNull<ReturnStatement>(-1)
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 
-        method = tu.getDeclarationAs(3, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(3)
         assertEquals("function2()void*", method!!.signature)
 
         statements = (method.body as Block).statements
@@ -168,24 +162,24 @@ class CXXDeclarationTest {
         assertEquals(1, statements.size)
 
         // should only contain 1 explicit return statement
-        statement = method.getBodyStatementAs(0, ReturnStatement::class.java)
+        statement = method.returns.singleOrNull()
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 
-        method = tu.getDeclarationAs(4, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(4)
         assertNotNull(method)
         assertEquals("function3()UnknownType*", method.signature)
 
-        method = tu.getDeclarationAs(5, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(5)
         assertNotNull(method)
         assertEquals("function4(int)void", method.signature)
 
-        method = tu.getDeclarationAs(6, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(6)
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
 
-        method = tu.getDeclarationAs(7, FunctionDeclaration::class.java)
+        method = tu.declarations<FunctionDeclaration>(7)
         assertNotNull(method)
         assertEquals(1, method.parameters.size)
 

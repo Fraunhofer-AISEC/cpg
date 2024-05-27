@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -49,7 +47,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifBothPossible"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         for (edge in ifStatement.nextEOGEdges) {
@@ -62,7 +60,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifTrue"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         // Check if the then-branch is set as reachable including all the edges until reaching the
@@ -112,7 +110,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifFalse"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         assertFalse(ifStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -124,7 +122,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifTrueComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         assertFalse(ifStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -136,7 +134,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifFalseComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         assertFalse(ifStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -148,7 +146,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileTrueEndless"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -160,7 +158,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileTrue"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -172,7 +170,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileComputedTrue"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -184,7 +182,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileFalse"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -196,7 +194,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileComputedFalse"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
@@ -208,7 +206,7 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileUnknown"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
