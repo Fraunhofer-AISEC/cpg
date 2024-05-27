@@ -142,8 +142,6 @@ val performanceTest = tasks.register<Test>("performanceTest") {
         includeTags("performance")
     }
 
-    maxParallelForks = 1
-
     maxHeapSize = "4048m"
 
     usesService(provider)
@@ -157,6 +155,7 @@ kover {
     }
 }
 
+// this should limit the performance test to non-parallel but does not work yet
 abstract class LimitExecutionService : BuildService<BuildServiceParameters.None> {
 
 }
