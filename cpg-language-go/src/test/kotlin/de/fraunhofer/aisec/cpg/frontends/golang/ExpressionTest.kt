@@ -25,16 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -44,7 +37,7 @@ class ExpressionTest {
     fun testCastExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
                 true
@@ -59,14 +52,10 @@ class ExpressionTest {
         val mainFunc = main.functions["main"]
         assertNotNull(mainFunc)
 
-        val f =
-            (mainFunc.bodyOrNull<DeclarationStatement>(0))?.singleDeclaration
-                as? VariableDeclaration
+        val f = mainFunc.variables["f"]
         assertNotNull(f)
 
-        val s =
-            (mainFunc.bodyOrNull<DeclarationStatement>(1))?.singleDeclaration
-                as? VariableDeclaration
+        val s = mainFunc.variables["s"]
         assertNotNull(s)
 
         val cast = s.initializer as? CastExpression
@@ -82,11 +71,7 @@ class ExpressionTest {
     fun testSliceExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("slices.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("slices.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -143,11 +128,7 @@ class ExpressionTest {
     fun testSendStmt() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("chan.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("chan.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -164,12 +145,12 @@ class ExpressionTest {
             assertNotNull(ch)
             assertEquals(objectType("chan", generics = listOf(primitiveType("int"))), ch.type)
 
-            val binOp = main.bodyOrNull<BinaryOperator>()
+            val binOp = main.bodyOrNull<BinaryOperator>(2)
             assertNotNull(binOp)
             assertRefersTo(binOp.lhs, ch)
             assertRefersTo(binOp.rhs, v)
 
-            val unaryOp = main.bodyOrNull<UnaryOperator>()
+            val unaryOp = main.bodyOrNull<UnaryOperator>(3)
             assertNotNull(unaryOp)
             assertRefersTo(unaryOp.input, ch)
         }
@@ -179,7 +160,7 @@ class ExpressionTest {
     fun testShortAssign() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("short_assign.go").toFile()),
                 topLevel,
                 true

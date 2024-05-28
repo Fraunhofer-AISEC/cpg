@@ -26,8 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
-import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -35,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertIs

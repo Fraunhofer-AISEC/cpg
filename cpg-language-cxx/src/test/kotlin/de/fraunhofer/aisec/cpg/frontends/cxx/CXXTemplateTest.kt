@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertIs

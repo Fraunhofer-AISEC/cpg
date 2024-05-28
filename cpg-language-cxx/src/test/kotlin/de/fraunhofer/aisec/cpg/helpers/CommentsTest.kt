@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,7 +39,7 @@ class CommentsTest {
     fun testCommentMatcher() {
         val file = File("src/test/resources/c/comments.c")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerLanguage<CLanguage>()
             }

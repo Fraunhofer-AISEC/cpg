@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.graph.casts
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

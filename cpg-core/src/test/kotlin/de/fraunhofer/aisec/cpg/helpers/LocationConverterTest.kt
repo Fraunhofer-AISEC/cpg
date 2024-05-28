@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.test.*
 import java.net.URI
 import java.util.*
 import kotlin.collections.HashMap

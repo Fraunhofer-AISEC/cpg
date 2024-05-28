@@ -40,7 +40,10 @@ import org.slf4j.LoggerFactory
  * Works for if, for, and extends to the block scope
  */
 open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
-    @Transient var valueDeclarations = mutableListOf<ValueDeclaration>()
+    val valueDeclarations: List<ValueDeclaration>
+        get() {
+            return symbols.flatMap { it.value }.filterIsInstance<ValueDeclaration>()
+        }
 
     /** A map of typedefs keyed by their alias. */
     @Transient val typedefs = mutableMapOf<Type, TypedefDeclaration>()
@@ -68,8 +71,7 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
      * @param valueDeclaration the [ValueDeclaration]
      * @param addToAST whether to also add the declaration to the AST of its holder.
      */
-    fun addValueDeclaration(valueDeclaration: ValueDeclaration, addToAST: Boolean) {
-        valueDeclarations.add(valueDeclaration)
+    protected fun addValueDeclaration(valueDeclaration: ValueDeclaration, addToAST: Boolean) {
         if (addToAST) {
             if (astNode is DeclarationHolder) {
                 val holder = astNode as DeclarationHolder

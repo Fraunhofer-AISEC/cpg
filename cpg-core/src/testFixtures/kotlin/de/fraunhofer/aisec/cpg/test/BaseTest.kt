@@ -23,8 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.test
 
+import kotlin.jvm.javaClass
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 

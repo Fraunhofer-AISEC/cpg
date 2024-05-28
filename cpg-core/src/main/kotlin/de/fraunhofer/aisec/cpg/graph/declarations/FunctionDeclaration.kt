@@ -134,14 +134,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         }
     }
 
-    fun <T> getBodyStatementAs(i: Int, clazz: Class<T>): T? {
-        if (body is Block) {
-            val statement = (body as Block).statements[i]
-            return if (clazz.isAssignableFrom(statement.javaClass)) clazz.cast(statement) else null
-        }
-        return null
-    }
-
     /**
      * A list of default expressions for each item in [parameters]. If a [ParameterDeclaration] has
      * no default, the list will be null at this index. This list must have the same size as

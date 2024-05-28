@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import org.slf4j.LoggerFactory
 
 @DependsOn(TypeHierarchyResolver::class)
-@ExecuteBefore(ImportResolver::class)
+@ExecuteBefore(JavaImportResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
 class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {

@@ -9,6 +9,7 @@ repositories {
 dependencies {
     implementation(libs.kotlin.gradle)
     implementation(libs.dokka.gradle)
+    implementation(libs.kover.gradle)
     implementation(libs.sonarqube.gradle)
     implementation(libs.spotless.gradle)
     implementation(libs.nexus.publish.gradle)

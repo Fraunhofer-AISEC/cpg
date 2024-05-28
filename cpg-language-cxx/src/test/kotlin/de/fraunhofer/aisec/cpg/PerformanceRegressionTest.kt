@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
-import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -40,13 +38,16 @@ import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.test.*
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertTimeout
 
+@Tag("performance")
 class PerformanceRegressionTest {
     /**
      * This test demonstrates two performance bottlenecks.

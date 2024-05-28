@@ -25,12 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
-import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertFalse

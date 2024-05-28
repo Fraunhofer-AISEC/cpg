@@ -25,10 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOf
-import de.fraunhofer.aisec.cpg.TestUtils.assertUsageOfMemberAndBase
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -39,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.test.Test
@@ -87,9 +84,9 @@ internal class VariableResolverCppTest : BaseTest() {
         externVarName = externalClass.fields["varName"]
         externStaticVarName = externalClass.fields["staticVarName"]
         outerClass = records["ScopeVariables"]
-        outerVarName = outerClass?.byNameOrNull("varName")
-        outerStaticVarName = outerClass?.byNameOrNull("staticVarName")
-        function2Receiver = outerClass?.byNameOrNull<MethodDeclaration>("function2")?.receiver
+        outerVarName = outerClass?.fields["varName"]
+        outerStaticVarName = outerClass?.fields["staticVarName"]
+        function2Receiver = outerClass?.methods["function2"]?.receiver
 
         // Inner class and its fields
         innerClass = records["ScopeVariables::InnerClass"]
@@ -98,14 +95,14 @@ internal class VariableResolverCppTest : BaseTest() {
         main = functions["main"]
 
         // Functions in the outer and inner object
-        outerFunction1 = outerClass?.methods?.first { it.name.localName == "function1" }
-        forStatements = outerFunction1.allChildren()
-        outerFunction2 = outerClass?.methods?.first { it.name.localName == "function2" }
-        outerFunction3 = outerClass?.methods?.first { it.name.localName == "function3" }
-        outerFunction4 = outerClass?.methods?.first { it.name.localName == "function4" }
-        outerFunction5 = outerClass?.methods?.first { it.name.localName == "function5" }
-        innerFunction1 = innerClass?.methods?.first { it.name.localName == "function1" }
-        innerFunction2 = innerClass?.methods?.first { it.name.localName == "function2" }
+        outerFunction1 = outerClass?.methods["function1"]
+        forStatements = outerFunction1.forLoops
+        outerFunction2 = outerClass?.methods["function2"]
+        outerFunction3 = outerClass?.methods["function3"]
+        outerFunction4 = outerClass?.methods["function4"]
+        outerFunction5 = outerClass?.methods["function5"]
+        innerFunction1 = innerClass?.methods["function1"]
+        innerFunction2 = innerClass?.methods["function2"]
         for (call in calls) {
             val first = call.arguments[0]
             val logId = (first as Literal<*>).value.toString()

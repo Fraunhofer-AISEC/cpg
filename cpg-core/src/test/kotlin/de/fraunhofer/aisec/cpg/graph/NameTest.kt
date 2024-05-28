@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.test.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

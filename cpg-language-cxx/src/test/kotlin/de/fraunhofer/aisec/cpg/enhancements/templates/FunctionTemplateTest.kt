@@ -25,18 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.templates
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.assertLiteralValue
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.function.Predicate
 import kotlin.test.*
