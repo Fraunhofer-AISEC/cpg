@@ -498,7 +498,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun handle(node: Node?, currClass: RecordDeclaration?) {
+    protected open fun handle(node: Node?, currClass: RecordDeclaration?) {
         when (node) {
             is MemberExpression -> handleMemberExpression(currClass, node)
             is Reference -> handleReference(currClass, node)

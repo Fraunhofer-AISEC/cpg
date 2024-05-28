@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 
@@ -37,7 +38,7 @@ import java.util.*
  * unknown size apart from void. Therefore, this Type is not called VoidType
  */
 class IncompleteType : Type {
-    constructor() : super("void", null)
+    constructor(language: Language<*>? = null) : super("void", language)
 
     constructor(type: Type?) : super(type)
 
