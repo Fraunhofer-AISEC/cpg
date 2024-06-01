@@ -42,6 +42,9 @@ import java.util.function.Consumer
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
+/** A type for a node visitor callback for the [SubgraphWalker]. */
+typealias Callback = (node: Node, parent: Node?) -> Unit
+
 /** Helper class for graph walking: Walking through ast-, cfg-, ...- edges */
 object SubgraphWalker {
     private val LOGGER = LoggerFactory.getLogger(SubgraphWalker::class.java)
@@ -198,8 +201,7 @@ object SubgraphWalker {
         }
 
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
-        // twice,
-        // possibly resulting in loops
+        // twice, possibly resulting in loops
         val identitySet = IdentitySet<Node>()
         flattenASTInternal(identitySet, n)
         return identitySet.toSortedList()
@@ -254,8 +256,6 @@ object SubgraphWalker {
     }
 
     class IterativeGraphWalker {
-        private var todo: Deque<Pair<Node, Node?>>? = null
-
         var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
 
         /**
@@ -263,7 +263,7 @@ object SubgraphWalker {
          * place where usual graph manipulation will happen. The current node and its parent are
          * passed to the consumer.
          */
-        private val onNodeVisit: MutableList<BiConsumer<Node, Node?>> = mutableListOf()
+        private val onNodeVisit: MutableList<Callback> = mutableListOf()
 
         private val replacements = mutableMapOf<Node, Node>()
 
@@ -274,14 +274,13 @@ object SubgraphWalker {
          * @param root The node where we should start
          */
         fun iterate(root: Node) {
-            todo = ArrayDeque()
+            var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
-            todo?.push(Pair<Node, Node?>(root, null))
-            while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
-                var (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
-                onNodeVisit.forEach(
-                    Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
-                )
+
+            todo.push(Pair<Node, Node?>(root, null))
+            while (todo.isNotEmpty()) {
+                var (current, parent) = todo.pop()
+                onNodeVisit.forEach { it(current, parent) }
 
                 // Check if we have a replacement node
                 val toReplace = replacements[current]
@@ -295,7 +294,7 @@ object SubgraphWalker {
 
                 seen.addAll(unseenChildren)
                 unseenChildren.asReversed().forEach { child: Node ->
-                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
+                    todo.push(Pair(child, current))
                 }
             }
         }
@@ -309,7 +308,8 @@ object SubgraphWalker {
             replacements[from] = to
         }
 
-        fun registerOnNodeVisit(callback: BiConsumer<Node, Node?>) {
+        /** Registers a [Callback]. */
+        fun registerOnNodeVisit(callback: Callback) {
             onNodeVisit.add(callback)
         }
     }
