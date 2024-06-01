@@ -255,42 +255,17 @@ object SubgraphWalker {
 
     class IterativeGraphWalker {
         private var todo: Deque<Pair<Node, Node?>>? = null
-        var backlog: Deque<Node>? = null
-            private set
 
         var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
 
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
-         * place where usual graph manipulation will happen. The current node is the single argument
-         * passed to the function
+         * place where usual graph manipulation will happen. The current node and its parent are
+         * passed to the consumer.
          */
-        private val onNodeVisit: MutableList<Consumer<Node>> = mutableListOf()
-        private val onNodeVisit2: MutableList<BiConsumer<Node, Node?>> = mutableListOf()
+        private val onNodeVisit: MutableList<BiConsumer<Node, Node?>> = mutableListOf()
 
         private val replacements = mutableMapOf<Node, Node>()
-
-        /**
-         * The callback that is designed to tell the user when we leave the current scope. The
-         * exited node is passed as an argument to the callback function. Consider the following
-         * AST:
-         *
-         * .........(1) parent
-         *
-         * ........./........\
-         *
-         * (2) child1....(4) child2
-         *
-         * ........|
-         *
-         * (3) subchild
-         *
-         * Once "parent" has been visited, we continue descending into its children. First into
-         * "child1", followed by "subchild". Once we are done there, we return to "child1". At this
-         * point, the exit handler notifies the user that "subchild" is being exited. Afterwards we
-         * exit "child1", and after "child2" is done, "parent" is exited.
-         */
-        private val onNodeExit: MutableList<Consumer<Node>> = ArrayList()
 
         /**
          * The core iterative AST traversal algorithm: In a depth-first way we descend into the
@@ -300,42 +275,27 @@ object SubgraphWalker {
          */
         fun iterate(root: Node) {
             todo = ArrayDeque()
-            backlog = ArrayDeque()
-            val seen: MutableSet<Node> = LinkedHashSet()
+            val seen = identitySetOf<Node>()
             todo?.push(Pair<Node, Node?>(root, null))
             while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
                 var (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
-                if (
-                    (backlog as ArrayDeque<Node>).isNotEmpty() &&
-                        (backlog as ArrayDeque<Node>).peek() == current
-                ) {
-                    val exiting = (backlog as ArrayDeque<Node>).pop()
-                    onNodeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
-                } else {
-                    onNodeVisit.forEach(Consumer { c: Consumer<Node> -> c.accept(current) })
-                    onNodeVisit2.forEach(
-                        Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
-                    )
+                onNodeVisit.forEach(
+                    Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
+                )
 
-                    // Check if we have a replacement node
-                    val toReplace = replacements[current]
-                    if (toReplace != null) {
-                        current = toReplace
-                        replacements.remove(toReplace)
-                    }
+                // Check if we have a replacement node
+                val toReplace = replacements[current]
+                if (toReplace != null) {
+                    current = toReplace
+                    replacements.remove(toReplace)
+                }
 
-                    val unseenChildren =
-                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                val unseenChildren =
+                    strategy(current).asSequence().filter { it !in seen }.toMutableList()
 
-                    // re-place the current node as a marker for the above check to find out when we
-                    // need to exit a scope
-                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
-
-                    seen.addAll(unseenChildren)
-                    unseenChildren.asReversed().forEach { child: Node ->
-                        (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
-                    }
-                    (backlog as ArrayDeque<Node>).push(current)
+                seen.addAll(unseenChildren)
+                unseenChildren.asReversed().forEach { child: Node ->
+                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
                 }
             }
         }
@@ -349,25 +309,8 @@ object SubgraphWalker {
             replacements[from] = to
         }
 
-        fun registerOnNodeVisit(callback: Consumer<Node>) {
+        fun registerOnNodeVisit(callback: BiConsumer<Node, Node?>) {
             onNodeVisit.add(callback)
-        }
-
-        fun registerOnNodeVisit2(callback: BiConsumer<Node, Node?>) {
-            onNodeVisit2.add(callback)
-        }
-
-        fun registerOnNodeExit(callback: Consumer<Node>) {
-            onNodeExit.add(callback)
-        }
-
-        fun clearCallbacks() {
-            onNodeVisit.clear()
-            onNodeExit.clear()
-        }
-
-        fun getTodo(): Deque<Node> {
-            return ArrayDeque(todo?.map { it.first })
         }
     }
 
@@ -437,7 +380,7 @@ object SubgraphWalker {
         fun iterate(root: Node) {
             val walker = IterativeGraphWalker()
             walker.strategy = this.strategy
-            handlers.forEach { h -> walker.registerOnNodeVisit { n -> handleNode(n, h) } }
+            handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
 
             this.walker = walker
 
@@ -446,14 +389,13 @@ object SubgraphWalker {
 
         private fun handleNode(
             current: Node,
+            parent: Node?,
             handler: TriConsumer<RecordDeclaration?, Node?, Node?>
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
                 scopeManager.jumpTo(current.scope)
             }
-
-            val parent = walker?.backlog?.peek()
 
             handler.accept(scopeManager.currentRecord, parent, current)
         }
