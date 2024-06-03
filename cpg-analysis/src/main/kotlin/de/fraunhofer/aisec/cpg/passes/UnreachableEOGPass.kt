@@ -58,7 +58,7 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      *
      * @param node every node in the TranslationResult
      */
-    protected fun handle(node: Node) {
+    protected fun handle(node: Node, parent: Node?) {
         if (node is FunctionDeclaration) {
             val startState = UnreachabilityState()
             for (firstEdge in node.nextEOGEdges) {
