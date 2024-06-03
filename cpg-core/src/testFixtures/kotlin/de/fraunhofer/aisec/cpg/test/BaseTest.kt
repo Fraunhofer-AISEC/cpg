@@ -1,9 +1,5 @@
 /*
-<<<<<<<< HEAD:cpg-core/src/testFixtures/kotlin/de/fraunhofer/aisec/cpg/test/BaseTest.kt
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
-========
  * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
->>>>>>>> 4a1c55f0f6 (Concepts for symbols):cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/graph/scopes/FileScope.kt
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-<<<<<<<< HEAD:cpg-core/src/testFixtures/kotlin/de/fraunhofer/aisec/cpg/test/BaseTest.kt
 package de.fraunhofer.aisec.cpg.test
 
 import kotlin.jvm.javaClass
@@ -37,16 +32,3 @@ import org.slf4j.LoggerFactory
 abstract class BaseTest {
     protected var log: Logger = LoggerFactory.getLogger(this.javaClass)
 }
-========
-package de.fraunhofer.aisec.cpg.graph.scopes
-
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-
-/**
- * Represents a scope that is only visible in the current file. This is usually used in programming
- * languages for file-level imports.
- *
- * The only supported AST node is a [TranslationUnitDeclaration].
- */
-class FileScope(astNode: TranslationUnitDeclaration?) : Scope(astNode)
->>>>>>>> 4a1c55f0f6 (Concepts for symbols):cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/graph/scopes/FileScope.kt

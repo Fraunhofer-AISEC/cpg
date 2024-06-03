@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -627,7 +626,8 @@ class ScopeManager : ScopeProvider {
                             helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
                                 val fptrType = helper.type as FunctionPointerType
                                 // TODO(oxisto): Support multiple return values
-                                val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                                val returnType =
+                                    it.returnTypes.firstOrNull() ?: ref.incompleteType()
                                 returnType == fptrType.returnType &&
                                     it.matchesSignature(fptrType.parameters) !=
                                         IncompatibleSignature

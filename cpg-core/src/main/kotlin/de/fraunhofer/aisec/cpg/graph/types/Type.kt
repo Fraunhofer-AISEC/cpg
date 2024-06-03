@@ -68,7 +68,7 @@ abstract class Type : Node {
 
     open var typeOrigin: Origin? = null
 
-    constructor() {
+    constructor(language: Language<*>? = null) {
         name = Name(EMPTY_NAME, null, language)
         genericsPropertyEdges = ArrayList()
     }
