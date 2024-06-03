@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.frontends.DirectMatch
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -1059,6 +1060,19 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val doInterface = tu.functions["DoInterface"]
         assertNotNull(doInterface)
+
+        val newMyStruct = tu.functions["NewMyStruct"]
+        assertNotNull(newMyStruct)
+
+        val myInterfaceTypeRef = doInterface.parameters.getOrNull(0)?.type
+        assertNotNull(myInterfaceTypeRef)
+        assertTrue(myInterfaceTypeRef.isInterface)
+
+        val myStructTypeRefPointerType = newMyStruct.returnTypes.singleOrNull()
+        assertNotNull(myStructTypeRefPointerType)
+
+        val result = myStructTypeRefPointerType.tryCast(myInterfaceTypeRef)
+        assertSame(DirectMatch, result)
 
         val call = tu.calls["DoInterface"]
         assertNotNull(call)

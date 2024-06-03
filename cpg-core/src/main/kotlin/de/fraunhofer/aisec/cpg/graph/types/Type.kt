@@ -245,7 +245,10 @@ abstract class Type : Node {
     }
 }
 
-/** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
+/**
+ * A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType] or
+ * [TypeReference].
+ */
 var Type.recordDeclaration: RecordDeclaration?
     get() {
         return when (this) {

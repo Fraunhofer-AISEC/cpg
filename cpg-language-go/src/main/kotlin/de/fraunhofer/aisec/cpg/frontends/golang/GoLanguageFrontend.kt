@@ -501,7 +501,7 @@ val Type?.namedType: Boolean
 
 val Type.isInterface: Boolean
     get() {
-        return underlyingType is ObjectType && this.recordDeclaration?.kind == "interface"
+        return this.recordDeclaration?.kind == "interface"
     }
 
 val Type.isMap: Boolean
