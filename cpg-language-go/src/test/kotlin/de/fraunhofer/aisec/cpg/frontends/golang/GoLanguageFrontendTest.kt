@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -970,10 +971,11 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(h)
 
         type = h.type
-        assertIs<ObjectType>(type)
+        assertIs<TypeReference>(type)
+        assertIs<ObjectType>(type.referringType)
         assertLocalName("newType", type)
 
-        assertEquals(1, type.recordDeclaration?.methods?.size)
+        assertEquals(1, (type.refersTo as? RecordDeclaration).methods.size)
     }
 
     @Test

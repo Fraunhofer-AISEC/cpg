@@ -106,8 +106,6 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     ): RecordDeclaration {
         val record = newRecordDeclaration(name, "struct", rawNode = typeSpec)
 
-        frontend.scopeManager.enterScope(record)
-
         if (!structType.incomplete) {
             for (field in structType.fields.list) {
                 val type = frontend.typeOf(field.type)
@@ -124,8 +122,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         Pair(field.names[0].name, listOf())
                     }
 
+                // make sure, that only the declaration is in the record scope, but not the type
+                frontend.scopeManager.enterScope(record)
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
+                frontend.scopeManager.leaveScope(record)
             }
         }
 
