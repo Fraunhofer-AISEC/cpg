@@ -1715,4 +1715,18 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         lookup = scope.lookupSymbol("string").singleOrNull()
         assertEquals(string, lookup)
     }
+
+    @Test
+    fun testSymbolResolverFail() {
+        val file = File("src/test/resources/c/symbol_resolver_fail.c")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        val doCall = result.calls["do_call"]
+        assertNotNull(doCall)
+        assertTrue(doCall.invokes.isNotEmpty())
+    }
 }
