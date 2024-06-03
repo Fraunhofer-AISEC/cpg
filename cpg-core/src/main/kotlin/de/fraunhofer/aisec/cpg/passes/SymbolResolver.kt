@@ -548,7 +548,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         when (result.success) {
             PROBLEMATIC -> {
                 log.error(
-                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
+                    "Resolution of ${call.name} returned a problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
                 call.invokes = result.bestViable.toList()
             }
