@@ -180,7 +180,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         declaration.isDefinition = true
 
         // We also need to set the return type, based on the function type.
-        declaration.returnTypes = type?.returnTypes ?: listOf(IncompleteType())
+        declaration.returnTypes = type?.returnTypes ?: listOf(incompleteType())
 
         // We want to determine, whether this is a function definition that is external to its
         // scope. This is a usual case in C++, where the named scope, such as a record or namespace
@@ -461,7 +461,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // [handleFunctionDefinition].
                 if (declaration is FunctionDeclaration) {
                     declaration.returnTypes =
-                        (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
+                        (type as? FunctionType)?.returnTypes ?: listOf(incompleteType())
                 }
 
                 // We also need to set the type, based on the declarator type.
