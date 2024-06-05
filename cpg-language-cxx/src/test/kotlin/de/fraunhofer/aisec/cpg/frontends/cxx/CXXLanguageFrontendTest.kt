@@ -1706,4 +1706,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(doCall)
         assertTrue(doCall.invokes.isNotEmpty())
     }
+
+    @Test
+    fun testSwitchEOG() {
+        val file = File("src/test/resources/c/switch_eog.c")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        val printf = result.calls["printf"]
+        assertNotNull(printf)
+        assertTrue(printf.prevEOG.isNotEmpty())
+        assertTrue(printf.invokes.isNotEmpty())
+    }
 }
