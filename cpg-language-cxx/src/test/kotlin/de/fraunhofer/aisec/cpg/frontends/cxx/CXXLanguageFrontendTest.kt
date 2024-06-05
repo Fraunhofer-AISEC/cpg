@@ -1719,4 +1719,17 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(printf.prevEOG.isNotEmpty())
         assertTrue(printf.invokes.isNotEmpty())
     }
+
+    @Test
+    fun testExternC() {
+        val file = File("src/test/resources/cxx/extern_c.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        val test = result.functions["test"]
+        assertNotNull(test)
+    }
 }
