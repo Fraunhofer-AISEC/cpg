@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 
 /**
@@ -33,32 +32,32 @@ import java.util.*
  * its element types(s). This can potentially be a chain of different pointer/array operations.
  */
 class WrapState {
-    /** The total depth of "wrapping". This is usually equal to [Type.referenceDepth] */
-    var depth = 0
 
     /**
-     * An array of [PointerType.PointerOrigin] values, applied in the order the types are wrapped
-     * in.
+     * @param depth The total depth of "wrapping". This is usually equal to
+     *   [SecondOrderType.referenceDepth]
      */
-    var pointerOrigins: Array<PointerOrigin?> = arrayOf(PointerOrigin.ARRAY)
+    constructor(depth: Int = 0) {
+        wraps = arrayOfNulls(depth)
+    }
 
-    /** True, if the original type was a [ReferenceType]. It is then stored in [referenceType]. */
-    var isReference = false
+    /** An array of [Wrap] values, applied in the order the types are wrapped in. */
+    var wraps: Array<Wrap?>
 
-    /** The [ReferenceType], if [isReference] is true. */
-    var referenceType: ReferenceType? = null
+    enum class Wrap {
+        ARRAY,
+        POINTER,
+        REFERENCE,
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is WrapState) return false
 
-        return depth == other.depth &&
-            isReference == other.isReference &&
-            pointerOrigins.contentEquals(other.pointerOrigins) &&
-            referenceType == other.referenceType
+        return wraps.contentEquals(other.wraps)
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(depth, isReference, pointerOrigins.contentHashCode(), referenceType)
+        return wraps.contentHashCode()
     }
 }

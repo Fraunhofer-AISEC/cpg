@@ -145,13 +145,6 @@ abstract class Type : Node {
     val typeName: String
         get() = name.toString()
 
-    open val referenceDepth: Int
-        /**
-         * @return number of steps that are required in order to traverse the type chain until the
-         *   root is reached
-         */
-        get() = 0
-
     val isFirstOrderType: Boolean
         /**
          * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a

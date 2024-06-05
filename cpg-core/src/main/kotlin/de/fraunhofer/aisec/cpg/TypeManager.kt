@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -345,31 +344,29 @@ val Collection<Type>.commonType: Type?
  */
 val Type.wrapState: WrapState
     get() {
-        val wrapState = WrapState()
-        var type = this
-
-        // A reference can only be the last item, so we check if the most outer type is a reference
-        // type
-        if (type is ReferenceType) {
-            wrapState.referenceType = this as ReferenceType?
-            wrapState.isReference = true
-            type = type.elementType
+        if (this !is SecondOrderType) {
+            return WrapState()
         }
 
         // We already know the depth, so we can just set this and allocate the pointer origins array
-        wrapState.depth = this.referenceDepth
-        wrapState.pointerOrigins = arrayOfNulls(wrapState.depth)
+        val wrapState = WrapState(this.referenceDepth)
 
-        // If we have a pointer type, "unwrap" the type until we are back at the element type
-        if (type is PointerType) {
-            var i = 0
-            wrapState.pointerOrigins[i] = type.pointerOrigin
-            while (type is PointerType) {
-                type = type.elementType
-                if (type is PointerType) {
-                    wrapState.pointerOrigins[++i] = type.pointerOrigin
+        var type: Type = this as Type
+        // Let's unwrap
+        var i = 0
+        while (type is SecondOrderType) {
+            var wrapType =
+                if (type is ReferenceType) {
+                    WrapState.Wrap.REFERENCE
+                } else if (type is PointerType && type.isArray) {
+                    WrapState.Wrap.ARRAY
+                } else {
+                    WrapState.Wrap.POINTER
                 }
-            }
+
+            wrapState.wraps[i++] = wrapType
+
+            type = type.elementType
         }
 
         return wrapState
@@ -381,14 +378,17 @@ val Type.wrapState: WrapState
  */
 fun Type.wrap(wrapState: WrapState): Type {
     var type = this
-    if (wrapState.depth > 0) {
-        for (i in wrapState.depth - 1 downTo 0) {
-            type = type.reference(wrapState.pointerOrigins[i])
+    if (wrapState.wraps.isNotEmpty()) {
+        for (i in wrapState.wraps.size - 1 downTo 0) {
+            var wrap = wrapState.wraps[i]
+            if (wrap == WrapState.Wrap.REFERENCE) {
+                type = ReferenceType(type)
+            } else if (wrap == WrapState.Wrap.ARRAY) {
+                type = type.reference(PointerType.PointerOrigin.ARRAY)
+            } else if (wrap == WrapState.Wrap.POINTER) {
+                type = type.reference(PointerType.PointerOrigin.POINTER)
+            }
         }
-    }
-
-    if (wrapState.isReference) {
-        return ReferenceType(this)
     }
 
     return type
