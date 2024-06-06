@@ -38,22 +38,6 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/**
- * This array holds the chain of different pointer/array operations. For example if a [PointerType]
- * is built from its element type, which in turn could be a [ReferenceType] or another pointer.
- */
-typealias TypeOperations = List<TypeOperation>
-
-/** An operation that is applied on a [Type], e.g. a pointer, an array or a reference. */
-enum class TypeOperation {
-    /** a [PointerType] with [PointerType.PointerOrigin.ARRAY] */
-    ARRAY,
-    /** a [PointerType] with [PointerType.PointerOrigin.POINTER] */
-    POINTER,
-    /** a [ReferenceType] */
-    REFERENCE,
-}
-
 class TypeManager {
     companion object {
         val log: Logger = LoggerFactory.getLogger(TypeManager::class.java)
@@ -354,58 +338,3 @@ val Collection<Type>.commonType: Type?
         // root node is 0) and re-wrap the final common type back into the original wrap state
         return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
-
-/**
- * Calculates and returns the [TypeOperations] of the current type. A [TypeOperations] can be used
- * to compute a "wrapped" type, for example a [PointerType] back from its [Type.root].
- */
-val Type.typeOperations: TypeOperations
-    get() {
-        if (this !is SecondOrderType) {
-            return listOf()
-        }
-
-        // We already know the depth, so we can just set this and allocate the pointer origins array
-        val operations = mutableListOf<TypeOperation>()
-
-        var type: Type = this as Type
-        while (type is SecondOrderType) {
-            var op =
-                if (type is ReferenceType) {
-                    TypeOperation.REFERENCE
-                } else if (type is PointerType && type.isArray) {
-                    TypeOperation.ARRAY
-                } else {
-                    TypeOperation.POINTER
-                }
-
-            operations += op
-
-            type = type.elementType
-        }
-
-        return operations
-    }
-
-/**
- * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the operations
- * in [TypeOperations].
- */
-fun TypeOperations.apply(root: Type): Type {
-    var type = root
-
-    if (this.isNotEmpty()) {
-        for (i in this.size - 1 downTo 0) {
-            var wrap = this[i]
-            if (wrap == TypeOperation.REFERENCE) {
-                type = ReferenceType(type)
-            } else if (wrap == TypeOperation.ARRAY) {
-                type = type.reference(PointerType.PointerOrigin.ARRAY)
-            } else if (wrap == TypeOperation.POINTER) {
-                type = type.reference(PointerType.PointerOrigin.POINTER)
-            }
-        }
-    }
-
-    return type
-}
