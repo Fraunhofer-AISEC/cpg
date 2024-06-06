@@ -115,17 +115,6 @@ class PointerType : Type, SecondOrderType {
             super.isSimilar(t))
     }
 
-    override val referenceDepth: Int
-        get() {
-            var depth = 1
-            var containedType = elementType
-            while (containedType is PointerType) {
-                depth++
-                containedType = containedType.elementType
-            }
-            return depth
-        }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PointerType) return false
