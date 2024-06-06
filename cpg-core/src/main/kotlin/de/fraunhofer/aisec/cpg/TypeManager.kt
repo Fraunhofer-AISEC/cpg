@@ -279,8 +279,9 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 
 /**
  * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
- * [TypeOperations] of the type into account, which means that pointer types of derived types will not
- * match with a non-pointer type of its base type. But, if both are pointer types, they will match.
+ * [TypeOperations] of the type into account, which means that pointer types of derived types will
+ * not match with a non-pointer type of its base type. But, if both are pointer types, they will
+ * match.
  *
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
@@ -355,8 +356,8 @@ val Collection<Type>.commonType: Type?
     }
 
 /**
- * Calculates and returns the [TypeOperations] of the current type. A [TypeOperations] can be used to compute
- * a "wrapped" type, for example a [PointerType] back from its [Type.root].
+ * Calculates and returns the [TypeOperations] of the current type. A [TypeOperations] can be used
+ * to compute a "wrapped" type, for example a [PointerType] back from its [Type.root].
  */
 val Type.typeOperations: TypeOperations
     get() {
