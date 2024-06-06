@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.apply
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -38,8 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.wrap
-import de.fraunhofer.aisec.cpg.wrapState
+import de.fraunhofer.aisec.cpg.typeOperations
 
 /**
  * Adds the resolved default template arguments recursively to the templateParameter list of the
@@ -235,9 +235,10 @@ internal fun realizeType(
     if (typeParamDeclaration != null) {
         val node = initializationSignature[typeParamDeclaration]
         if (node is TypeExpression) {
-            // We might need basically exchange the root node, and we can do this using a wrap state
-            val wrapState = incomingType.wrapState
-            val newType = node.type.wrap(wrapState)
+            // We might need basically exchange the root node, and we can do this using type
+            // operations
+            val operations = incomingType.typeOperations
+            val newType = operations.apply(node.type)
 
             type = newType
         }

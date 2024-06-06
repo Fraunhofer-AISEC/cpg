@@ -38,6 +38,22 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+/**
+ * This array holds the chain of different pointer/array operations. For example if a [PointerType]
+ * is built from its element type, which in turn could be a [ReferenceType] or another pointer.
+ */
+typealias TypeOperations = List<TypeOperation>
+
+/** An operation that is applied on a [Type], e.g. a pointer, an array or a reference. */
+enum class TypeOperation {
+    /** a [PointerType] with [PointerType.PointerOrigin.ARRAY] */
+    ARRAY,
+    /** a [PointerType] with [PointerType.PointerOrigin.POINTER] */
+    POINTER,
+    /** a [ReferenceType] */
+    REFERENCE,
+}
+
 class TypeManager {
     companion object {
         val log: Logger = LoggerFactory.getLogger(TypeManager::class.java)
@@ -263,7 +279,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 
 /**
  * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
- * [WrapState] of the type into account, which means that pointer types of derived types will not
+ * [TypeOperations] of the type into account, which means that pointer types of derived types will not
  * match with a non-pointer type of its base type. But, if both are pointer types, they will match.
  *
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
@@ -298,8 +314,8 @@ val Collection<Type>.commonType: Type?
         // (which contains the pointer origins), because otherwise we need to re-create the
         // equivalent wrap state at the end. Make sure we only have one wrap state before we
         // proceed.
-        val wrapStates = this.map { it.wrapState }.toSet()
-        val wrapState = wrapStates.singleOrNull() ?: return null
+        val operations = this.map { it.typeOperations }.toSet()
+        val typeOp = operations.singleOrNull() ?: return null
 
         // Build all ancestors out of the root types. This way we compare the most inner type,
         // regardless of the wrap state.
@@ -335,57 +351,56 @@ val Collection<Type>.commonType: Type?
 
         // Find the one with the largest depth (which is closest to the original type, since the
         // root node is 0) and re-wrap the final common type back into the original wrap state
-        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.wrap(wrapState)
+        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
 
 /**
- * Calculates and returns the [WrapState] of the current type. A [WrapState] can be used to compute
+ * Calculates and returns the [TypeOperations] of the current type. A [TypeOperations] can be used to compute
  * a "wrapped" type, for example a [PointerType] back from its [Type.root].
  */
-val Type.wrapState: WrapState
+val Type.typeOperations: TypeOperations
     get() {
         if (this !is SecondOrderType) {
-            return WrapState()
+            return listOf()
         }
 
         // We already know the depth, so we can just set this and allocate the pointer origins array
-        val wrapState = WrapState(this.referenceDepth)
+        val operations = mutableListOf<TypeOperation>()
 
         var type: Type = this as Type
-        // Let's unwrap
-        var i = 0
         while (type is SecondOrderType) {
-            var wrapType =
+            var op =
                 if (type is ReferenceType) {
-                    WrapState.Wrap.REFERENCE
+                    TypeOperation.REFERENCE
                 } else if (type is PointerType && type.isArray) {
-                    WrapState.Wrap.ARRAY
+                    TypeOperation.ARRAY
                 } else {
-                    WrapState.Wrap.POINTER
+                    TypeOperation.POINTER
                 }
 
-            wrapState.wraps[i++] = wrapType
+            operations += op
 
             type = type.elementType
         }
 
-        return wrapState
+        return operations
     }
 
 /**
- * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the
- * instructions in [WrapState].
+ * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the operations
+ * in [TypeOperations].
  */
-fun Type.wrap(wrapState: WrapState): Type {
-    var type = this
-    if (wrapState.wraps.isNotEmpty()) {
-        for (i in wrapState.wraps.size - 1 downTo 0) {
-            var wrap = wrapState.wraps[i]
-            if (wrap == WrapState.Wrap.REFERENCE) {
+fun TypeOperations.apply(root: Type): Type {
+    var type = root
+
+    if (this.isNotEmpty()) {
+        for (i in this.size - 1 downTo 0) {
+            var wrap = this[i]
+            if (wrap == TypeOperation.REFERENCE) {
                 type = ReferenceType(type)
-            } else if (wrap == WrapState.Wrap.ARRAY) {
+            } else if (wrap == TypeOperation.ARRAY) {
                 type = type.reference(PointerType.PointerOrigin.ARRAY)
-            } else if (wrap == WrapState.Wrap.POINTER) {
+            } else if (wrap == TypeOperation.POINTER) {
                 type = type.reference(PointerType.PointerOrigin.POINTER)
             }
         }
