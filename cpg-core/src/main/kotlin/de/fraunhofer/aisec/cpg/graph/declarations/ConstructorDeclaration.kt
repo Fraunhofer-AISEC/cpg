@@ -42,7 +42,7 @@ class ConstructorDeclaration : MethodDeclaration() {
                 returnTypes = listOf(recordDeclaration.toType())
 
                 // also make sure, our name is updated to the FQN of the record
-                name = recordDeclaration.name.fqn(recordDeclaration.name.localName)
+                name = recordDeclaration.name.fqn(this.name.localName)
             }
         }
 }
