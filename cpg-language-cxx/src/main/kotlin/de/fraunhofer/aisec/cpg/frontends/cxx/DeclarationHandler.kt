@@ -73,6 +73,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTUsingDeclaration -> handleUsingDeclaration(node)
             is CPPASTAliasDeclaration -> handleAliasDeclaration(node)
             is CPPASTNamespaceAlias -> handleNamespaceAlias(node)
+            is CPPASTLinkageSpecification -> handleLinkageSpecification(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
@@ -669,6 +670,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
+     * Translates a C++ (linkage
+     * specification)[https://en.cppreference.com/w/cpp/language/language_linkage]. Actually, we do
+     * not care about the linkage specification per-se, but we need to parse the declaration(s) it
+     * contains.
+     */
+    private fun handleLinkageSpecification(ctx: CPPASTLinkageSpecification): Declaration {
+        var sequence = DeclarationSequence()
+
+        // Just forward its declaration(s) to our handler
+        for (decl in ctx.declarations) {
+            handle(decl)?.let { sequence += it }
+        }
+
+        return simplifySequence(sequence)
+    }
+
+    /**
      * @param sequence
      * @return First Element of DeclarationSequence if the Sequence consist of only one element,
      *   full sequence if it contains more than one element
@@ -707,9 +725,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
         for (declaration in translationUnit.declarations) {
-            if (declaration is CPPASTLinkageSpecification) {
-                continue // do not care about these for now
-            }
             val decl = handle(declaration) ?: continue
             (decl as? ProblemDeclaration)?.location?.let {
                 val problems =
