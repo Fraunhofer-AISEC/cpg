@@ -37,6 +37,9 @@ private constructor(
     /** Enables or disables the inference system as a whole. */
     val enabled: Boolean,
 
+    /** Enables the inference of namespace declarations. */
+    val inferNamespaces: Boolean,
+
     /** Enables the inference of record declarations. */
     val inferRecords: Boolean,
 
@@ -54,12 +57,15 @@ private constructor(
 ) {
     class Builder(
         private var enabled: Boolean = true,
+        private var inferNamespaces: Boolean = true,
         private var inferRecords: Boolean = true,
         private var inferFunctions: Boolean = true,
         private var inferVariables: Boolean = true,
         private var inferDfgForUnresolvedCalls: Boolean = true
     ) {
         fun enabled(infer: Boolean) = apply { this.enabled = infer }
+
+        fun inferNamespaces(infer: Boolean) = apply { this.inferNamespaces = infer }
 
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
 
@@ -74,6 +80,7 @@ private constructor(
         fun build() =
             InferenceConfiguration(
                 enabled,
+                inferNamespaces,
                 inferRecords,
                 inferFunctions,
                 inferVariables,
