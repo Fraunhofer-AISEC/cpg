@@ -354,6 +354,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     is ClassOrInterfaceDeclaration -> {
                         frontend.scopeManager.addDeclaration(handle(decl))
                     }
+                    is com.github.javaparser.ast.body.EnumDeclaration -> {
+                        frontend.scopeManager.addDeclaration(handle(decl))
+                    }
                     is InitializerDeclaration -> {
                         val initializerBlock =
                             frontend.statementHandler.handleBlockStatement(decl.body)
