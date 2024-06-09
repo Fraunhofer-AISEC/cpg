@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.test.*
-import kotlin.test.Test
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.test.assertLocalName
+import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
 class TypeTest {
@@ -53,6 +56,23 @@ class TypeTest {
             assertLocalName("boolean", boolean)
 
             assertThrows<TranslationException> { primitiveType("BOOLEAN") }
+        }
+    }
+
+    @Test
+    fun testTypeOperations() {
+        with(TestLanguageFrontend()) {
+            var type: Type = objectType("myClass")
+            type = type.pointer().pointer().pointer()
+            assertIs<SecondOrderType>(type)
+            assertEquals(3, type.referenceDepth)
+
+            var operations = type.typeOperations
+            assertEquals(3, operations.size)
+
+            type = objectType("myNewClass")
+            type = operations.apply(type)
+            assertLocalName("myNewClass***", type)
         }
     }
 }
