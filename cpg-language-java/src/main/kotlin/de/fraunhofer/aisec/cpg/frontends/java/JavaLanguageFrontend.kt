@@ -468,7 +468,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     val member =
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
-                            expressionHandler.handle(value.asLiteralExpr()) as Expression,
+                            expressionHandler.handle(value) as Expression,
                             rawNode = value
                         )
                     members.add(member)
