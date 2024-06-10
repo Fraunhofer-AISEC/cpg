@@ -203,9 +203,18 @@ class CXXDeclarationTest {
 
         val manipulateString = result.functions["manipulateString"]
         assertNotNull(manipulateString)
+        assertFalse(manipulateString.isInferred)
+
+        val size = result.functions["size"]
+        assertNotNull(size)
+        assertFalse(size.isInferred)
 
         // We should be able to resolve all calls to manipulateString
-        val calls = result.calls("manipulateString")
+        var calls = result.calls("manipulateString")
         calls.forEach { assertContains(it.invokes, manipulateString) }
+
+        // We should be able to resolve all calls to size
+        calls = result.calls("size")
+        calls.forEach { assertContains(it.invokes, size) }
     }
 }

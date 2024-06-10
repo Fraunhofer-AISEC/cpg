@@ -568,7 +568,7 @@ class ScopeManager : ScopeProvider {
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
-        val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+        val typedefs = mutableMapOf<Name, TypedefDeclaration>()
 
         val path = mutableListOf<ValueDeclarationScope>()
         var current = searchScope
@@ -993,7 +993,7 @@ class ScopeManager : ScopeProvider {
         return findSymbols(name).filterIsInstance<RecordDeclaration>().singleOrNull()
     }
 
-    fun typedefFor(alias: Type): Type? {
+    fun typedefFor(alias: Name): Type? {
         var current = currentScope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
@@ -1010,7 +1010,7 @@ class ScopeManager : ScopeProvider {
                 // This process has several steps:
                 // First, do a quick local lookup, to see if we have a typedef our current scope
                 // (only do this if the name is not qualified)
-                if (!alias.name.isQualified() && current == currentScope) {
+                if (!alias.isQualified() && current == currentScope) {
                     val decl = current.typedefs[alias]
                     if (decl != null) {
                         return decl.type
@@ -1021,7 +1021,7 @@ class ScopeManager : ScopeProvider {
                 // qualified based on the current namespace
                 val key =
                     current.typedefs.keys.firstOrNull {
-                        var lookupName = alias.name
+                        var lookupName = alias
 
                         // If the lookup name is already a FQN, we can use the name directly
                         lookupName =
@@ -1033,7 +1033,7 @@ class ScopeManager : ScopeProvider {
                                 currentNamespace?.fqn(lookupName.localName) ?: lookupName
                             }
 
-                        it.name.lastPartsMatch(lookupName)
+                        it.lastPartsMatch(lookupName)
                     }
                 if (key != null) {
                     return current.typedefs[key]?.type
