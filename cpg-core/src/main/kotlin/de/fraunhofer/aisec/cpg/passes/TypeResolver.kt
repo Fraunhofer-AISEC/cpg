@@ -59,8 +59,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun resolveType(type: Type): Boolean {
-        var test = typeManager.resolvePossibleTypedef(type, scopeManager)
-
         // Let's start by looking up the type according to their name and scope. We exclusively
         // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
         // constructor declarations and such with the same name. It seems this is ok since most

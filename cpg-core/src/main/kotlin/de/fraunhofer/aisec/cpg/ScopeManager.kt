@@ -833,7 +833,7 @@ class ScopeManager : ScopeProvider {
 
     /**
      * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
-     * the given [Name].
+     * the given [Name]. This has also the major problem of only resolving one layer of aliases :(
      */
     fun resolveParentAlias(name: Name, scope: Scope?): Name {
         val parentName = name.parent ?: return name
@@ -847,6 +847,16 @@ class ScopeManager : ScopeProvider {
         if (decl != null && parentName != decl.name) {
             // This is probably an already resolved alias so, we take this one
             return Name(newName.localName, decl.name, delimiter = newName.delimiter)
+        }
+
+        // Some special handling of typedefs; this should somehow be merged with the above but not
+        // exactly sure how. The issue is that we cannot take the "name" of the typedef declaration,
+        // but we rather want its original type name.
+        // TODO: This really needs to be handled better somehow, maybe a common interface for
+        //  typedefs, namespaces and records that return the correct name?
+        decl = scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
+        if ((decl as? TypedefDeclaration) != null) {
+            return Name(newName.localName, decl.type.name, delimiter = newName.delimiter)
         }
 
         // If we do not have a match yet, it could be that we are trying to resolve an FQN type
