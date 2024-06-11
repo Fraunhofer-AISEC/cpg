@@ -43,5 +43,7 @@ publishing {
 dependencies {
     api(projects.cpgCore)
 
+    implementation(libs.sarif4k)
+
     testImplementation(testFixtures(projects.cpgCore))
 }
