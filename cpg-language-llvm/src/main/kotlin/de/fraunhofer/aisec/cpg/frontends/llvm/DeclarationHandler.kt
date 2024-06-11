@@ -208,8 +208,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         record = newRecordDeclaration(name, "struct")
 
-        frontend.scopeManager.enterScope(record)
-
         val size = LLVMCountStructElementTypes(typeRef)
 
         for (i in 0 until size) {
@@ -219,15 +217,17 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
+            frontend.scopeManager.enterScope(record)
+
             val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
 
             frontend.scopeManager.addDeclaration(field)
+
+            frontend.scopeManager.leaveScope(record)
         }
 
-        frontend.scopeManager.leaveScope(record)
-
         // add it to the global scope
-        frontend.scopeManager.globalScope?.addDeclaration(record, true)
+        frontend.scopeManager.addDeclaration(record)
 
         return record
     }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import org.neo4j.ogm.annotation.NodeEntity
 
 /**
@@ -37,4 +38,10 @@ import org.neo4j.ogm.annotation.NodeEntity
  * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
  * however clang does establish a connection between those nodes, we currently do not.
  */
-@NodeEntity abstract class Declaration : Node()
+@NodeEntity
+abstract class Declaration : Node() {
+    val symbol: Symbol
+        get() {
+            return this.name.localName
+        }
+}

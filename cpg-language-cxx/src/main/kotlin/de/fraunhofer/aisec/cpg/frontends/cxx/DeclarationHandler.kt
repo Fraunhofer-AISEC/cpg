@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -68,6 +70,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTTemplateDeclaration -> handleTemplateDeclaration(node)
             is CPPASTNamespaceDefinition -> handleNamespace(node)
             is CPPASTUsingDirective -> handleUsingDirective(node)
+            is CPPASTUsingDeclaration -> handleUsingDeclaration(node)
+            is CPPASTAliasDeclaration -> handleAliasDeclaration(node)
+            is CPPASTNamespaceAlias -> handleNamespaceAlias(node)
+            is CPPASTLinkageSpecification -> handleLinkageSpecification(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
@@ -75,13 +81,48 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
+     * Translates a C++ (namespace
+     * alias)[https://en.cppreference.com/w/cpp/language/namespace_alias] into an alias handled by
+     * an [ImportDeclaration].
+     */
+    private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): ImportDeclaration {
+        val from = parseName(ctx.mappingName.toString())
+        val to = parseName(ctx.alias.toString())
+
+        val import = newImportDeclaration(from, false, to, rawNode = ctx)
+
+        frontend.scopeManager.addDeclaration(import)
+
+        return import
+    }
+
+    /**
      * Translates a C++ (using
      * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
-     * [UsingDeclaration]. However, currently, no actual adjustment of available names / scopes is
-     * done yet.
+     * [ImportDeclaration].
      */
-    private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return newUsingDeclaration(qualifiedName = using.qualifiedName.toString(), rawNode = using)
+    private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
+        val import = parseName(ctx.qualifiedName.toString())
+        val declaration = newImportDeclaration(import, rawNode = ctx)
+        declaration.wildcardImport = true
+
+        frontend.scopeManager.addDeclaration(declaration)
+
+        return declaration
+    }
+
+    /**
+     * Translates a C++ (using
+     * declaration)[https://en.cppreference.com/w/cpp/language/using_declaration] into a
+     * [ImportDeclaration].
+     */
+    private fun handleUsingDeclaration(ctx: CPPASTUsingDeclaration): Declaration {
+        val import = parseName(ctx.name.toString())
+        val declaration = newImportDeclaration(import, rawNode = ctx)
+
+        frontend.scopeManager.addDeclaration(declaration)
+
+        return declaration
     }
 
     /**
@@ -401,8 +442,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (ctx.isTypedef) {
                 type = frontend.typeOf(declarator, declSpecifierToUse)
 
+                val (nameDecl, _) = declarator.realName()
+
                 // Handle typedefs.
-                val declaration = handleTypedef(declarator, type)
+                val declaration = handleTypedef(nameDecl.name, type)
 
                 sequence.addDeclaration(declaration)
             } else {
@@ -564,11 +607,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return null
     }
 
-    private fun handleTypedef(declarator: IASTDeclarator, type: Type): Declaration {
-        val (nameDecl: IASTDeclarator, _) = declarator.realName()
+    /**
+     * @param aliasName is an [IASTName] that describes the new type name.
+     * @param type is the original type.
+     */
+    private fun handleTypedef(aliasName: IASTName, type: Type): TypedefDeclaration {
+        // C/C++ behaves slightly different when it comes to typedefs in a function or in a record,
+        // such as a class or struct. A typedef in a function (or actually in any block scope) is
+        // scoped to the current block. A  typedef in a record declaration is scoped to the global
+        // scope,
+        // but its alias name is FQN'd.
+        val (scope, doFqn) =
+            if (frontend.scopeManager.currentScope is RecordScope) {
+                Pair(frontend.scopeManager.globalScope, true)
+            } else if (frontend.scopeManager.currentScope is ValueDeclarationScope) {
+                Pair(frontend.scopeManager.currentScope as ValueDeclarationScope, false)
+            } else {
+                TODO()
+            }
+        // TODO(oxisto): What about namespaces?
 
         val declaration =
-            frontend.typeManager.createTypeAlias(frontend, type, frontend.typeOf(nameDecl.name))
+            frontend.newTypedefDeclaration(type, frontend.typeOf(aliasName, doFqn = doFqn))
+
+        frontend.scopeManager.addTypedef(declaration, scope)
 
         // Add the declaration to the current scope
         frontend.scopeManager.addDeclaration(declaration)
@@ -605,6 +667,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         enum.entries = entries
 
         return enum
+    }
+
+    /**
+     * Translates a C++ (linkage
+     * specification)[https://en.cppreference.com/w/cpp/language/language_linkage]. Actually, we do
+     * not care about the linkage specification per-se, but we need to parse the declaration(s) it
+     * contains.
+     */
+    private fun handleLinkageSpecification(ctx: CPPASTLinkageSpecification): Declaration {
+        var sequence = DeclarationSequence()
+
+        // Just forward its declaration(s) to our handler
+        for (decl in ctx.declarations) {
+            handle(decl)?.let { sequence += it }
+        }
+
+        return simplifySequence(sequence)
     }
 
     /**
@@ -646,9 +725,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
         for (declaration in translationUnit.declarations) {
-            if (declaration is CPPASTLinkageSpecification) {
-                continue // do not care about these for now
-            }
             val decl = handle(declaration) ?: continue
             (decl as? ProblemDeclaration)?.location?.let {
                 val problems =
@@ -664,6 +740,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         return node
+    }
+
+    /**
+     * Translates a C++ (type alias)[https://en.cppreference.com/w/cpp/language/type_alias] into a
+     * [TypedefDeclaration].
+     */
+    private fun handleAliasDeclaration(ctx: CPPASTAliasDeclaration): TypedefDeclaration {
+        val type = frontend.typeOf(ctx.mappingTypeId)
+
+        return handleTypedef(ctx.alias, type)
     }
 
     private fun addIncludes(

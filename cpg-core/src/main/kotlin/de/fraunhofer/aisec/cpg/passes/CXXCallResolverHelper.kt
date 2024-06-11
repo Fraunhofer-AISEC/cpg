@@ -240,13 +240,13 @@ fun getTemplateInitializationSignature(
         val typeExpression = templateCall.newTypeExpression(deducedType.name, deducedType)
         typeExpression.isImplicit = true
         if (
-            currentArgumentType is ParameterizedType &&
-                (signature[parameterizedTypeResolution[currentArgumentType]] == null ||
+            currentArgumentType.root is ParameterizedType &&
+                (signature[parameterizedTypeResolution[currentArgumentType.root]] == null ||
                     (instantiationType[
-                        signature[parameterizedTypeResolution[currentArgumentType]]] ==
+                        signature[parameterizedTypeResolution[currentArgumentType.root]]] ==
                         TemplateDeclaration.TemplateInitialization.DEFAULT))
         ) {
-            signature[parameterizedTypeResolution[currentArgumentType]] = typeExpression
+            signature[parameterizedTypeResolution[currentArgumentType.root]] = typeExpression
             instantiationType[typeExpression] =
                 TemplateDeclaration.TemplateInitialization.AUTO_DEDUCTION
         }
@@ -393,16 +393,15 @@ fun getCallSignature(
 ): List<Type> {
     val templateCallSignature = mutableListOf<Type>()
     for (argument in function.parameters) {
-        if (argument.type is ParameterizedType) {
-            var type: Type = UnknownType.getUnknownType(function.language)
-            val typeParamDeclaration = parameterizedTypeResolution[argument.type]
-            if (typeParamDeclaration != null) {
-                val node = initializationSignature[typeParamDeclaration]
-                if (node is TypeExpression) {
-                    type = node.type
-                }
-            }
-            templateCallSignature.add(type)
+        if (argument.type.root is ParameterizedType) {
+            templateCallSignature.add(
+                realizeType(
+                    function.language,
+                    parameterizedTypeResolution,
+                    argument.type,
+                    initializationSignature
+                )
+            )
         } else {
             templateCallSignature.add(argument.type)
         }
@@ -423,8 +422,13 @@ fun checkArgumentValidity(
     functionDeclaration: FunctionDeclaration,
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
-    explicitInstantiation: List<ParameterizedType>
+    explicitInstantiation: List<ParameterizedType>,
+    needsExactMatch: Boolean
 ): Boolean {
+    // We need to keep track of the original (template) arguments and double-check that we are not
+    // casting two parameterized types into two different arguments
+    val convertedTypes = mutableMapOf<ParameterizedType, Type>()
+
     if (templateCallExpression.arguments.size <= functionDeclaration.parameters.size) {
         val callArguments =
             mutableListOf<Expression?>(
@@ -440,13 +444,31 @@ fun checkArgumentValidity(
         ) // Extend by defaults
         for (i in callArguments.indices) {
             val callArgument = callArguments[i] ?: return false
+
+            val originalType = functionDeclaration.parameters.getOrNull(i)?.type
+
+            val notMatches =
+                callArgument.type.tryCast(
+                    functionDeclarationSignature[i],
+                    hint = callArgument,
+                    targetHint = functionDeclaration.parameters[i]
+                ) == CastNotPossible
             if (
-                callArgument.type != functionDeclarationSignature[i] &&
+                notMatches &&
                     !(callArgument.type.isPrimitive &&
                         functionDeclarationSignature[i].isPrimitive &&
                         functionDeclaration.parameters[i].type in explicitInstantiation)
             ) {
                 return false
+            }
+
+            // Check, that we "convert" each parameterized type only into the same type once
+            if (originalType is ParameterizedType) {
+                val alreadyMatches = convertedTypes[originalType]
+                if (alreadyMatches != null && alreadyMatches != callArgument.type) {
+                    return false
+                }
+                convertedTypes[originalType] = callArgument.type
             }
         }
         return true

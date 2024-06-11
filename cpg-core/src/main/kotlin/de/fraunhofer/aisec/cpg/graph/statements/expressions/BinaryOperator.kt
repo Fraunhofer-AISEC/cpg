@@ -72,10 +72,6 @@ open class BinaryOperator :
             }
         }
 
-    fun <T : Expression?> getLhsAs(clazz: Class<T>): T? {
-        return if (clazz.isInstance(lhs)) clazz.cast(lhs) else null
-    }
-
     private fun connectNewLhs(lhs: Expression) {
         lhs.registerTypeObserver(this)
         if (lhs is Reference && "=" == operatorCode) {
@@ -91,10 +87,6 @@ open class BinaryOperator :
 
     private fun disconnectOldLhs() {
         lhs.unregisterTypeObserver(this)
-    }
-
-    fun <T : Expression?> getRhsAs(clazz: Class<T>): T? {
-        return if (clazz.isInstance(rhs)) clazz.cast(rhs) else null
     }
 
     private fun connectNewRhs(rhs: Expression) {

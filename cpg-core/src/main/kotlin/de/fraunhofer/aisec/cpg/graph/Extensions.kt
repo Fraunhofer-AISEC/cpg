@@ -27,17 +27,22 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.astParent
+import kotlin.math.absoluteValue
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -145,50 +150,29 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
     return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
-inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
-    name: String,
-    fqn: Boolean = false
-): T? {
-    var base = this
-    var lookup = name
-
-    // lets do a _very_ simple FQN lookup
-    // TODO(oxisto): we could do this with a for-loop for multiple nested levels
-    if (fqn && name.contains(".")) {
-        // take the most left one
-        val baseName = name.split(".")[0]
-
-        base =
-            this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                (it as Node).name.lastPartsMatch(baseName)
-            } ?: return null
-        lookup = name.split(".")[1]
-    }
-
-    return base.declarations.filterIsInstance<T>().firstOrNull { it.name.lastPartsMatch(lookup) }
-}
-
-@Throws(DeclarationNotFound::class)
-inline fun <reified T : Declaration> DeclarationHolder.byName(
-    name: String,
-    fqn: Boolean = false
-): T {
-    return byNameOrNull(name, fqn)
-        ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
-}
-
 /**
- * This inline function returns the `n`-th body statement (in AST order) as specified in T or `null`
- * if it does not exist or the type does not match.
+ * This inline function returns the `n`-th body statement (in AST order) cast as T or `null` if it
+ * does not exist or the type does not match.
+ *
+ * `n` can also be negative; in this case `-1` corresponds to the last statement, `-2` to the second
+ * to last and so on.
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    return if (this.body is Block) {
-        return (body as? Block)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+    var body = this.body
+    return if (body is Block) {
+        var statements = body.statements
+        var idx =
+            if (n < 0) {
+                statements.size - n.absoluteValue
+            } else {
+                n
+            }
+        return statements.getOrNull(idx) as? T
     } else {
-        if (n == 0 && this.body is T) {
-            this.body as T
+        if (n == 0 && body is T) {
+            body
         } else {
             return null
         }
@@ -566,6 +550,10 @@ val Node?.records: List<RecordDeclaration>
 val Node?.namespaces: List<NamespaceDeclaration>
     get() = this.allChildren()
 
+/** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
+val Node?.imports: List<ImportDeclaration>
+    get() = this.allChildren()
+
 /** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
 val Node?.variables: List<VariableDeclaration>
     get() = this.allChildren()
@@ -574,12 +562,56 @@ val Node?.variables: List<VariableDeclaration>
 val Node?.literals: List<Literal<*>>
     get() = this.allChildren()
 
+/** Returns all [Block] child edges in this graph, starting with this [Node]. */
+val Node?.blocks: List<Block>
+    get() = this.allChildren()
+
 /** Returns all [Reference] children in this graph, starting with this [Node]. */
 val Node?.refs: List<Reference>
     get() = this.allChildren()
 
 /** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
 val Node?.memberExpressions: List<MemberExpression>
+    get() = this.allChildren()
+
+/** Returns all [Statement] child edges in this graph, starting with this [Node]. */
+val Node?.statements: List<Statement>
+    get() = this.allChildren()
+
+/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+val Node?.forLoops: List<ForStatement>
+    get() = this.allChildren()
+
+/** Returns all [TryStatement] child edges in this graph, starting with this [Node]. */
+val Node?.trys: List<TryStatement>
+    get() = this.allChildren()
+
+/** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
+val Node?.forEachLoops: List<ForEachStatement>
+    get() = this.allChildren()
+
+/** Returns all [SwitchStatement] child edges in this graph, starting with this [Node]. */
+val Node?.switches: List<SwitchStatement>
+    get() = this.allChildren()
+
+/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+val Node?.whileLoops: List<WhileStatement>
+    get() = this.allChildren()
+
+/** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
+val Node?.ifs: List<IfStatement>
+    get() = this.allChildren()
+
+/** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
+val Node?.labels: List<LabelStatement>
+    get() = this.allChildren()
+
+/** Returns all [ReturnStatement] child edges in this graph, starting with this [Node]. */
+val Node?.returns: List<ReturnStatement>
+    get() = this.allChildren()
+
+/** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
+val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */

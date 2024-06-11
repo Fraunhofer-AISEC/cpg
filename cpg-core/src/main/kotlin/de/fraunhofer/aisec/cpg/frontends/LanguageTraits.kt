@@ -74,7 +74,8 @@ interface HasTemplates : HasGenerics {
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?
+        currentTU: TranslationUnitDeclaration?,
+        needsExactMatch: Boolean
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,34 +25,37 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.assertLocalName
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.test.assertLocalName
 import kotlin.test.Test
-import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-class TypeTest {
+class ExtensionTest {
     @Test
-    fun testType() {
-        with(TestLanguageFrontend()) {
-            val tu = newTranslationUnitDeclaration("file.extension")
-            this.scopeManager.resetToGlobal(tu)
+    fun testBodyOrNull() {
+        var func = FunctionDeclaration()
+        var body = Block()
 
-            val func = newFunctionDeclaration("main")
-            assertLocalName("main", func)
-
-            val simpleType = objectType("SomeObject")
-            assertLocalName("SomeObject", simpleType)
+        for (i in 0 until 5) {
+            var ref = Reference()
+            ref.name = Name("$i")
+            body += ref
         }
-    }
 
-    @Test
-    fun testPrimitive() {
-        with(TestLanguageFrontend()) {
-            val boolean = primitiveType("boolean")
-            assertLocalName("boolean", boolean)
+        func.body = body
 
-            assertThrows<TranslationException> { primitiveType("BOOLEAN") }
-        }
+        var last = func.bodyOrNull<Reference>(-1)
+        assertNotNull(last)
+        assertLocalName("4", last)
+
+        var ref = Reference()
+        ref.name = Name("single")
+        func.body = ref
+
+        var single = func.bodyOrNull<Reference>(0)
+        assertEquals(ref, single)
     }
 }

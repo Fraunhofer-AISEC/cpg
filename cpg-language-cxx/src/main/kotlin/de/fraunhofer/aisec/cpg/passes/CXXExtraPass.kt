@@ -26,13 +26,13 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -48,13 +48,102 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @ExecuteBefore(ReplaceCallCastPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
+
+    private lateinit var walker: SubgraphWalker.ScopedWalker
+
     override fun accept(component: Component) {
-        val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
 
         walker.registerHandler(::fixInitializers)
+        walker.registerHandler { _, parent, node ->
+            when (node) {
+                is UnaryOperator -> removeBracketOperators(node, parent)
+                is BinaryOperator -> convertOperators(node, parent)
+            }
+        }
         walker.registerHandler(::connectDefinitions)
+
         for (tu in component.translationUnits) {
             walker.iterate(tu)
+        }
+    }
+
+    /**
+     * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
+     * are [CastExpression] nodes or just simply brackets with no syntactic value. The
+     * [CastExpression] conversion is done in [convertOperators], but in this function we are trying
+     * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
+     * the graph.
+     */
+    private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
+        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name.toString())) {
+            // It was really just parenthesis around an identifier, but we can only make this
+            // distinction now.
+            //
+            // In theory, we could just keep this meaningless unary expression, but it in order
+            // to reduce nodes, we unwrap the reference and exchange it in the arguments of the
+            // binary op
+            walker.replaceArgument(parent, node, node.input)
+        }
+    }
+
+    /**
+     * In C++ there is an ambiguity between the combination of a cast + unary operator or a binary
+     * operator where some arguments are wrapped in parentheses. This function tries to resolve
+     * this.
+     *
+     * Note: This is done especially for the C++ frontend. [ReplaceCallCastPass.handleCall] handles
+     * the more general case (which also applies to C++), in which a cast and a call are
+     * indistinguishable and need to be resolved once all types are known.
+     */
+    private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
+        val fakeUnaryOp = binOp.lhs
+        val language = fakeUnaryOp.language as? CLanguage
+        // We need to check, if the expression in parentheses is really referring to a type or
+        // not. A common example is code like `(long) &addr`. We could end up parsing this as a
+        // binary operator with the left-hand side of `(long)`, an operator code `&` and a rhs
+        // of `addr`.
+        if (
+            language != null &&
+                fakeUnaryOp is UnaryOperator &&
+                fakeUnaryOp.operatorCode == "()" &&
+                typeManager.typeExists(fakeUnaryOp.input.name.toString())
+        ) {
+            // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
+            // is really a cast and our binary operator is really a unary operator `&addr`.
+            // We need to perform the following steps:
+            // * create a cast expression out of the ()-unary operator, with the type that is
+            //   referred to in the op.
+            val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
+            cast.language = language
+            cast.castType = language.objectType(fakeUnaryOp.input.name)
+
+            // * create a unary operator with the rhs of the binary operator (and the same
+            //   operator code).
+            // * in the unlikely case that the binary operator cannot actually be used as a
+            //   unary operator, we abort this. This should not happen, but we might never know
+            val opCode = binOp.operatorCode ?: ""
+            if (opCode !in language.unaryOperators) {
+                log.error(
+                    "We tried to convert a binary operator into a unary operator, but the list of " +
+                        "operator codes does not allow that. This is suspicious and the translation " +
+                        "probably was incorrect"
+                )
+                return
+            }
+
+            val unaryOp =
+                newUnaryOperator(opCode, postfix = false, prefix = true)
+                    .codeAndLocationFrom(binOp.rhs)
+            unaryOp.language = language
+            unaryOp.input = binOp.rhs
+
+            // * set the unary operator as the "expression" of the cast
+            cast.expression = unaryOp
+
+            // * replace the binary operator with the cast expression in the parent argument
+            //   holder
+            walker.replaceArgument(parent, binOp, cast)
         }
     }
 
@@ -121,14 +210,13 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (scope is ValueDeclarationScope) {
             // Update the definition
             val candidates =
-                scope.valueDeclarations.filterIsInstance<FunctionDeclaration>().filter {
+                scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
                     // We should only connect methods to methods, functions to functions and
                     // constructors to constructors.
                     it::class == declaration::class &&
                         !it.isDefinition &&
-                        it.name == declaration.name &&
                         it.signature == declaration.signature
-                }
+                } ?: emptyList()
             for (candidate in candidates) {
                 candidate.definition = declaration
 

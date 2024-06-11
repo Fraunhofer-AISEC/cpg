@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
+package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-/** Represents a using directive used to extend the currently valid name scope. */
-class UsingDeclaration : Declaration() {
-    var qualifiedName: String? = null
+class CXXExpressionTest {
+    @Test
+    fun testExplicitTypeConversion() {
+        val file = File("src/test/resources/cxx/explicit_type_conversion.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is UsingDeclaration) return false
-        return super.equals(other) && qualifiedName == other.qualifiedName
+        // We should have two calls (int and myint64)
+        val casts = tu.casts
+        assertEquals(2, casts.size)
+        assertEquals(listOf("int", "myint64"), casts.map { it.name.localName })
     }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), qualifiedName)
 }

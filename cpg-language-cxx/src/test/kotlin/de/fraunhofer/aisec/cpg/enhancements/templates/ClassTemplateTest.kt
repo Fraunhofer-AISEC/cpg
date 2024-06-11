@@ -25,11 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.templates
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyze
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -40,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -212,7 +208,7 @@ internal class ClassTemplateTest : BaseTest() {
         val pair = findByUniqueName(result.records, "Pair")
         val paramN = findByUniqueName(result.parameters, "N")
         val n = findByUniqueName(result.fields, "n")
-        val receiver = pair.byNameOrNull<ConstructorDeclaration>("Pair")?.receiver
+        val receiver = pair.constructors["Pair"]?.receiver
         assertNotNull(receiver)
 
         val pairConstructorDecl =
@@ -509,7 +505,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(1, array.fields.size)
         assertEquals(mArray, array.fields[0])
 
-        val receiver = array.byNameOrNull<MethodDeclaration>("GetSize")?.receiver
+        val receiver = array.methods["GetSize"]?.receiver
         assertNotNull(receiver)
 
         val arrayType = ((receiver.type as? PointerType)?.elementType) as? ObjectType

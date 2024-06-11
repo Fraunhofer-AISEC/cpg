@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AST
 import java.util.*
 
 /**
@@ -54,17 +55,17 @@ import java.util.*
 class RangeExpression : Expression() {
 
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
-    var floor: Expression? = null
+    @AST var floor: Expression? = null
 
     /** The upper bound ("ceiling") of the range. This index is usually *exclusive*. */
-    var ceiling: Expression? = null
+    @AST var ceiling: Expression? = null
 
     /**
      * Some languages offer a third value. The meaning depends completely on the language. For
      * example, Python allows specifying a step, while Go allows to control the underlying array's
      * capacity (not length).
      */
-    var third: Expression? = null
+    @AST var third: Expression? = null
 
     /** The operator code that separates the range elements. Common cases are `:` or `...` */
     var operatorCode = ":"

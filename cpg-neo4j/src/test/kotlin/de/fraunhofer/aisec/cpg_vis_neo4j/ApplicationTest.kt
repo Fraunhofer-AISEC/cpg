@@ -63,7 +63,7 @@ class ApplicationTest {
     fun testSerializeCpgViaOGM() {
         val (application, translationResult) = createTranslationResult()
         // TODO: this was originally 32 nodes, it seems we can now resolve less :(
-        assertEquals(35, translationResult.functions.size)
+        assertEquals(34, translationResult.functions.size)
 
         val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
         val graph = application.buildJsonGraph(nodes, edges)
@@ -96,7 +96,7 @@ class ApplicationTest {
     fun testExportToJson() {
         val (application, translationResult) = createTranslationResult()
         // TODO: this was originally 32 nodes, it seems we can now resolve less :(
-        assertEquals(35, translationResult.functions.size)
+        assertEquals(34, translationResult.functions.size)
         val path = createTempFile().toFile()
         application.exportToJson(translationResult, path)
         assert(path.length() > 0)

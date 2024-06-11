@@ -28,9 +28,6 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -70,16 +67,16 @@ class ValueEvaluatorTest {
     fun test() {
         val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
-        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        val main = tu.functions["main"]
         assertNotNull(main)
 
-        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val b = main.variables["b"]
         assertNotNull(b)
 
         var value = b.evaluate()
         assertEquals(2, value)
 
-        val printB = main.bodyOrNull<CallExpression>()
+        val printB = main.calls("println").getOrNull(0)
         assertNotNull(printB)
 
         val evaluator = ValueEvaluator()
@@ -89,76 +86,76 @@ class ValueEvaluatorTest {
         val path = evaluator.path
         assertEquals(5, path.size)
 
-        val printA = main.bodyOrNull<CallExpression>(1)
+        val printA = main.calls("println").getOrNull(1)
         assertNotNull(printA)
 
         value = printA.arguments.firstOrNull()?.evaluate()
         assertEquals(2, value)
 
-        val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration
+        val c = main.variables["c"]
         assertNotNull(c)
 
         value = c.evaluate()
         assertEquals(3, value)
 
-        val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
+        val d = main.variables["d"]
         assertNotNull(d)
 
         value = d.evaluate()
         assertEquals(2, value)
 
-        val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
+        val e = main.variables["e"]
         assertNotNull(e)
         value = e.evaluate()
         assertEquals(3.5, value)
 
-        val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
+        val f = main.variables["f"]
         assertNotNull(f)
         value = f.evaluate()
         assertEquals(10, value)
 
-        val printHelloWorld = main.bodyOrNull<CallExpression>(2)
+        val printHelloWorld = main.calls("println").getOrNull(2)
         assertNotNull(printHelloWorld)
 
         value = printHelloWorld.arguments.firstOrNull()?.evaluate()
         assertEquals("Hello world", value)
 
-        val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
+        val g = main.variables["g"]
         assertNotNull(g)
         value = g.evaluate()
         assertEquals(-3, value)
 
-        val h = main.bodyOrNull<DeclarationStatement>(7)?.singleDeclaration
+        val h = main.variables["h"]
         assertNotNull(h)
         value = h.evaluate()
         assertFalse(value as Boolean)
 
-        val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
+        val i = main.variables["i"]
         assertNotNull(i)
         value = i.evaluate()
         assertFalse(value as Boolean)
 
-        val j = main.bodyOrNull<DeclarationStatement>(9)?.singleDeclaration
+        val j = main.variables["j"]
         assertNotNull(j)
         value = j.evaluate()
         assertFalse(value as Boolean)
 
-        val k = main.bodyOrNull<DeclarationStatement>(10)?.singleDeclaration
+        val k = main.variables["k"]
         assertNotNull(k)
         value = k.evaluate()
         assertFalse(value as Boolean)
 
-        val l = main.bodyOrNull<DeclarationStatement>(11)?.singleDeclaration
+        val l = main.variables["l"]
         assertNotNull(l)
         value = l.evaluate()
         assertFalse(value as Boolean)
 
-        val m = main.bodyOrNull<DeclarationStatement>(12)?.singleDeclaration
+        val m = main.variables["m"]
         assertNotNull(m)
         value = m.evaluate()
         assertFalse(value as Boolean)
 
-        val n = main.bodyOrNull<DeclarationStatement>(13)?.singleDeclaration
+        val n = main.variables["n"]
         assertNotNull(n)
         value = n.evaluate()
         assertFalse(value as Boolean)
@@ -177,7 +174,7 @@ class ValueEvaluatorTest {
         val main = mainClass.functions["main"]
         assertNotNull(main)
 
-        val s = main.refs("s").last()
+        val s = main.refs("s").lastOrNull()
         assertNotNull(s)
 
         var value = s.evaluate()
@@ -186,7 +183,7 @@ class ValueEvaluatorTest {
         value = s.evaluate(MultiValueEvaluator())
         assertEquals(setOf("big!?", "small!?"), value)
 
-        val i = main.refs("i").last()
+        val i = main.refs("i").lastOrNull()
         assertNotNull(i)
 
         value = i.evaluate()
@@ -741,15 +738,15 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleUnary() {
-        with(TestHandler(TestLanguageFrontend())) {
-            val neg = newUnaryOperator("-", false, true)
+        with(TestLanguageFrontend()) {
+            val neg = newUnaryOperator("-", postfix = false, prefix = true)
             neg.input = newLiteral(3, primitiveType("int"))
             assertEquals(-3, ValueEvaluator().evaluate(neg))
 
             neg.input = newLiteral(3.5, primitiveType("double"))
             assertEquals(-3.5, ValueEvaluator().evaluate(neg))
 
-            val plusplus = newUnaryOperator("++", true, false)
+            val plusplus = newUnaryOperator("++", postfix = true, prefix = false)
             plusplus.input = newLiteral(3, primitiveType("int"))
             assertEquals(4, ValueEvaluator().evaluate(plusplus))
 
@@ -759,7 +756,7 @@ class ValueEvaluatorTest {
             plusplus.input = newLiteral(3.5f, primitiveType("float"))
             assertEquals(4.5f, ValueEvaluator().evaluate(plusplus))
 
-            val minusminus = newUnaryOperator("--", true, false)
+            val minusminus = newUnaryOperator("--", postfix = true, prefix = false)
             minusminus.input = newLiteral(3, primitiveType("int"))
             assertEquals(2, ValueEvaluator().evaluate(minusminus))
 
@@ -768,6 +765,38 @@ class ValueEvaluatorTest {
 
             minusminus.input = newLiteral(3.5f, primitiveType("float"))
             assertEquals(2.5f, ValueEvaluator().evaluate(minusminus))
+        }
+    }
+
+    @Test
+    fun testHandleConditionalExpression() {
+        with(TestLanguageFrontend()) {
+            val a = newVariableDeclaration("a")
+            a.initializer = newLiteral(1)
+
+            val aRef = newReference("a")
+            aRef.refersTo = a
+            aRef.prevDFG = mutableSetOf(a)
+
+            // handle not equals
+            var comparison = newBinaryOperator("!=")
+            comparison.lhs = aRef
+            comparison.rhs = newLiteral(1)
+
+            var cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            assertEquals(1, cond.evaluate())
+
+            // handle equals
+            comparison = newBinaryOperator("==")
+            comparison.lhs = aRef
+            comparison.rhs = newLiteral(1)
+
+            cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            assertEquals(2, cond.evaluate())
+
+            // handle invalid
+            cond = newConditionalExpression(newProblemExpression(), newLiteral(2), aRef)
+            assertEquals("{}", cond.evaluate())
         }
     }
 }

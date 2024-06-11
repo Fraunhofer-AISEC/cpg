@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
-import de.fraunhofer.aisec.cpg.assertFullName
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -39,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.math.pow
 import kotlin.test.*
@@ -48,11 +45,7 @@ class PythonFrontendTest : BaseTest() {
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("literal.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -103,11 +96,7 @@ class PythonFrontendTest : BaseTest() {
     fun testFunctionDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -199,11 +188,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("if.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("if.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -233,7 +218,7 @@ class PythonFrontendTest : BaseTest() {
     fun testSimpleClass() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("simple_class.py").toFile()),
                 topLevel,
                 true
@@ -287,11 +272,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIfExpr() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("ifexpr.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("ifexpr.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -333,7 +314,7 @@ class PythonFrontendTest : BaseTest() {
     fun testFields() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_fields.py").toFile()),
                 topLevel,
                 true
@@ -395,7 +376,7 @@ class PythonFrontendTest : BaseTest() {
     fun testSelf() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_self.py").toFile()),
                 topLevel,
                 true
@@ -461,7 +442,7 @@ class PythonFrontendTest : BaseTest() {
     fun testCtor() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_ctor.py").toFile()),
                 topLevel,
                 true
@@ -513,11 +494,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue432() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue432.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue432.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -620,11 +597,7 @@ class PythonFrontendTest : BaseTest() {
     fun testVarsAndFields() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("vars.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("vars.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -714,11 +687,7 @@ class PythonFrontendTest : BaseTest() {
     fun testRegionInCPG() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("literal.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -739,7 +708,7 @@ class PythonFrontendTest : BaseTest() {
     fun testMultiLevelMemberCall() { // TODO
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
                 topLevel,
                 true
@@ -775,11 +744,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue598() { // test for added functionality: "while" and "break"
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue598.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue598.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -816,11 +781,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue615() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue615.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue615.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -886,11 +847,7 @@ class PythonFrontendTest : BaseTest() {
     fun testIssue473() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("issue473.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("issue473.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -938,11 +895,7 @@ class PythonFrontendTest : BaseTest() {
     fun testCommentMatching() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("comments.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("comments.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
             }
         assertNotNull(tu)
@@ -986,7 +939,7 @@ class PythonFrontendTest : BaseTest() {
     fun testAnnotations() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("annotations.py").toFile()),
                 topLevel,
                 true
@@ -1004,11 +957,7 @@ class PythonFrontendTest : BaseTest() {
     fun testForLoop() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("forloop.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("forloop.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -1080,11 +1029,7 @@ class PythonFrontendTest : BaseTest() {
     fun testArithmetics() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("calc.py").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("calc.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
@@ -1094,6 +1039,149 @@ class PythonFrontendTest : BaseTest() {
 
         val result = a.evaluate(PythonValueEvaluator())
         assertEquals(16.0, result)
+
+        val bAugAssign =
+            tu.allChildren<AssignExpression>().singleOrNull {
+                (it.lhs.singleOrNull() as? Reference)?.name?.localName == "b" &&
+                    it.location?.region?.startLine == 4
+            }
+        assertNotNull(bAugAssign)
+        assertEquals("*=", bAugAssign.operatorCode)
+        assertEquals("b", bAugAssign.lhs.singleOrNull()?.name?.localName)
+        assertEquals(2L, (bAugAssign.rhs.singleOrNull() as? Literal<*>)?.value)
+
+        // c = (not True and False) or True
+        val cAssign =
+            tu.allChildren<AssignExpression>()
+                .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "c" }
+                ?.rhs
+                ?.singleOrNull() as? BinaryOperator
+        assertNotNull(cAssign)
+        assertEquals("or", cAssign.operatorCode)
+        assertEquals(true, (cAssign.rhs as? Literal<*>)?.value)
+        assertEquals("and", (cAssign.lhs as? BinaryOperator)?.operatorCode)
+        assertEquals(false, ((cAssign.lhs as? BinaryOperator)?.rhs as? Literal<*>)?.value)
+        assertEquals("not", ((cAssign.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.operatorCode)
+        assertEquals(
+            true,
+            (((cAssign.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.input as? Literal<*>)?.value
+        )
+
+        // d = ((-5 >> 2) & ~7 | (+4 << 1)) ^ 0xffff
+        val dAssign =
+            tu.allChildren<AssignExpression>()
+                .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "d" }
+                ?.rhs
+                ?.singleOrNull() as? BinaryOperator
+        assertNotNull(dAssign)
+        assertEquals("^", dAssign.operatorCode)
+        assertEquals(0xffffL, (dAssign.rhs as? Literal<*>)?.value)
+        assertEquals("|", (dAssign.lhs as? BinaryOperator)?.operatorCode)
+        assertEquals("<<", ((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.operatorCode)
+        assertEquals(
+            1L,
+            (((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.rhs as? Literal<*>)?.value
+        )
+        assertEquals(
+            "+",
+            (((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.lhs as? UnaryOperator)
+                ?.operatorCode
+        )
+        assertEquals(
+            4L,
+            ((((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.lhs as? UnaryOperator)
+                    ?.input as? Literal<*>)
+                ?.value
+        )
+        val dAssignLhsOfOr = (dAssign.lhs as? BinaryOperator)?.lhs as? BinaryOperator
+        assertNotNull(dAssignLhsOfOr)
+        assertEquals("&", dAssignLhsOfOr.operatorCode)
+        assertEquals("~", (dAssignLhsOfOr.rhs as? UnaryOperator)?.operatorCode)
+        assertEquals(7L, ((dAssignLhsOfOr.rhs as? UnaryOperator)?.input as? Literal<*>)?.value)
+        assertEquals(">>", (dAssignLhsOfOr.lhs as? BinaryOperator)?.operatorCode)
+        assertEquals(2L, ((dAssignLhsOfOr.lhs as? BinaryOperator)?.rhs as? Literal<*>)?.value)
+        assertEquals(
+            "-",
+            ((dAssignLhsOfOr.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.operatorCode
+        )
+        assertEquals(
+            5L,
+            (((dAssignLhsOfOr.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.input as? Literal<*>)
+                ?.value
+        )
+    }
+
+    @Test
+    fun testDataTypes() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("datatypes.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+        val namespace = tu.namespaces.singleOrNull()
+        assertNotNull(namespace)
+        val aStmt = namespace.statements[0] as? AssignExpression
+        assertNotNull(aStmt)
+        assertEquals(
+            "list",
+            (aStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+        val bStmt = namespace.statements[1] as? AssignExpression
+        assertNotNull(bStmt)
+        assertEquals(
+            "set",
+            (bStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+        val cStmt = namespace.statements[2] as? AssignExpression
+        assertNotNull(cStmt)
+        assertEquals(
+            "tuple",
+            (cStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+        val dStmt = namespace.statements[3] as? AssignExpression
+        assertNotNull(dStmt)
+        assertEquals(
+            "dict",
+            (dStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
+        )
+
+        val eStmtRhs =
+            (namespace.statements[4] as? AssignExpression)?.rhs?.singleOrNull() as? BinaryOperator
+        assertNotNull(eStmtRhs)
+        assertEquals("Values of a: ", (eStmtRhs.lhs as? Literal<*>)?.value)
+        val eStmtRhsRhs = (eStmtRhs.rhs as? BinaryOperator)
+        assertNotNull(eStmtRhsRhs)
+        val aRef = eStmtRhsRhs.lhs as? Reference
+        assertEquals("a", aRef?.name?.localName)
+        val eStmtRhsRhsRhs = (eStmtRhsRhs.rhs as? BinaryOperator)
+        assertEquals(" and b: ", (eStmtRhsRhsRhs?.lhs as? Literal<*>)?.value)
+        val bCall = eStmtRhsRhsRhs?.rhs as? CallExpression
+        assertEquals("str", bCall?.name?.localName)
+        assertEquals("b", bCall?.arguments?.singleOrNull()?.name?.localName)
+
+        val fStmtRhs =
+            (namespace.statements[5] as? AssignExpression)?.rhs?.singleOrNull()
+                as? SubscriptExpression
+        assertNotNull(fStmtRhs)
+        assertEquals("a", fStmtRhs.arrayExpression.name.localName)
+        assertTrue(fStmtRhs.subscriptExpression is RangeExpression)
+        assertEquals(
+            1L,
+            ((fStmtRhs.subscriptExpression as RangeExpression).floor as? Literal<*>)?.value
+        )
+        assertEquals(
+            3L,
+            ((fStmtRhs.subscriptExpression as RangeExpression).ceiling as? Literal<*>)?.value
+        )
+        assertEquals(
+            2L,
+            ((fStmtRhs.subscriptExpression as RangeExpression).third as? Literal<*>)?.value
+        )
     }
 
     class PythonValueEvaluator : ValueEvaluator() {

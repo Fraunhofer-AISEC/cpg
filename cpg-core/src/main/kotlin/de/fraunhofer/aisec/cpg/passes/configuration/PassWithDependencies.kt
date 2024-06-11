@@ -64,4 +64,32 @@ data class PassWithDependencies(
         }
         return builder.toString()
     }
+
+    /**
+     * Checks whether the [dependencies] of this pass are met. The list of [softDependencies] and
+     * [hardDependencies] is removed step-by-step in
+     * [PassWithDepsContainer.getAndRemoveFirstPassWithoutDependencies].
+     */
+    fun dependenciesMet(workingList: MutableList<PassWithDependencies>): Boolean {
+        // In the simplest case all our dependencies are empty since they were already removed by
+        // the selecting algorithm.
+        if (this.dependencies.isEmpty() && !this.isLastPass) {
+            return true
+        }
+
+        // We also need to check, whether we still "soft" depend on passes that are just not
+        // there (after all hard dependencies are met), in this case we can select the pass
+        // as well
+        val remainingClasses = workingList.map { it.pass }
+        if (
+            this.hardDependencies.isEmpty() &&
+                this.softDependencies.all { !remainingClasses.contains(it) } &&
+                !this.isLastPass
+        ) {
+            return true
+        }
+
+        // Otherwise, we still depend on an unselected pass
+        return false
+    }
 }

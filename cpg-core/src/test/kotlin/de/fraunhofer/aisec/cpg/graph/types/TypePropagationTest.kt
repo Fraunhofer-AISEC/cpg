@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 class TypePropagationTest {
@@ -324,7 +325,7 @@ class TypePropagationTest {
                                     }
                                 }
                                 returnStmt {
-                                    ase {
+                                    subscriptExpr {
                                         ref("bb")
                                         literal(1)
                                     }

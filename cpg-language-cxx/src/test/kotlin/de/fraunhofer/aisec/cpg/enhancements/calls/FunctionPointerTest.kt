@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
@@ -38,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
@@ -52,7 +50,7 @@ internal class FunctionPointerTest : BaseTest() {
     ): TranslationResult {
         val topLevel = Path.of("src", "test", "resources", "functionPointers")
 
-        return TestUtils.analyze(language, topLevel, true, configModifier)
+        return analyze(language, topLevel, true, configModifier)
     }
 
     @Throws(Exception::class)

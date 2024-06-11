@@ -25,11 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.assertInvokes
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -88,5 +87,23 @@ class SymbolResolverTest {
         val hCall = tu.calls["h"]
         assertNotNull(hCall)
         assertInvokes(hCall, hOne)
+    }
+
+    @Test
+    fun testCPPMethodDefinitionOutsideOfClass() {
+        val file = File("src/test/resources/cxx/outside_class_definition.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        val field = tu.fields["field"]
+        assertNotNull(field)
+        assertFalse(field.isInferred)
+
+        val fieldRef = tu.refs["field"]
+        assertNotNull(fieldRef)
+        assertRefersTo(fieldRef, field)
     }
 }

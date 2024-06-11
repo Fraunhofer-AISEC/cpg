@@ -86,7 +86,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             return
         }
 
-        log.debug("Handling {} (complexity: {})", node.name, c)
+        log.trace("Handling {} (complexity: {})", node.name, c)
 
         clearFlowsOfVariableDeclarations(node)
         val startState = DFGPassState<Set<Node>>()

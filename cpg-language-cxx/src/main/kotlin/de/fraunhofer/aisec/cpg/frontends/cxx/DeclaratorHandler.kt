@@ -235,8 +235,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val parent = name.parent
         if (parent != null) {
             // In this case, the name contains a qualifier, and we can try to check, if we have a
-            // matching name scope for the parent name
-            parentScope = frontend.scopeManager.lookupScope(parent.toString())
+            // matching name scope for the parent name. We also need to take the current namespace
+            // into account
+            parentScope =
+                frontend.scopeManager.lookupScope(
+                    frontend.scopeManager.currentNamespace.fqn(parent.toString()).toString()
+                )
 
             declaration = createFunctionOrMethodOrConstructor(name, parentScope, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
@@ -266,8 +270,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 scopeParent.addDeclaration(declaration)
             }
 
-            // Enter the record scope
-            parentScope.astNode?.let { frontend.scopeManager.enterScope(it) }
+            // Enter the name scope
+            parentScope.astNode?.let {
+                frontend.scopeManager.enterScope(it)
+                frontend.scopeManager.addDeclaration(declaration, addToAST = false)
+            }
 
             // We also need to by-pass the scope manager for this, because it will
             // otherwise add the declaration to the AST element of the named scope (the record
@@ -276,7 +283,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // AST field, (for now) we only want those methods in there, that were actual AST
             // parents. This is also something that we need to figure out how we want to handle
             // this.
-            parentScope.valueDeclarations.add(declaration)
+            parentScope.addSymbol(declaration.symbol, declaration)
         } else {
             // Add the declaration via the scope manager
             frontend.scopeManager.addDeclaration(declaration)

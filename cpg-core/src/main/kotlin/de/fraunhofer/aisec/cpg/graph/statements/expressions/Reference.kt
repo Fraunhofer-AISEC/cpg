@@ -143,8 +143,11 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
             this.addAssignedTypes(assignedTypes)
         }
 
-        // We also allow updates from our previous DFG nodes
-        if (prevDFG.contains(src as Node)) {
+        // We also allow updates from our previous DFG nodes; but only for FULL data-flows. This is
+        // important especially for MemberExpression nodes (which are also Reference nodes).
+        // Otherwise, an update in the base's type could propagate to a member (since we have a
+        // PARTIAL DFG from the base to the member) and this is BAD.
+        if (prevFullDFG.contains(src as Node)) {
             this.addAssignedTypes(assignedTypes)
         }
     }

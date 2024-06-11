@@ -63,6 +63,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -76,6 +77,7 @@ import kotlin.jvm.optionals.getOrNull
 @RegisterExtraPass(
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
+@RegisterExtraPass(JavaImportResolver::class)
 open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Node, Type>(language, ctx) {
 
@@ -466,7 +468,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     val member =
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
-                            expressionHandler.handle(value.asLiteralExpr()) as Expression,
+                            expressionHandler.handle(value) as Expression,
                             rawNode = value
                         )
                     members.add(member)
@@ -485,7 +487,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             is PrimitiveType -> primitiveType(type.asString())
             is ClassOrInterfaceType ->
                 objectType(
-                    type.nameAsString,
+                    type.nameWithScope,
                     type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf()
                 )
             is ReferenceType -> objectType(type.asString())

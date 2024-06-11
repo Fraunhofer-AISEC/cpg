@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -44,6 +45,15 @@ import org.neo4j.ogm.annotation.Relationship
 abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
 
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
+
+    override var language: Language<*>? = null
+        set(value) {
+            // We need to adjust an eventual unknown type, once we know the language
+            field = value
+            if (value != null && type is UnknownType) {
+                type = UnknownType.getUnknownType(value)
+            }
+        }
 
     /** The type of this declaration. */
     override var type: Type = unknownType()

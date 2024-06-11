@@ -30,11 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -81,18 +77,6 @@ class ScopeManager : ScopeProvider {
      * [resolveReference] as a caching mechanism.
      */
     private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
-
-    /**
-     * In some languages, we can define aliases for names. An example is renaming package imports in
-     * Go, e.g., to avoid name conflicts.
-     *
-     * In reality, they can probably be defined at different scopes for other languages, but for now
-     * we only allow it for the current file.
-     *
-     * This can potentially be used to replace [addTypedef] at some point, which still relies on the
-     * existence of a [LanguageFrontend].
-     */
-    private val aliases = mutableMapOf<PhysicalLocation.ArtifactLocation, MutableSet<Alias>>()
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
@@ -164,13 +148,8 @@ class ScopeManager : ScopeProvider {
             for (entry in manager.fqnScopeMap.entries) {
                 val existing = fqnScopeMap[entry.key]
                 if (existing != null) {
-                    // a name scope with an identical FQN already exist. we transfer all
-                    // declarations over to it. We are NOT using [addValueDeclaration] because this
-                    // will add it to the underlying AST node as well. This was already done by the
-                    // respective sub-scope manager. We add it directly to the declarations array
-                    // instead.
-                    existing.valueDeclarations.addAll(entry.value.valueDeclarations)
-                    existing.structureDeclarations.addAll(entry.value.structureDeclarations)
+                    // merge symbols
+                    existing.symbols.mergeFrom(entry.value.symbols)
 
                     // copy over the typedefs as well just to be sure
                     existing.typedefs.putAll(entry.value.typedefs)
@@ -202,9 +181,6 @@ class ScopeManager : ScopeProvider {
             // individual scope manager into our map, otherwise we would overwrite our merged global
             // scope.
             scopeMap.putAll(manager.scopeMap.filter { it.key != null })
-
-            // Merge aliases
-            aliases.putAll(manager.aliases)
 
             // free the maps, just to clear up some things. this scope manager will not be used
             // anymore
@@ -270,6 +246,7 @@ class ScopeManager : ScopeProvider {
                     is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
                     is TryStatement -> TryScope(nodeToScope)
+                    is TranslationUnitDeclaration -> FileScope(nodeToScope)
                     is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
@@ -307,7 +284,7 @@ class ScopeManager : ScopeProvider {
      */
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
-            currentScope?.children?.firstOrNull { it is NameScope && it.name == nodeToScope.name }
+            filterScopes { it is NameScope && it.name == nodeToScope.name }.firstOrNull()
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -403,6 +380,12 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
+        if (declaration != null) {
+            // New stuff here
+            currentScope?.addSymbol(declaration.symbol, declaration)
+        }
+
+        // Legacy stuff here
         when (declaration) {
             is ProblemDeclaration,
             is IncludeDeclaration -> {
@@ -411,8 +394,9 @@ class ScopeManager : ScopeProvider {
             }
             is ValueDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-                scope?.addValueDeclaration(declaration, addToAST)
+                scope?.addDeclaration(declaration, addToAST)
             }
+            is ImportDeclaration,
             is EnumDeclaration,
             is RecordDeclaration,
             is NamespaceDeclaration,
@@ -574,15 +558,13 @@ class ScopeManager : ScopeProvider {
         }
     }
 
-    /** Only used by the [TypeManager], adds typedefs to the current [ValueDeclarationScope]. */
-    fun addTypedef(typedef: TypedefDeclaration) {
-        val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-        if (scope == null) {
-            LOGGER.error("Cannot add typedef. Not in declaration scope.")
-            return
-        }
-
-        scope.addTypedef(typedef)
+    /**
+     * Adds typedefs to a [ValueDeclarationScope]. The language frontend needs to decide on the
+     * scope of the typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set
+     * as default.
+     */
+    fun addTypedef(typedef: TypedefDeclaration, scope: ValueDeclarationScope? = globalScope) {
+        scope?.addTypedef(typedef)
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
@@ -716,6 +698,13 @@ class ScopeManager : ScopeProvider {
                 CallResolutionResult.SuccessKind.UNRESOLVED,
                 startScope,
             )
+        val language = call.language
+
+        if (language == null) {
+            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            return result
+        }
+
         // We can only resolve non-dynamic function calls here that have a reference node to our
         // function
         val callee = call.callee as? Reference ?: return result
@@ -725,7 +714,7 @@ class ScopeManager : ScopeProvider {
 
         // Retrieve a list of possible functions with a matching name
         result.candidateFunctions =
-            callee.candidates?.filterIsInstance<FunctionDeclaration>()?.toSet() ?: setOf()
+            callee.candidates.filterIsInstance<FunctionDeclaration>().toSet()
 
         if (call.language !is HasFunctionOverloading) {
             // If the function does not allow function overloading, and we have multiple candidate
@@ -764,11 +753,9 @@ class ScopeManager : ScopeProvider {
 
         // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
         // the success kind.
-        val pair = call.language?.bestViableResolution(result)
-        if (pair != null) {
-            result.bestViable = pair.first
-            result.success = pair.second
-        }
+        val pair = language.bestViableResolution(result)
+        result.bestViable = pair.first
+        result.success = pair.second
 
         return result
     }
@@ -776,10 +763,10 @@ class ScopeManager : ScopeProvider {
     /**
      * This function extracts a scope for the [Name] in node, e.g. if the name is fully qualified.
      *
-     * The pair returns the extracted scope and a name that is adjusted by [aliases]. The extracted
-     * scope is "responsible" for the name (e.g. declares the parent namespace) and the returned
-     * name only differs from the provided name if aliasing was involved at the node location (e.g.
-     * because of imports).
+     * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
+     * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
+     * the returned name only differs from the provided name if aliasing was involved at the node
+     * location (e.g. because of imports).
      *
      * Note: Currently only *fully* qualified names are properly resolved. This function will
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
@@ -790,33 +777,50 @@ class ScopeManager : ScopeProvider {
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
     fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
-        var name: Name = node.name
+        return extractScope(node.name, node.location, scope)
+    }
+
+    /**
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified.
+     *
+     * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
+     * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
+     * the returned name only differs from the provided name if aliasing was involved at the node
+     * location (e.g. because of imports).
+     *
+     * Note: Currently only *fully* qualified names are properly resolved. This function will
+     * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
+     * `B` points to `A::B`, rather than to `A`.
+     *
+     * @param name the name
+     * @param scope the current scope relevant for the name resolution, e.g. parent of node
+     * @return a pair with the scope of node.name and the alias-adjusted name
+     */
+    fun extractScope(
+        name: Name,
+        location: PhysicalLocation? = null,
+        scope: Scope? = currentScope,
+    ): Pair<Scope?, Name> {
+        var n = name
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping.
-        if (node.name.isQualified()) {
+        if (n.isQualified()) {
+            // We need to check, whether we have an alias for the name's parent in this file
+            n = resolveParentAlias(n, scope)
+
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
-            var scopeName = node.name.parent
-
-            // We need to check, whether we have an alias for the scope name in this file
-            val list = aliases[node.location?.artifactLocation]
-            val alias = list?.firstOrNull { it.to == scopeName }?.from
-            if (alias != null) {
-                scopeName = alias
-                // Reconstruct the original name with the alias, so we can resolve declarations with
-                // the namespace
-                name = Name(name.localName, alias)
-            }
+            val scopeName = n.parent
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
             s =
                 if (scopes.isEmpty()) {
                     Util.warnWithFileLocation(
-                        node,
+                        location,
                         LOGGER,
-                        "Could not find the scope $scopeName needed to resolve the call ${node.name}"
+                        "Could not find the scope $scopeName needed to resolve $n"
                     )
                     scope
                 } else {
@@ -824,7 +828,42 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
-        return Pair(s, name)
+        return Pair(s, n)
+    }
+
+    /**
+     * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
+     * the given [Name].
+     */
+    fun resolveParentAlias(name: Name, scope: Scope?): Name {
+        val parentName = name.parent ?: return name
+
+        // This is not 100 % ideal, but at least somewhat compatible to the previous approach
+        var newName = name
+        var decl =
+            scope?.lookupSymbol(parentName.localName)?.singleOrNull {
+                it is NamespaceDeclaration || it is RecordDeclaration
+            }
+        if (decl != null && parentName != decl.name) {
+            // This is probably an already resolved alias so, we take this one
+            return Name(newName.localName, decl.name, delimiter = newName.delimiter)
+        }
+
+        // If we do not have a match yet, it could be that we are trying to resolve an FQN type
+        // during frontend translation. This is deprecated and will be replaced in the future
+        // by a system that also resolves type during symbol resolving. However, to support aliases
+        // from imports in this intermediate stage, we have to look for unresolved import
+        // declarations and also take their aliases into account
+        decl =
+            scope
+                ?.lookupSymbol(parentName.localName)
+                ?.filterIsInstance<ImportDeclaration>()
+                ?.singleOrNull()
+        if (decl != null && decl.importedSymbols.isEmpty() && parentName != decl.import) {
+            newName = Name(newName.localName, decl.import, delimiter = newName.delimiter)
+        }
+
+        return newName
     }
 
     /**
@@ -950,15 +989,8 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name, scope: Scope? = currentScope): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.name.lastPartsMatch(name) }
-            .firstOrNull()
-    }
-
-    fun addAlias(file: PhysicalLocation.ArtifactLocation, from: Name, to: Name) {
-        val list = aliases.computeIfAbsent(file) { mutableSetOf() }
-
-        list += Alias(from, to)
+    fun getRecordForName(name: Name): RecordDeclaration? {
+        return findSymbols(name).filterIsInstance<RecordDeclaration>().singleOrNull()
     }
 
     fun typedefFor(alias: Type): Type? {
@@ -968,9 +1000,43 @@ class ScopeManager : ScopeProvider {
         // a local definition overwrites / shadows one that was there on a higher scope.
         while (current != null) {
             if (current is ValueDeclarationScope) {
-                val decl = current.typedefs[alias]
-                if (decl != null) {
-                    return decl.type
+                // This is a little bit of a hack to support partial FQN resolution at least with
+                // typedefs, but it's not really ideal.
+                // And this also should be merged with the scope manager logic when resolving names.
+                //
+                // The better approach would be to harmonize the FQN of all types in one pass before
+                // all this happens.
+                //
+                // This process has several steps:
+                // First, do a quick local lookup, to see if we have a typedef our current scope
+                // (only do this if the name is not qualified)
+                if (!alias.name.isQualified() && current == currentScope) {
+                    val decl = current.typedefs[alias]
+                    if (decl != null) {
+                        return decl.type
+                    }
+                }
+
+                // Next, try to look up the name either by its FQN (if it is qualified) or make it
+                // qualified based on the current namespace
+                val key =
+                    current.typedefs.keys.firstOrNull {
+                        var lookupName = alias.name
+
+                        // If the lookup name is already a FQN, we can use the name directly
+                        lookupName =
+                            if (lookupName.isQualified()) {
+                                lookupName
+                            } else {
+                                // Otherwise, we want to make an FQN out of it using the current
+                                // namespace
+                                currentNamespace?.fqn(lookupName.localName) ?: lookupName
+                            }
+
+                        it.name.lastPartsMatch(lookupName)
+                    }
+                if (key != null) {
+                    return current.typedefs[key]?.type
                 }
             }
 
@@ -983,6 +1049,40 @@ class ScopeManager : ScopeProvider {
     /** Returns the current scope for the [ScopeProvider] interface. */
     override val scope: Scope?
         get() = currentScope
+
+    /**
+     * This function tries to resolve a [Node.name] to a list of symbols (a symbol represented by a
+     * [Declaration]) starting with [startScope]. This function can return a list of multiple
+     * symbols in order to check for things like function overloading. but it will only return list
+     * of symbols within the same scope; the list cannot be spread across different scopes.
+     *
+     * This means that as soon one or more symbols are found in a "local" scope, these shadow all
+     * other occurrences of the same / symbol in a "higher" scope and only the ones from the lower
+     * ones will be returned.
+     */
+    fun findSymbols(
+        name: Name,
+        location: PhysicalLocation? = null,
+        startScope: Scope? = currentScope,
+    ): List<Declaration> {
+        val (scope, n) = extractScope(name, location, startScope)
+        val list = scope?.lookupSymbol(n.localName)?.toMutableList() ?: mutableListOf()
+
+        // If we have both the definition and the declaration of a function declaration in our list,
+        // we chose only the definition
+        val it = list.iterator()
+        while (it.hasNext()) {
+            val decl = it.next()
+            if (decl is FunctionDeclaration) {
+                val definition = decl.definition
+                if (!decl.isDefinition && definition != null && definition in list) {
+                    it.remove()
+                }
+            }
+        }
+
+        return list
+    }
 }
 
 /**
@@ -1088,7 +1188,7 @@ data class CallResolutionResult(
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
-     * [SymbolResolver.findSymbols]), more specifically a list of [FunctionDeclaration] nodes.
+     * [ScopeManager.findSymbols]), more specifically a list of [FunctionDeclaration] nodes.
      */
     var candidateFunctions: Set<FunctionDeclaration>,
 

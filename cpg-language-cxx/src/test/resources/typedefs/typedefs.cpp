@@ -70,7 +70,7 @@ unsigned long typedef long int ullong;
 unsigned long long int someUllong1;
 ullong someUllong2;
 
-// std::add_const, like many other metafunctions, use member typedefs
+// a global typedef called "type", which will be used to explain typedef scopes and shadowing
 typedef long type;
 type typeMemberOutside;
 
@@ -78,16 +78,20 @@ type typeMemberOutside;
 typedef uint8_t		test;
 
 struct add_const {
+    // this typedef is scoped to the global scope, but its alias name is actually a
+    // FQN of add_const::type
     typedef const int type;
     const int typeMember1;
+
+    // since C++ allows omitting the scope of types, this "type" actually refers to add_const::type
     type typeMember2;
 };
 
 // template, not to be confused with multiple typedef
 typedef template_class_A<int, int> type_B;
 
-
 int main() {
+  // this typedef is scoped only to the function and shadows the global "type" typedef within this function
   typedef char *type;
   char *cptr1;
   type cptr2;

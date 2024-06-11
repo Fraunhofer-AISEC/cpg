@@ -85,7 +85,7 @@ sonarqube {
         property("sonar.sourceEncoding", "UTF-8")
         // The report part is either relative to the submodules or the main module. We want to specify our
         // aggregated jacoco report here
-        property("sonar.coverage.jacoco.xmlReportPaths", "../cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml,cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml")
+        property("sonar.coverage.jacoco.xmlReportPaths", "../cpg-all/build/reports/kover/report.xml,cpg-all/build/reports/kover/report.xml")
     }
 }
 

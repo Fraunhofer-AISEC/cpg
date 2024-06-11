@@ -160,9 +160,8 @@ class PassWithDepsContainer {
 
             // Keep going until our dependencies are met, this will collect passes that can run in
             // parallel in results
-            if (
-                currentElement.dependencies.isEmpty() && !currentElement.isLastPass
-            ) { // no unsatisfied dependencies
+            if (currentElement.dependenciesMet(workingList)) {
+                // no unsatisfied dependencies
                 val result = currentElement.pass
                 results.add(result)
 
