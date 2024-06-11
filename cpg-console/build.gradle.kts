@@ -65,7 +65,6 @@ dependencies {
     api(projects.cpgAnalysis)
     api(projects.cpgNeo4j)
 
-    implementation(libs.sarif4k)
     implementation(libs.kotlin.ki.shell)
 
     // ki-shell dependencies, that we need to specify manually because we are using the JitPack "release"
