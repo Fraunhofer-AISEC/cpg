@@ -446,15 +446,16 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
     }
 
-    fun inferNamespaceDeclaration(name: Name, path: String?, origin: Node): NamespaceDeclaration {
-        // Here be dragons. Jump to the scope that the node defines directly, so that we can
-        // delegate further operations to the scope manager. We also save the old scope, so we can
-        // restore it.
+    fun inferNamespaceDeclaration(name: Name, path: String?, origin: Node): NamespaceDeclaration? {
+        if (!ctx.config.inferenceConfiguration.inferNamespaces) {
+            return null
+        }
+
         return inferInScopeOf(start) {
             debugWithFileLocation(
                 origin,
                 log,
-                "Inferring a new namespace declaration {} {} in $it",
+                "Inferring a new namespace declaration {} (path: {}) in $it",
                 name,
                 if (path != null) {
                     "with path '$path'"
