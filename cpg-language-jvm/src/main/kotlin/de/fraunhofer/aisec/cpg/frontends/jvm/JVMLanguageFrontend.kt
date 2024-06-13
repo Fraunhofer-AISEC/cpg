@@ -42,7 +42,7 @@ import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
-import sootup.java.bytecode.interceptors.*
+import sootup.java.core.interceptors.*
 import sootup.java.core.views.JavaView
 import sootup.java.sourcecode.inputlocation.JavaSourcePathAnalysisInputLocation
 import sootup.jimple.parser.JimpleAnalysisInputLocation

@@ -39,12 +39,12 @@ publishing {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xcontext-receivers")
-    }
-}
-
 dependencies {
     api(libs.bundles.sootup)
+    // needed until https://github.com/antlr/antlr4/issues/3895 is fixed
+    runtimeOnly("org.antlr:antlr4-runtime") {
+        version {
+            strictly("4.9.3")
+        }
+    }
 }
