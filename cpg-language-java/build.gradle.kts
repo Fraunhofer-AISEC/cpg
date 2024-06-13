@@ -39,12 +39,6 @@ publishing {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xcontext-receivers")
-    }
-}
-
 dependencies {
     api(libs.javaparser)
 }
