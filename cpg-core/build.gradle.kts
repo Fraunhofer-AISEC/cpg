@@ -43,12 +43,6 @@ publishing {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xcontext-receivers")
-    }
-}
-
 tasks.test {
     useJUnitPlatform {
         if (!project.hasProperty("experimental")) {
