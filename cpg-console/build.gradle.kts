@@ -44,15 +44,6 @@ application {
     mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform {
-        if (!project.hasProperty("integration")) {
-            excludeTags("integration")
-        }
-    }
-}
-
-
 repositories {
     maven {
         setUrl("https://jitpack.io")

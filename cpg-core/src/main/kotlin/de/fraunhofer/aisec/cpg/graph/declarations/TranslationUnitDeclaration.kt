@@ -70,44 +70,6 @@ class TranslationUnitDeclaration :
     val namespaces: List<NamespaceDeclaration>
         get() = unwrap(namespaceEdges)
 
-    /**
-     * Returns the i-th declaration as a specific class, if it can be cast
-     *
-     * @param i the index
-     * @param clazz the class
-     * @param <T> the type of the class
-     * @return the declaration or null, if it can not be cast to the class </T>
-     */
-    fun <T : Declaration?> getDeclarationAs(i: Int, clazz: Class<T>): T? {
-        val declaration = declarationEdges[i].end
-        return if (declaration.javaClass.isAssignableFrom(clazz))
-            clazz.cast(declarationEdges[i].end)
-        else null
-    }
-
-    /**
-     * Returns a non-null, possibly empty `Set` of the declaration of a specified type and clazz.
-     *
-     * The set may contain more than one element if a declaration exists in the [ ] itself and in an
-     * included header file.
-     *
-     * @param name the name to search for
-     * @param clazz the declaration class, such as [FunctionDeclaration].
-     * @param <T> the type of the declaration
-     * @return a `Set` containing the declarations, if any. </T>
-     */
-    fun <T : Declaration?> getDeclarationsByName(name: String, clazz: Class<T>): Set<T> {
-        return declarationEdges
-            .map { it.end }
-            .filter { it.name.toString() == name }
-            .filterIsInstance(clazz)
-            .toSet()
-    }
-
-    fun getIncludeByName(name: String): IncludeDeclaration? {
-        return includeEdges.map { it.end }.firstOrNull { it.name.toString() == name }
-    }
-
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is IncludeDeclaration) {
             addIfNotContains(includeEdges, declaration)
@@ -130,8 +92,8 @@ class TranslationUnitDeclaration :
             val list = mutableListOf<Node>()
             // Add all top-level declarations
             list += declarations
-            // Add all top-level statements
-            list += statements
+            // Add the TU itself, so that we can catch any static statements in the TU
+            list += this
 
             return list
         }

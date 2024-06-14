@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -225,7 +224,7 @@ class TypeManager {
     }
 
     fun typeExists(name: String): Boolean {
-        return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
+        return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -264,8 +263,9 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 
 /**
  * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
- * [WrapState] of the type into account, which means that pointer types of derived types will not
- * match with a non-pointer type of its base type. But, if both are pointer types, they will match.
+ * [TypeOperations] of the type into account, which means that pointer types of derived types will
+ * not match with a non-pointer type of its base type. But, if both are pointer types, they will
+ * match.
  *
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
@@ -299,8 +299,8 @@ val Collection<Type>.commonType: Type?
         // (which contains the pointer origins), because otherwise we need to re-create the
         // equivalent wrap state at the end. Make sure we only have one wrap state before we
         // proceed.
-        val wrapStates = this.map { it.wrapState }.toSet()
-        val wrapState = wrapStates.singleOrNull() ?: return null
+        val operations = this.map { it.typeOperations }.toSet()
+        val typeOp = operations.singleOrNull() ?: return null
 
         // Build all ancestors out of the root types. This way we compare the most inner type,
         // regardless of the wrap state.
@@ -336,60 +336,5 @@ val Collection<Type>.commonType: Type?
 
         // Find the one with the largest depth (which is closest to the original type, since the
         // root node is 0) and re-wrap the final common type back into the original wrap state
-        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.wrap(wrapState)
+        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
-
-/**
- * Calculates and returns the [WrapState] of the current type. A [WrapState] can be used to compute
- * a "wrapped" type, for example a [PointerType] back from its [Type.root].
- */
-val Type.wrapState: WrapState
-    get() {
-        val wrapState = WrapState()
-        var type = this
-
-        // A reference can only be the last item, so we check if the most outer type is a reference
-        // type
-        if (type is ReferenceType) {
-            wrapState.referenceType = this as ReferenceType?
-            wrapState.isReference = true
-            type = type.elementType
-        }
-
-        // We already know the depth, so we can just set this and allocate the pointer origins array
-        wrapState.depth = this.referenceDepth
-        wrapState.pointerOrigins = arrayOfNulls(wrapState.depth)
-
-        // If we have a pointer type, "unwrap" the type until we are back at the element type
-        if (type is PointerType) {
-            var i = 0
-            wrapState.pointerOrigins[i] = type.pointerOrigin
-            while (type is PointerType) {
-                type = type.elementType
-                if (type is PointerType) {
-                    wrapState.pointerOrigins[++i] = type.pointerOrigin
-                }
-            }
-        }
-
-        return wrapState
-    }
-
-/**
- * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the
- * instructions in [WrapState].
- */
-fun Type.wrap(wrapState: WrapState): Type {
-    var type = this
-    if (wrapState.depth > 0) {
-        for (i in wrapState.depth - 1 downTo 0) {
-            type = type.reference(wrapState.pointerOrigins[i])
-        }
-    }
-
-    if (wrapState.isReference) {
-        return ReferenceType(this)
-    }
-
-    return type
-}

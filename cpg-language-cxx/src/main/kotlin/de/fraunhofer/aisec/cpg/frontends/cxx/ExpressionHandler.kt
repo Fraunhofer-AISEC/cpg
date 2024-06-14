@@ -383,24 +383,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTUnaryExpression.op_not -> operatorCode = "!"
             IASTUnaryExpression.op_sizeof -> operatorCode = "sizeof"
             IASTUnaryExpression.op_bracketedPrimary -> {
-                if (
-                    frontend.config.inferenceConfiguration.guessCastExpressions &&
-                        ctx.operand is IASTIdExpression
-                ) {
-                    // this can either be just a meaningless bracket or it can be a cast expression
-                    val typeName = (ctx.operand as IASTIdExpression).name.toString()
-                    if (frontend.typeManager.typeExists(typeName)) {
-                        val cast = newCastExpression(rawNode = ctx)
-                        cast.setCastOperator(0)
-                        cast.castType = frontend.typeOf((ctx.operand as IASTIdExpression).name)
-                        // The expression member can only be filled by the parent call
-                        // (handleFunctionCallExpression and handleBinaryExpression)
-                        cast.location = frontend.locationOf(ctx)
-                        return cast
+                // If this expression is NOT part of a call expression and contains a "name" or
+                // something similar, we want to keep the information that this is an expression
+                // wrapped in parentheses. The best way to do this is to create a unary expression
+                if (ctx.operand is IASTIdExpression && ctx.parent !is IASTFunctionCallExpression) {
+                    val op = newUnaryOperator("()", postfix = true, prefix = true, rawNode = ctx)
+                    if (input != null) {
+                        op.input = input
                     }
+                    return op
                 }
 
-                // otherwise, ignore this kind of expression and return the input directly
+                // In all other cases, e.g., if the parenthesis is nested or part of a function
+                // call, we just return the unwrapped expression, because in this case we do not
+                // need to information about the parenthesis.
                 return input as Expression
             }
             IASTUnaryExpression.op_throw -> operatorCode = "throw"
@@ -475,14 +471,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId
                     )
                     .forEach { callExpression.addTemplateParameter(it) }
-            }
-            reference is CastExpression &&
-                frontend.config.inferenceConfiguration.guessCastExpressions -> {
-                // this really is a cast expression in disguise
-                reference.expression =
-                    ctx.arguments.firstOrNull()?.let { handle(it) }
-                        ?: newProblemExpression("could not parse argument for cast")
-                return reference
             }
             else -> {
                 callExpression =
@@ -576,21 +564,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 handle(ctx.initOperand2)
             } ?: newProblemExpression("could not parse rhs")
-
-        if (
-            lhs is CastExpression &&
-                (language as? CLanguage)
-                    ?.unaryOperators
-                    ?.contains((binaryOperator.operatorCode ?: "")) == true &&
-                frontend.config.inferenceConfiguration.guessCastExpressions
-        ) {
-            // this really is a combination of a cast and a unary operator
-            val op = newUnaryOperator(operatorCode, postfix = true, prefix = false, rawNode = ctx)
-            op.input = rhs
-            op.location = frontend.locationOf(ctx.operand2)
-            lhs.expression = op
-            return lhs
-        }
 
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs

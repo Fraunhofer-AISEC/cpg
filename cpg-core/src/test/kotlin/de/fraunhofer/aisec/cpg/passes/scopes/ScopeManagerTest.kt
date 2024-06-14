@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 internal class ScopeManagerTest : BaseTest() {
@@ -84,8 +84,8 @@ internal class ScopeManagerTest : BaseTest() {
             assertEquals(scopeA, final.lookupScope("A"))
 
             // and it should contain both functions from the different file in the same namespace
-            assertTrue(scopeA.valueDeclarations.contains(func1))
-            assertTrue(scopeA.valueDeclarations.contains(func2))
+            assertContains(scopeA.symbols["func1"] ?: listOf(), func1)
+            assertContains(scopeA.symbols["func2"] ?: listOf(), func2)
 
             // finally, test whether our two namespace declarations are pointing to the same
             // NameScope

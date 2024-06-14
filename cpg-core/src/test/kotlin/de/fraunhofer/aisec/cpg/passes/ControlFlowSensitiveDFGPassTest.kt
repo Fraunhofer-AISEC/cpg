@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.assertLiteralValue
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -38,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 class ControlFlowSensitiveDFGPassTest {

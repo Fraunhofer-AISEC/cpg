@@ -29,6 +29,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -37,6 +39,14 @@ import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
+
+/**
+ * A symbol is a simple, local name. It is valid within the scope that declares it and all of its
+ * child scopes. However, a child scope can usually "shadow" a symbol of a higher scope.
+ */
+typealias Symbol = String
+
+typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
 
 /**
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
@@ -71,6 +81,58 @@ abstract class Scope(
     var children = mutableListOf<Scope>()
 
     @Transient var labelStatements = mutableMapOf<String, LabelStatement>()
+
+    /** A map of symbols and their respective [Declaration] nodes that declare them. */
+    @Transient var symbols: SymbolMap = mutableMapOf()
+
+    /**
+     * A list of [ImportDeclaration] nodes that have [ImportDeclaration.wildcardImport] set to true.
+     */
+    @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
+
+    /** Adds a [declaration] with the defined [symbol]. */
+    fun addSymbol(symbol: Symbol, declaration: Declaration) {
+        if (declaration is ImportDeclaration && declaration.wildcardImport) {
+            // Because a wildcard import does not really have a valid "symbol", we store it in a
+            // separate list
+            wildcardImports += declaration
+        } else {
+            val list = symbols.computeIfAbsent(symbol) { mutableListOf() }
+            list += declaration
+        }
+    }
+
+    /** Looks up a list of [Declaration] nodes for the specified [symbol]. */
+    fun lookupSymbol(symbol: Symbol): List<Declaration> {
+        // First, try to look for the symbol in the current scope
+        var scope: Scope? = this
+        var list: MutableList<Declaration>? = null
+
+        while (scope != null) {
+            list = scope.symbols[symbol]?.toMutableList()
+
+            // Also add any wildcard imports that we have to the list
+            val wildcards = scope.wildcardImports
+            if (list == null) {
+                list = wildcards.toMutableList()
+            } else {
+                list.addAll(wildcards.toMutableList())
+            }
+
+            // We need to resolve any imported symbols
+            list.replaceImports(symbol)
+
+            // If we have a hit, we can break the loop
+            if (list.isNotEmpty()) {
+                break
+            }
+
+            // If we do not have a hit, we can go up one scope
+            scope = scope.parent
+        }
+
+        return list ?: listOf()
+    }
 
     fun addLabelStatement(labelStatement: LabelStatement) {
         labelStatement.label?.let { labelStatements[it] = labelStatement }
@@ -123,5 +185,36 @@ abstract class Scope(
         }
 
         return builder.toString()
+    }
+
+    fun addSymbols(other: MutableMap<Symbol, MutableSet<Declaration>>) {
+        for ((key, value) in other.entries) {
+            val list = this.symbols.computeIfAbsent(key) { mutableListOf() }
+            list += value
+        }
+    }
+}
+
+/**
+ * This function loops through all [ImportDeclaration] nodes in the [MutableSet] and resolves the
+ * imports to a set of [ImportDeclaration.importedSymbols] with the name [symbol]. The
+ * [ImportDeclaration] is then removed from the list.
+ */
+private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
+    val imports = this.filterIsInstance<ImportDeclaration>()
+    for (import in imports) {
+        val set = import.importedSymbols[symbol]
+        if (set != null) {
+            this.addAll(set)
+            this.remove(import)
+        }
+    }
+}
+
+/** This function merges in all entries from the [symbolMap] into the current [SymbolMap]. */
+fun SymbolMap.mergeFrom(symbolMap: SymbolMap) {
+    for (entry in symbolMap) {
+        val list = this.computeIfAbsent(entry.key) { mutableListOf() }
+        list += entry.value
     }
 }

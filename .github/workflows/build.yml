@@ -34,13 +34,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "18"
-      - name: Setup neo4j
-        run: |
-          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j || true
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: 1.21
+      - name: Setup neo4j
+        run: |
+          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j || true
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
@@ -71,13 +71,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar testCodeCoverageReport sonar \
+            ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar sonar performanceTest integrationTest \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=$SONAR_TOKEN
+            -Dsonar.token=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pintegration spotlessCheck -x spotlessApply build -x distZip -x distTar
+            ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar performanceTest integrationTest
           fi
         id: build
         env:

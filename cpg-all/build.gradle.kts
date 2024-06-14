@@ -1,7 +1,6 @@
 plugins {
     id("cpg.library-conventions")
     id("cpg.frontend-dependency-conventions")
-    id("jacoco-report-aggregation")
 }
 
 publishing {
@@ -17,16 +16,17 @@ publishing {
     }
 }
 
-// Make the sonarqube task depend on the aggregated code coverage report
-tasks.getByPath(":sonar").dependsOn(tasks.named<JacocoReport>("testCodeCoverageReport"))
-
 dependencies {
     // this exposes all of our (published) modules as dependency
     api(projects.cpgCore)
     api(projects.cpgAnalysis)
     api(projects.cpgNeo4j)
 
-    jacocoAggregation(projects.cpgCore)
-    jacocoAggregation(projects.cpgAnalysis)
-    jacocoAggregation(projects.cpgNeo4j)
+    kover(projects.cpgCore)
+    kover(projects.cpgAnalysis)
+    kover(projects.cpgNeo4j)
 }
+
+val sonar = tasks.getByPath(":sonar")
+sonar.dependsOn(tasks.named("koverHtmlReport"))
+sonar.dependsOn(tasks.named("koverXmlReport"))

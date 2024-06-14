@@ -26,15 +26,13 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -118,7 +116,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result =
-            TestUtils.analyze("java", topLevel, true) {
+            analyze("java", topLevel, true) {
                 it.registerLanguage(JavaLanguage())
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(false).build()

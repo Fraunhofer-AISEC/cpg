@@ -322,7 +322,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             val lhs = currentNode.lhs.singleOrNull()
             writtenDeclaration = (lhs as? Reference)?.refersTo
 
-            if (writtenDeclaration != null && lhs != null) {
+            if (writtenDeclaration != null) {
                 val prev = doubleState.declarationsState[writtenDeclaration]
                 findAndSetProperties(prev?.elements ?: setOf(), currentNode)
                 // Data flows from the last writes to the lhs variable to this node

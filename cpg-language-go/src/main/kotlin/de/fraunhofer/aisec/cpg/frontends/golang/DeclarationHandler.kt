@@ -222,6 +222,11 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         val sequence = DeclarationSequence()
 
         for (spec in genDecl.specs) {
+            // We parse imports specifications directly in the frontend
+            if (spec is GoStandardLibrary.Ast.ImportSpec) {
+                continue
+            }
+
             val declaration = frontend.specificationHandler.handle(spec)
             if (declaration != null) {
                 sequence += declaration

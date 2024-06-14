@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -71,8 +70,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTTemplateDeclaration -> handleTemplateDeclaration(node)
             is CPPASTNamespaceDefinition -> handleNamespace(node)
             is CPPASTUsingDirective -> handleUsingDirective(node)
+            is CPPASTUsingDeclaration -> handleUsingDeclaration(node)
             is CPPASTAliasDeclaration -> handleAliasDeclaration(node)
             is CPPASTNamespaceAlias -> handleNamespaceAlias(node)
+            is CPPASTLinkageSpecification -> handleLinkageSpecification(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
@@ -82,31 +83,46 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++ (namespace
      * alias)[https://en.cppreference.com/w/cpp/language/namespace_alias] into an alias handled by
-     * the scope manager using [ScopeManager.addAlias] done yet. Since we do not have any node
-     * itself for this concept, we just return an empty [DeclarationSequence], which will then be
-     * ignored in the final graph.
+     * an [ImportDeclaration].
      */
-    private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): DeclarationSequence {
-        val location = locationOf(ctx)
-
+    private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): ImportDeclaration {
         val from = parseName(ctx.mappingName.toString())
         val to = parseName(ctx.alias.toString())
 
-        // Currently, we can only scope the alias to the file location, this is a shortcoming of the
-        // scope manager. In reality, the namespace alias is valid in the current scope block
-        location?.artifactLocation?.let { frontend.scopeManager.addAlias(it, from, to) }
+        val import = newImportDeclaration(from, false, to, rawNode = ctx)
 
-        return DeclarationSequence()
+        frontend.scopeManager.addDeclaration(import)
+
+        return import
     }
 
     /**
      * Translates a C++ (using
      * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
-     * [UsingDeclaration]. However, currently, no actual adjustment of available names / scopes is
-     * done yet.
+     * [ImportDeclaration].
      */
-    private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
-        return newUsingDeclaration(qualifiedName = using.qualifiedName.toString(), rawNode = using)
+    private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
+        val import = parseName(ctx.qualifiedName.toString())
+        val declaration = newImportDeclaration(import, rawNode = ctx)
+        declaration.wildcardImport = true
+
+        frontend.scopeManager.addDeclaration(declaration)
+
+        return declaration
+    }
+
+    /**
+     * Translates a C++ (using
+     * declaration)[https://en.cppreference.com/w/cpp/language/using_declaration] into a
+     * [ImportDeclaration].
+     */
+    private fun handleUsingDeclaration(ctx: CPPASTUsingDeclaration): Declaration {
+        val import = parseName(ctx.name.toString())
+        val declaration = newImportDeclaration(import, rawNode = ctx)
+
+        frontend.scopeManager.addDeclaration(declaration)
+
+        return declaration
     }
 
     /**
@@ -654,6 +670,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
+     * Translates a C++ (linkage
+     * specification)[https://en.cppreference.com/w/cpp/language/language_linkage]. Actually, we do
+     * not care about the linkage specification per-se, but we need to parse the declaration(s) it
+     * contains.
+     */
+    private fun handleLinkageSpecification(ctx: CPPASTLinkageSpecification): Declaration {
+        var sequence = DeclarationSequence()
+
+        // Just forward its declaration(s) to our handler
+        for (decl in ctx.declarations) {
+            handle(decl)?.let { sequence += it }
+        }
+
+        return simplifySequence(sequence)
+    }
+
+    /**
      * @param sequence
      * @return First Element of DeclarationSequence if the Sequence consist of only one element,
      *   full sequence if it contains more than one element
@@ -692,9 +725,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
         for (declaration in translationUnit.declarations) {
-            if (declaration is CPPASTLinkageSpecification) {
-                continue // do not care about these for now
-            }
             val decl = handle(declaration) ?: continue
             (decl as? ProblemDeclaration)?.location?.let {
                 val problems =

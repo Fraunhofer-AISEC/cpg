@@ -1,5 +1,8 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.services.BuildService;
+import org.gradle.api.services.BuildServiceParameters;
+import org.gradle.api.services.BuildServiceParameters.None;
 
 plugins {
     id("cpg.formatting-conventions")
@@ -10,6 +13,7 @@ plugins {
     `maven-publish`
     kotlin("jvm")
     id("org.jetbrains.dokka")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 java {
@@ -23,12 +27,13 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/")
         metadataSources {
             artifact()
         }
+
         patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
+            artifact("[organisation].[module]_[revision].[ext]")
         }
     }
 }
@@ -101,7 +106,7 @@ kotlin {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions {
+    compilerOptions {
         freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xcontext-receivers")
     }
 }
@@ -111,16 +116,53 @@ tasks.withType<KotlinCompile> {
 //
 tasks.test {
     useJUnitPlatform() {
-        if (!project.hasProperty("integration")) {
-            excludeTags("integration")
-        }
+        excludeTags("integration")
+        excludeTags("performance")
     }
+
     maxHeapSize = "4048m"
 }
 
-tasks.jacocoTestReport {
-    reports {
-        xml.required.set(true)
+val integrationTest = tasks.register<Test>("integrationTest") {
+    description = "Runs integration tests."
+    group = "verification"
+    useJUnitPlatform() {
+        includeTags("integration")
     }
-    dependsOn(tasks.test) // tests are required to run before generating the report
+
+    maxHeapSize = "4048m"
+
+    shouldRunAfter(tasks.test)
+}
+
+val performanceTest = tasks.register<Test>("performanceTest") {
+    description = "Runs performance tests."
+    group = "verification"
+    useJUnitPlatform() {
+        includeTags("performance")
+    }
+
+    maxHeapSize = "4048m"
+
+    // do not parallelize tests within the task
+    maxParallelForks = 1
+    // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
+    usesService(serialExecutionService)
+
+    mustRunAfter(tasks.getByPath(":sonar"))
+}
+
+// A build service that ensures serial execution of a group of tasks
+abstract class SerialExecutionService : BuildService<BuildServiceParameters.None>
+val serialExecutionService =
+    gradle.sharedServices.registerIfAbsent("serialExecution", SerialExecutionService::class.java) {
+        this.maxParallelUsages.set(1)
+    }
+
+kover {
+    currentProject {
+        instrumentation {
+            disabledForTestTasks.add("performanceTest")
+        }
+    }
 }

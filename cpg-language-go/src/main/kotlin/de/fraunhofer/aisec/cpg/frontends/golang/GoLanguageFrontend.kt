@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
@@ -171,6 +172,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         ) { tu ->
             currentTU = tu
 
+            // We need to keep imports on a special file scope. We can simulate this by "entering"
+            // the
+            // translation unit
+            scopeManager.enterScope(tu)
+
+            // We parse the imports specifically and not as part of the handler later
             for (spec in f.imports) {
                 val import = specificationHandler.handle(spec)
                 scopeManager.addDeclaration(import)
@@ -207,7 +214,25 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                         if (declaration is DeclarationSequence) {
                             declaration.declarations.forEach { it.declare() }
                         } else {
-                            declaration?.declare()
+                            // We need to be careful with method declarations. We need to put them
+                            // in the
+                            // respective name scope of the record and NOT on the global scope /
+                            // namespace scope
+                            // TODO: this is broken if we see the declaration of the method before
+                            // the class :(
+                            if (declaration is MethodDeclaration) {
+                                declaration.recordDeclaration?.let {
+                                    scopeManager.enterScope(it)
+                                    scopeManager.addDeclaration(declaration)
+                                    scopeManager.leaveScope(it)
+                                    // But still add it to the AST of the namespace so our AST
+                                    // walker can find
+                                    // it
+                                    p.declarations += declaration
+                                }
+                            } else {
+                                scopeManager.addDeclaration(declaration)
+                            }
                         }
                     }
                 }

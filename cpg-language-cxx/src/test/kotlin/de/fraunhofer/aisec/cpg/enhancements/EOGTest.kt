@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
@@ -45,6 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util.Connect
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.util.stream.Collectors
 import java.util.stream.Stream

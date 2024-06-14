@@ -27,15 +27,23 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 
 open class StructureDeclarationScope(final override var astNode: Node?) :
     ValueDeclarationScope(astNode) {
-    @Transient var structureDeclarations = mutableListOf<Declaration>()
+    val structureDeclarations: List<Declaration>
+        get() {
+            return symbols
+                .flatMap { it.value }
+                .filter {
+                    it is EnumDeclaration ||
+                        it is RecordDeclaration ||
+                        it is NamespaceDeclaration ||
+                        it is TemplateDeclaration
+                }
+        }
 
     private fun addStructureDeclaration(declaration: Declaration) {
-        structureDeclarations.add(declaration)
         if (astNode is DeclarationHolder) {
             val holder = astNode as DeclarationHolder
             holder.addDeclaration(declaration)

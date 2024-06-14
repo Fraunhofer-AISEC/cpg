@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.StructureDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -80,6 +79,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeResolver::class)
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(ImportResolver::class)
 open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected lateinit var walker: ScopedWalker
@@ -101,8 +101,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         for (tu in component.translationUnits) {
             currentTU = tu
-            // gather all resolution start holders and their start nodes
-            val nodes = tu.allEOGStarters
+            // Gather all resolution EOG starters; and make sure they really do not have a
+            // predecessor, otherwise we might analyze a node multiple times
+            val nodes = tu.allEOGStarters.filter { it.prevEOG.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -176,7 +177,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        current.candidates = findSymbols(current)
+        current.candidates = scopeManager.findSymbols(current.name, current.location).toSet()
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -257,41 +258,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function tries to resolve a [Node.name] to a list of symbols (a symbol represented by a
-     * [Declaration]) starting with [startScope]. This function can return a list of multiple
-     * symbols in order to check for things like function overloading. but it will only return list
-     * of symbols within the same scope; the list cannot be spread across different scopes.
-     *
-     * This means that as soon one or more symbols are found in a "local" scope, these shadow all
-     * other occurrences of the same / symbol in a "higher" scope and only the ones from the lower
-     * ones will be returned.
-     */
-    private fun findSymbols(
-        nodeWithName: Node,
-        startScope: Scope? = scopeManager.currentScope
-    ): Set<Declaration> {
-        val (scope, name) = scopeManager.extractScope(nodeWithName, startScope)
-        val list =
-            scopeManager
-                .resolve<Declaration>(scope, true) { it.name.lastPartsMatch(name) }
-                .toMutableSet()
-        // If we have both the definition and the declaration of a function declaration in our list,
-        // we chose only the definition
-        val it = list.iterator()
-        while (it.hasNext()) {
-            val decl = it.next()
-            if (decl is FunctionDeclaration) {
-                val definition = decl.definition
-                if (!decl.isDefinition && definition != null && definition in list) {
-                    it.remove()
-                }
-            }
-        }
-
-        return list
-    }
-
-    /**
      * Tries to infer a global variable from an unresolved [Reference]. This will return `null`, if
      * inference was not possible, or if it was turned off in the [InferenceConfiguration].
      */
@@ -329,8 +295,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             scope = null
         }
 
+        var holder = scope?.astNode
+
+        // If we could not find a scope, but we have an FQN, we can try to infer a namespace
+        var parentName = type.name.parent
+        if (scope == null && parentName != null) {
+            holder = tryNamespaceInference(parentName, type)
+        }
+
         val record =
-            (scope?.astNode ?: currentTU)
+            (holder ?: currentTU)
                 .startInference(ctx)
                 ?.inferRecordDeclaration(type, kind, locationHint)
 
@@ -947,9 +921,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         val candidateFunctions =
             scope
-                ?.valueDeclarations
+                ?.lookupSymbol(name)
                 ?.filterIsInstance<MethodDeclaration>()
-                ?.filter { it.name.lastPartsMatch(name) }
                 ?.toSet<FunctionDeclaration>() ?: setOf()
 
         // The following code is unfortunately largely a copy/paste from the new resolveCall
@@ -1080,5 +1053,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
         }
+    }
+
+    fun tryNamespaceInference(name: Name, type: Type): NamespaceDeclaration? {
+        return scopeManager.globalScope
+            ?.astNode
+            ?.startInference(ctx)
+            ?.inferNamespaceDeclaration(name, null, type)
     }
 }

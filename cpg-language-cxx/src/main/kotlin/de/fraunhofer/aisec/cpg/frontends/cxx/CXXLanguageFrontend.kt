@@ -697,7 +697,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         val location = currentTU?.location
 
         // We need to take name(space) aliases into account.
-        typeName = scopeManager.resolveParentAlias(typeName, location)
+        typeName = scopeManager.resolveParentAlias(typeName, scopeManager.currentScope)
 
         return objectType(typeName)
     }

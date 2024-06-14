@@ -417,20 +417,28 @@ fun MetadataProvider.newNamespaceDeclaration(
 }
 
 /**
- * Creates a new [UsingDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ImportDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newUsingDeclaration(
-    qualifiedName: CharSequence?,
+fun MetadataProvider.newImportDeclaration(
+    import: Name,
+    wildcardImport: Boolean = false,
+    alias: Name? = null,
     rawNode: Any? = null
-): UsingDeclaration {
-    val node = UsingDeclaration()
-    node.applyMetadata(this, qualifiedName, rawNode)
-
-    node.qualifiedName = qualifiedName.toString()
+): ImportDeclaration {
+    val node = ImportDeclaration()
+    node.applyMetadata(this, "", rawNode)
+    node.import = import
+    node.alias = alias
+    node.wildcardImport = wildcardImport
+    if (alias != null) {
+        node.name = alias
+    } else {
+        node.name = import
+    }
 
     log(node)
     return node

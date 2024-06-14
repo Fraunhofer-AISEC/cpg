@@ -26,10 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
@@ -40,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.nio.file.Path
 import java.util.function.Predicate
@@ -144,11 +141,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCpp() {
         val result =
-            TestUtils.analyze(
-                listOf(Path.of(topLevel.toString(), "calls.cpp").toFile()),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(Path.of(topLevel.toString(), "calls.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(false).build()
@@ -177,7 +170,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testImplicitCastMethodCallResolution() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcast", "implicitCastInMethod.cpp")
                         .toFile()
@@ -215,7 +208,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testImplicitCastCallResolution() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcast", "ambiguouscall.cpp").toFile(),
                     Path.of(topLevel.toString(), "implicitcast", "implicitcast.cpp").toFile()
@@ -262,7 +255,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefaultArgumentsInDeclaration() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultargs", "defaultInDeclaration.cpp").toFile()
                 ),
@@ -346,7 +339,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefaultArgumentsInDefinition() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultargs", "defaultInDefinition.cpp").toFile()
                 ),
@@ -414,7 +407,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testPartialDefaultArguments() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(Path.of(topLevel.toString(), "defaultargs", "partialDefaults.cpp").toFile()),
                 topLevel,
                 true
@@ -486,7 +479,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testDefaultArgumentsMethodResolution() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(Path.of(topLevel.toString(), "defaultargs", "defaultInMethod.cpp").toFile()),
                 topLevel,
                 true
@@ -530,7 +523,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testScopedFunctionResolutionUndefined() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "undefined.cpp").toFile()),
                 topLevel,
                 true
@@ -550,7 +543,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testScopedFunctionResolutionDefined() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "defined.cpp").toFile()),
                 topLevel,
                 true
@@ -638,7 +631,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testScopedFunctionResolutionWithDefaults() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(
                             topLevel.toString(),
@@ -662,7 +655,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCxxPrioResolutionWithMethods() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(
                             topLevel.toString(),
@@ -710,7 +703,7 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testCXXMethodResolutionDoNotStopOnFirstOccurrence() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(
                             topLevel.toString(),
