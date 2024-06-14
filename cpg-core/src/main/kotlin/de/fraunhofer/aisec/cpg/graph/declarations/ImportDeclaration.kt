@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.scopes.FileScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.SymbolMap
+import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * This class represents a real *import* of one or more symbols of a specified [NameScope] (e.g.,
@@ -128,7 +130,7 @@ class ImportDeclaration : Declaration() {
      *   imported symbol.
      * * If an alias is used, the [name] of this declaration is set to the value of [alias].
      */
-    var import: Name = Name(EMPTY_NAME)
+    @Convert(NameConverter::class) var import: Name = Name(EMPTY_NAME)
 
     /**
      * Some languages support the use of aliases in importing symbols, for example to avoid
@@ -139,7 +141,7 @@ class ImportDeclaration : Declaration() {
      * different names. However, in practice, it is easier to have this as an extra property to
      * quickly identify imports with aliases.
      */
-    var alias: Name? = null
+    @Convert(NameConverter::class) var alias: Name? = null
 
     /**
      * In some languages (such as Go), we can specify packages to fetch from external sources. In
