@@ -173,8 +173,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             currentTU = tu
 
             // We need to keep imports on a special file scope. We can simulate this by "entering"
-            // the
-            // translation unit
+            // the translation unit
             scopeManager.enterScope(tu)
 
             // We parse the imports specifically and not as part of the handler later
@@ -183,16 +182,15 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 scopeManager.addDeclaration(import)
             }
 
-            newNamespaceDeclaration(f.name.name)
-                .withChildren(hasScope = true) { p ->
+            var p =
+                newNamespaceDeclaration(f.name.name).withChildren(hasScope = true) { p ->
                     try {
                         // we need to construct the package "path" (e.g. "encoding/json") out of the
                         // module path as well as the current directory in relation to the topLevel
                         var packagePath = file.parentFile.relativeTo(topLevel)
 
                         // If we are in a module, we need to prepend the module path to it. There is
-                        // an
-                        // exception if we are in the "std" module, which represents the standard
+                        // an exception if we are in the "std" module, which represents the standard
                         // library
                         val modulePath = currentModule?.module?.mod?.path
                         if (modulePath != null && modulePath != "std") {
@@ -236,7 +234,13 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                         }
                     }
                 }
-                .declare()
+
+            scopeManager.leaveScope(p)
+            scopeManager.leaveScope(tu)
+
+            scopeManager.resetToGlobal(tu)
+
+            scopeManager.addDeclaration(p)
         }
     }
 
@@ -319,8 +323,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
 
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
-                    // global
-                    // scope to avoid namespace issues
+                    // global scope to avoid namespace issues
                     var record =
                         scopeManager.withScope(scopeManager.globalScope) {
                             specificationHandler.buildRecordDeclaration(type, name)
@@ -330,14 +333,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 }
                 is GoStandardLibrary.Ast.InterfaceType -> {
                     // Go allows to use anonymous interface as type. This is something we cannot
-                    // model
-                    // properly in the CPG yet. In order to at least deal with this partially, we
-                    // construct a ObjectType and put the methods and their types into the type.
+                    // model properly in the CPG yet. In order to at least deal with this partially,
+                    // we construct a ObjectType and put the methods and their types into the type.
 
                     // In the easiest case this is the empty interface `interface{}`, which we then
                     // consider to be the "any" type. `any` is actually a type alias for
-                    // `interface{}`,
-                    // but in modern Go `any` is preferred.
+                    // `interface{}`, but in modern Go `any` is preferred.
                     if (type.methods.list.isEmpty()) {
                         return primitiveType("any")
                     }

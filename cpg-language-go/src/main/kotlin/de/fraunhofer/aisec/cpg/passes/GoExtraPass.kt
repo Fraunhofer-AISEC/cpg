@@ -403,7 +403,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.findSymbols(import.name, null).filter {
+            scopeManager.findSymbols(import.import, null).filter {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
 
