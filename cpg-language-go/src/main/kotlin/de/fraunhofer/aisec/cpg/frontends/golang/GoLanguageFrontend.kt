@@ -213,8 +213,8 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                             declaration.declarations.forEach { it.declare() }
                         } else {
                             // We need to be careful with method declarations. We need to put them
-                            // in the
-                            // respective name scope of the record and NOT on the global scope /
+                            // in the respective name scope of the record and NOT on the global
+                            // scope /
                             // namespace scope
                             // TODO: this is broken if we see the declaration of the method before
                             // the class :(
@@ -235,12 +235,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                     }
                 }
 
-            scopeManager.leaveScope(p)
             scopeManager.leaveScope(tu)
 
             scopeManager.resetToGlobal(tu)
 
-            scopeManager.addDeclaration(p)
+            // Declare our namespace
+            p.declare()
         }
     }
 
