@@ -295,8 +295,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             scope = null
         }
 
+        var holder = scope?.astNode
+
+        // If we could not find a scope, but we have an FQN, we can try to infer a namespace
+        var parentName = type.name.parent
+        if (scope == null && parentName != null) {
+            holder = tryNamespaceInference(parentName, type)
+        }
+
         val record =
-            (scope?.astNode ?: currentTU)
+            (holder ?: currentTU)
                 .startInference(ctx)
                 ?.inferRecordDeclaration(type, kind, locationHint)
 
@@ -1045,5 +1053,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
         }
+    }
+
+    fun tryNamespaceInference(name: Name, type: Type): NamespaceDeclaration? {
+        return scopeManager.globalScope
+            ?.astNode
+            ?.startInference(ctx)
+            ?.inferNamespaceDeclaration(name, null, type)
     }
 }
