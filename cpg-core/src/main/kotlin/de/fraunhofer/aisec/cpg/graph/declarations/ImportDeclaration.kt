@@ -31,15 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.scopes.FileScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.SymbolMap
-import org.neo4j.ogm.annotation.typeconversion.Convert
-
-<<<<<<< HEAD
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
-=======
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
->>>>>>> e630dc0176 (Fixed Neo4J import of `ImportDeclaration`)
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
-import org.neo4j.ogm.annotation.Transient
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * This class represents a real *import* of one or more symbols of a specified [NameScope] (e.g.,
