@@ -58,7 +58,7 @@ interface Reporter {
      * @param path the path to write the report to. If unspecified, the default path is used
      */
     fun toFile(report: String, path: Path = getDefaultPath()) {
-        print("writing report to ${path.toAbsolutePath()}")
+        println("writing report to ${path.toAbsolutePath()}") // TODO: actual logging
         path.parent.createDirectories() // create parent directories if they don't exist
         path.writeText(report)
     }
