@@ -73,6 +73,20 @@ class SarifReporter : Reporter {
                                                 }
                                         )
                                 ),
+                            externalPropertyFileReferences =
+                                ExternalPropertyFileReferences(
+                                    taxonomies =
+                                        listOf(
+                                            ExternalPropertyFileReference(
+                                                location =
+                                                    ArtifactLocation(
+                                                        // TODO mby dont hardcode?
+                                                        uri =
+                                                            "https://raw.githubusercontent.com/sarif-standard/taxonomies/main/CWE_v4.4.sarif"
+                                                    )
+                                            )
+                                        )
+                                ),
                             // TODO: automationDetails, invocation?
                             results = createResults(rules)
                         )
@@ -86,73 +100,73 @@ class SarifReporter : Reporter {
 
         val results = mutableListOf<Result>()
         for ((i, rule) in rules.withIndex()) {
-            if (rule.queryResult?.first == null) {
-                results.addAll(createResultsRegular(rule, i.toLong()))
-            } else if (rule.queryResult?.second == null) {
-                results.addAll(createResultsExtended(rule, i.toLong()))
-            } // else rule not run TODO: log
+            results.addAll(createResultsExtended(rule, i.toLong()))
         }
 
         return results
     }
 
-    private fun createResultsRegular(rule: Rule, idx: Long): List<Result> {
-        val results = mutableListOf<Result>()
-        if (rule.queryResult?.second?.second != null) {
-            for (node in rule.queryResult?.second?.second!!) { // non-null
-                results.add(
-                    Result(
-                        ruleID = rule.id,
-                        ruleIndex = idx,
-                        message =
+    /*
+        private fun createResultsRegular(rule: Rule, idx: Long): List<Result> {
+            val results = mutableListOf<Result>()
+            if (rule.queryResult?.second?.second != null) {
+                for (node in rule.queryResult?.second?.second!!) { // non-null
+                    results.add(
+                        Result(
+                            ruleID = rule.id,
+                            ruleIndex = idx,
+                            message =
                             Message(
                                 text = rule.message,
                                 markdown = rule.mdMessage,
                                 arguments = rule.messageArguments
                             ),
-                        locations =
+                            locations =
                             listOf(
                                 Location(
                                     physicalLocation =
-                                        if (node is CpgGraphNode) {
-                                            PhysicalLocation(
-                                                artifactLocation =
-                                                    ArtifactLocation(
-                                                        uri =
-                                                            node.location
-                                                                ?.artifactLocation
-                                                                ?.uri
-                                                                ?.let { uri ->
-                                                                    pwd.relativize(Paths.get(uri))
-                                                                        .toString()
-                                                                },
-                                                        uriBaseID = pwd.toString()
-                                                    ),
-                                                region =
-                                                    run {
-                                                        val region = node.location?.region
-                                                        Region(
-                                                            startLine = region?.startLine?.toLong(),
-                                                            endLine = region?.endLine?.toLong(),
-                                                            startColumn =
-                                                                region?.startColumn?.toLong(),
-                                                            endColumn = region?.endColumn?.toLong()
-                                                        )
-                                                    }
-                                            )
-                                        } else null
+                                    if (node is CpgGraphNode) {
+                                        PhysicalLocation(
+                                            artifactLocation =
+                                            ArtifactLocation(
+                                                uri =
+                                                node.location
+                                                    ?.artifactLocation
+                                                    ?.uri
+                                                    .toString()
+                                                //         ?.let { uri ->
+                                                //
+                                                // pwd.relativize(Paths.get(uri))
+                                                //                 .toString()
+                                                //         },
+                                                // uriBaseID = pwd.toString()
+                                            ),
+                                            region =
+                                            run {
+                                                val region = node.location?.region
+                                                Region(
+                                                    startLine = region?.startLine?.toLong(),
+                                                    endLine = region?.endLine?.toLong(),
+                                                    startColumn =
+                                                    region?.startColumn?.toLong(),
+                                                    endColumn = region?.endColumn?.toLong()
+                                                )
+                                            }
+                                        )
+                                    } else null
                                 )
                             )
+                        )
                     )
-                )
+                }
             }
+            return results
         }
-        return results
-    }
+    */
 
     private fun createResultsExtended(rule: Rule, idx: Long): List<Result> {
         val results = mutableListOf<Result>()
-        for (node in rule.queryResult?.first?.children ?: emptyList()) {
+        for (node in rule.queryResult?.children ?: emptyList()) {
             val threadFlowLocations = createThreadFlowLocations(node)
             results.add(
                 Result(
@@ -163,6 +177,12 @@ class SarifReporter : Reporter {
                             text = rule.message,
                             markdown = rule.mdMessage,
                             arguments = rule.messageArguments
+                        ),
+                    taxa =
+                        listOf(
+                            ReportingDescriptorReference(
+                                id = if (rule.cweId != null) "CWE-${rule.cweId}" else null
+                            )
                         ),
                     // TODO: wonky
                     locations =
@@ -178,13 +198,15 @@ class SarifReporter : Reporter {
                                                         ?.physicalLocation
                                                         ?.artifactLocation
                                                         ?.uri
-                                                        ?.let { uri ->
-                                                            pwd.relativize(
-                                                                    Paths.get(uri).toAbsolutePath()
-                                                                )
-                                                                .toString()
-                                                        },
-                                                uriBaseID = pwd.toString()
+                                                // TODO no baseid rn
+                                                //         ?.let { uri ->
+                                                //             pwd.relativize(
+                                                //
+                                                // Paths.get(uri).toAbsolutePath()
+                                                //                 )
+                                                //                 .toString()
+                                                //         },
+                                                // uriBaseID = pwd.toString()
                                             ),
                                     )
                             )
@@ -219,10 +241,15 @@ class SarifReporter : Reporter {
                                         artifactLocation =
                                             ArtifactLocation(
                                                 uri =
-                                                    nodeValueLocation?.artifactLocation?.uri?.let {
-                                                        pwd.relativize(Paths.get(it)).toString()
-                                                    },
-                                                uriBaseID = pwd.toString()
+                                                    nodeValueLocation
+                                                        ?.artifactLocation
+                                                        ?.uri
+                                                        .toString()
+                                                // TODO no baseid rn
+                                                //         ?.let {
+                                                //         pwd.relativize(Paths.get(it)).toString()
+                                                //     },
+                                                // uriBaseID = pwd.toString()
                                             ),
                                         region =
                                             Region(
