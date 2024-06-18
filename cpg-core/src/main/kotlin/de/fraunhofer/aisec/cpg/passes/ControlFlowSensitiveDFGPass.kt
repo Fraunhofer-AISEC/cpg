@@ -126,12 +126,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
                     } else if (
-                        Pair(it, key) in edgePropertiesMap &&
-                            edgePropertiesMap[Pair(it, key)] is CallingContext
+                        Triple(it, key, true) in edgePropertiesMap &&
+                            edgePropertiesMap[Triple(it, key, true)] is CallingContext
                     ) {
                         key.addPrevDFG(
                             it,
-                            callingContext = (edgePropertiesMap[Pair(it, key)] as? CallingContext)
+                            callingContext =
+                                (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
                         key.addPrevDFG(it)
@@ -147,8 +148,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
-            .filter { it.key.first in from && it.key.second == null }
-            .forEach { edgePropertiesMap[Pair(it.key.first, to)] = it.value }
+            .filter { it.key.first in from && it.key.second == (to as? Reference)?.refersTo }
+            .forEach { edgePropertiesMap[Triple(it.key.first, to, true)] = it.value }
     }
 
     /**
@@ -492,7 +493,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        edgePropertiesMap[Pair(param, null)] = CallingContextOut(currentNode)
+                        edgePropertiesMap[Triple(param, arg?.refersTo, false)] =
+                            CallingContextOut(currentNode)
                     }
                 }
             } else {
@@ -517,9 +519,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * context-sensitivity label (i.e., if the node used as key is somehow inside the called
      * function and the next usage happens inside the function under analysis right now). The key of
      * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
-     * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st.
+     * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st. If
+     * the third item is false, we also don't consider it.
      */
-    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, Any>()
+    val edgePropertiesMap = mutableMapOf<Triple<Node, Node?, Boolean>, Any>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
