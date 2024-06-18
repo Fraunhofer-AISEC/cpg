@@ -44,7 +44,7 @@ class SimpleNameConverter : AttributeConverter<Name, String> {
         }
 
         // We cannot really know what the actual delimiter was, so we need to supply some delimiters
-        // and hope for the best. Unfortunately, we do not get access to the "language" node here..
-        return parseName(value, "", ".", ",", "::")
+        // and hope for the best. Unfortunately, we do not get access to the "language" node here...
+        return parseName(value, ".", ",", "::")
     }
 }

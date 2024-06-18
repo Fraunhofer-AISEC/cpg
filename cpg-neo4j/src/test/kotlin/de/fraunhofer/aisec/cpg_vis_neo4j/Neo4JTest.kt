@@ -25,7 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,5 +62,35 @@ class Neo4JTest {
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
+    }
+
+    @Test
+    fun testSimpleNameConverter() {
+        val result =
+            with(TestLanguageFrontend()) {
+                translationResult {
+                    val import = ImportDeclaration()
+                    import.name = Name("myname")
+                    import.alias = Name("myname", Name("myparent"), "::")
+                    additionalNodes += import
+                }
+            }
+
+        val app = Application()
+        app.pushToNeo4j(result)
+
+        val sessionAndSessionFactoryPair = app.connect()
+
+        val session = sessionAndSessionFactoryPair.first
+        session.beginTransaction().use { transaction ->
+            val imports = session.loadAll(ImportDeclaration::class.java)
+            assertNotNull(imports)
+
+            var loadedImport = imports.singleOrNull()
+            assertNotNull(loadedImport)
+            assertEquals("myname", loadedImport.alias?.localName)
+
+            transaction.commit()
+        }
     }
 }
