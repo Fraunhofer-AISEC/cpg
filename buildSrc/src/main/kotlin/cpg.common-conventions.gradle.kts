@@ -27,12 +27,13 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/")
         metadataSources {
             artifact()
         }
+
         patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
+            artifact("[organisation].[module]_[revision].[ext]")
         }
     }
 }
@@ -105,7 +106,7 @@ kotlin {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions {
+    compilerOptions {
         freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xcontext-receivers")
     }
 }
@@ -120,7 +121,6 @@ tasks.test {
     }
 
     maxHeapSize = "4048m"
-    shouldRunAfter(performanceTest)
 }
 
 val integrationTest = tasks.register<Test>("integrationTest") {
@@ -144,8 +144,20 @@ val performanceTest = tasks.register<Test>("performanceTest") {
 
     maxHeapSize = "4048m"
 
-    usesService(provider)
+    // do not parallelize tests within the task
+    maxParallelForks = 1
+    // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
+    usesService(serialExecutionService)
+
+    mustRunAfter(tasks.getByPath(":sonar"))
 }
+
+// A build service that ensures serial execution of a group of tasks
+abstract class SerialExecutionService : BuildService<BuildServiceParameters.None>
+val serialExecutionService =
+    gradle.sharedServices.registerIfAbsent("serialExecution", SerialExecutionService::class.java) {
+        this.maxParallelUsages.set(1)
+    }
 
 kover {
     currentProject {
@@ -154,12 +166,3 @@ kover {
         }
     }
 }
-
-// this should limit the performance test to non-parallel but does not work yet
-abstract class LimitExecutionService : BuildService<BuildServiceParameters.None> {
-
-}
-
-val provider = project.getGradle().getSharedServices().registerIfAbsent<LimitExecutionService, BuildServiceParameters.None>("limit", LimitExecutionService::class.java, {
-    getMaxParallelUsages().set(0)
-})
