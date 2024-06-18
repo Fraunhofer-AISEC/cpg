@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 
 interface Rule {
     /** the query result, one of the members has to be `null` */
-    var queryResult: Pair<QueryTree<*>?, Pair<Boolean, List<*>>?>?
+    var queryResult: QueryTree<*>? /* Pair<QueryTree<*>?, Pair<Boolean, List<*>>?>? */
 
     // consider
     // https://github.com/microsoft/sarif-tutorials/blob/main/docs/Authoring-rule-metadata-and-result-messages.md
@@ -41,6 +41,16 @@ interface Rule {
 
     /** human readable name of the query */
     val name: String
+    /**
+     * !!only the number!!
+     *
+     * something like "CWE-123" WILL break stuff
+     *
+     * TODO consider validation
+     */
+    val cweId: String?
+        get() = null
+
     val shortDescription: String
     val mdShortDescription: String?
         get() = null
