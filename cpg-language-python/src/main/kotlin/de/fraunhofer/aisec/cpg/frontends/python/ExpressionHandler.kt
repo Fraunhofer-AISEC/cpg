@@ -281,7 +281,21 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAttribute(node: Python.ASTAttribute): Expression {
-        return newMemberExpression(name = node.attr, base = handle(node.value), rawNode = node)
+        var base = handle(node.value)
+
+        // We do a quick check, if this refers to an import. This is faster than doing
+        // this in a pass and most likely valid, since we are under the assumption that
+        // our current file is (more or less) complete, but we might miss some
+        // additional dependencies
+        var ref =
+            if (isImport(base.name)) {
+                // Yes, it's an import, so we need to construct a reference with an FQN
+                newReference(base.name.fqn(node.attr), rawNode = node)
+            } else {
+                newMemberExpression(name = node.attr, base = base, rawNode = node)
+            }
+
+        return ref
     }
 
     private fun handleConstant(node: Python.ASTConstant): Expression {
@@ -333,22 +347,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
         val ret =
             if (callee is MemberExpression) {
-                // We do a quick check, if this refers to an import. This is faster than doing
-                // this in a pass and most likely valid, since we are under the assumption that
-                // our current file is (more or less) complete, but we might miss some
-                // additional dependencies
-                if (isImport(callee.base.name)) {
-                    // Yes, it's an import, so we need to construct a new callee and a regular call
-                    // expression rather than a member call expression
-                    callee =
-                        newReference(
-                            callee.base.name.fqn(callee.name.localName),
-                            rawNode = node.func
-                        )
-                    newCallExpression(callee, rawNode = node)
-                } else {
-                    newMemberCallExpression(callee, rawNode = node)
-                }
+                newMemberCallExpression(callee, rawNode = node)
             } else {
                 // try to resolve -> [ConstructExpression]
                 val currentScope = frontend.scopeManager.currentScope
