@@ -284,7 +284,7 @@ class PythonFrontendTest : BaseTest() {
         val assignExpr = (main.body as? Block)?.statements?.first() as? AssignExpression
         assertNotNull(assignExpr)
 
-        val foo = assignExpr.declarations.first() as? VariableDeclaration
+        val foo = assignExpr.declarations.firstOrNull() as? VariableDeclaration
         assertNotNull(foo)
         assertLocalName("foo", foo)
         assertEquals(tu.primitiveType("int"), foo.type)
@@ -1182,6 +1182,26 @@ class PythonFrontendTest : BaseTest() {
             2L,
             ((fStmtRhs.subscriptExpression as RangeExpression).third as? Literal<*>)?.value
         )
+    }
+
+    @Test
+    fun testSimpleImport() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("simple_import.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        assertEquals(2, result.variables.size)
+        // Note, that "pi" is incorrectly inferred as a field declaration. This is a known bug in
+        // the inference system (and not in the python module) and will be handled separately.
+        assertEquals(listOf("mypi", "pi"), result.variables.map { it.name.localName })
     }
 
     @Test

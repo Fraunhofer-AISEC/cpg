@@ -70,9 +70,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handle(node: Node?) {
         when (node) {
-            // TODO is doubled. Whatever this means
             is AssignExpression -> handleAssignExpression(node)
-            is Reference -> handleReference(node)
             is ForEachStatement -> handleForEach(node)
             else -> {
                 // Nothing to do for all other types of nodes
@@ -87,6 +85,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node.resolutionHelper is CallExpression) {
             return null
         }
+
+        // TODO(oxisto): Actually the logic here is far more complex in reality, taking into account
+        //  local and global variables, but for now we just resolve it using the scope manager
         val resolved = scopeManager.resolveReference(node)
 
         // Nothing to create
