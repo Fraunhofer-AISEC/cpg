@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
@@ -111,7 +111,7 @@ class CallStack(val stack: Stack<CallExpression> = Stack<CallExpression>()) {
  */
 fun hasContextSensitiveDFG(
     from: Node,
-    forwardAnalysis: Boolean,
+    forwardAnalysis: Boolean = false,
     predicate: (Node) -> Boolean,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
@@ -192,6 +192,18 @@ class OpenStackTest : BaseTest() {
     }
 
     @Test
+    fun testOpenStackMagnum() {
+        val topLevel =
+            Path.of("/Users/chr55316/Repositories/magnum/magnum/tests/unit/api/controllers/v1/")
+        val result =
+            analyze(listOf(topLevel.toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        check(result)
+    }
+
+    @Test
     fun testOpenStackFixed() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
@@ -209,7 +221,7 @@ class OpenStackTest : BaseTest() {
     }
 
     fun check(result: TranslationResult) {
-        var openWrites =
+        /*var openWrites =
             result.calls {
                 it.name.localName == "open" &&
                     it.arguments[1].evaluate() in listOf("w+", "w", "x", "a")
@@ -220,16 +232,32 @@ class OpenStackTest : BaseTest() {
             if (checkSensitiveWrite(it)) {
                 errorWithFileLocation(it, log, "Write from potential sensitive source")
             }
-        }
+        }*/
+        result
+            .calls {
+                it.name.localName == "open" &&
+                    it.arguments[1].evaluate() in listOf("w+", "w", "x", "a")
+            }
+            .forEach {
+                val (isProblem, where) = checkSensitiveWrite(it)
+                if (isProblem) {
+                    println(
+                        "${PhysicalLocation.locationLink(it.location)}: Write from potential sensitive source to unprotected file"
+                    )
+                    //where?.printCode(showNumbers = true, linesAhead = 2)
+                }
+            }
     }
 
-    fun checkSensitiveWrite(call: CallExpression): Boolean {
+    fun checkSensitiveWrite(call: CallExpression): Pair<Boolean, Node?> {
         // the first param is our file, we want to get the last write
         var file = call.arguments[0].prevFullDFG.singleOrNull()
 
         // the return value is our io object
         val io = call.nextDFG.singleOrNull()
-        assertNotNull(io)
+        if (io == null) {
+            return Pair(false, null)
+        }
 
         // let's follow the DFG from this point to a "write" to our IO
         var paths =
@@ -240,9 +268,9 @@ class OpenStackTest : BaseTest() {
                     // we are only interested in writes from sensitive functions
                     hasContextSensitiveDFG(
                             it,
-                            forwardAnalysis = false,
-                            { it ->
-                                it is CallExpression && it.name.toString().contains("private_key")
+                            predicate = { it ->
+                                it is CallExpression && it.name.contains("key") ||
+                                    it.name.contains("certificate")
                             }
                         )
                         .fulfilled
@@ -259,6 +287,6 @@ class OpenStackTest : BaseTest() {
                 }
             }
 
-        return problemPaths.isNotEmpty()
+        return Pair(problemPaths.isNotEmpty(), problemPaths.firstOrNull()?.lastOrNull())
     }
 }

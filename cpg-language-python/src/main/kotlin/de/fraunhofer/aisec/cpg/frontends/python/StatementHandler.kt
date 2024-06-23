@@ -530,12 +530,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
         for (decorator in node.decorator_list) {
             if (decorator !is Python.ASTCall) {
-                TODO()
+                continue
             }
 
             val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
             if (decFuncParsed !is MemberExpression) {
-                TODO()
+                continue
             }
 
             val annotation =

@@ -1162,6 +1162,7 @@ interface Python {
      * ```
      */
     class ASTNot(pyObject: PyObject) : ASTBASEunaryop(pyObject)
+
     /**
      * ```
      * ast.UAdd = class UAdd(unaryop)

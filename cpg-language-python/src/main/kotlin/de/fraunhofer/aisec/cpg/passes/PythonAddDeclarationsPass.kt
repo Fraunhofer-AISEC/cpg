@@ -168,7 +168,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     handled.let { node.addDeclaration(it) }
                 }
             }
-            else -> TODO()
+        // else -> TODO()
         }
     }
 }
