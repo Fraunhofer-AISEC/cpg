@@ -45,7 +45,36 @@ object CpgConsole {
     fun main(args: Array<String>) {
         Node.TO_STRING_STYLE = MultiLineToStringStyle()
 
-        val repl =
+        val repl = configureREPL()
+        repl.doRun()
+    }
+
+    private fun configuration(): ReplConfiguration {
+        val instance = CachedInstance<ReplConfiguration>()
+        val klassName: String? = System.getProperty("config.class")
+
+        return if (klassName != null) {
+            instance.load(klassName, ReplConfiguration::class)
+        } else {
+            instance.get {
+                object : ReplConfigurationBase() {
+                    override fun plugins(): Iterator<Plugin> {
+                        val list = super.plugins().asSequence().toList().toMutableList()
+                        list += TranslatePlugin()
+                        list += Neo4jPlugin()
+                        list += ShowCodePlugin()
+                        list += RunPlugin()
+                        list += CompilationDatabase()
+
+                        return list.listIterator()
+                    }
+                }
+            }
+        }
+    }
+
+    internal fun configureREPL(): Shell {
+        var repl =
             Shell(
                 configuration(),
                 defaultJvmScriptingHostConfiguration,
@@ -73,30 +102,6 @@ object CpgConsole {
                 }
             )
 
-        repl.doRun()
-    }
-
-    private fun configuration(): ReplConfiguration {
-        val instance = CachedInstance<ReplConfiguration>()
-        val klassName: String? = System.getProperty("config.class")
-
-        return if (klassName != null) {
-            instance.load(klassName, ReplConfiguration::class)
-        } else {
-            instance.get {
-                object : ReplConfigurationBase() {
-                    override fun plugins(): Iterator<Plugin> {
-                        val list = super.plugins().asSequence().toList().toMutableList()
-                        list += TranslatePlugin()
-                        list += Neo4jPlugin()
-                        list += ShowCodePlugin()
-                        list += RunPlugin()
-                        list += CompilationDatabase()
-
-                        return list.listIterator()
-                    }
-                }
-            }
-        }
+        return repl
     }
 }
