@@ -18,10 +18,12 @@ publishing {
 
 dependencies {
     // this exposes all of our (published) modules as dependency
+    api(projects.cpgConsole)
     api(projects.cpgCore)
     api(projects.cpgAnalysis)
     api(projects.cpgNeo4j)
 
+    kover(projects.cpgConsole)
     kover(projects.cpgCore)
     kover(projects.cpgAnalysis)
     kover(projects.cpgNeo4j)
