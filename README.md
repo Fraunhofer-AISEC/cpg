@@ -116,14 +116,34 @@ val translationConfig = TranslationConfiguration
     .build()
 ```
 
-## Development Setup
+## Development
+This section describes languages, how well they are supported, and how to use and develop them yourself.
 
-### Experimental Languages
+### Language Support
+Languages are maintained to different degrees, and are noted in the table below with:
+- `maintained`: if they are mostly feature complete and bugs have priority of being fixed.
+- `developing`: if the language is currently being worked on to reach a state of feature completeness.
+- `experimental`: if a first working prototype was implemented, e.g., to support research topics, and its future development is unclear.
+- `discontinued`: if the language is no longer actively developed or maintained but is kept for everyone to fork and adapt.
+  
+The current state of languages is:
 
-Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included in the `cpg-core` module but have separate gradle submodules.
-To include the desired submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+| Language | Module | Branch | State |
+|---|---|---|---|
+| Java | cpg-language-java | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
+| C++ | cpg-language-cxx | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
+| Python | cpg-language-python | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
+| Go | cpg-language-go | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
+| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
+| TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
+| Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
+| Python-Quantum | T.B.A | T.B.A | `experimental` |
+
+### Languages and Configuration
+`cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
+To include the desired language submodules, simply toggle them on in your local `gradle.properties` file by setting the properties to `true`, e.g., (`enableGoFrontend=true`).
 We provide a sample file with all languages switched on [here](./gradle.properties.example).
-Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
+Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you. Some languages, such as Golang, depend on other native libraries that have to be installed manually.
 
 #### Golang
 
