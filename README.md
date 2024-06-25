@@ -143,7 +143,7 @@ The current state of languages is:
 `cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
 To include the desired language submodules, simply toggle them on in your local `gradle.properties` file by setting the properties to `true`, e.g., (`enableGoFrontend=true`).
 We provide a sample file with all languages switched on [here](./gradle.properties.example).
-Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you. Some languages, such as Golang, depend on other native libraries that have to be installed manually.
+Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you. Some languages need additional installation of software to run and will be listed below.
 
 #### Golang
 
