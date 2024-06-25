@@ -147,7 +147,7 @@ Instead of manually editing the `gradle.properties` file, you can also use the `
 
 #### Golang
 
-In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically store the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS.
+In the case of Golang, additional native code, [libgoast](https://github.com/Fraunhofer-AISEC/libgoast), is used to access the Go `ast` packages. Gradle should automatically download the latest version of this library during the build process. This currently only works for Linux and macOS.
 
 #### Python
 
