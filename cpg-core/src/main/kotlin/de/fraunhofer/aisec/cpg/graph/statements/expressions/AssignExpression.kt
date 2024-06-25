@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -68,9 +69,32 @@ class AssignExpression :
                 }
             }
             if (isSimpleAssignment) {
-                field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
+                field.forEach {
+                    val unwrapped = it.unwrapReference()
+                    unwrapped?.let {
+                        it.access = AccessValues.WRITE
+                        it.dfgHandlerHint = true
+                    }
+                }
             } else {
-                field.forEach { (it as? Reference)?.access = AccessValues.READWRITE }
+                field.forEach {
+                    val unwrapped = it.unwrapReference()
+                    unwrapped?.let {
+                        it.access = AccessValues.READWRITE
+                        it.dfgHandlerHint = true
+                    }
+                }
+
+                if (!isCompoundAssignment) {
+                    // If this is neither a simple nor a compound assignment, probably something
+                    // went wrong, we still model this as a READWRITE, but we indicate a warning to
+                    // the user
+                    Util.warnWithFileLocation(
+                        this,
+                        log,
+                        "Assignment is neither a simple nor a compound assignment. This is suspicious."
+                    )
+                }
             }
         }
 

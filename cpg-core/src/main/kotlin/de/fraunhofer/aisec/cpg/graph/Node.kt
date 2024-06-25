@@ -306,8 +306,10 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
             } else {
                 Dataflow(prev, this, granularity)
             }
-        prevDFGEdges.add(edge)
-        prev.nextDFGEdges.add(edge)
+        if (edge !in prevDFGEdges) {
+            prevDFGEdges.add(edge)
+            prev.nextDFGEdges.add(edge)
+        }
     }
 
     fun addPrevCDG(

@@ -256,6 +256,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(predicate: (Node) -> Boolean): Fulfilled
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -273,12 +274,13 @@ fun Node.followNextFullDFGEdgesUntilHit(
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.last()
-        alreadySeenNodes.add(currentNode)
+
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
         if (currentNode.nextFullDFG.isEmpty()) {
             // No further nodes in the path and the path criteria are not satisfied.
             if (collectFailedPaths) failedPaths.add(currentPath)
+            if (!continueAfterHit) continue
         }
 
         for (next in currentNode.nextFullDFG) {
@@ -293,9 +295,18 @@ fun Node.followNextFullDFGEdgesUntilHit(
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
+            // For our daily dose of special magic, we check that the path reaching the next node
+            // differs. If the path is different, we do accept seeing the same node multiple times.
+            val indexedPath =
+                currentPath
+                    .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
+                    .filterNotNull()
             if (
-                next !in currentPath &&
-                    (findAllPossiblePaths ||
+                (indexedPath.isEmpty() ||
+                    indexedPath.all {
+                        it.first == 0 || currentNode != currentPath[it.first - 1]
+                    }) &&
+                    ((findAllPossiblePaths && currentPath.count { it == next } <= 2) ||
                         (next !in alreadySeenNodes && worklist.none { next in it }))
             ) {
                 worklist.add(nextPath)

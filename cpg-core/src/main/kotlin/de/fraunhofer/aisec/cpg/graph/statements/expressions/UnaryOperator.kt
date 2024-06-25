@@ -62,6 +62,7 @@ class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver {
         var access = AccessValues.READ
         if (operatorCode == "++" || operatorCode == "--") {
             access = AccessValues.READWRITE
+            (input as? Reference)?.dfgHandlerHint = true
         }
         if (input is Reference) {
             (input as? Reference)?.access = access

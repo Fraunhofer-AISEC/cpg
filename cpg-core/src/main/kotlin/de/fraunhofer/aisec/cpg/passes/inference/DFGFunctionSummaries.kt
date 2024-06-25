@@ -240,7 +240,7 @@ class DFGFunctionSummaries {
                 if (entry.from.startsWith("param")) {
                     try {
                         val paramIndex = entry.from.removePrefix("param").toInt()
-                        functionDeclaration.parameters[paramIndex]
+                        functionDeclaration.parameters.getOrNull(paramIndex)
                     } catch (e: NumberFormatException) {
                         null
                     }
@@ -253,8 +253,8 @@ class DFGFunctionSummaries {
                 if (entry.to.startsWith("param")) {
                     try {
                         val paramIndex = entry.to.removePrefix("param").toInt()
-                        val paramTo = functionDeclaration.parameters[paramIndex]
-                        if (from != null) {
+                        val paramTo = functionDeclaration.parameters.getOrNull(paramIndex)
+                        if (from != null && paramTo != null) {
                             functionToChangedParameters
                                 .computeIfAbsent(functionDeclaration) { mutableMapOf() }
                                 .computeIfAbsent(paramTo) { mutableSetOf() }
