@@ -137,7 +137,7 @@ The current state of languages is:
 | LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
 | TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
 | Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
-| Python-Quantum | T.B.A | T.B.A | `experimental` |
+| {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
 
 ### Languages and Configuration
 `cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
