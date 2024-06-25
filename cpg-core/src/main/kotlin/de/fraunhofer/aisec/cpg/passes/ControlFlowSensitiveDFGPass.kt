@@ -143,12 +143,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Checks if there's an entry in [edgePropertiesMap] with key `(x, null)` where `x` is in [from]
-     * and, if so, adds an entry with key `(x, to)` and the same value
+     * Checks if there's an entry in [edgePropertiesMap] with key `(x, null, <any>)` where `x` is in
+     * [from] and, if so, adds an entry with key `(x, to, true)` and the same value
      */
     protected fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
-            .filter { it.key.first in from && it.key.second == (to as? Reference)?.refersTo }
+            .filter { entry ->
+                entry.key.first in from && (to as HasAliases).aliases.any { it == entry.key.second }
+            }
             .forEach { edgePropertiesMap[Triple(it.key.first, to, true)] = it.value }
     }
 
@@ -493,8 +495,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        edgePropertiesMap[Triple(param, arg?.refersTo, false)] =
-                            CallingContextOut(currentNode)
+                        /*edgePropertiesMap[Triple(param, arg?.refersTo, false)] =
+                        CallingContextOut(currentNode)*/
+                        if (arg != null) {
+                            for (alias in arg.aliases) {
+                                edgePropertiesMap[Triple(param, alias as Node?, false)] =
+                                    CallingContextOut(currentNode)
+                            }
+                        }
                     }
                 }
             } else {
@@ -518,7 +526,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * state. This is for example the case to identify if the resulting edge will receive a
      * context-sensitivity label (i.e., if the node used as key is somehow inside the called
      * function and the next usage happens inside the function under analysis right now). The key of
-     * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
+     * an entry works as follows: The 1st item in the triple is the prevDFG of the 2nd item. If the
      * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st. If
      * the third item is false, we also don't consider it.
      */
