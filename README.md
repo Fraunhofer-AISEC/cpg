@@ -134,9 +134,9 @@ The current state of languages is:
 | C++ | cpg-language-cxx | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
 | Python | cpg-language-python | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
 | Go | cpg-language-go | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
-| Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
+| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
+| TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
+| Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
 | {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
 
 ### Languages and Configuration
