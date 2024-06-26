@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -479,9 +479,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(
-        node: Python.ASTAsyncFunctionDef
-    ): Collection<Annotation> {
+    private fun handleAnnotations(node: Python.ASTAsyncFunctionDef): Collection<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in node.decorator_list) {
             if (decorator !is Python.ASTCall) {
@@ -525,9 +523,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return annotations
     }
 
-    private fun handleAnnotations(
-        node: Python.ASTFunctionDef
-    ): Collection<Annotation> {
+    private fun handleAnnotations(node: Python.ASTFunctionDef): Collection<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in node.decorator_list) {
             if (decorator !is Python.ASTCall) {
