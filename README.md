@@ -122,7 +122,7 @@ This section describes languages, how well they are supported, and how to use an
 ### Language Support
 Languages are maintained to different degrees, and are noted in the table below with:
 - `maintained`: if they are mostly feature complete and bugs have priority of being fixed.
-- `developing`: if the language is currently being worked on to reach a state of feature completeness.
+- `incubating`: if the language is currently being worked on to reach a state of feature completeness.
 - `experimental`: if a first working prototype was implemented, e.g., to support research topics, and its future development is unclear.
 - `discontinued`: if the language is no longer actively developed or maintained but is kept for everyone to fork and adapt.
   
@@ -134,7 +134,7 @@ The current state of languages is:
 | C++ | cpg-language-cxx | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
 | Python | cpg-language-python | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
 | Go | cpg-language-go | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `developing` |
+| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `incubating` |
 | TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
 | Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
 | {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
