@@ -90,7 +90,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                 }
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.addDeclaration(decl)
+            declStmt.addToPropertyEdgeDeclaration(decl)
         }
         return declStmt
     }
@@ -122,7 +122,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             // Finally, add our declaration to the scope and the declaration statement
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.addDeclaration(decl)
+            declStmt.addToPropertyEdgeDeclaration(decl)
         }
         return declStmt
     }
