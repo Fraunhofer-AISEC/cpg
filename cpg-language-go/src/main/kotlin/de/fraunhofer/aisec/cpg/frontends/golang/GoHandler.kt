@@ -59,6 +59,11 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
         return node
     }
 
+    /** A small shortcut to invoke [handle] on all elements on the supplied node [list]. */
+    fun handle(list: List<HandlerNode>): List<ResultNode> {
+        return list.mapNotNull(this::handle)
+    }
+
     abstract fun handleNode(node: HandlerNode): ResultNode
 
     /**

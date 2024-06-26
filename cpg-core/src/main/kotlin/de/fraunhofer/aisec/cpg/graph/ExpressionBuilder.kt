@@ -122,15 +122,11 @@ fun MetadataProvider.newUnaryOperator(
 @JvmOverloads
 fun MetadataProvider.newAssignExpression(
     operatorCode: String = "=",
-    lhs: List<Expression> = listOf(),
-    rhs: List<Expression> = listOf(),
     rawNode: Any? = null
 ): AssignExpression {
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
     node.operatorCode = operatorCode
-    node.lhs = lhs
-    node.rhs = rhs
 
     log(node)
 
@@ -183,9 +179,6 @@ fun MetadataProvider.newConstructExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
-    condition: Expression,
-    thenExpression: Expression?,
-    elseExpression: Expression?,
     type: Type = unknownType(),
     rawNode: Any? = null
 ): ConditionalExpression {
@@ -193,9 +186,6 @@ fun MetadataProvider.newConditionalExpression(
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.type = type
-    node.condition = condition
-    node.thenExpression = thenExpression
-    node.elseExpression = elseExpression
 
     log(node)
     return node

@@ -134,6 +134,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         } else {
             scopeManager.addDeclaration(decl)
         }
+
+        // copy the AST parent from the initial reference node
+        decl.astParent = node.astParent
         return decl
     }
 

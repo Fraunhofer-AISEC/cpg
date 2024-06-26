@@ -167,76 +167,81 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         currentFile = f
         currentFileSet = fset
 
-        val tu = newTranslationUnitDeclaration(file.absolutePath, rawNode = f)
-        scopeManager.resetToGlobal(tu)
-        currentTU = tu
+        return newTranslationUnitDeclaration(file.absolutePath, rawNode = f).withChildren(
+            isGlobalScope = true
+        ) { tu ->
+            currentTU = tu
 
-        // We need to keep imports on a special file scope. We can simulate this by "entering" the
-        // translation unit
-        scopeManager.enterScope(tu)
+            // We need to keep imports on a special file scope. We can simulate this by "entering"
+            // the translation unit
+            scopeManager.enterScope(tu)
 
-        // We parse the imports specifically and not as part of the handler later
-        for (spec in f.imports) {
-            val import = specificationHandler.handle(spec)
-            scopeManager.addDeclaration(import)
-        }
-
-        val p = newNamespaceDeclaration(f.name.name)
-        scopeManager.enterScope(p)
-
-        try {
-            // we need to construct the package "path" (e.g. "encoding/json") out of the
-            // module path as well as the current directory in relation to the topLevel
-            var packagePath = file.parentFile.relativeTo(topLevel)
-
-            // If we are in a module, we need to prepend the module path to it. There is an
-            // exception if we are in the "std" module, which represents the standard library
-            val modulePath = currentModule?.module?.mod?.path
-            if (modulePath != null && modulePath != "std") {
-                packagePath = File(modulePath).resolve(packagePath)
+            // We parse the imports specifically and not as part of the handler later
+            for (spec in f.imports) {
+                val import = specificationHandler.handle(spec)
+                scopeManager.addDeclaration(import)
             }
 
-            p.path = packagePath.path
-        } catch (ex: IllegalArgumentException) {
-            log.error(
-                "Could not relativize package path to top level. Cannot set package path.",
-                ex
-            )
-        }
+            var p =
+                newNamespaceDeclaration(f.name.name).withChildren(hasScope = true) { p ->
+                    try {
+                        // we need to construct the package "path" (e.g. "encoding/json") out of the
+                        // module path as well as the current directory in relation to the topLevel
+                        var packagePath = file.parentFile.relativeTo(topLevel)
 
-        for (decl in f.decls) {
-            // Retrieve all top level declarations. One "Decl" could potentially
-            // contain multiple CPG declarations.
-            val declaration = declarationHandler.handle(decl)
-            if (declaration is DeclarationSequence) {
-                declaration.declarations.forEach { scopeManager.addDeclaration(it) }
-            } else {
-                // We need to be careful with method declarations. We need to put them in the
-                // respective name scope of the record and NOT on the global scope / namespace scope
-                // TODO: this is broken if we see the declaration of the method before the class :(
-                if (declaration is MethodDeclaration) {
-                    declaration.recordDeclaration?.let {
-                        scopeManager.enterScope(it)
-                        scopeManager.addDeclaration(declaration)
-                        scopeManager.leaveScope(it)
-                        // But still add it to the AST of the namespace so our AST walker can find
-                        // it
-                        p.declarations += declaration
+                        // If we are in a module, we need to prepend the module path to it. There is
+                        // an exception if we are in the "std" module, which represents the standard
+                        // library
+                        val modulePath = currentModule?.module?.mod?.path
+                        if (modulePath != null && modulePath != "std") {
+                            packagePath = File(modulePath).resolve(packagePath)
+                        }
+
+                        p.path = packagePath.path
+                    } catch (ex: IllegalArgumentException) {
+                        log.error(
+                            "Could not relativize package path to top level. Cannot set package path.",
+                            ex
+                        )
                     }
-                } else {
-                    scopeManager.addDeclaration(declaration)
+
+                    for (decl in f.decls) {
+                        // Retrieve all top level declarations. One "Decl" could potentially
+                        // contain multiple CPG declarations.
+                        val declaration = declarationHandler.handle(decl)
+                        if (declaration is DeclarationSequence) {
+                            declaration.declarations.forEach { it.declare() }
+                        } else {
+                            // We need to be careful with method declarations. We need to put them
+                            // in the respective name scope of the record and NOT on the global
+                            // scope /
+                            // namespace scope
+                            // TODO: this is broken if we see the declaration of the method before
+                            // the class :(
+                            if (declaration is MethodDeclaration) {
+                                declaration.recordDeclaration?.let {
+                                    scopeManager.enterScope(it)
+                                    scopeManager.addDeclaration(declaration)
+                                    scopeManager.leaveScope(it)
+                                    // But still add it to the AST of the namespace so our AST
+                                    // walker can find
+                                    // it
+                                    p.declarations += declaration
+                                }
+                            } else {
+                                scopeManager.addDeclaration(declaration)
+                            }
+                        }
+                    }
                 }
-            }
+
+            scopeManager.leaveScope(tu)
+
+            scopeManager.resetToGlobal(tu)
+
+            // Declare our namespace
+            p.declare()
         }
-
-        scopeManager.leaveScope(p)
-        scopeManager.leaveScope(tu)
-
-        scopeManager.resetToGlobal(tu)
-
-        scopeManager.addDeclaration(p)
-
-        return tu
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {
@@ -318,8 +323,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
 
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
-                    // global
-                    // scope to avoid namespace issues
+                    // global scope to avoid namespace issues
                     var record =
                         scopeManager.withScope(scopeManager.globalScope) {
                             specificationHandler.buildRecordDeclaration(type, name)
@@ -329,14 +333,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 }
                 is GoStandardLibrary.Ast.InterfaceType -> {
                     // Go allows to use anonymous interface as type. This is something we cannot
-                    // model
-                    // properly in the CPG yet. In order to at least deal with this partially, we
-                    // construct a ObjectType and put the methods and their types into the type.
+                    // model properly in the CPG yet. In order to at least deal with this partially,
+                    // we construct a ObjectType and put the methods and their types into the type.
 
                     // In the easiest case this is the empty interface `interface{}`, which we then
                     // consider to be the "any" type. `any` is actually a type alias for
-                    // `interface{}`,
-                    // but in modern Go `any` is preferred.
+                    // `interface{}`, but in modern Go `any` is preferred.
                     if (type.methods.list.isEmpty()) {
                         return primitiveType("any")
                     }

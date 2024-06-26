@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.util.*
+import kotlin.collections.ArrayDeque
 import org.slf4j.LoggerFactory
 
 /**
@@ -61,12 +62,15 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     ScopeProvider,
     NamespaceProvider,
     ContextProvider,
-    RawNodeTypeProvider<AstNode> {
+    RawNodeTypeProvider<AstNode>,
+    AstStackProvider {
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
 
     var currentTU: TranslationUnitDeclaration? = null
+
+    override val astStack: ArrayDeque<Node> = ArrayDeque()
 
     @Throws(TranslationException::class)
     fun parseAll(): List<TranslationUnitDeclaration> {
