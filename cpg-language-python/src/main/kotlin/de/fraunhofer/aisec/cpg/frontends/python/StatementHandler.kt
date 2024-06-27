@@ -480,59 +480,32 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAnnotations(node: Python.ASTAsyncFunctionDef): Collection<Annotation> {
-        val annotations = mutableListOf<Annotation>()
-        for (decorator in node.decorator_list) {
-            if (decorator !is Python.ASTCall) {
-                continue
-            }
-
-            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
-            if (decFuncParsed !is MemberExpression) {
-                continue
-            }
-
-            val annotation =
-                newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
-                    )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
-
-            annotations += annotation
-        }
-        return annotations
+        return handleDeclaratorList(node, node.decorator_list)
     }
 
     private fun handleAnnotations(node: Python.ASTFunctionDef): Collection<Annotation> {
+        return handleDeclaratorList(node, node.decorator_list)
+    }
+
+    fun handleDeclaratorList(
+        node: Python.AST,
+        decoratorList: List<Python.ASTBASEexpr>
+    ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
-        for (decorator in node.decorator_list) {
+        for (decorator in decoratorList) {
             if (decorator !is Python.ASTCall) {
-                TODO()
+                log.warn(
+                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
+                )
+                continue
             }
 
             val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
             if (decFuncParsed !is MemberExpression) {
-                TODO()
+                log.warn(
+                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
+                )
+                continue
             }
 
             val annotation =
@@ -564,6 +537,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             annotations += annotation
         }
+
         return annotations
     }
 
