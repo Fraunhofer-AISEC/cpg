@@ -284,7 +284,7 @@ class PythonFrontendTest : BaseTest() {
         val assignExpr = (main.body as? Block)?.statements?.first() as? AssignExpression
         assertNotNull(assignExpr)
 
-        val foo = assignExpr.declarations.first() as? VariableDeclaration
+        val foo = assignExpr.declarations.firstOrNull() as? VariableDeclaration
         assertNotNull(foo)
         assertLocalName("foo", foo)
         assertEquals(tu.primitiveType("int"), foo.type)
@@ -1182,6 +1182,78 @@ class PythonFrontendTest : BaseTest() {
             2L,
             ((fStmtRhs.subscriptExpression as RangeExpression).third as? Literal<*>)?.value
         )
+    }
+
+    @Test
+    fun testSimpleImport() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("simple_import.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        assertEquals(2, result.variables.size)
+        // Note, that "pi" is incorrectly inferred as a field declaration. This is a known bug in
+        // the inference system (and not in the python module) and will be handled separately.
+        assertEquals(listOf("mypi", "pi"), result.variables.map { it.name.localName })
+    }
+
+    @Test
+    fun testModules() {
+        val topLevel = Path.of("src", "test", "resources", "python", "modules")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("a.py").toFile(),
+                    topLevel.resolve("b.py").toFile(),
+                    topLevel.resolve("c.py").toFile(),
+                    topLevel.resolve("main.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val aFunc = result.functions["a.func"]
+        assertNotNull(aFunc)
+
+        val bFunc = result.functions["b.func"]
+        assertNotNull(bFunc)
+
+        val cCompletelyDifferentFunc = result.functions["c.completely_different_func"]
+        assertNotNull(cCompletelyDifferentFunc)
+
+        var call = result.calls["a.func"]
+        assertNotNull(call)
+        assertInvokes(call, aFunc)
+
+        call = result.calls["a_func"]
+        assertNotNull(call)
+        assertInvokes(call, aFunc)
+
+        call =
+            result.calls[
+                    { // we need to do select it this way otherwise we will also match "a.func"
+                        it.name.toString() == "func"
+                    }]
+        assertNotNull(call)
+        assertInvokes(call, bFunc)
+
+        call = result.calls["completely_different_func"]
+        assertNotNull(call)
+        assertInvokes(call, cCompletelyDifferentFunc)
+
+        call = result.calls["different.completely_different_func"]
+        assertNotNull(call)
+        assertInvokes(call, cCompletelyDifferentFunc)
     }
 
     class PythonValueEvaluator : ValueEvaluator() {

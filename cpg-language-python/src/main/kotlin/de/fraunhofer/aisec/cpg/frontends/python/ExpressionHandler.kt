@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import jep.python.PyObject
 
@@ -279,7 +281,21 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAttribute(node: Python.ASTAttribute): Expression {
-        return newMemberExpression(name = node.attr, base = handle(node.value), rawNode = node)
+        var base = handle(node.value)
+
+        // We do a quick check, if this refers to an import. This is faster than doing
+        // this in a pass and most likely valid, since we are under the assumption that
+        // our current file is (more or less) complete, but we might miss some
+        // additional dependencies
+        var ref =
+            if (isImport(base.name)) {
+                // Yes, it's an import, so we need to construct a reference with an FQN
+                newReference(base.name.fqn(node.attr), rawNode = node)
+            } else {
+                newMemberExpression(name = node.attr, base = base, rawNode = node)
+            }
+
+        return ref
     }
 
     private fun handleConstant(node: Python.ASTConstant): Expression {
@@ -327,34 +343,25 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * TODO: cast, memberexpression, magic
      */
     private fun handleCall(node: Python.ASTCall): Expression {
+        var callee = frontend.expressionHandler.handle(node.func)
+
         val ret =
-            when (node.func) {
-                is Python.ASTAttribute -> {
-                    newMemberCallExpression(
-                        frontend.expressionHandler.handle(node.func),
-                        rawNode = node
-                    )
-                }
-                else -> {
-                    val func = handle(node.func)
+            if (callee is MemberExpression) {
+                newMemberCallExpression(callee, rawNode = node)
+            } else {
+                // try to resolve -> [ConstructExpression]
+                val currentScope = frontend.scopeManager.currentScope
+                val record =
+                    currentScope?.let { frontend.scopeManager.getRecordForName(callee.name) }
 
-                    // try to resolve -> [ConstructExpression]
-                    val currentScope = frontend.scopeManager.currentScope
-                    val record =
-                        currentScope?.let { frontend.scopeManager.getRecordForName(func.name) }
-
-                    if (record != null) {
-                        // construct expression
-                        val constructExpr =
-                            newConstructExpression(
-                                (node.func as? Python.ASTName)?.id,
-                                rawNode = node
-                            )
-                        constructExpr.type = record.toType()
-                        constructExpr
-                    } else {
-                        newCallExpression(func, rawNode = node)
-                    }
+                if (record != null) {
+                    // construct expression
+                    val constructExpr =
+                        newConstructExpression((node.func as? Python.ASTName)?.id, rawNode = node)
+                    constructExpr.type = record.toType()
+                    constructExpr
+                } else {
+                    newCallExpression(callee, rawNode = node)
                 }
             }
 
@@ -367,6 +374,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
 
         return ret
+    }
+
+    private fun isImport(name: Name): Boolean {
+        val decl = frontend.scopeManager.findSymbols(name).filterIsInstance<ImportDeclaration>()
+        return decl.isNotEmpty()
     }
 
     private fun handleName(node: Python.ASTName): Expression {
