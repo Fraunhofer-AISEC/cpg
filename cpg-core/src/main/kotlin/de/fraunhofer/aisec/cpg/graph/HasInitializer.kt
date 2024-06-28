@@ -54,6 +54,10 @@ interface HasInitializer : HasType, ArgumentHolder, AssignmentHolder {
         return true
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return initializer == expression
+    }
+
     override val assignments: List<Assignment>
         get() {
             return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()

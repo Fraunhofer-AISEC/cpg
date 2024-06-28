@@ -40,8 +40,9 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
-import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryMethodInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -473,6 +474,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             is Reference -> handleReference(currClass, node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(scopeManager.currentRecord, node)
+
+            // the following function are more for type-resolving, but they are placed inside the
+            // symbol resolver, because this allows us to have the necessary location of nodes where
+            // we infer from
+            is RecordDeclaration -> handleRecordDeclaration(node)
         }
     }
 
@@ -614,7 +620,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
                     listOfNotNull(func)
                 } else {
-                    createMethodDummies(suitableBases, bestGuess, call)
+                    ctx.tryMethodInference(suitableBases, bestGuess, call)
                 }
         }
 
@@ -754,34 +760,29 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return invocationCandidates
     }
 
-    /**
-     * Creates an inferred element for each RecordDeclaration
-     *
-     * @param possibleContainingTypes
-     * @param call
-     */
-    protected fun createMethodDummies(
-        possibleContainingTypes: Set<Type>,
-        bestGuess: Type?,
-        call: CallExpression
-    ): List<FunctionDeclaration> {
-        var records =
-            possibleContainingTypes.mapNotNull {
-                val root = it.root as? ObjectType
-                root?.recordDeclaration
+    fun handleRecordDeclaration(record: RecordDeclaration) {
+        var superTypeDeclarations = mutableSetOf<RecordDeclaration>()
+
+        // If we have not resolved our super types yet, we can probably infer them
+        for (type in record.superTypes) {
+            if (type.typeOrigin == Type.Origin.UNRESOLVED) {
+                var superRecord = ctx.tryRecordInference(type, locationHint = record)
+                type.declaredFrom = superRecord
+                type.recordDeclaration = superRecord
+                type.typeOrigin = Type.Origin.RESOLVED
+
+                if (superRecord != null) {
+                    superTypeDeclarations += superRecord
+                }
+
+                record.superTypeDeclarations = superTypeDeclarations
             }
-
-        // We access an unknown method of an unknown record. so we need to handle that
-        // along the way as well. We prefer the base type
-        if (records.isEmpty()) {
-            records =
-                listOfNotNull(
-                    ctx.tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
-                )
         }
-        records = records.distinct()
 
-        return records.mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
+        // Also make sure to resolve sub-records
+        for (sub in record.declarations.filterIsInstance<RecordDeclaration>()) {
+            handleRecordDeclaration(sub)
+        }
     }
 
     /**
@@ -1015,69 +1016,4 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
-}
-
-fun TranslationContext.tryNamespaceInference(
-    name: Name,
-    locationHint: Node?
-): NamespaceDeclaration? {
-    return scopeManager.globalScope
-        ?.astNode
-        ?.startInference(this)
-        ?.inferNamespaceDeclaration(name, null, locationHint)
-}
-
-/**
- * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
- * inference was not possible, or if it was turned off in the [InferenceConfiguration].
- */
-fun TranslationContext.tryRecordInference(
-    type: Type,
-    locationHint: Node? = null
-): RecordDeclaration? {
-    val kind =
-        if (type.language is HasStructs) {
-            "struct"
-        } else {
-            "class"
-        }
-    // Determine the scope where we want to start our inference
-    var (scope, _) = scopeManager.extractScope(type)
-
-    if (scope !is NameScope) {
-        scope = null
-    }
-
-    var holder = scope?.astNode
-
-    // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
-    // parent record)
-    var parentName = type.name.parent
-    if (scope == null && parentName != null) {
-        // At this point, we need to check whether we have any type reference to our parent
-        // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
-        // have a high chance that this is actually a parent record and not a namespace
-        var parentType = typeManager.typeExists(parentName)
-        holder =
-            if (parentType != null) {
-                tryRecordInference(parentType, locationHint = locationHint)
-            } else {
-                tryNamespaceInference(parentName, locationHint = locationHint)
-            }
-    }
-
-    val record =
-        (holder ?: this.scopeManager.globalScope?.astNode)
-            ?.startInference(this)
-            ?.inferRecordDeclaration(type, kind, locationHint)
-
-    // update the type's record. Because types are only unique per scope, we potentially need to
-    // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
-    if (record != null) {
-        typeManager.firstOrderTypes
-            .filter { it.name == record.name }
-            .forEach { it.recordDeclaration = record }
-    }
-
-    return record
 }

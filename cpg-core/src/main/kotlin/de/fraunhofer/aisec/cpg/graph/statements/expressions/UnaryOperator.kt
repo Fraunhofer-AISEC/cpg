@@ -126,6 +126,10 @@ class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver {
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.input == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
