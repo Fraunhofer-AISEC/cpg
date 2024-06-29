@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ResolvableExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -115,7 +116,7 @@ open class CPPLanguage :
     override fun refineMethodCallResolution(
         curClass: RecordDeclaration?,
         possibleContainingTypes: Set<Type>,
-        call: CallExpression,
+        call: ResolvableExpression<*>,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
@@ -127,7 +128,7 @@ open class CPPLanguage :
                 callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
             )
         }
-        if (invocationCandidates.isEmpty()) {
+        if (invocationCandidates.isEmpty() && call is CallExpression) {
             // This could be a regular function call that somehow ends up here because of weird
             // complexity of the old call resolver
             val result = ctx.scopeManager.resolveCall(call)

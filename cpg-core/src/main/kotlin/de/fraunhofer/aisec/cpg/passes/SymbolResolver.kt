@@ -512,6 +512,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             is Reference -> handleReference(currClass, node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(scopeManager.currentRecord, node)
+            is UnaryOperator -> handleUnaryOperator(node)
         }
     }
 
@@ -745,12 +746,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return resolveCalleeByName(callee.name.localName, curClass, call)
     }
 
-    protected fun resolveCalleeByName(
+    protected fun <T : FunctionDeclaration> resolveCalleeByName(
         localName: String,
         curClass: RecordDeclaration?,
-        call: CallExpression
+        call: ResolvableExpression<T>
     ): List<FunctionDeclaration> {
-
         val (possibleContainingTypes, _) = getPossibleContainingTypes(call)
 
         // Find function targets. If our languages has a complex call resolution, we need to take
@@ -830,7 +830,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param call
      * @return true if we should stop searching parent, false otherwise
      */
-    protected fun shouldSearchForInvokesInParent(call: CallExpression): Boolean {
+    protected fun shouldSearchForInvokesInParent(call: ResolvableExpression<*>): Boolean {
         return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
@@ -882,7 +882,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * returns a [Pair], where the first element is the set of types and the second is our best
      * guess.
      */
-    protected fun getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
+    protected fun <T : FunctionDeclaration> getPossibleContainingTypes(
+        call: ResolvableExpression<T>
+    ): Pair<Set<Type>, Type?> {
         val possibleTypes = mutableSetOf<Type>()
         var bestGuess: Type? = null
         if (call is MemberCallExpression) {
@@ -903,10 +905,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return Pair(possibleTypes, bestGuess)
     }
 
-    fun getInvocationCandidatesFromRecord(
+    fun <T : FunctionDeclaration> getInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration?,
         name: String,
-        call: CallExpression
+        call: ResolvableExpression<T>
     ): List<FunctionDeclaration> {
         if (recordDeclaration == null) {
             return listOf()
@@ -936,7 +938,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         it.matchesSignature(
                             call.signature,
                             call.language is HasDefaultArguments,
-                            call
+                            call.arguments
                         )
                     )
                 }
@@ -960,7 +962,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun getInvocationCandidatesFromParents(
         name: String,
-        call: CallExpression,
+        call: ResolvableExpression<*>,
         possibleTypes: Set<RecordDeclaration>
     ): List<FunctionDeclaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
@@ -1021,7 +1023,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 it.matchesSignature(
                     signature,
                     constructExpression.language is HasDefaultArguments,
-                    constructExpression
+                    constructExpression.arguments
                 ) != IncompatibleSignature
             }
 
@@ -1060,5 +1062,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             ?.astNode
             ?.startInference(ctx)
             ?.inferNamespaceDeclaration(name, null, type)
+    }
+
+    fun handleUnaryOperator(operator: UnaryOperator): Unit {
+        println(operator.type.recordDeclaration)
     }
 }
