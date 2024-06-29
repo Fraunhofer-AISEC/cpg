@@ -408,7 +408,56 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return null
         }
         var member: ValueDeclaration? = null
-        val record = containingClass.recordDeclaration
+        var type = containingClass
+
+        // Check for a possible overloaded operator-> (C++ only?!)
+        if (
+            reference.language is HasOperatorOverloading &&
+                reference is MemberExpression &&
+                reference.operatorCode == "->" &&
+                reference.base.type !is PointerType
+        ) {
+            var emptySignature =
+                object : ResolvableExpression<OperatorDeclaration>() {
+                    override val signature: List<Type>
+                        get() = listOf()
+
+                    override val arguments: List<Expression>?
+                        get() = null
+
+                    override var language: Language<*>? = reference.language
+
+                    override fun typeChanged(
+                        newType: Type,
+                        src: HasType,
+                    ) {}
+
+                    override fun assignedTypeChanged(
+                        assignedTypes: Set<Type>,
+                        src: HasType,
+                    ) {}
+
+                    override val base: Expression?
+                        get() = reference.base
+
+                    override val operatorCode: String?
+                        get() = "->"
+                }
+            var op =
+                resolveCalleeByName("operator->", emptySignature)
+                    .filterIsInstance<OperatorDeclaration>()
+                    .singleOrNull()
+
+            // For now, we just re-direct the containing class, but we should actually model an
+            // implicit call to our operator in between
+            if (op != null) {
+                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
+                // rather hacky
+                reference.name = type.root.name.fqn(reference.name.localName)
+            }
+        }
+
+        val record = type.recordDeclaration
         if (record != null) {
             member =
                 record.fields
@@ -418,7 +467,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         if (member == null) {
             member =
-                containingClass.superTypes
+                type.superTypes
                     .flatMap { it.recordDeclaration?.fields ?: listOf() }
                     .filter { it.name.localName == reference.name.localName }
                     .map { it.definition }
@@ -894,20 +943,18 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 possibleTypes.add(base.type)
                 possibleTypes.addAll(base.assignedTypes)
             }
-        } else if (call is UnaryOperator) {
-            bestGuess = call.type
-            possibleTypes.add(call.type)
-            possibleTypes.addAll(call.assignedTypes)
-        } else if (call is BinaryOperator) {
-            bestGuess = call.lhs.type
-            possibleTypes.add(call.lhs.type)
-            possibleTypes.addAll(call.lhs.assignedTypes)
-        } else {
+        } else if (call is CallExpression) {
             // This could be a C++ member call with an implicit this (which we do not create), so
             // let's add the current class to the possible list
             scopeManager.currentRecord?.toType()?.let {
                 bestGuess = it
                 possibleTypes.add(it)
+            }
+        } else {
+            call.base?.let { base ->
+                bestGuess = base.type
+                possibleTypes.add(base.type)
+                possibleTypes.addAll(base.assignedTypes)
             }
         }
 

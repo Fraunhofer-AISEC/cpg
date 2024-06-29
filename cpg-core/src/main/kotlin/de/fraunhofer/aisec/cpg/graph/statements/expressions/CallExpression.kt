@@ -254,4 +254,10 @@ open class CallExpression : ResolvableExpression<FunctionDeclaration>(), Argumen
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
+
+    override val base: Expression?
+        get() = null
+
+    override val operatorCode: String?
+        get() = null
 }

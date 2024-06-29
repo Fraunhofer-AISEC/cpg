@@ -246,4 +246,27 @@ class CXXDeclarationTest {
         assertNotNull(binaryOp1)
         assertInvokes(binaryOp1, plus.getOrNull(1))
     }
+
+    @Test
+    fun testMemberAccess() {
+        val file = File("src/test/resources/cxx/operators/member_access.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var proxy = result.records["Proxy"]
+        assertNotNull(proxy)
+
+        var data = result.records["Data"]
+        assertNotNull(data)
+
+        var size = data.fields["size"]
+        assertNotNull(size)
+
+        var sizeRef = result.memberExpressions["size"]
+        assertNotNull(sizeRef)
+        assertRefersTo(sizeRef, size)
+    }
 }

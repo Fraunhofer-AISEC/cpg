@@ -71,6 +71,9 @@ class UnaryOperator :
     override val arguments: List<Expression>?
         get() = null
 
+    override val base: Expression?
+        get() = this
+
     private fun changeExpressionAccess() {
         var access = AccessValues.READ
         if (operatorCode == "++" || operatorCode == "--") {
