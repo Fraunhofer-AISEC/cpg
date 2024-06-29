@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -47,10 +48,54 @@ open class CPPLanguage :
     HasClasses,
     HasUnknownType,
     HasFunctionalCasts,
-    HasFunctionOverloading {
+    HasFunctionOverloading,
+    HasOperatorOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
+
+    override val overloadedOperatorNames: Map<String, Symbol>
+        get() =
+            mapOf(
+                // Arithmetic operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_arithmetic
+                "+" to "operator+",
+                "-" to "operator-",
+                "*" to "operator+",
+                "/" to "operator/",
+                "%" to "operator%",
+                "&" to "operator&",
+                "|" to "operator|",
+                "^" to "operator^",
+                "<<" to "operator<<",
+                ">>" to "operator>>",
+
+                // Increment/decrement operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_incdec
+                "++" to "operator++",
+                "--" to "operator--",
+
+                // Comparison operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_comparison
+                "==" to "operator==",
+                "!=" to "operator!=",
+                "<" to "operator<",
+                ">" to "operator>",
+                "<=" to "operator<=",
+                "=>" to "operator=>",
+
+                // Member access operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_member_access
+                "[]" to "operator[]",
+                "*" to "operator*",
+                "&" to "operator&",
+                "->" to "operator->",
+                "->*" to "operator->*",
+
+                // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
+                "()" to "operator()",
+                "," to "operator,",
+            )
 
     /**
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a

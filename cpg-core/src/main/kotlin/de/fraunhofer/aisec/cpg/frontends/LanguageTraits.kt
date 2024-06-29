@@ -27,16 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.scopes.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.passes.ReplaceCallCastPass
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.*
 
 /**
  * A language trait is a feature or trait that is common to a group of programming languages. Any
@@ -230,3 +228,13 @@ interface HasFunctionalCasts : LanguageTrait
  * multiple functions can share the same name with different parameters.
  */
 interface HasFunctionOverloading : LanguageTrait
+
+/** A language trait that specifies that this language allows overloading of operators. */
+interface HasOperatorOverloading : LanguageTrait {
+
+    /**
+     * A map of operator codes and function names acting as overloaded operators. The key is the
+     * [HasOperatorCode.operatorCode] and the value is the name of the function.
+     */
+    val overloadedOperatorNames: Map<String, Symbol>
+}
