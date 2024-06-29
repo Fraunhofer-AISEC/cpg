@@ -530,6 +530,10 @@ val Node?.casts: List<CastExpression>
 val Node?.methods: List<MethodDeclaration>
     get() = this.allChildren()
 
+/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
+val Node?.operators: List<OperatorDeclaration>
+    get() = this.allChildren()
+
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
 val Node?.fields: List<FieldDeclaration>
     get() = this.allChildren()

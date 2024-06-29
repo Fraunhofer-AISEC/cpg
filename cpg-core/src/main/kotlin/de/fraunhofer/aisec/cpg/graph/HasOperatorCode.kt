@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-
 /** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
 interface HasOperatorCode {
 
