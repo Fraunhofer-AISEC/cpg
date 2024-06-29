@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.StructureDeclarationScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
@@ -717,7 +718,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val result = ctx.scopeManager.resolveCall(call)
             result.bestViable.toList()
         } else {
-            resolveCalleeByName(callee.name.localName, curClass, call)
+            resolveCalleeByName(callee.name.localName, call)
         }
     }
 
@@ -743,12 +744,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 scopeManager,
             )
         }
-        return resolveCalleeByName(callee.name.localName, curClass, call)
+        return resolveCalleeByName(callee.name.localName, call)
     }
 
     protected fun <T : FunctionDeclaration> resolveCalleeByName(
-        localName: String,
-        curClass: RecordDeclaration?,
+        symbol: Symbol,
         call: ResolvableExpression<T>
     ): List<FunctionDeclaration> {
         val (possibleContainingTypes, _) = getPossibleContainingTypes(call)
@@ -759,7 +759,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             if (call.language is HasComplexCallResolution) {
                 (call.language as HasComplexCallResolution)
                     .refineMethodCallResolution(
-                        curClass,
+                        symbol,
                         possibleContainingTypes,
                         call,
                         ctx,
@@ -774,12 +774,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Find invokes by supertypes
         if (
             invocationCandidates.isEmpty() &&
-                localName.isNotEmpty() &&
+                symbol.isNotEmpty() &&
                 (!call.language.isCPP || shouldSearchForInvokesInParent(call))
         ) {
             val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
             invocationCandidates =
-                getInvocationCandidatesFromParents(localName, call, records).toMutableList()
+                getInvocationCandidatesFromParents(symbol, call, records).toMutableList()
         }
 
         // Add overridden invokes
@@ -893,6 +893,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 possibleTypes.add(base.type)
                 possibleTypes.addAll(base.assignedTypes)
             }
+        } else if (call is UnaryOperator) {
+            bestGuess = call.type
+            possibleTypes.add(call.type)
+            possibleTypes.addAll(call.assignedTypes)
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so
             // let's add the current class to the possible list
@@ -1065,6 +1069,17 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     fun handleUnaryOperator(operator: UnaryOperator): Unit {
-        println(operator.type.recordDeclaration)
+        var language = operator.language as? HasOperatorOverloading ?: return
+
+        var symbol = language.operatorNames[operator.operatorCode]
+        if (symbol == null) {
+            log.warn(
+                "Could not resolve operator overloading for unknown operatorCode ${operator.operatorCode}"
+            )
+            return
+        }
+
+        operator.invokes =
+            resolveCalleeByName(symbol, operator).filterIsInstance<OperatorDeclaration>()
     }
 }

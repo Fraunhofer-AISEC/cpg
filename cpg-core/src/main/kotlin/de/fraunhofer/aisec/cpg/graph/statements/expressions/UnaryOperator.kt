@@ -62,10 +62,10 @@ class UnaryOperator :
     var isPrefix = false
 
     override val signature: List<Type>
-        get() = arguments?.map { it.type } ?: listOf()
+        get() = listOf()
 
     override val arguments: List<Expression>?
-        get() = listOf(input)
+        get() = null
 
     private fun changeExpressionAccess() {
         var access = AccessValues.READ

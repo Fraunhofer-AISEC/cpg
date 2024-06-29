@@ -25,15 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.CallResolutionResult
+import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ResolvableExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import org.neo4j.ogm.annotation.Transient
@@ -48,10 +54,14 @@ open class CPPLanguage :
     HasClasses,
     HasUnknownType,
     HasFunctionalCasts,
-    HasFunctionOverloading {
+    HasFunctionOverloading,
+    HasOperatorOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
+
+    override val operatorNames: Map<String, Symbol>
+        get() = mapOf("++" to "operator++")
 
     /**
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
@@ -113,10 +123,10 @@ open class CPPLanguage :
      * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
      *   resolution techniques
      */
-    override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
+    override fun <T : FunctionDeclaration> refineMethodCallResolution(
+        symbol: Symbol,
         possibleContainingTypes: Set<Type>,
-        call: ResolvableExpression<*>,
+        call: ResolvableExpression<T>,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
@@ -125,7 +135,7 @@ open class CPPLanguage :
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
             invocationCandidates.addAll(
-                callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
+                callResolver.getInvocationCandidatesFromRecord(record, symbol, call)
             )
         }
         if (invocationCandidates.isEmpty() && call is CallExpression) {
@@ -168,6 +178,27 @@ open class CPPLanguage :
         }
 
         return CastNotPossible
+    }
+
+    override fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+        // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
+        // increment and decrement operators. See
+        // https://en.cppreference.com/w/cpp/language/operator_incdec
+        val expr = result.call
+        if (expr is UnaryOperator && (expr.operatorCode == "++" || expr.operatorCode == "--")) {
+            // If it is a postfix, we need to match for a function with a fake "int" parameter
+            if (expr.isPostfix) {
+                result.signatureResults =
+                    result.candidateFunctions
+                        .map { Pair(it, it.matchesSignature(listOf(primitiveType("int")))) }
+                        .filter { it.second is SignatureMatches }
+                        .associate { it }
+            }
+        }
+
+        return super.bestViableResolution(result)
     }
 
     override val startCharacter = '<'

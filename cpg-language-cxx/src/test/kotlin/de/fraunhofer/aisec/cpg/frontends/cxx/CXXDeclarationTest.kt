@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -221,5 +222,11 @@ class CXXDeclarationTest {
         var plusplus = result.operators["operator++"]
         assertNotNull(plusplus)
         assertEquals("++", plusplus.operatorCode)
+
+        val main = result.functions["main"]
+        assertNotNull(main)
+
+        var unaryOp = main.allChildren<UnaryOperator>().firstOrNull()
+        assertNotNull(unaryOp)
     }
 }

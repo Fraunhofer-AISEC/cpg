@@ -27,11 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.ResolvableExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -99,10 +101,10 @@ interface HasComplexCallResolution : LanguageTrait {
      *
      * @return a list of [FunctionDeclaration] candidates.
      */
-    fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
+    fun <T : FunctionDeclaration> refineMethodCallResolution(
+        symbol: Symbol,
         possibleContainingTypes: Set<Type>,
-        call: ResolvableExpression<*>,
+        call: ResolvableExpression<T>,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
@@ -233,4 +235,11 @@ interface HasFunctionalCasts : LanguageTrait
 interface HasFunctionOverloading : LanguageTrait
 
 /** A language trait that specifies that this language allows overloading of operators. */
-interface HasOperatorOverloading : LanguageTrait
+interface HasOperatorOverloading : LanguageTrait {
+
+    /**
+     * The name of the operators. The key is the [HasOperatorCode.operatorCode] and the value is the
+     * name of the operator.
+     */
+    val operatorNames: Map<String, Symbol>
+}
