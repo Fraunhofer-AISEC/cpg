@@ -223,11 +223,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         /*
-         * As always, there are some special cases to consider and one of those are C++ operators.
-         * They are regarded as functions and eclipse CDT for some reason introduces a whitespace
-         * in the function name, which will complicate things later on. But we only want to replace
-         * the whitespace for "standard" operators.
-         */
+                 * As always, there are some special cases to consider and one of those are C++ operators.
+                 * They are regarded as functions and eclipse CDT for some reason introduces a whitespace
+        <<<<<<< HEAD
+                 * in the function name, which will complicate things later on. But we only want to replace
+                 * the whitespace for "standard" operators.
+        =======
+                 * in the function name, which will complicate things later on
+        >>>>>>> 432105b5ae (Added `OperatorDeclaration`)
+                 */
         if (nameDecl.name is CPPASTOperatorName && name.replace(" ", "").isKnownOperatorName) {
             name = name.replace(" ", "")
         }
