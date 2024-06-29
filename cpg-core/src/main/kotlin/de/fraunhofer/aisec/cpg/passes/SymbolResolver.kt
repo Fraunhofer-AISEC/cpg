@@ -513,7 +513,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             is Reference -> handleReference(currClass, node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(scopeManager.currentRecord, node)
-            is UnaryOperator -> handleUnaryOperator(node)
+            is UnaryOperator -> handleOperator(node)
+            is BinaryOperator -> handleOperator(node)
         }
     }
 
@@ -897,6 +898,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             bestGuess = call.type
             possibleTypes.add(call.type)
             possibleTypes.addAll(call.assignedTypes)
+        } else if (call is BinaryOperator) {
+            bestGuess = call.lhs.type
+            possibleTypes.add(call.lhs.type)
+            possibleTypes.addAll(call.lhs.assignedTypes)
         } else {
             // This could be a C++ member call with an implicit this (which we do not create), so
             // let's add the current class to the possible list
@@ -1068,8 +1073,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             ?.inferNamespaceDeclaration(name, null, type)
     }
 
-    fun handleUnaryOperator(operator: UnaryOperator): Unit {
-        var language = operator.language as? HasOperatorOverloading ?: return
+    fun handleOperator(operator: ResolvableExpression<OperatorDeclaration>) {
+        var language = operator.language
+        if (
+            operator !is HasOperatorCode ||
+                language !is HasOperatorOverloading ||
+                language.isPrimitive(operator.type)
+        ) {
+            return
+        }
 
         var symbol = language.operatorNames[operator.operatorCode]
         if (symbol == null) {

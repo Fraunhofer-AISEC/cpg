@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
@@ -39,7 +40,11 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), HasBase, HasOperatorCode, ArgumentHolder, HasType.TypeObserver {
+    ResolvableExpression<OperatorDeclaration>(),
+    HasBase,
+    HasOperatorCode,
+    ArgumentHolder,
+    HasType.TypeObserver {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -71,6 +76,12 @@ open class BinaryOperator :
                 )
             }
         }
+
+    override val signature: List<Type>
+        get() = listOf(rhs.type)
+
+    override val arguments: List<Expression>?
+        get() = listOf(rhs)
 
     private fun connectNewLhs(lhs: Expression) {
         lhs.registerTypeObserver(this)

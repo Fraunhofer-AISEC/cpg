@@ -61,7 +61,26 @@ open class CPPLanguage :
     override val unknownTypeString = listOf("auto")
 
     override val operatorNames: Map<String, Symbol>
-        get() = mapOf("++" to "operator++")
+        get() =
+            mapOf(
+                // Arithmetic operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_arithmetic
+                "+" to "operator+",
+                "-" to "operator-",
+                "*" to "operator+",
+                "/" to "operator/",
+                "%" to "operator%",
+                "&" to "operator&",
+                "|" to "operator|",
+                "^" to "operator^",
+                "<<" to "operator<<",
+                ">>" to "operator>>",
+
+                // Increment/decrement operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_incdec
+                "++" to "operator++",
+                "--" to "operator--",
+            )
 
     /**
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
@@ -164,6 +183,17 @@ open class CPPLanguage :
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {
             return match
+        }
+
+        // Another special rule is that if we have a (const) reference (e.g. const T&) in a function
+        // call, this will match the type T because this means that the parameter is given by
+        // reference rather than by value.
+        if (
+            targetType is ReferenceType &&
+                targetType.elementType == type &&
+                targetHint is ParameterDeclaration
+        ) {
+            return DirectMatch
         }
 
         // In C++, it is possible to have conversion constructors. We will not have full support for

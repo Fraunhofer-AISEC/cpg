@@ -171,7 +171,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 name.localName.startsWith("operator") -> {
                     // retrieve the operator code
                     var operatorCode = name.localName.drop("operator".length)
-                    // TODO(oxisto): Should we somehow harmonize the name?
                     newOperatorDeclaration(name, operatorCode, rawNode = ctx)
                 }
                 // Check, if it's a constructor. This is the case if the local names of the function

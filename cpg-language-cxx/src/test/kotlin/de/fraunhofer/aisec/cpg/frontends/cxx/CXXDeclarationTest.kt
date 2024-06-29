@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -219,14 +220,30 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var plusplus = result.operators["operator++"]
+        val integer = result.records["Integer"]
+        assertNotNull(integer)
+
+        var plusplus = integer.operators["operator++"]
         assertNotNull(plusplus)
         assertEquals("++", plusplus.operatorCode)
+
+        var plus = integer.operators("operator+")
+        assertEquals(2, plus.size)
+        assertEquals("+", plus.map { it.operatorCode }.distinct().singleOrNull())
 
         val main = result.functions["main"]
         assertNotNull(main)
 
         var unaryOp = main.allChildren<UnaryOperator>().firstOrNull()
         assertNotNull(unaryOp)
+        assertInvokes(unaryOp, plusplus)
+
+        val binaryOp0 = main.allChildren<BinaryOperator>().getOrNull(0)
+        assertNotNull(binaryOp0)
+        assertInvokes(binaryOp0, plus.getOrNull(0))
+
+        val binaryOp1 = main.allChildren<BinaryOperator>().getOrNull(1)
+        assertNotNull(binaryOp1)
+        assertInvokes(binaryOp1, plus.getOrNull(1))
     }
 }
