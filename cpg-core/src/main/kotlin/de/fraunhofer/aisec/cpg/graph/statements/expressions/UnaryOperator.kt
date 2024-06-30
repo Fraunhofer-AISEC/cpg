@@ -71,7 +71,7 @@ class UnaryOperator :
     override val arguments: List<Expression>?
         get() = null
 
-    override val base: Expression?
+    override val resolutionBase: Expression?
         get() = this
 
     private fun changeExpressionAccess() {

@@ -83,6 +83,9 @@ open class BinaryOperator :
     override val arguments: List<Expression>?
         get() = listOf(rhs)
 
+    override val resolutionBase: Expression?
+        get() = lhs
+
     private fun connectNewLhs(lhs: Expression) {
         lhs.registerTypeObserver(this)
         if (lhs is Reference && "=" == operatorCode) {

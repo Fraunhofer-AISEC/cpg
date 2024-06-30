@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
@@ -259,14 +260,28 @@ class CXXDeclarationTest {
         var proxy = result.records["Proxy"]
         assertNotNull(proxy)
 
+        var op = proxy.operators["operator->"]
+        assertNotNull(op)
+
         var data = result.records["Data"]
         assertNotNull(data)
 
         var size = data.fields["size"]
         assertNotNull(size)
 
+        val p = result.refs["p"]
+        assertNotNull(p)
+        assertEquals(proxy.toType(), p.type)
+
         var sizeRef = result.memberExpressions["size"]
         assertNotNull(sizeRef)
         assertRefersTo(sizeRef, size)
+
+        // we should now have an implicit call to our operator in-between "p" and "size"
+        val opCall = sizeRef.base
+        assertNotNull(opCall)
+        assertIs<MemberCallExpression>(opCall)
+        assertEquals(p, opCall.base)
+        assertInvokes(opCall, op)
     }
 }

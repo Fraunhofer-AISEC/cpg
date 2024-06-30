@@ -437,23 +437,34 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         src: HasType,
                     ) {}
 
-                    override val base: Expression?
+                    override val resolutionBase: Expression?
                         get() = reference.base
 
-                    override val operatorCode: String?
-                        get() = "->"
+                    /*override val operatorCode: String?
+                    get() = "->"*/
                 }
             var op =
                 resolveCalleeByName("operator->", emptySignature)
                     .filterIsInstance<OperatorDeclaration>()
                     .singleOrNull()
 
-            // For now, we just re-direct the containing class, but we should actually model an
-            // implicit call to our operator in between
+            // We unfortunately, have no direct access to the AST parent, but this is a very good
+            // heuristic to get it
+            var parent = reference.base.prevEOG.singleOrNull()
+
             if (op != null) {
                 type = op.returnTypes.singleOrNull()?.root ?: unknownType()
-                // rather hacky
-                reference.name = type.root.name.fqn(reference.name.localName)
+
+                // We need to insert a new call expression to our operator in between
+                val ref =
+                    newMemberExpression(op.name, reference.base, operatorCode = ".")
+                        .implicit(op.name.localName, location = reference.location)
+                ref.refersTo = op
+                var call = newMemberCallExpression(ref).codeAndLocationFrom(ref)
+                call.invokes = listOf(op)
+
+                // Make the call our new base
+                reference.base = call
             }
         }
 
@@ -937,13 +948,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     ): Pair<Set<Type>, Type?> {
         val possibleTypes = mutableSetOf<Type>()
         var bestGuess: Type? = null
-        if (call is MemberCallExpression) {
-            call.base?.let { base ->
-                bestGuess = base.type
-                possibleTypes.add(base.type)
-                possibleTypes.addAll(base.assignedTypes)
-            }
-        } else if (call is CallExpression) {
+        if (call is CallExpression && call !is MemberCallExpression) {
             // This could be a C++ member call with an implicit this (which we do not create), so
             // let's add the current class to the possible list
             scopeManager.currentRecord?.toType()?.let {
@@ -951,7 +956,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 possibleTypes.add(it)
             }
         } else {
-            call.base?.let { base ->
+            call.resolutionBase?.let { base ->
                 bestGuess = base.type
                 possibleTypes.add(base.type)
                 possibleTypes.addAll(base.assignedTypes)

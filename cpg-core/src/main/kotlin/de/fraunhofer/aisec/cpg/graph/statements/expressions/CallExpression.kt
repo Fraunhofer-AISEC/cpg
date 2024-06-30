@@ -255,9 +255,6 @@ open class CallExpression : ResolvableExpression<FunctionDeclaration>(), Argumen
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
 
-    override val base: Expression?
-        get() = null
-
-    override val operatorCode: String?
+    override val resolutionBase: Expression?
         get() = null
 }

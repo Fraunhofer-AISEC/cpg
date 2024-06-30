@@ -44,11 +44,12 @@ import org.neo4j.ogm.annotation.Relationship
  * example would be a [CallExpression], which is resolved to a [FunctionDeclaration]. but if
  * languages have the trait [HasOperatorOverloading], also operators, such as an [UnaryOperator]
  */
-abstract class ResolvableExpression<T : FunctionDeclaration> :
-    Expression(), HasBase, HasType.TypeObserver {
+abstract class ResolvableExpression<T : FunctionDeclaration> : Expression(), HasType.TypeObserver {
     abstract val signature: List<Type>
 
     abstract val arguments: List<Expression>?
+
+    abstract val resolutionBase: Expression?
 
     /**
      * Connection to its [T]. This will be populated by the [SymbolResolver]. This will have an
