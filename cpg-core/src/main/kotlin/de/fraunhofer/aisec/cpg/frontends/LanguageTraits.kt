@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.*
 import kotlin.reflect.KClass
 
@@ -85,29 +84,6 @@ interface HasTemplates : HasGenerics {
  */
 interface HasDefaultArguments : LanguageTrait
 
-/**
- * A language trait that specifies that this language has a complex call resolution that we need to
- * fine-tune in the language implementation.
- */
-interface HasComplexCallResolution : LanguageTrait {
-    /**
-     * A function that can be used to fine-tune resolution of a method [call].
-     *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
-     *
-     * @return a list of [FunctionDeclaration] candidates.
-     */
-    fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
-        possibleContainingTypes: Set<Type>,
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
-        callResolver: SymbolResolver
-    ): List<FunctionDeclaration>
-}
-
 /** A language trait that specifies if the language supports function pointers. */
 interface HasFunctionPointers : LanguageTrait
 
@@ -134,12 +110,12 @@ interface HasClasses : LanguageTrait
 interface HasSuperClasses : LanguageTrait {
     /**
      * Determines which keyword is used to access functions, etc. of the superclass of an object
-     * (often "super).
+     * (often `super`).
      */
     val superClassKeyword: String
 
-    fun handleSuperCall(
-        callee: MemberExpression,
+    fun handleSuperExpression(
+        me: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
     ): Boolean

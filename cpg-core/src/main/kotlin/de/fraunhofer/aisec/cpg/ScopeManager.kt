@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
@@ -596,8 +597,6 @@ class ScopeManager : ScopeProvider {
      *
      * @param ref
      * @return
-     *
-     * TODO: We should merge this function with [.resolveFunction]
      */
     fun resolveReference(ref: Reference): ValueDeclaration? {
         val startScope = ref.scope
@@ -614,7 +613,10 @@ class ScopeManager : ScopeProvider {
             return pair.second
         }
 
-        val (scope, name) = extractScope(ref, startScope)
+        var (scope, name) = extractScope(ref, startScope)
+        if (scope == null) {
+            scope = startScope
+        }
 
         // Try to resolve value declarations according to our criteria
         val decl =
@@ -657,111 +659,8 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Tries to resolve a function in a call expression.
-     *
-     * @param call the call expression
-     * @return a list of possible functions
-     */
-    @JvmOverloads
-    fun resolveFunctionLegacy(
-        call: CallExpression,
-        startScope: Scope? = currentScope
-    ): List<FunctionDeclaration> {
-        val (scope, name) = extractScope(call, startScope)
-
-        val func =
-            resolve<FunctionDeclaration>(scope) {
-                it.name.lastPartsMatch(name) &&
-                    it.matchesSignature(call.signature) != IncompatibleSignature
-            }
-
-        return func
-    }
-
-    /**
-     * This function tries to resolve a [CallExpression] into its matching [FunctionDeclaration] (or
-     * multiple functions, if applicable). The result is returned in the form of a
-     * [CallResolutionResult] which holds detail information about intermediate results as well as
-     * the kind of success the resolution had.
-     *
-     * Note: The [CallExpression.callee] needs to be resolved first, otherwise the call resolution
-     * fails.
-     */
-    fun resolveCall(call: CallExpression, startScope: Scope? = currentScope): CallResolutionResult {
-        val result =
-            CallResolutionResult(
-                call,
-                setOf(),
-                setOf(),
-                mapOf(),
-                setOf(),
-                CallResolutionResult.SuccessKind.UNRESOLVED,
-                startScope,
-            )
-        val language = call.language
-
-        if (language == null) {
-            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
-            return result
-        }
-
-        // We can only resolve non-dynamic function calls here that have a reference node to our
-        // function
-        val callee = call.callee as? Reference ?: return result
-
-        val (scope, _) = extractScope(callee, startScope)
-        result.actualStartScope = scope
-
-        // Retrieve a list of possible functions with a matching name
-        result.candidateFunctions =
-            callee.candidates.filterIsInstance<FunctionDeclaration>().toSet()
-
-        if (call.language !is HasFunctionOverloading) {
-            // If the function does not allow function overloading, and we have multiple candidate
-            // symbols, the
-            // result is "problematic"
-            if (result.candidateFunctions.size > 1) {
-                result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
-            }
-        }
-
-        // Filter functions that match the signature of our call, either directly or with casts;
-        // those functions are "viable". Take default arguments into account if the language has
-        // them.
-        result.signatureResults =
-            result.candidateFunctions
-                .map {
-                    Pair(
-                        it,
-                        it.matchesSignature(
-                            call.signature,
-                            call.language is HasDefaultArguments,
-                            call
-                        )
-                    )
-                }
-                .filter { it.second is SignatureMatches }
-                .associate { it }
-        result.viableFunctions = result.signatureResults.keys
-
-        // If we have a "problematic" result, we can stop here. In this case we cannot really
-        // determine anything more.
-        if (result.success == CallResolutionResult.SuccessKind.PROBLEMATIC) {
-            result.bestViable = result.viableFunctions
-            return result
-        }
-
-        // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
-        // the success kind.
-        val pair = language.bestViableResolution(result)
-        result.bestViable = pair.first
-        result.success = pair.second
-
-        return result
-    }
-
-    /**
-     * This function extracts a scope for the [Name] in node, e.g. if the name is fully qualified.
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
+     * returned, if no scope can be extracted.
      *
      * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
      * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
@@ -776,7 +675,7 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -803,7 +702,7 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope,
     ): Pair<Scope?, Name> {
         var n = name
-        var s = scope
+        var s: Scope? = null
 
         // First, we need to check, whether we have some kind of scoping.
         if (n.isQualified()) {
@@ -910,12 +809,6 @@ class ScopeManager : ScopeProvider {
         return ret
     }
 
-    fun resolveFunctionStopScopeTraversalOnDefinition(
-        call: CallExpression
-    ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
-    }
-
     /**
      * Traverses the scope upwards and looks for declarations of type [T] which matches the
      * condition [predicate].
@@ -928,7 +821,7 @@ class ScopeManager : ScopeProvider {
      * @param predicate predicate the element must match to
      * @param <T>
      */
-    inline fun <reified T : Declaration> resolve(
+    internal inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
         noinline predicate: (T) -> Boolean
@@ -936,7 +829,7 @@ class ScopeManager : ScopeProvider {
         return resolve(T::class.java, searchScope, stopIfFound, predicate)
     }
 
-    fun <T : Declaration> resolve(
+    internal fun <T : Declaration> resolve(
         klass: Class<T>,
         searchScope: Scope?,
         stopIfFound: Boolean = false,
@@ -1084,9 +977,21 @@ class ScopeManager : ScopeProvider {
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val (scope, n) = extractScope(name, location, startScope)
+
+        // We need to differentiate between a qualified and unqualified lookup. We have a qualified
+        // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            scope?.lookupSymbol(n.localName, predicate = predicate)?.toMutableList()
-                ?: mutableListOf()
+            // TODO(oxisto): extractScope does not return null in all cases, so we need to make sure
+            //  that the returned scope is NOT our startscope
+            if (scope != null && scope is NameScope && scope != startScope) {
+                    scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
+                }
+                // Otherwise, we can look up the symbol alone (without any FQN) starting from the
+                // startScope
+                else {
+                    startScope?.lookupSymbol(n.localName, predicate = predicate)
+                }
+                ?.toMutableList() ?: return listOf()
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
@@ -1132,8 +1037,8 @@ data class SignatureMatches(override val casts: List<CastResult>) : SignatureRes
 
 fun FunctionDeclaration.matchesSignature(
     signature: List<Type>,
+    arguments: List<Expression>? = null,
     useDefaultArguments: Boolean = false,
-    call: CallExpression? = null,
 ): SignatureResult {
     val casts = mutableListOf<CastResult>()
 
@@ -1155,7 +1060,7 @@ fun FunctionDeclaration.matchesSignature(
             // Check, if we can cast the arg into our target type; and if, yes, what is
             // the "distance" to the base type. We need this to narrow down the type during
             // resolving
-            val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
+            val match = type.tryCast(param.type, arguments?.getOrNull(i), param)
             if (match == CastNotPossible) {
                 return IncompatibleSignature
             }
@@ -1198,13 +1103,16 @@ fun FunctionDeclaration.matchesSignature(
 }
 
 /**
- * This is the result of [ScopeManager.resolveCall]. It holds all necessary intermediate results
- * (such as [candidateFunctions], [viableFunctions]) as well as the final result (see [bestViable])
- * of the call resolution.
+ * This is the result of [SymbolResolver.resolveWithArguments]. It holds all necessary intermediate
+ * results (such as [candidateFunctions], [viableFunctions]) as well as the final result (see
+ * [bestViable]) of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original call expression. */
-    val call: CallExpression,
+    /** The original expression that triggered the resolution. Most likely a [CallExpression]. */
+    val source: Expression,
+
+    /** The arguments that were supplied to the expression. */
+    val arguments: List<Expression>,
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
@@ -1235,7 +1143,7 @@ data class CallResolutionResult(
     /**
      * The actual start scope of the resolution, after [ScopeManager.extractScope] is called on the
      * callee. This can differ from the original start scope parameter handed to
-     * [ScopeManager.resolveCall] if the callee contains an FQN.
+     * [SymbolResolver.resolveWithArguments] if the callee contains an FQN.
      */
     var actualStartScope: Scope?
 ) {

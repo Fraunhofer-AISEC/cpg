@@ -75,8 +75,8 @@ class RubyLanguage() :
             "^=" // Bitwise XOR assignment
         )
 
-    override fun handleSuperCall(
-        callee: MemberExpression,
+    override fun handleSuperExpression(
+        me: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager
     ): Boolean {

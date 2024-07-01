@@ -407,10 +407,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
 
-        scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
-            it.name == import.name && it.path == import.importURL
-        }
-
         // If not, we can infer a namespace declaration, so we can bundle all inferred function
         // declarations in there
         if (namespace.isEmpty()) {

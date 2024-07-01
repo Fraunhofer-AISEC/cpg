@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -42,18 +41,18 @@ class JavaCallResolverHelper {
 
     companion object {
         /**
-         * Handle calls in the form of `super.call()` or `ClassName.super.call()`, conforming to
-         * JLS13 §15.12.1.
+         * Handle expressions in the form of `super.property` or `ClassName.super.call()`,
+         * conforming to JLS13 §15.12.1.
          *
          * This function basically sets the correct type of the [Reference] containing the "super"
-         * keyword. Afterwards, we can use the regular [SymbolResolver.resolveMemberCallee] to
-         * resolve the [MemberCallExpression].
+         * keyword. Afterward, we can use the regular [SymbolResolver.resolveMemberByName] to
+         * resolve the [MemberExpression].
          *
-         * @param callee The callee of the call expression that needs to be adjusted
+         * @param me The member expression that needs to be adjusted
          * @param curClass The class containing the call
          */
-        fun handleSuperCall(
-            callee: MemberExpression,
+        fun handleSuperExpression(
+            me: MemberExpression,
             curClass: RecordDeclaration,
             scopeManager: ScopeManager
         ): Boolean {
@@ -61,7 +60,7 @@ class JavaCallResolverHelper {
             // still need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
             if (func is MethodDeclaration) {
-                (callee.base as Reference?)?.refersTo = func.receiver
+                (me.base as Reference?)?.refersTo = func.receiver
             }
 
             // In the next step we can "cast" the base to the correct type, by setting the base
@@ -69,37 +68,36 @@ class JavaCallResolverHelper {
 
             // In case the reference is just called "super", this is a direct superclass, either
             // defined explicitly or java.lang.Object by default
-            if (callee.base.name.toString() == JavaLanguage().superClassKeyword) {
+            if (me.base.name.toString() == JavaLanguage().superClassKeyword) {
                 if (curClass.superClasses.isNotEmpty()) {
                     target = curClass.superClasses[0].root.recordDeclaration
                 } else {
                     Util.warnWithFileLocation(
-                        callee,
+                        me,
                         LOGGER,
                         "super call without direct superclass! Expected java.lang.Object to be present at least!"
                     )
                 }
             } else {
                 // BaseName.super.call(), might either be in order to specify an enclosing class or
-                // an
-                // interface that is implemented
-                target = handleSpecificSupertype(callee, curClass)
+                // an interface that is implemented
+                target = handleSpecificSupertype(me, curClass)
             }
 
             if (target != null) {
                 val superType = target.toType()
                 // Explicitly set the type of the call's base to the super type, basically "casting"
                 // the "this" object to the super class
-                callee.base.type = superType
+                me.base.type = superType
 
-                val refersTo = (callee.base as? Reference)?.refersTo
+                val refersTo = (me.base as? Reference)?.refersTo
                 if (refersTo is HasType) {
                     refersTo.type = superType
                     refersTo.assignedTypes = mutableSetOf(superType)
                 }
 
                 // Make sure that really only our super class is in the list of assigned types
-                callee.base.assignedTypes = mutableSetOf(superType)
+                me.base.assignedTypes = mutableSetOf(superType)
 
                 return true
             }
