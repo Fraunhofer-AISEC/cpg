@@ -208,4 +208,18 @@ class CXXDeclarationTest {
         val calls = result.calls("manipulateString")
         calls.forEach { assertContains(it.invokes, manipulateString) }
     }
+
+    @Test
+    fun testArithmeticOperator() {
+        val file = File("src/test/resources/cxx/operators/arithmetic.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var plusplus = result.operators["operator++"]
+        assertNotNull(plusplus)
+        assertEquals("++", plusplus.operatorCode)
+    }
 }

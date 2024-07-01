@@ -230,3 +230,6 @@ interface HasFunctionalCasts : LanguageTrait
  * multiple functions can share the same name with different parameters.
  */
 interface HasFunctionOverloading : LanguageTrait
+
+/** A language trait that specifies that this language allows overloading of operators. */
+interface HasOperatorOverloading : LanguageTrait
