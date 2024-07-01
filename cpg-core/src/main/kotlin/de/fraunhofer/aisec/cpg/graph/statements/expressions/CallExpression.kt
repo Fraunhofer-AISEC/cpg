@@ -45,7 +45,8 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
+open class CallExpression :
+    Expression(), HasType.TypeObserver, HasArgumentsAndOptionalBase, ArgumentHolder {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
@@ -85,7 +86,7 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
      * The list of arguments as a simple list. This is a delegated property delegated to
      * [argumentEdges].
      */
-    var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
+    override var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
 
     /**
      * The expression that is being "called". This is currently not yet used in the [SymbolResolver]
@@ -93,6 +94,12 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @AST var callee: Expression? = null
+
+    override val base: Expression?
+        get() = null
+
+    override val operatorCode: String?
+        get() = null
 
     /**
      * The [Name] of this call expression, based on its [callee].
@@ -150,10 +157,6 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
         arguments -= expression
         return true
     }
-
-    /** Returns the function signature as list of types of the call arguments. */
-    val signature: List<Type>
-        get() = argumentEdges.map { it.end.type }
 
     /** Specifies, whether this call has any template arguments. */
     var template = false

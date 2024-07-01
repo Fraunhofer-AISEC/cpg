@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
-/** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
-interface HasOperatorCode {
+class InterfacesTest {
 
-    /** The operator code, identifying an operation executed on one or more [Expression]s */
-    val operatorCode: String?
+    @Test
+    fun testRemoveArgument() {
+        val v: HasInitializer = VariableDeclaration()
+        val lit = Literal<String>()
+        v.initializer = lit
+        assertTrue(v.removeArgument(lit))
+    }
 }
