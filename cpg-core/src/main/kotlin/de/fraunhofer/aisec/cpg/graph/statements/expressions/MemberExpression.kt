@@ -60,7 +60,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     override val operatorArguments: List<Expression>
         get() = listOf()
 
-    override val operatorBase: HasType
+    override val operatorBase: Expression
         get() = base
 
     override fun toString(): String {

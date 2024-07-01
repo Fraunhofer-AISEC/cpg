@@ -57,7 +57,8 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         get() = listOf()
 
     /** The unary operator operates on [input]. */
-    override val operatorBase = input
+    override val operatorBase
+        get() = input
 
     /** The operator code. */
     override var operatorCode: String? = null

@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
@@ -343,7 +344,29 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return null
         }
         var member: ValueDeclaration? = null
-        val record = containingClass.recordDeclaration
+        var type = containingClass
+
+        // Check for a possible overloaded operator->
+        if (
+            reference.language is HasOperatorOverloading &&
+                reference is MemberExpression &&
+                reference.operatorCode == "->" &&
+                reference.base.type !is PointerType
+        ) {
+            val result = resolveOperator(reference)
+            val op = result?.bestViable?.singleOrNull()
+            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
+                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
+
+                // We need to insert a new operator call expression in between
+                val call = operatorCallFromDeclaration(op, reference)
+
+                // Make the call our new base
+                reference.base = call
+            }
+        }
+
+        val record = type.recordDeclaration
         if (record != null) {
             member =
                 record.fields
@@ -353,8 +376,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         if (member == null) {
             member =
-                (containingClass.recordDeclaration?.superTypeDeclarations?.flatMap { it.fields }
-                        ?: listOf())
+                type.superTypes
+                    .flatMap { it.recordDeclaration?.fields ?: listOf() }
                     .filter { it.name.localName == reference.name.localName }
                     .map { it.definition }
                     .firstOrNull()
@@ -390,6 +413,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     null
                 }
             }
+        }
+    }
+
+    /**
+     * Creates a new [OperatorCallExpression] to a [OperatorDeclaration] and also sets the
+     * appropriate fields such as [CallExpression.invokes] and [Reference.refersTo].
+     */
+    private fun operatorCallFromDeclaration(
+        decl: OperatorDeclaration,
+        op: HasOverloadedOperation
+    ): OperatorCallExpression {
+        return with(decl) {
+            val ref =
+                newMemberExpression(decl.name, op.operatorBase, operatorCode = ".")
+                    .implicit(decl.name.localName, location = op.location)
+            ref.refersTo = decl
+            val call =
+                newOperatorCallExpression(operatorCode = op.operatorCode ?: "", ref)
+                    .codeAndLocationFrom(ref)
+            call.invokes = mutableListOf(decl)
+            call
         }
     }
 
@@ -448,6 +492,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             is Reference -> handleReference(currClass, node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(node)
+            is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
     }
 
@@ -724,6 +769,44 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val constructor = getConstructorDeclaration(constructExpression, recordDeclaration)
             constructExpression.constructor = constructor
         }
+    }
+
+    private fun handleOverloadedOperator(op: HasOverloadedOperation) {
+        val result = resolveOperator(op)
+        val decl = result?.bestViable?.singleOrNull() ?: return
+
+        // If the result was successful, we can replace the node
+        if (result.success == SUCCESSFUL && decl is OperatorDeclaration && op is Expression) {
+            val call = operatorCallFromDeclaration(decl, op)
+            walker.replace(op.astParent, op, call)
+        }
+    }
+
+    private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult? {
+        val language = op.language
+        val base = op.operatorBase
+        if (language !is HasOperatorOverloading || language.isPrimitive(base.type)) {
+            return null
+        }
+
+        val symbol = language.overloadedOperatorNames[Pair(op::class, op.operatorCode)]
+        if (symbol == null) {
+            log.warn(
+                "Could not resolve operator overloading for unknown operatorCode ${op.operatorCode}"
+            )
+            return null
+        }
+
+        val possibleTypes = mutableSetOf<Type>()
+        possibleTypes.add(op.operatorBase.type)
+        possibleTypes.addAll(op.operatorBase.assignedTypes)
+
+        val candidates =
+            resolveMemberByName(symbol, possibleTypes)
+                .filterIsInstance<OperatorDeclaration>()
+                .toSet()
+
+        return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
 
     /**

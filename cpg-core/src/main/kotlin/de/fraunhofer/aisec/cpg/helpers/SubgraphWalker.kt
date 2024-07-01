@@ -27,10 +27,15 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -339,4 +344,39 @@ object SubgraphWalker {
             handler.accept(scopeManager.currentRecord, parent, current)
         }
     }
+}
+
+context(ContextProvider)
+fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
+    val success =
+        when (parent) {
+            is ArgumentHolder -> parent.replace(old, new)
+            is StatementHolder -> parent.replace(old, new)
+            else -> {
+                Pass.log.error(
+                    "Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."
+                )
+                return false
+            }
+        }
+
+    if (!success) {
+        Pass.log.error(
+            "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
+        )
+    } else {
+        // Store any eventual EOG nodes and disconnect old node
+        val oldPrevEOG = old.prevEOG.toMutableList()
+        val oldNextEOG = old.nextEOG.toMutableList()
+        old.disconnectFromGraph()
+
+        // Put the stored EOG nodes to the new node
+        new.prevEOG = oldPrevEOG
+        new.nextEOG = oldNextEOG
+
+        // Make sure to inform the walker about our change
+        this.registerReplacement(old, new)
+    }
+
+    return success
 }

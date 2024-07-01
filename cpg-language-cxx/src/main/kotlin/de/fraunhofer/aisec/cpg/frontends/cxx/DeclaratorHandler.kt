@@ -171,7 +171,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 // Check if it's an operator
                 name.isKnownOperatorName -> {
                     // retrieve the operator code
-                    var operatorCode = name.localName.drop("operator".length)
+                    val operatorCode = name.localName.drop("operator".length)
                     newOperatorDeclaration(name, operatorCode, rawNode = ctx)
                 }
                 // Check, if it's a constructor. This is the case if the local names of the function
@@ -511,9 +511,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /** Checks whether the [Name] for a function is a known operator name. */
-    val Name.isKnownOperatorName: Boolean
+    private val Name.isKnownOperatorName: Boolean
         get() {
-            var language = language
+            val language = language
             if (language !is HasOperatorOverloading) {
                 return false
             }

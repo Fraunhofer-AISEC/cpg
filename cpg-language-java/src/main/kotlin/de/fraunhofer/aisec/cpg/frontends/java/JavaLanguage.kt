@@ -39,7 +39,6 @@ import org.neo4j.ogm.annotation.Transient
 /** The Java language. */
 open class JavaLanguage :
     Language<JavaLanguageFrontend>(),
-    // HasComplexCallResolution,
     HasClasses,
     HasSuperClasses,
     HasGenerics,

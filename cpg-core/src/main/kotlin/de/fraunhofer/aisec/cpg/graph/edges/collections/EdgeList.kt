@@ -82,6 +82,16 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return ok
     }
 
+    fun replace(old: NodeType, new: NodeType): Boolean {
+        val idx = this.indexOfFirst { it.end == old }
+        if (idx != -1) {
+            this[idx] = init(thisRef, new)
+            return true
+        }
+
+        return false
+    }
+
     override fun clear() {
         // Make a copy of our edges so we can pass a copy to our on-remove handler
         val edges = this.toList()

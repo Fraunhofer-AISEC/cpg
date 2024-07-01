@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
@@ -170,7 +171,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     cast.expression = call.arguments.single()
     cast.name = cast.castType.name
 
-    replaceArgument(parent, call, cast)
+    replace(parent, call, cast)
 }
 
 context(ContextProvider)
@@ -188,27 +189,5 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     construct.arguments = call.arguments
     construct.type = type
 
-    replaceArgument(parent, call, construct)
-}
-
-context(ContextProvider)
-fun SubgraphWalker.ScopedWalker.replaceArgument(parent: Node?, old: Expression, new: Expression) {
-    if (parent !is ArgumentHolder) {
-        Pass.log.error(
-            "Parent AST node of call expression is not an argument holder. Cannot convert to cast expression. Further analysis might not be entirely accurate."
-        )
-        return
-    }
-
-    val success = parent.replaceArgument(old, new)
-    if (!success) {
-        Pass.log.error(
-            "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
-        )
-    } else {
-        old.disconnectFromGraph()
-
-        // Make sure to inform the walker about our change
-        this.registerReplacement(old, new)
-    }
+    replace(parent, call, construct)
 }

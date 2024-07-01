@@ -263,7 +263,7 @@ open class CallExpression :
      * is overloaded. In this case we want the [operatorBase] to point to [callee], so we can take
      * its type to lookup the necessary [OperatorDeclaration].
      */
-    override val operatorBase: HasType
+    override val operatorBase: Expression
         get() = callee
 
     override fun equals(other: Any?): Boolean {
