@@ -46,9 +46,14 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
             changeExpressionAccess()
         }
 
-    /** The unary operator operates on itself. */
-    override val base: Expression?
-        get() = this
+    /**
+     * The unary operator does not have any arguments, since [input] is already the [operatorBase].
+     */
+    override val operatorArguments: List<Expression>
+        get() = listOf()
+
+    /** The unary operator operates on [input]. */
+    override val operatorBase = input
 
     /** The operator code. */
     override var operatorCode: String? = null

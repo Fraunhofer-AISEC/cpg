@@ -60,7 +60,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     }
 
     /**
-     * Computes the CDG for the given [functionDeclaration]. It performs the following steps:
+     * Computes the CDG for the given [startNode]. It performs the following steps:
      * 1) Compute the "parent branching node" for each node and through which path the node is
      *    reached
      * 2) Find out which branch of a [BranchingNode] is actually conditional. The other ones aren't.
@@ -226,27 +226,23 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             Pair(functionDeclaration, setOf(functionDeclaration)),
             *functionDeclaration
                 .allChildren<BranchingNode>()
+                .filterIsInstance<Node>()
                 .map { branchingNode ->
                     val mergingPoints =
-                        if (
-                            (branchingNode as? Node)?.nextEOGEdges?.any {
-                                !it.isConditionalBranch()
-                            } == true
-                        ) {
+                        if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
                             // There's an unconditional path (case 1), so when reaching this branch,
                             // we're done. Collect all (=1) unconditional branches.
-                            (branchingNode as? Node)
-                                ?.nextEOGEdges
-                                ?.filter { !it.isConditionalBranch() }
-                                ?.map { it.end }
-                                ?.toSet()
+                            branchingNode.nextEOGEdges
+                                .filter { !it.isConditionalBranch() }
+                                .map { it.end }
+                                .toSet()
                         } else {
                             // All branches are executed based on some condition (case 2), so we
                             // collect all these branches.
-                            (branchingNode as Node).nextEOGEdges.map { it.end }.toSet()
+                            branchingNode.nextEOGEdges.map { it.end }.toSet()
                         }
                     // Map this branching node to its merging points
-                    Pair(branchingNode as Node, mergingPoints)
+                    Pair(branchingNode, mergingPoints)
                 }
                 .toTypedArray()
         )
