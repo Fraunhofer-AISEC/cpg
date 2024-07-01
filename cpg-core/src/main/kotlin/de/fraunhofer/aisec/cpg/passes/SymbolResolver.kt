@@ -448,10 +448,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     .filterIsInstance<OperatorDeclaration>()
                     .singleOrNull()
 
-            // We unfortunately, have no direct access to the AST parent, but this is a very good
-            // heuristic to get it
-            var parent = reference.base.prevEOG.singleOrNull()
-
             if (op != null) {
                 type = op.returnTypes.singleOrNull()?.root ?: unknownType()
 
@@ -460,7 +456,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     newMemberExpression(op.name, reference.base, operatorCode = ".")
                         .implicit(op.name.localName, location = reference.location)
                 ref.refersTo = op
-                var call = newOperatorCallExpression(operatorCode = ".", ref).codeAndLocationFrom(ref)
+                var call =
+                    newOperatorCallExpression(operatorCode = "->", ref).codeAndLocationFrom(ref)
                 call.invokes = listOf(op)
 
                 // Make the call our new base

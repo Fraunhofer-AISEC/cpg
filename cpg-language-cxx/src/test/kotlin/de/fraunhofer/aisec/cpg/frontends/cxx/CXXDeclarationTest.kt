@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
@@ -280,7 +280,7 @@ class CXXDeclarationTest {
         // we should now have an implicit call to our operator in-between "p" and "size"
         val opCall = sizeRef.base
         assertNotNull(opCall)
-        assertIs<MemberCallExpression>(opCall)
+        assertIs<OperatorCallExpression>(opCall)
         assertEquals(p, opCall.base)
         assertInvokes(opCall, op)
     }

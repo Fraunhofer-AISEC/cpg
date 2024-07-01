@@ -293,11 +293,10 @@ fun MetadataProvider.newOperatorCallExpression(
     rawNode: Any? = null
 ): OperatorCallExpression {
     val node = OperatorCallExpression()
-    node.applyMetadata(
-        this,
-        operatorCode,
-        rawNode
-    )
+    node.applyMetadata(this, operatorCode, rawNode)
+
+    node.operatorCode = operatorCode
+    node.callee = callee
 
     log(node)
     return node

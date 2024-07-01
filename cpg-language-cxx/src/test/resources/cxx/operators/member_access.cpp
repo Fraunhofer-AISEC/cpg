@@ -19,4 +19,6 @@ public:
 int main() {
     Proxy p;
     int size = p->size;
+
+    // int another_size = p.operator->()->size;
 }

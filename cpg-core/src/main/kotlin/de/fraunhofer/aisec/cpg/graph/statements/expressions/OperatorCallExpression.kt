@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
@@ -34,11 +35,21 @@ import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
  * In this case, we replace the original [BinaryOperator] with an [OperatorCallExpression], which
  * points to its respective [OperatorDeclaration].
  */
-class OperatorCallExpression : CallExpression(), HasOperatorCode {
+class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
 
-    override val operatorCode: String? = null
+    override var operatorCode: String? = null
 
     override var name: Name
         get() = Name(operatorCode ?: "")
         set(_) {}
+
+    /**
+     * The base object. This is basically a shortcut to accessing the base of the [callee], if it
+     * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a
+     * [MemberExpression].
+     */
+    override val base: Expression?
+        get() {
+            return (callee as? HasBase)?.base
+        }
 }
