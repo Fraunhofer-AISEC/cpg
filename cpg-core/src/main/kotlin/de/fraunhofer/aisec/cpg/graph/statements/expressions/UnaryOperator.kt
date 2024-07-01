@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -53,7 +49,8 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         get() = listOf()
 
     /** The unary operator operates on [input]. */
-    override val operatorBase = input
+    override val operatorBase
+        get() = input
 
     /** The operator code. */
     override var operatorCode: String? = null

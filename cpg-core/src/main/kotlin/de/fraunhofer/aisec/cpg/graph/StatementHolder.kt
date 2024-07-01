@@ -71,6 +71,16 @@ interface StatementHolder : Holder<Statement> {
         statementEdges.add(propertyEdge)
     }
 
+    fun replaceStatement(old: Statement, new: Statement): Boolean {
+        var found = statementEdges.firstOrNull { it.end == old }
+        if (found != null) {
+            found.end = new
+            return true
+        }
+
+        return false
+    }
+
     /** Inserts the statement [s] before the statement specified in [before]. */
     fun insertStatementBefore(s: Statement, beforeStmt: Statement) {
         val statements = this.statements

@@ -130,19 +130,23 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     cast.expression = call.arguments.single()
     cast.name = cast.castType.name
 
-    replaceArgument(parent, call, cast)
+    replace(parent, call, cast)
 }
 
 context(ContextProvider)
-fun SubgraphWalker.ScopedWalker.replaceArgument(parent: Node?, old: Expression, new: Expression) {
-    if (parent !is ArgumentHolder) {
-        Pass.log.error(
-            "Parent AST node of call expression is not an argument holder. Cannot convert to cast expression. Further analysis might not be entirely accurate."
-        )
-        return
-    }
+fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
+    val success =
+        if (parent is ArgumentHolder) {
+            parent.replaceArgument(old, new)
+        } else if (parent is StatementHolder) {
+            parent.replaceStatement(old, new)
+        } else {
+            Pass.log.error(
+                "Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."
+            )
+            return false
+        }
 
-    val success = parent.replaceArgument(old, new)
     if (!success) {
         Pass.log.error(
             "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
@@ -153,4 +157,6 @@ fun SubgraphWalker.ScopedWalker.replaceArgument(parent: Node?, old: Expression, 
         // Make sure to inform the walker about our change
         this.registerReplacement(old, new)
     }
+
+    return success
 }

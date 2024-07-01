@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.HasBase
-import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
@@ -56,7 +52,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     override val operatorArguments: List<Expression>
         get() = listOf()
 
-    override val operatorBase: HasType
+    override val operatorBase: Expression
         get() = base
 
     override fun toString(): String {
