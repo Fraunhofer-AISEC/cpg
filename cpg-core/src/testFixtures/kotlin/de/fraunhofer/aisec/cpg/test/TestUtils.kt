@@ -240,7 +240,7 @@ fun assertRefersTo(expression: Expression?, b: Declaration?) {
  * Asserts, that the call expression given in [call] refers to the expected function declaration
  * [func].
  */
-fun assertInvokes(call: CallExpression?, func: FunctionDeclaration?) {
+fun assertInvokes(call: CallExpression, func: FunctionDeclaration?) {
     assertNotNull(call)
     assertContains(call.invokes, func)
 }

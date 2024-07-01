@@ -287,6 +287,28 @@ fun MetadataProvider.newCallExpression(
  * prepended argument.
  */
 @JvmOverloads
+fun MetadataProvider.newOperatorCallExpression(
+    operatorCode: String,
+    callee: Expression?,
+    rawNode: Any? = null
+): OperatorCallExpression {
+    val node = OperatorCallExpression()
+    node.applyMetadata(this, operatorCode, rawNode)
+
+    node.operatorCode = operatorCode
+    node.callee = callee
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [MemberCallExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
     callee: Expression?,
     isStatic: Boolean = false,

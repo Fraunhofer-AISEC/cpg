@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -664,7 +665,7 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun resolveFunctionLegacy(
-        call: CallExpression,
+        call: HasArgumentsAndOptionalBase,
         startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
         val (scope, name) = extractScope(call, startScope)
@@ -672,7 +673,7 @@ class ScopeManager : ScopeProvider {
         val func =
             resolve<FunctionDeclaration>(scope) {
                 it.name.lastPartsMatch(name) &&
-                    it.matchesSignature(call.signature) != IncompatibleSignature
+                    it.matchesSignature(call.arguments.map(HasType::type)) != IncompatibleSignature
             }
 
         return func
@@ -687,7 +688,7 @@ class ScopeManager : ScopeProvider {
      * Note: The [CallExpression.callee] needs to be resolved first, otherwise the call resolution
      * fails.
      */
-    fun resolveCall(call: CallExpression, startScope: Scope? = currentScope): CallResolutionResult {
+    fun resolveCall(call: CallExpression): CallResolutionResult {
         val result =
             CallResolutionResult(
                 call,
@@ -696,7 +697,7 @@ class ScopeManager : ScopeProvider {
                 mapOf(),
                 setOf(),
                 CallResolutionResult.SuccessKind.UNRESOLVED,
-                startScope,
+                call.scope,
             )
         val language = call.language
 
@@ -709,7 +710,7 @@ class ScopeManager : ScopeProvider {
         // function
         val callee = call.callee as? Reference ?: return result
 
-        val (scope, _) = extractScope(callee, startScope)
+        val (scope, _) = extractScope(callee, call.scope)
         result.actualStartScope = scope
 
         // Retrieve a list of possible functions with a matching name
@@ -736,7 +737,7 @@ class ScopeManager : ScopeProvider {
                         it.matchesSignature(
                             call.signature,
                             call.language is HasDefaultArguments,
-                            call
+                            call.arguments
                         )
                     )
                 }
@@ -776,7 +777,7 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -894,7 +895,7 @@ class ScopeManager : ScopeProvider {
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
-        call: CallExpression
+        call: HasArgumentsAndOptionalBase
     ): List<FunctionDeclaration> {
         return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
     }
@@ -1113,7 +1114,7 @@ data class SignatureMatches(override val casts: List<CastResult>) : SignatureRes
 fun FunctionDeclaration.matchesSignature(
     signature: List<Type>,
     useDefaultArguments: Boolean = false,
-    call: CallExpression? = null,
+    argumentHints: List<Expression>? = null,
 ): SignatureResult {
     val casts = mutableListOf<CastResult>()
 
@@ -1135,7 +1136,7 @@ fun FunctionDeclaration.matchesSignature(
             // Check, if we can cast the arg into our target type; and if, yes, what is
             // the "distance" to the base type. We need this to narrow down the type during
             // resolving
-            val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
+            val match = type.tryCast(param.type, argumentHints?.getOrNull(i), param)
             if (match == CastNotPossible) {
                 return IncompatibleSignature
             }
@@ -1183,8 +1184,11 @@ fun FunctionDeclaration.matchesSignature(
  * of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original call expression. */
-    val call: CallExpression,
+    /**
+     * The original call expression or something that implements [HasArgumentsAndOptionalBase] (e.g.
+     * an overloaded operator expression).
+     */
+    val call: HasArgumentsAndOptionalBase,
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using

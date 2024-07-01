@@ -45,35 +45,8 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
-    /**
-     * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
-     * will have an effect on the [type]
-     */
-    @PopulatedByPass(SymbolResolver::class)
-    @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
-        protected set
-
-    /**
-     * A virtual property to quickly access the list of declarations that this call invokes without
-     * property edges.
-     */
-    @PopulatedByPass(SymbolResolver::class)
-    var invokes: List<FunctionDeclaration>
-        get(): List<FunctionDeclaration> {
-            val targets: MutableList<FunctionDeclaration> = ArrayList()
-            for (propertyEdge in invokeEdges) {
-                targets.add(propertyEdge.end)
-            }
-            return Collections.unmodifiableList(targets)
-        }
-        set(value) {
-            unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
-            invokeEdges = wrap(value, this)
-            value.forEach { it.registerTypeObserver(this) }
-        }
-
+open class CallExpression :
+    Expression(), ArgumentHolder, HasArgumentsAndOptionalBase, HasType.TypeObserver {
     /**
      * The list of arguments of this call expression, backed by a list of [PropertyEdge] objects.
      */
@@ -85,7 +58,7 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
      * The list of arguments as a simple list. This is a delegated property delegated to
      * [argumentEdges].
      */
-    var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
+    override var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
 
     /**
      * The expression that is being "called". This is currently not yet used in the [SymbolResolver]
@@ -113,6 +86,30 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
         }
         set(_) {
             // read-only
+        }
+
+    /**
+     * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
+     * will have an effect on the [HasType.type].
+     */
+    @PopulatedByPass(SymbolResolver::class)
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
+    var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
+        protected set
+
+    /**
+     * A virtual property to quickly access the list of declarations that this call invokes without
+     * property edges.
+     */
+    @PopulatedByPass(SymbolResolver::class)
+    var invokes: List<FunctionDeclaration>
+        get(): List<FunctionDeclaration> {
+            return unwrap(invokeEdges)
+        }
+        set(value) {
+            unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
+            invokeEdges = wrap(value, this)
+            value.forEach { it.registerTypeObserver(this) }
         }
 
     fun setArgument(index: Int, argument: Expression) {
@@ -284,4 +281,10 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
+
+    override val base: Expression?
+        get() = null
+
+    override val operatorCode: String?
+        get() = null
 }

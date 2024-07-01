@@ -25,14 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.CallResolutionResult
+import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.HasArgumentsAndOptionalBase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import org.neo4j.ogm.annotation.Transient
@@ -47,10 +54,33 @@ open class CPPLanguage :
     HasClasses,
     HasUnknownType,
     HasFunctionalCasts,
-    HasFunctionOverloading {
+    HasFunctionOverloading,
+    HasOperatorOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
+
+    override val operatorNames: Map<String, Symbol>
+        get() =
+            mapOf(
+                // Arithmetic operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_arithmetic
+                "+" to "operator+",
+                "-" to "operator-",
+                "*" to "operator+",
+                "/" to "operator/",
+                "%" to "operator%",
+                "&" to "operator&",
+                "|" to "operator|",
+                "^" to "operator^",
+                "<<" to "operator<<",
+                ">>" to "operator>>",
+
+                // Increment/decrement operators. See
+                // https://en.cppreference.com/w/cpp/language/operator_incdec
+                "++" to "operator++",
+                "--" to "operator--",
+            )
 
     /**
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
@@ -113,21 +143,21 @@ open class CPPLanguage :
      *   resolution techniques
      */
     override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
+        symbol: Symbol,
         possibleContainingTypes: Set<Type>,
-        call: CallExpression,
+        call: HasArgumentsAndOptionalBase,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
-    ): List<FunctionDeclaration> {
-        var invocationCandidates = mutableListOf<FunctionDeclaration>()
+    ): Set<FunctionDeclaration> {
+        var invocationCandidates = mutableSetOf<FunctionDeclaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
             invocationCandidates.addAll(
-                callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
+                callResolver.getInvocationCandidatesFromRecord(record, symbol, call)
             )
         }
-        if (invocationCandidates.isEmpty()) {
+        if (invocationCandidates.isEmpty() && call is CallExpression) {
             // This could be a regular function call that somehow ends up here because of weird
             // complexity of the old call resolver
             val result = ctx.scopeManager.resolveCall(call)
@@ -139,7 +169,7 @@ open class CPPLanguage :
         // resolver completely.
         if (call is MemberCallExpression) {
             invocationCandidates =
-                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableList()
+                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableSet()
         }
         return invocationCandidates
     }
@@ -155,6 +185,17 @@ open class CPPLanguage :
             return match
         }
 
+        // Another special rule is that if we have a (const) reference (e.g. const T&) in a function
+        // call, this will match the type T because this means that the parameter is given by
+        // reference rather than by value.
+        if (
+            targetType is ReferenceType &&
+                targetType.elementType == type &&
+                targetHint is ParameterDeclaration
+        ) {
+            return DirectMatch
+        }
+
         // In C++, it is possible to have conversion constructors. We will not have full support for
         // them yet, but at least we should have some common cases here, such as const char* to
         // std::string
@@ -167,6 +208,27 @@ open class CPPLanguage :
         }
 
         return CastNotPossible
+    }
+
+    override fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+        // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
+        // increment and decrement operators. See
+        // https://en.cppreference.com/w/cpp/language/operator_incdec
+        val expr = result.call
+        if (expr is UnaryOperator && (expr.operatorCode == "++" || expr.operatorCode == "--")) {
+            // If it is a postfix, we need to match for a function with a fake "int" parameter
+            if (expr.isPostfix) {
+                result.signatureResults =
+                    result.candidateFunctions
+                        .map { Pair(it, it.matchesSignature(listOf(primitiveType("int")))) }
+                        .filter { it.second is SignatureMatches }
+                        .associate { it }
+            }
+        }
+
+        return super.bestViableResolution(result)
     }
 
     override val startCharacter = '<'
