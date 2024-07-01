@@ -74,7 +74,4 @@ class MemberCallExpression : CallExpression(), HasBase, HasOperatorCode {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), base)
-
-    override val resolutionBase: Expression?
-        get() = base
 }

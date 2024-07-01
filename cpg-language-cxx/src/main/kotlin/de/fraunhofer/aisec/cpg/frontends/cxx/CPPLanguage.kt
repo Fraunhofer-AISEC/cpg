@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.HasArgumentsAndOptionalBase
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ResolvableExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.primitiveType
@@ -142,10 +142,10 @@ open class CPPLanguage :
      * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
      *   resolution techniques
      */
-    override fun <T : FunctionDeclaration> refineMethodCallResolution(
+    override fun refineMethodCallResolution(
         symbol: Symbol,
         possibleContainingTypes: Set<Type>,
-        call: ResolvableExpression<T>,
+        call: HasArgumentsAndOptionalBase,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver

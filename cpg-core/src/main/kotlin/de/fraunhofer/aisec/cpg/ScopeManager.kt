@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -664,7 +665,7 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun resolveFunctionLegacy(
-        call: ResolvableExpression<*>,
+        call: HasArgumentsAndOptionalBase,
         startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
         val (scope, name) = extractScope(call, startScope)
@@ -672,7 +673,7 @@ class ScopeManager : ScopeProvider {
         val func =
             resolve<FunctionDeclaration>(scope) {
                 it.name.lastPartsMatch(name) &&
-                    it.matchesSignature(call.signature) != IncompatibleSignature
+                    it.matchesSignature(call.arguments.map(HasType::type)) != IncompatibleSignature
             }
 
         return func
@@ -776,7 +777,7 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -894,7 +895,7 @@ class ScopeManager : ScopeProvider {
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
-        call: ResolvableExpression<*>
+        call: HasArgumentsAndOptionalBase
     ): List<FunctionDeclaration> {
         return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
     }
@@ -1183,8 +1184,11 @@ fun FunctionDeclaration.matchesSignature(
  * of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original call expression. */
-    val call: ResolvableExpression<*>,
+    /**
+     * The original call expression or something that implements [HasArgumentsAndOptionalBase] (e.g.
+     * an overloaded operator expression).
+     */
+    val call: HasArgumentsAndOptionalBase,
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using

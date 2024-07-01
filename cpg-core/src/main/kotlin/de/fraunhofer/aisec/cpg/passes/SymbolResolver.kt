@@ -417,34 +417,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 reference.operatorCode == "->" &&
                 reference.base.type !is PointerType
         ) {
-            var emptySignature =
-                object : ResolvableExpression<OperatorDeclaration>() {
-                    override val signature: List<Type>
-                        get() = listOf()
-
-                    override val arguments: List<Expression>?
-                        get() = null
-
-                    override var language: Language<*>? = reference.language
-
-                    override fun typeChanged(
-                        newType: Type,
-                        src: HasType,
-                    ) {}
-
-                    override fun assignedTypeChanged(
-                        assignedTypes: Set<Type>,
-                        src: HasType,
-                    ) {}
-
-                    override val resolutionBase: Expression?
-                        get() = reference.base
-
-                    /*override val operatorCode: String?
-                    get() = "->"*/
-                }
             var op =
-                resolveCalleeByName("operator->", emptySignature)
+                resolveCalleeByName("operator->", reference)
                     .filterIsInstance<OperatorDeclaration>()
                     .singleOrNull()
 
@@ -570,8 +544,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             is Reference -> handleReference(currClass, node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(scopeManager.currentRecord, node)
-            is UnaryOperator -> handleOperator(node)
-            is BinaryOperator -> handleOperator(node)
+            is HasOverloadedOperator -> handleOverloadedOperator(node)
         }
     }
 
@@ -805,9 +778,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return resolveCalleeByName(callee.name.localName, call)
     }
 
-    protected fun <T : FunctionDeclaration> resolveCalleeByName(
+    protected fun resolveCalleeByName(
         symbol: Symbol,
-        call: ResolvableExpression<T>
+        call: HasArgumentsAndOptionalBase
     ): List<FunctionDeclaration> {
         val (possibleContainingTypes, _) = getPossibleContainingTypes(call)
 
@@ -888,7 +861,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param call
      * @return true if we should stop searching parent, false otherwise
      */
-    protected fun shouldSearchForInvokesInParent(call: ResolvableExpression<*>): Boolean {
+    protected fun shouldSearchForInvokesInParent(call: HasArgumentsAndOptionalBase): Boolean {
         return scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty()
     }
 
@@ -940,8 +913,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * returns a [Pair], where the first element is the set of types and the second is our best
      * guess.
      */
-    protected fun <T : FunctionDeclaration> getPossibleContainingTypes(
-        call: ResolvableExpression<T>
+    protected fun getPossibleContainingTypes(
+        call: HasArgumentsAndOptionalBase
     ): Pair<Set<Type>, Type?> {
         val possibleTypes = mutableSetOf<Type>()
         var bestGuess: Type? = null
@@ -953,7 +926,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 possibleTypes.add(it)
             }
         } else {
-            call.resolutionBase?.let { base ->
+            call.base?.let { base ->
                 bestGuess = base.type
                 possibleTypes.add(base.type)
                 possibleTypes.addAll(base.assignedTypes)
@@ -963,10 +936,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return Pair(possibleTypes, bestGuess)
     }
 
-    fun <T : FunctionDeclaration> getInvocationCandidatesFromRecord(
+    fun getInvocationCandidatesFromRecord(
         recordDeclaration: RecordDeclaration?,
         name: String,
-        call: ResolvableExpression<T>
+        call: HasArgumentsAndOptionalBase
     ): List<FunctionDeclaration> {
         if (recordDeclaration == null) {
             return listOf()
@@ -994,7 +967,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     Pair(
                         it,
                         it.matchesSignature(
-                            call.signature,
+                            call.arguments.map(HasType::type),
                             call.language is HasDefaultArguments,
                             call.arguments
                         )
@@ -1020,7 +993,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun getInvocationCandidatesFromParents(
         name: String,
-        call: ResolvableExpression<*>,
+        call: HasArgumentsAndOptionalBase,
         possibleTypes: Set<RecordDeclaration>
     ): List<FunctionDeclaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
@@ -1122,13 +1095,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             ?.inferNamespaceDeclaration(name, null, type)
     }
 
-    fun handleOperator(operator: ResolvableExpression<OperatorDeclaration>) {
+    fun handleOverloadedOperator(operator: HasOverloadedOperator) {
         var language = operator.language
-        if (
-            operator !is HasOperatorCode ||
-                language !is HasOperatorOverloading ||
-                language.isPrimitive(operator.type)
-        ) {
+        if (language !is HasOperatorOverloading || language.isPrimitive(operator.type)) {
             return
         }
 
@@ -1140,7 +1109,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        operator.invokes =
-            resolveCalleeByName(symbol, operator).filterIsInstance<OperatorDeclaration>()
+        // operator.invokes =
+        //    resolveCalleeByName(symbol, operator).filterIsInstance<OperatorDeclaration>()
+        // TODO: replace with call
+        val ops = resolveCalleeByName(symbol, operator).filterIsInstance<OperatorDeclaration>()
+        println(ops)
     }
 }

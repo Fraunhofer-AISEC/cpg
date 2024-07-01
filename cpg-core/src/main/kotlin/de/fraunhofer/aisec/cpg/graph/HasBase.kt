@@ -25,7 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /** Specifies that a certain node has a base on which it executes an operation. */
 interface HasBase : HasOperatorCode {
@@ -39,3 +43,27 @@ interface HasBase : HasOperatorCode {
      */
     override val operatorCode: String?
 }
+
+interface HasLanguage {
+
+    var language: Language<*>?
+}
+
+interface HasNameAndLocation {
+
+    val name: Name
+
+    val location: PhysicalLocation?
+}
+
+interface HasScope {
+
+    val scope: Scope?
+}
+
+interface HasArgumentsAndOptionalBase : HasLanguage, HasBase, HasNameAndLocation, HasScope {
+
+    val arguments: List<Expression>
+}
+
+interface HasOverloadedOperator : HasArgumentsAndOptionalBase, HasLanguage, HasType

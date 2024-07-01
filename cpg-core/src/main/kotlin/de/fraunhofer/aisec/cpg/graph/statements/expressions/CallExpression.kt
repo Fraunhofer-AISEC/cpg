@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
@@ -43,7 +45,8 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : ResolvableExpression<FunctionDeclaration>(), ArgumentHolder {
+open class CallExpression :
+    Expression(), ArgumentHolder, HasArgumentsAndOptionalBase, HasType.TypeObserver {
     /**
      * The list of arguments of this call expression, backed by a list of [PropertyEdge] objects.
      */
@@ -85,6 +88,30 @@ open class CallExpression : ResolvableExpression<FunctionDeclaration>(), Argumen
             // read-only
         }
 
+    /**
+     * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
+     * will have an effect on the [HasType.type].
+     */
+    @PopulatedByPass(SymbolResolver::class)
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
+    var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
+        protected set
+
+    /**
+     * A virtual property to quickly access the list of declarations that this call invokes without
+     * property edges.
+     */
+    @PopulatedByPass(SymbolResolver::class)
+    var invokes: List<FunctionDeclaration>
+        get(): List<FunctionDeclaration> {
+            return unwrap(invokeEdges)
+        }
+        set(value) {
+            unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
+            invokeEdges = wrap(value, this)
+            value.forEach { it.registerTypeObserver(this) }
+        }
+
     fun setArgument(index: Int, argument: Expression) {
         argumentEdges[index].end = argument
     }
@@ -122,7 +149,7 @@ open class CallExpression : ResolvableExpression<FunctionDeclaration>(), Argumen
     }
 
     /** Returns the function signature as list of types of the call arguments. */
-    override val signature: List<Type>
+    val signature: List<Type>
         get() = argumentEdges.map { it.end.type }
 
     /** Specifies, whether this call has any template arguments. */
@@ -255,6 +282,9 @@ open class CallExpression : ResolvableExpression<FunctionDeclaration>(), Argumen
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
 
-    override val resolutionBase: Expression?
+    override val base: Expression?
+        get() = null
+
+    override val operatorCode: String?
         get() = null
 }

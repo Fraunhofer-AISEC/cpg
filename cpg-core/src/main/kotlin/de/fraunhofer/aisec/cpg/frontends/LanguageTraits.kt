@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.HasArgumentsAndOptionalBase
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
-import de.fraunhofer.aisec.cpg.graph.ResolvableExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -101,10 +101,10 @@ interface HasComplexCallResolution : LanguageTrait {
      *
      * @return a list of [FunctionDeclaration] candidates.
      */
-    fun <T : FunctionDeclaration> refineMethodCallResolution(
+    fun refineMethodCallResolution(
         symbol: Symbol,
         possibleContainingTypes: Set<Type>,
-        call: ResolvableExpression<T>,
+        call: HasArgumentsAndOptionalBase,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver

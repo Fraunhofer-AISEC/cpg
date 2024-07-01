@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
-import de.fraunhofer.aisec.cpg.graph.ResolvableExpression
-import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperator
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -38,10 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
 class UnaryOperator :
-    ResolvableExpression<OperatorDeclaration>(),
-    HasOperatorCode,
-    ArgumentHolder,
-    HasType.TypeObserver {
+    Expression(), HasOperatorCode, ArgumentHolder, HasOverloadedOperator, HasType.TypeObserver {
     /** The expression on which the operation is applied. */
     @AST
     var input: Expression = ProblemExpression("could not parse input")
@@ -65,14 +61,9 @@ class UnaryOperator :
     /** Specifies, whether this a pre fix operation. */
     var isPrefix = false
 
-    override val signature: List<Type>
-        get() = listOf()
+    override val arguments = listOf<Expression>()
 
-    override val arguments: List<Expression>?
-        get() = null
-
-    override val resolutionBase: Expression?
-        get() = this
+    override val base = this
 
     private fun changeExpressionAccess() {
         var access = AccessValues.READ
