@@ -455,12 +455,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             if (op != null) {
                 type = op.returnTypes.singleOrNull()?.root ?: unknownType()
 
-                // We need to insert a new call expression to our operator in between
+                // We need to insert a new operator call expression in between
                 val ref =
                     newMemberExpression(op.name, reference.base, operatorCode = ".")
                         .implicit(op.name.localName, location = reference.location)
                 ref.refersTo = op
-                var call = newMemberCallExpression(ref).codeAndLocationFrom(ref)
+                var call = newOperatorCallExpression(operatorCode = ".", ref).codeAndLocationFrom(ref)
                 call.invokes = listOf(op)
 
                 // Make the call our new base
