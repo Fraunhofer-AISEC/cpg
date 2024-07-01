@@ -419,6 +419,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         ) {
             var op =
                 resolveCalleeByName("operator->", reference)
+                    .bestViable
                     .filterIsInstance<OperatorDeclaration>()
                     .singleOrNull()
 
@@ -749,7 +750,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val result = ctx.scopeManager.resolveCall(call)
             result.bestViable.toList()
         } else {
-            resolveCalleeByName(callee.name.localName, call)
+            // TODO: directly return the result
+            resolveCalleeByName(callee.name.localName, call).bestViable.toList()
         }
     }
 
@@ -775,13 +777,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 scopeManager,
             )
         }
-        return resolveCalleeByName(callee.name.localName, call)
+        // TODO: directly return the result
+        return resolveCalleeByName(callee.name.localName, call).bestViable.toList()
     }
 
     protected fun resolveCalleeByName(
         symbol: Symbol,
         call: HasArgumentsAndOptionalBase
-    ): List<FunctionDeclaration> {
+    ): CallResolutionResult {
         val (possibleContainingTypes, _) = getPossibleContainingTypes(call)
 
         // Find function targets. If our languages has a complex call resolution, we need to take
@@ -797,9 +800,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         currentTU,
                         this
                     )
-                    .toMutableList()
+                    .toMutableSet()
             } else {
-                scopeManager.resolveFunctionLegacy(call).toMutableList()
+                scopeManager.resolveFunctionLegacy(call).toMutableSet()
             }
 
         // Find invokes by supertypes
@@ -810,7 +813,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         ) {
             val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
             invocationCandidates =
-                getInvocationCandidatesFromParents(symbol, call, records).toMutableList()
+                getInvocationCandidatesFromParents(symbol, call, records).toMutableSet()
         }
 
         // Add overridden invokes
@@ -821,7 +824,40 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 .toMutableList()
         )
 
-        return invocationCandidates
+        // The following code is unfortunately largely a copy/paste from the new resolveCall
+        // function; but resolveCall is not yet completely ready to resolve methods, therefore, we
+        // need to have this duplicate code here, to at least use the new features here.
+        val signatureResults =
+            invocationCandidates
+                .map {
+                    Pair(
+                        it,
+                        it.matchesSignature(
+                            call.arguments.map(HasType::type),
+                            call.language is HasDefaultArguments,
+                            call.arguments
+                        )
+                    )
+                }
+                .filter { it.second is SignatureMatches }
+                .associate { it }
+        val viableFunctions = signatureResults.keys
+        val result =
+            CallResolutionResult(
+                call,
+                invocationCandidates,
+                viableFunctions,
+                signatureResults,
+                setOf(),
+                UNRESOLVED,
+                call.scope
+            )
+        // TODO: dangerous
+        val pair = call.language!!.bestViableResolution(result)
+        result.bestViable = pair.first
+        result.success = pair.second
+
+        return result
     }
 
     /**
@@ -940,9 +976,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         recordDeclaration: RecordDeclaration?,
         name: String,
         call: HasArgumentsAndOptionalBase
-    ): List<FunctionDeclaration> {
+    ): Set<FunctionDeclaration> {
         if (recordDeclaration == null) {
-            return listOf()
+            return setOf()
         }
 
         // We should not directly access the "methods" property of the record declaration,
@@ -958,37 +994,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 ?.filterIsInstance<MethodDeclaration>()
                 ?.toSet<FunctionDeclaration>() ?: setOf()
 
-        // The following code is unfortunately largely a copy/paste from the new resolveCall
-        // function; but resolveCall is not yet completely ready to resolve methods, therefore, we
-        // need to have this duplicate code here, to at least use the new features here.
-        val signatureResults =
-            candidateFunctions
-                .map {
-                    Pair(
-                        it,
-                        it.matchesSignature(
-                            call.arguments.map(HasType::type),
-                            call.language is HasDefaultArguments,
-                            call.arguments
-                        )
-                    )
-                }
-                .filter { it.second is SignatureMatches }
-                .associate { it }
-        val viableFunctions = signatureResults.keys
-        val result =
-            CallResolutionResult(
-                call,
-                candidateFunctions,
-                viableFunctions,
-                signatureResults,
-                setOf(),
-                UNRESOLVED,
-                call.scope
-            )
-        val pair = call.language?.bestViableResolution(result)
-
-        return pair?.first?.toList() ?: listOf()
+        return candidateFunctions
     }
 
     protected fun getInvocationCandidatesFromParents(
@@ -1112,7 +1118,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // operator.invokes =
         //    resolveCalleeByName(symbol, operator).filterIsInstance<OperatorDeclaration>()
         // TODO: replace with call
-        val ops = resolveCalleeByName(symbol, operator).filterIsInstance<OperatorDeclaration>()
+        val ops =
+            resolveCalleeByName(symbol, operator).bestViable.filterIsInstance<OperatorDeclaration>()
         println(ops)
     }
 }

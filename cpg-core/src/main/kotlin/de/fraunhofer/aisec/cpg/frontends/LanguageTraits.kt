@@ -108,7 +108,7 @@ interface HasComplexCallResolution : LanguageTrait {
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
-    ): List<FunctionDeclaration>
+    ): Set<FunctionDeclaration>
 }
 
 /** A language trait that specifies if the language supports function pointers. */

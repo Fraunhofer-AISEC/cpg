@@ -149,8 +149,8 @@ open class CPPLanguage :
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration,
         callResolver: SymbolResolver
-    ): List<FunctionDeclaration> {
-        var invocationCandidates = mutableListOf<FunctionDeclaration>()
+    ): Set<FunctionDeclaration> {
+        var invocationCandidates = mutableSetOf<FunctionDeclaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
             invocationCandidates.addAll(
@@ -169,7 +169,7 @@ open class CPPLanguage :
         // resolver completely.
         if (call is MemberCallExpression) {
             invocationCandidates =
-                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableList()
+                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableSet()
         }
         return invocationCandidates
     }

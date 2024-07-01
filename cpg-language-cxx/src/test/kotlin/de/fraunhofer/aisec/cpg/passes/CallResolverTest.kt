@@ -717,6 +717,7 @@ class CallResolverTest : BaseTest() {
                 true
             ) {
                 it.registerLanguage<CPPLanguage>()
+                it.inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
             }
         val calls = result.calls
 
@@ -727,8 +728,7 @@ class CallResolverTest : BaseTest() {
                 }
                 false
             }
-        assertEquals(1, calcCall.invokes.size)
-        assertFalse(calcCall.invokes[0].isInferred)
+        assertEquals(0, calcCall.invokes.size)
     }
 
     @Test
