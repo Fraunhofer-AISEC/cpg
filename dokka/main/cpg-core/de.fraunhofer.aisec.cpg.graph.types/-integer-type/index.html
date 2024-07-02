@@ -318,6 +318,21 @@
               </div>
             </div>
           </div>
+<a data-name="-1480867466%2FProperties%2F1556141526" anchor-label="declaredFrom" id="-1480867466%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-type/declared-from.html"><span>declared</span><wbr><span><span>From</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1480867466%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="../-type/declared-from.html">declaredFrom</a><span class="token operator">: </span><a href="../-declares-type/index.html">DeclaresType</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">This points to the <a href="../-declares-type/index.html">DeclaresType</a> node (most likely a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a>), that declares this type. At some point this should replace <a href="../-object-type/record-declaration.html">ObjectType.recordDeclaration</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="1995389611%2FProperties%2F1556141526" anchor-label="fields" id="1995389611%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -1682,7 +1697,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-numeric-type/hash-code.html"><span class="token function">hashCode</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Implementation of hash code. We are including the name and the location in this hash code as a compromise between including too few attributes and performance. Please note that this means, that two nodes that might be semantically equal, such as two record declarations with the same name but different location (e.g. because of header files) will be sorted into different hash keys.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-numeric-type/hash-code.html"><span class="token function">hashCode</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">We need a constant hashcode implementation because we need to change <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-numeric-type/name.html">name</a> and <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-numeric-type/scope.html">scope</a> during the TypeResolver, so we cannot use them for hashcode.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -1713,21 +1728,6 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a><span class="token punctuation">.</span><a href="../../de.fraunhofer.aisec.cpg.graph/is-primitive.html"><span class="token function">isPrimitive</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="../-type/index.html">Type</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Checks, whether the given <a href="../-type/index.html">Type</a> is a primitive in the language specified in the <a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a>.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="2022179311%2FFunctions%2F1556141526" anchor-label="isSimilar" id="2022179311%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="../-type/is-similar.html"><span>is</span><wbr><span><span>Similar</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2022179311%2FFunctions%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="../-type/is-similar.html"><span class="token function">isSimilar</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">t<span class="token operator">: </span><a href="../-type/index.html">Type</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Required for possibleSubTypes to check if the new Type should be considered a subtype or not</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -2737,17 +2737,17 @@
               </div>
             </div>
           </div>
-<a data-name="-2038746609%2FFunctions%2F1556141526" anchor-label="objectType" id="-2038746609%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+<a data-name="1582740402%2FFunctions%2F1556141526" anchor-label="objectType" id="1582740402%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
                   <div><a href="../../de.fraunhofer.aisec.cpg.graph/object-type.html"><span>object</span><wbr><span><span>Type</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2038746609%2FFunctions%2F1556141526"></span>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1582740402%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-overloads/index.html"><span class="token annotation builtin">JvmOverloads</span></a></div></div><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a><span class="token punctuation">.</span><a href="../../de.fraunhofer.aisec.cpg.graph/object-type.html"><span class="token function">objectType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-char-sequence/index.html">CharSequence</a><span class="token punctuation">, </span></span><span class="parameter ">generics<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-type/index.html">Type</a><span class="token operator">&gt;</span><span class="token operator"> = </span>listOf()</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-type/index.html">Type</a></div><div class="brief "><p class="paragraph">This function returns an <a href="../-object-type/index.html">ObjectType</a> with the given <a href="../../de.fraunhofer.aisec.cpg.graph/object-type.html">name</a>. If a respective <a href="../-type/index.html">Type</a> does not yet exist, it will be created In order to avoid unnecessary allocation of simple types, we do a pre-check within this function, whether a built-in type exist with the particular name.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-overloads/index.html"><span class="token annotation builtin">JvmOverloads</span></a></div></div><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-language-provider/index.html">LanguageProvider</a><span class="token punctuation">.</span><a href="../../de.fraunhofer.aisec.cpg.graph/object-type.html"><span class="token function">objectType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-char-sequence/index.html">CharSequence</a><span class="token punctuation">, </span></span><span class="parameter ">generics<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-type/index.html">Type</a><span class="token operator">&gt;</span><span class="token operator"> = </span>listOf()<span class="token punctuation">, </span></span><span class="parameter ">rawNode<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-type/index.html">Type</a></div><div class="brief "><p class="paragraph">This function returns an <a href="../-object-type/index.html">ObjectType</a> with the given <a href="../../de.fraunhofer.aisec.cpg.graph/object-type.html">name</a>. If a respective <a href="../-type/index.html">Type</a> does not yet exist (in the current scope), it will be created. In order to avoid unnecessary allocation of simple types, we do a pre-check within this function, whether a built-in type exist with the particular name.</p></div></div></div>
                 </div>
               </div>
             </div>
