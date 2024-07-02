@@ -43,6 +43,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val callsInferredFunctions = mutableListOf<CallExpression>()
 
     override fun accept(component: Component) {
+        log.info(
+            "Function summaries database has {} entries",
+            config.functionSummaries.functionToDFGEntryMap.size
+        )
+
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit { node, parent ->

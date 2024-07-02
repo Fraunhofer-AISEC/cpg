@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
@@ -307,6 +308,18 @@ private constructor(
 
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
+
+        // We also need to update all types that point to one of the "old" global scopes
+        // TODO(oxisto): This is really messy and instead we should have ONE global scope
+        //  and individual file scopes beneath it
+        var newGlobalScope = globalCtx.scopeManager.globalScope
+        var types =
+            globalCtx.typeManager.firstOrderTypes.union(globalCtx.typeManager.secondOrderTypes)
+        types.forEach {
+            if (it.scope is GlobalScope) {
+                it.scope = newGlobalScope
+            }
+        }
 
         log.info("Parallel parsing completed")
 

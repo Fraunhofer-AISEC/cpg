@@ -451,7 +451,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Handle C++ classes
         if (ctx is CPPASTCompositeTypeSpecifier) {
             recordDeclaration.superClasses =
-                ctx.baseSpecifiers.map { objectType(it.nameSpecifier.toString()) }.toMutableList()
+                ctx.baseSpecifiers
+                    .map { objectType(it.nameSpecifier.toString(), rawNode = it) }
+                    .toMutableList()
         }
 
         frontend.scopeManager.addDeclaration(recordDeclaration)

@@ -204,10 +204,12 @@ fun MetadataProvider.newTypedefDeclaration(
     rawNode: Any? = null
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
-    node.applyMetadata(this, alias.typeName, rawNode, true)
+    node.applyMetadata(this, alias.typeName, rawNode)
 
     node.type = targetType
     node.alias = alias
+    // litle bit of a hack to make the type FQN
+    node.alias.name = node.name
 
     log(node)
     return node

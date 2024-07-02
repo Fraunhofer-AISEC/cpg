@@ -377,8 +377,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun isImport(name: Name): Boolean {
-        val decl = frontend.scopeManager.findSymbols(name).filterIsInstance<ImportDeclaration>()
-        return decl.isNotEmpty()
+        val decl =
+            frontend.scopeManager.currentScope
+                ?.lookupSymbol(name.localName, replaceImports = false)
+                ?.filterIsInstance<ImportDeclaration>()
+        return decl?.isNotEmpty() ?: false
     }
 
     private fun handleName(node: Python.ASTName): Expression {

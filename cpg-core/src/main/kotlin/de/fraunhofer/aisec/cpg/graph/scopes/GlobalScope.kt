@@ -59,6 +59,7 @@ class GlobalScope : StructureDeclarationScope(null) {
 
             // Merge symbols lists
             symbols.mergeFrom(other.symbols)
+            wildcardImports.addAll(other.wildcardImports)
 
             for (symbolList in other.symbols) {
                 // Update the scope property of all nodes that live on the global scope to our new

@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -46,9 +47,11 @@ import org.slf4j.LoggerFactory
 class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val provider =
-            object : ContextProvider, LanguageProvider {
+            object : ContextProvider, LanguageProvider, ScopeProvider {
                 override val language = JavaLanguage()
                 override val ctx: TranslationContext = this@JavaExternalTypeHierarchyResolver.ctx
+                override val scope: Scope?
+                    get() = scopeManager.globalScope
             }
         val resolver = CombinedTypeSolver()
 
@@ -68,16 +71,23 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         }
 
         // Iterate over all known types and add their (direct) supertypes.
-        for (t in HashSet(typeManager.firstOrderTypes)) {
-            // TODO: Do we have to check if the type's language is JavaLanguage?
+        for (t in typeManager.firstOrderTypes) {
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {
                 try {
                     val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
                     for (anc in resolvedSuperTypes) {
+                        // We need to try to resolve the type first in order to create weirdly
+                        // scoped types
+                        var superType = typeManager.lookupResolvedType(anc.qualifiedName)
+
+                        // Otherwise, we can create this in the global scope
+                        if (superType == null) {
+                            superType = provider.objectType(anc.qualifiedName)
+                            superType.typeOrigin = Type.Origin.RESOLVED
+                        }
+
                         // Add all resolved supertypes to the type.
-                        val superType = provider.objectType(anc.qualifiedName)
-                        superType.typeOrigin = Type.Origin.RESOLVED
                         t.superTypes.add(superType)
                     }
                 } catch (e: UnsolvedSymbolException) {
