@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.io.File
@@ -318,8 +319,9 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         // We need to check, whether this language has special handling of templates. In this
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
-        if (this is HasTemplates) {
-            result.call.templateParameterEdges = mutableListOf()
+        val call = result.call
+        if (this is HasTemplates && call is CallExpression) {
+            call.templateParameterEdges = mutableListOf()
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
                     null,
@@ -333,7 +335,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
             }
 
-            result.call.templateParameterEdges = null
+            call.templateParameterEdges = null
         }
 
         // If the list of viable functions is still empty at this point, the call is unresolved

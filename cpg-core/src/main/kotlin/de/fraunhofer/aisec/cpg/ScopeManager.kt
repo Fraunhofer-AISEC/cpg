@@ -664,7 +664,7 @@ class ScopeManager : ScopeProvider {
      */
     @JvmOverloads
     fun resolveFunctionLegacy(
-        call: CallExpression,
+        call: HasArgumentsAndOptionalBase,
         startScope: Scope? = currentScope
     ): List<FunctionDeclaration> {
         val (scope, name) = extractScope(call, startScope)
@@ -776,7 +776,7 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -894,7 +894,7 @@ class ScopeManager : ScopeProvider {
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
-        call: CallExpression
+        call: HasArgumentsAndOptionalBase
     ): List<FunctionDeclaration> {
         return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
     }
@@ -1113,7 +1113,7 @@ data class SignatureMatches(override val casts: List<CastResult>) : SignatureRes
 fun FunctionDeclaration.matchesSignature(
     signature: List<Type>,
     useDefaultArguments: Boolean = false,
-    call: CallExpression? = null,
+    call: HasArgumentsAndOptionalBase? = null,
 ): SignatureResult {
     val casts = mutableListOf<CastResult>()
 
@@ -1183,8 +1183,8 @@ fun FunctionDeclaration.matchesSignature(
  * of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original call expression. */
-    val call: CallExpression,
+    /** The original call expression or a node that implements [HasArgumentsAndOptionalBase]. */
+    val call: HasArgumentsAndOptionalBase,
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
