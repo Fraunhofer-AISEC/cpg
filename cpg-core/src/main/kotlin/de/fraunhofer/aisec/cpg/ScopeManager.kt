@@ -834,14 +834,19 @@ class ScopeManager : ScopeProvider {
 
     /**
      * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
-     * the given [Name]. This has also the major problem of only resolving one layer of aliases :(
+     * the given [Name]. It also does this recursively.
      */
     fun resolveParentAlias(name: Name, scope: Scope?): Name {
         var parentName = name.parent ?: return name
         parentName = resolveParentAlias(parentName, scope)
 
-        // This is not 100 % ideal, but at least somewhat compatible to the previous approach
-        var newName = Name(name.localName, parentName, delimiter = name.delimiter)
+        // Build a new name based on the eventual resolved parent alias
+        var newName =
+            if (parentName != name.parent) {
+                Name(name.localName, parentName, delimiter = name.delimiter)
+            } else {
+                name
+            }
         var decl =
             scope?.lookupSymbol(parentName.localName)?.singleOrNull {
                 it is NamespaceDeclaration || it is RecordDeclaration
