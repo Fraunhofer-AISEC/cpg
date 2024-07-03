@@ -70,6 +70,10 @@ class ReturnStatement : Statement(), ArgumentHolder {
         return true
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.returnValues.contains(expression)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ReturnStatement) return false

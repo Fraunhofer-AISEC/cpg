@@ -240,4 +240,8 @@ class AssignExpression :
             false
         }
     }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.lhs.contains(expression) || this.rhs.contains(expression)
+    }
 }
