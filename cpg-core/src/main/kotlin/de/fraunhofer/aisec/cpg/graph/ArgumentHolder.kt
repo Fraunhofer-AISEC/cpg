@@ -68,4 +68,9 @@ interface ArgumentHolder : Holder<Expression> {
     operator fun minusAssign(node: Expression) {
         removeArgument(node)
     }
+
+    /**
+     * Checks, if [expression] is part of the arguments.
+     */
+    fun hasArgument(expression: Expression): Boolean
 }

@@ -164,6 +164,10 @@ open class BinaryOperator :
         }
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return lhs == expression || rhs == expression
+    }
+
     override val base: Expression?
         get() {
             return if (operatorCode == ".*" || operatorCode == "->*") {
