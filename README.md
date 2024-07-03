@@ -129,7 +129,7 @@ Languages are maintained to different degrees, and are noted in the table below 
 The current state of languages is:
 
 | Language                 | Module                                | Branch                                                                  | State          |
-| ------------------------ | ------------------------------------- | ----------------------------------------------------------------------- | -------------- |
+|--------------------------|---------------------------------------|-------------------------------------------------------------------------|----------------|
 | Java (Source)            | cpg-language-java                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
