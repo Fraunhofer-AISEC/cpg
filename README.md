@@ -134,7 +134,7 @@ The current state of languages is:
 | C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
-| JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
 | Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
