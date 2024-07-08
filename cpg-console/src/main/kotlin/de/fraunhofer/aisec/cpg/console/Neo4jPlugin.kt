@@ -54,8 +54,8 @@ class Neo4jPlugin : Plugin {
 
             if (input.size == 4) {
                 // configure neo4j username and password
-                commands += "neo4j.neo4jPassword = ${input[2]}"
-                commands += "neo4j.neo4jUsername = ${input[3]}"
+                commands += "neo4j.neo4jUsername = \"${input[2]}\""
+                commands += "neo4j.neo4jPassword = \"${input[3]}\""
             }
 
             commands += "neo4j.pushToNeo4j(result)"

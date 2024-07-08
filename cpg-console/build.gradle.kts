@@ -42,6 +42,7 @@ publishing {
 
 application {
     mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
+    applicationDefaultJvmArgs = listOf("-Xss515m", "-Xmx8g")
 }
 
 repositories {
