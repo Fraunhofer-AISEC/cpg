@@ -158,6 +158,8 @@ open class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
+    @Relationship("AST") var astParent: Node? = null
+
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
     var prevEOG: List<Node> by PropertyEdgeDelegate(Node::prevEOGEdges, false)

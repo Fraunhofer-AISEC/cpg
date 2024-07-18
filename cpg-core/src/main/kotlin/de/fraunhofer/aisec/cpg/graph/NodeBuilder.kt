@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+import kotlin.reflect.KProperty
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -379,4 +381,52 @@ private fun <AstNode> Node.setCodeAndLocation(
         }
     }
     this.location = provider.locationOf(rawNode)
+}
+
+context(ContextProvider)
+fun <T : Node> T.withChildren(
+    hasScope: Boolean = false,
+    isGlobalScope: Boolean = false,
+    init: T.() -> Unit
+): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+
+    if (isGlobalScope && this is TranslationUnitDeclaration) {
+        scopeManager.resetToGlobal(this)
+        init(this)
+    } else if (hasScope) {
+        scopeManager.enterScope(this)
+        init(this)
+        scopeManager.leaveScope(this)
+    } else {
+        init(this)
+    }
+
+    return this
+}
+
+class AstProperty<PropertyType : Node, NodeType : Node>(
+    initializer: PropertyType,
+    var pre: ((PropertyType) -> Unit)? = null,
+    var post: ((PropertyType) -> Unit)? = null
+) {
+
+    private var storage: PropertyType = initializer
+
+    operator fun getValue(thisRef: NodeType, property: KProperty<*>): PropertyType {
+        return storage
+    }
+
+    operator fun setValue(thisRef: NodeType, property: KProperty<*>, value: PropertyType) {
+        pre?.let { it(storage) }
+
+        storage = value
+        storage.astParent = thisRef
+
+        post?.let { it(storage) }
+    }
 }

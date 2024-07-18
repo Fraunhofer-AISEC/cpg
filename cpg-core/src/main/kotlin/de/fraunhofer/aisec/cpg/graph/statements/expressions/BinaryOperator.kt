@@ -41,22 +41,20 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 open class BinaryOperator :
     Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
-    @AST
-    var lhs: Expression = ProblemExpression("could not parse lhs")
-        set(value) {
-            disconnectOldLhs()
-            field = value
-            connectNewLhs(value)
-        }
+    var lhs: Expression by
+        AstProperty(
+            initializer = ProblemExpression("could not parse lhs"),
+            pre = { disconnectOldLhs() },
+            post = { connectNewLhs(it) }
+        )
 
     /** The right-hand expression. */
-    @AST
-    var rhs: Expression = ProblemExpression("could not parse rhs")
-        set(value) {
-            disconnectOldRhs()
-            field = value
-            connectNewRhs(value)
-        }
+    var rhs: Expression by
+        AstProperty(
+            initializer = ProblemExpression("could not parse rhs"),
+            pre = { disconnectOldRhs() },
+            post = { connectNewRhs(it) }
+        )
 
     /** The operator code. */
     override var operatorCode: String? = null
