@@ -240,4 +240,8 @@ class AssignExpression :
             false
         }
     }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return expression in lhs || expression in rhs
+    }
 }

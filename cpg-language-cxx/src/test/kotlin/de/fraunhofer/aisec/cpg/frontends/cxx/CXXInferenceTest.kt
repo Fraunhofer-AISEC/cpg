@@ -31,6 +31,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class CXXInferenceTest {
     @Test
@@ -66,5 +67,29 @@ class CXXInferenceTest {
 
         val someClass = util.records["SomeClass"]
         assertNotNull(someClass)
+    }
+
+    @Test
+    fun testTrickyInference() {
+        val file = File("src/test/resources/cxx/tricky_inference.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.loadIncludes(false)
+                it.addIncludesToGraph(false)
+            }
+        assertNotNull(tu)
+
+        val some = tu.namespaces["some"]
+        assertNotNull(some)
+        assertTrue(some.isInferred)
+
+        val json = some.records["json"]
+        assertNotNull(json)
+        assertTrue(json.isInferred)
+
+        val iterator = json.records["iterator"]
+        assertNotNull(iterator)
+        assertTrue(iterator.isInferred)
     }
 }

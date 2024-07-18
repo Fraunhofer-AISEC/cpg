@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -227,10 +228,39 @@ class TypeManager {
         return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
     }
 
+    fun typeExists(name: Name): Type? {
+        return firstOrderTypes.firstOrNull { type: Type -> type.root.name == name }
+    }
+
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable = scopeManager.typedefFor(finalToCheck)
+        val applicable = scopeManager.typedefFor(finalToCheck.name, alias.scope)
         return applicable ?: alias
+    }
+
+    /**
+     * This function returns the first (there should be only one) [Type] with the given [fqn] that
+     * is [Type.Origin.RESOLVED].
+     */
+    fun lookupResolvedType(
+        fqn: String,
+        generics: List<Type>? = null,
+        language: Language<*>? = null
+    ): Type? {
+        var primitiveType = language?.getSimpleTypeOf(fqn)
+        if (primitiveType != null) {
+            return primitiveType
+        }
+
+        return firstOrderTypes.firstOrNull {
+            (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
+                it.name.toString() == fqn &&
+                if (generics != null) {
+                    (it as? ObjectType)?.generics == generics
+                } else {
+                    true
+                }
+        }
     }
 }
 
@@ -242,17 +272,7 @@ val Type.ancestors: Set<Type.Ancestor>
 internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
-    // Recursively call ourselves on our super types. There is a little hack here that we need to do
-    // for object types created from RecordDeclaration::toType() because their supertypes might not
-    // be set correctly. This would be better, if we change a RecordDeclaration to a
-    // ValueDeclaration and set the corresponding object type to its type.
-    val superTypes =
-        if (this is ObjectType) {
-            this.recordDeclaration?.superTypes ?: setOf()
-        } else {
-            superTypes
-        }
-
+    // Recursively call ourselves on our super types.
     types += superTypes.flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it

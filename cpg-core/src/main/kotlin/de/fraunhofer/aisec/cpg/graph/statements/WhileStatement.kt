@@ -68,6 +68,10 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
         return true
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.condition == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is WhileStatement) return false

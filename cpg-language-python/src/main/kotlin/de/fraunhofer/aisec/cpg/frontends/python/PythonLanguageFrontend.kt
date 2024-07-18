@@ -387,7 +387,7 @@ fun fromPython(pyObject: Any?): Python.AST {
             "ast.Is" -> Python.ASTIs(pyObject)
             "ast.IsNot" -> Python.ASTIsNot(pyObject)
             "ast.In" -> Python.ASTIn(pyObject)
-            "ast.NotInt" -> Python.ASTNotIn(pyObject)
+            "ast.NotIn" -> Python.ASTNotIn(pyObject)
 
             // `"ast.expr_context`
             "ast.Load" -> Python.ASTLoad(pyObject)

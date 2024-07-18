@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
@@ -308,6 +309,18 @@ private constructor(
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
 
+        // We also need to update all types that point to one of the "old" global scopes
+        // TODO(oxisto): This is really messy and instead we should have ONE global scope
+        //  and individual file scopes beneath it
+        var newGlobalScope = globalCtx.scopeManager.globalScope
+        var types =
+            globalCtx.typeManager.firstOrderTypes.union(globalCtx.typeManager.secondOrderTypes)
+        types.forEach {
+            if (it.scope is GlobalScope) {
+                it.scope = newGlobalScope
+            }
+        }
+
         log.info("Parallel parsing completed")
 
         return usedFrontends
@@ -410,9 +423,21 @@ private constructor(
         } else null
     }
 
+    /**
+     * This extension function returns an appropriate [Language] for this [File] based on the
+     * registered file extensions of [TranslationConfiguration.languages]. It will emit a warning if
+     * multiple languages are registered for the same extension (and the first one that was
+     * registered will be returned).
+     */
     private val File.language: Language<*>?
         get() {
-            return config.languages.firstOrNull { it.handlesFile(this) }
+            val languages = config.languages.filter { it.handlesFile(this) }
+            if (languages.size > 1) {
+                log.warn(
+                    "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
+                )
+            }
+            return languages.firstOrNull()
         }
 
     class Builder {

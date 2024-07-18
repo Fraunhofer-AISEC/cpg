@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.fqn
+
 /**
  * The declaration of a constructor within a [RecordDeclaration]. Is it essentially a special case
  * of a [MethodDeclaration].
@@ -38,6 +40,9 @@ class ConstructorDeclaration : MethodDeclaration() {
             if (recordDeclaration != null) {
                 // constructors always have implicitly the return type of their class
                 returnTypes = listOf(recordDeclaration.toType())
+
+                // also make sure, our name is updated to the FQN of the record
+                name = recordDeclaration.name.fqn(this.name.localName)
             }
         }
 }

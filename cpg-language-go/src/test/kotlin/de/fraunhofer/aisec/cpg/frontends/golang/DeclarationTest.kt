@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -87,6 +88,11 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
+        // we should have this pseudo-record in the global scope
+        val structFieldInt = tu.records["struct{field int}"]
+        assertNotNull(structFieldInt)
+        assertIs<GlobalScope>(structFieldInt.scope)
+
         val p = tu.namespaces["p"]
         assertNotNull(p)
 
@@ -145,6 +151,10 @@ class DeclarationTest {
 
         val record = type.recordDeclaration
         assertNotNull(record)
+        assertLocalName("struct{field int}", record)
+
+        val field = record.fields["field"]
+        assertNotNull(field)
 
         val init = s.initializer
         assertIs<InitializerListExpression>(init)
@@ -154,7 +164,7 @@ class DeclarationTest {
 
         val key = keyValue.key
         assertNotNull(key)
-        assertRefersTo(key, record.fields["field"])
+        assertRefersTo(key, field)
     }
 
     @Test
@@ -273,24 +283,24 @@ class DeclarationTest {
         with(tu) {
             val values =
                 mapOf(
-                    "zeroShift" to Pair(0, objectType("int")),
-                    "zeroAnd" to Pair(0, objectType("int")),
-                    "one" to Pair(1, objectType("p.custom")),
-                    "oneAsWell" to Pair(1, objectType("p.custom")),
-                    "oneShift" to Pair(1, primitiveType("int")),
-                    "two" to Pair(2, primitiveType("int")),
-                    "twoShift" to Pair(2, primitiveType("int")),
-                    "three" to Pair(3, primitiveType("int")),
-                    "threeOr" to Pair(3, primitiveType("int")),
-                    "threeXor" to Pair(3, primitiveType("int")),
-                    "four" to Pair(4, primitiveType("int")),
-                    "tenAsWell" to Pair(10, primitiveType("int")),
-                    "five" to Pair(5, primitiveType("int")),
-                    "fiveAsWell" to Pair(5, primitiveType("int")),
-                    "six" to Pair(6, primitiveType("int")),
-                    "fivehundred" to Pair(500, primitiveType("int")),
-                    "sixhundred" to Pair(600, primitiveType("int")),
-                    "onehundredandfive" to Pair(105, primitiveType("int")),
+                    "zeroShift" to Pair(0, assertResolvedType("int")),
+                    "zeroAnd" to Pair(0, assertResolvedType("int")),
+                    "one" to Pair(1, assertResolvedType("p.custom")),
+                    "oneAsWell" to Pair(1, assertResolvedType("p.custom")),
+                    "oneShift" to Pair(1, assertResolvedType("int")),
+                    "two" to Pair(2, assertResolvedType("int")),
+                    "twoShift" to Pair(2, assertResolvedType("int")),
+                    "three" to Pair(3, assertResolvedType("int")),
+                    "threeOr" to Pair(3, assertResolvedType("int")),
+                    "threeXor" to Pair(3, assertResolvedType("int")),
+                    "four" to Pair(4, assertResolvedType("int")),
+                    "tenAsWell" to Pair(10, assertResolvedType("int")),
+                    "five" to Pair(5, assertResolvedType("int")),
+                    "fiveAsWell" to Pair(5, assertResolvedType("int")),
+                    "six" to Pair(6, assertResolvedType("int")),
+                    "fivehundred" to Pair(500, assertResolvedType("int")),
+                    "sixhundred" to Pair(600, assertResolvedType("int")),
+                    "onehundredandfive" to Pair(105, assertResolvedType("int")),
                 )
             values.forEach {
                 val variable = tu.variables[it.key]

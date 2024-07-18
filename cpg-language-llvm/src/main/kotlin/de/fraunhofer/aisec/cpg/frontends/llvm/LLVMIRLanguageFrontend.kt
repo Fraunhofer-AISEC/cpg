@@ -211,6 +211,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
                     record.toType()
                 }
+                LLVMFunctionTypeKind -> {
+                    // we are not really interested in function types in this frontend
+                    unknownType()
+                }
                 else -> {
                     objectType(typeStr)
                 }

@@ -613,6 +613,10 @@ val Node?.returns: List<ReturnStatement>
 val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
+/** Returns all [ProblemNode] children in this graph, starting with this [Node]. */
+val Node?.problems: List<ProblemNode>
+    get() = this.allChildren()
+
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
     get() {

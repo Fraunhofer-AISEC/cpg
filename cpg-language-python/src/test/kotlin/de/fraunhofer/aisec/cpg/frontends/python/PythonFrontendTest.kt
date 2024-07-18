@@ -49,47 +49,48 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu)
+        with(tu) {
+            val p = tu.namespaces["literal"]
+            assertNotNull(p)
+            assertLocalName("literal", p)
 
-        val p = tu.namespaces["literal"]
-        assertNotNull(p)
-        assertLocalName("literal", p)
+            val b = p.variables["b"]
+            assertNotNull(b)
+            assertLocalName("b", b)
+            assertEquals(assertResolvedType("bool"), b.type)
+            assertEquals(true, (b.firstAssignment as? Literal<*>)?.value)
 
-        val b = p.variables["b"]
-        assertNotNull(b)
-        assertLocalName("b", b)
-        assertEquals(tu.primitiveType("bool"), b.type)
-        assertEquals(true, (b.firstAssignment as? Literal<*>)?.value)
+            val i = p.variables["i"]
+            assertNotNull(i)
+            assertLocalName("i", i)
+            assertEquals(assertResolvedType("int"), i.type)
+            assertEquals(42L, (i.firstAssignment as? Literal<*>)?.value)
 
-        val i = p.variables["i"]
-        assertNotNull(i)
-        assertLocalName("i", i)
-        assertEquals(tu.primitiveType("int"), i.type)
-        assertEquals(42L, (i.firstAssignment as? Literal<*>)?.value)
+            val f = p.variables["f"]
+            assertNotNull(f)
+            assertLocalName("f", f)
+            assertEquals(assertResolvedType("float"), f.type)
+            assertEquals(1.0, (f.firstAssignment as? Literal<*>)?.value)
 
-        val f = p.variables["f"]
-        assertNotNull(f)
-        assertLocalName("f", f)
-        assertEquals(tu.primitiveType("float"), f.type)
-        assertEquals(1.0, (f.firstAssignment as? Literal<*>)?.value)
+            val c = p.variables["c"]
+            assertNotNull(c)
+            assertLocalName("c", c)
+            // assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"
+            // assertEquals("(3+5j)", (c.firstAssignment as? Literal<*>)?.value) // TODO: this is
+            // currently a binary op
 
-        val c = p.variables["c"]
-        assertNotNull(c)
-        assertLocalName("c", c)
-        // assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"
-        // assertEquals("(3+5j)", (c.firstAssignment as? Literal<*>)?.value) // TODO: this is
-        // currently a binary op
+            val t = p.variables["t"]
+            assertNotNull(t)
+            assertLocalName("t", t)
+            assertEquals(assertResolvedType("str"), t.type)
+            assertEquals("Hello", (t.firstAssignment as? Literal<*>)?.value)
 
-        val t = p.variables["t"]
-        assertNotNull(t)
-        assertLocalName("t", t)
-        assertEquals(tu.primitiveType("str"), t.type)
-        assertEquals("Hello", (t.firstAssignment as? Literal<*>)?.value)
-
-        val n = p.variables["n"]
-        assertNotNull(n)
-        assertLocalName("n", n)
-        assertEquals(tu.objectType("None"), n.type)
-        assertEquals(null, (n.firstAssignment as? Literal<*>)?.value)
+            val n = p.variables["n"]
+            assertNotNull(n)
+            assertLocalName("n", n)
+            assertEquals(assertResolvedType("None"), n.type)
+            assertEquals(null, (n.firstAssignment as? Literal<*>)?.value)
+        }
     }
 
     @Test
@@ -284,7 +285,7 @@ class PythonFrontendTest : BaseTest() {
         val assignExpr = (main.body as? Block)?.statements?.first() as? AssignExpression
         assertNotNull(assignExpr)
 
-        val foo = assignExpr.declarations.first() as? VariableDeclaration
+        val foo = assignExpr.declarations.firstOrNull() as? VariableDeclaration
         assertNotNull(foo)
         assertLocalName("foo", foo)
         assertEquals(tu.primitiveType("int"), foo.type)
@@ -1182,6 +1183,78 @@ class PythonFrontendTest : BaseTest() {
             2L,
             ((fStmtRhs.subscriptExpression as RangeExpression).third as? Literal<*>)?.value
         )
+    }
+
+    @Test
+    fun testSimpleImport() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("simple_import.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        assertEquals(2, result.variables.size)
+        // Note, that "pi" is incorrectly inferred as a field declaration. This is a known bug in
+        // the inference system (and not in the python module) and will be handled separately.
+        assertEquals(listOf("mypi", "pi"), result.variables.map { it.name.localName })
+    }
+
+    @Test
+    fun testModules() {
+        val topLevel = Path.of("src", "test", "resources", "python", "modules")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("a.py").toFile(),
+                    topLevel.resolve("b.py").toFile(),
+                    topLevel.resolve("c.py").toFile(),
+                    topLevel.resolve("main.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val aFunc = result.functions["a.func"]
+        assertNotNull(aFunc)
+
+        val bFunc = result.functions["b.func"]
+        assertNotNull(bFunc)
+
+        val cCompletelyDifferentFunc = result.functions["c.completely_different_func"]
+        assertNotNull(cCompletelyDifferentFunc)
+
+        var call = result.calls["a.func"]
+        assertNotNull(call)
+        assertInvokes(call, aFunc)
+
+        call = result.calls["a_func"]
+        assertNotNull(call)
+        assertInvokes(call, aFunc)
+
+        call =
+            result.calls[
+                    { // we need to do select it this way otherwise we will also match "a.func"
+                        it.name.toString() == "func"
+                    }]
+        assertNotNull(call)
+        assertInvokes(call, bFunc)
+
+        call = result.calls["completely_different_func"]
+        assertNotNull(call)
+        assertInvokes(call, cCompletelyDifferentFunc)
+
+        call = result.calls["different.completely_different_func"]
+        assertNotNull(call)
+        assertInvokes(call, cCompletelyDifferentFunc)
     }
 
     class PythonValueEvaluator : ValueEvaluator() {

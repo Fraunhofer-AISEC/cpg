@@ -31,4 +31,10 @@ class StringType(
     typeName: CharSequence = "",
     language: Language<*>? = null,
     generics: List<Type> = listOf()
-) : ObjectType(typeName, generics, false, language)
+) : ObjectType(typeName, generics, false, language) {
+
+    init {
+        // Built-in types are always resolved
+        this.typeOrigin = Origin.RESOLVED
+    }
+}
