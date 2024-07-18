@@ -100,8 +100,12 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JUshrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
         map.put(JXorExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
 
+        // Fallback, just to be sure
+        map.put(AbstractBinopExpr::class.java) { handleAbstractBinopExpr(it) }
+
         // Unary operator
         map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
+
 
         // Special operators, which we need to model as binary/unary operators
         map.put(JInstanceOfExpr::class.java) { handleInstanceOfExpr(it as JInstanceOfExpr) }
