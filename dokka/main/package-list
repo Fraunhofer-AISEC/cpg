@@ -39,6 +39,8 @@ de.fraunhofer.aisec.cpg.passes
 module:cpg-language-java
 de.fraunhofer.aisec.cpg.frontends.java
 de.fraunhofer.aisec.cpg.passes
+module:cpg-language-jvm
+de.fraunhofer.aisec.cpg.frontends.jvm
 module:cpg-language-llvm
 de.fraunhofer.aisec.cpg.frontends.llvm
 de.fraunhofer.aisec.cpg.passes
