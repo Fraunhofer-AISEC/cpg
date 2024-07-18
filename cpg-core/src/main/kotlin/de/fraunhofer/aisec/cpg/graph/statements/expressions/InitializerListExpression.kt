@@ -80,6 +80,10 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return expression in this.initializers
+    }
+
     override fun typeChanged(newType: Type, src: HasType) {
         // Normally, we would check, if the source comes from our initializers, but we want to limit
         // the iteration of the initializer list (which can potentially contain tens of thousands of

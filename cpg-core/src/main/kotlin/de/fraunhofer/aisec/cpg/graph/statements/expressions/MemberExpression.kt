@@ -72,6 +72,10 @@ class MemberExpression : Reference(), ArgumentHolder, HasBase {
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return base == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MemberExpression) return false
