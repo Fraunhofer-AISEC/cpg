@@ -101,7 +101,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(JXorExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
 
         // Fallback, just to be sure
-        map.put(AbstractBinopExpr::class.java) { handleAbstractBinopExpr(it) }
+        map.put(AbstractBinopExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
 
         // Unary operator
         map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
