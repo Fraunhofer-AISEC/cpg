@@ -236,6 +236,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             var currentIfStatement: IfStatement? = null
             var idx = 1
             while (idx < numOps) {
+                // TODO: somehow change the AST stack here
                 if (currentIfStatement == null) {
                     currentIfStatement = ifStatement
                 } else {
@@ -254,21 +255,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
                 val matchesCatchpad =
                     newCallExpression(
-                        llvmInternalRef("llvm.matchesCatchpad"),
-                        "llvm.matchesCatchpad",
-                        false,
-                        rawNode = instr
-                    )
+                            llvmInternalRef("llvm.matchesCatchpad"),
+                            "llvm.matchesCatchpad",
+                            false,
+                            rawNode = instr
+                        )
+                        .withChildren {
+                            val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
+                            val catchswitch =
+                                frontend.expressionHandler.handle(parentCatchSwitch) as Expression
+                            it.addArgument(catchswitch, "parentCatchswitch")
 
-                val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
-                val catchswitch = frontend.expressionHandler.handle(parentCatchSwitch) as Expression
-                matchesCatchpad.addArgument(catchswitch, "parentCatchswitch")
-
-                for (i in 0 until catchOps) {
-                    val arg = frontend.getOperandValueAtIndex(catchpad, i)
-                    matchesCatchpad.addArgument(arg, "args_$i")
-                }
-
+                            for (i in 0 until catchOps) {
+                                val arg = frontend.getOperandValueAtIndex(catchpad, i)
+                                it.addArgument(arg, "args_$i")
+                            }
+                        }
                 currentIfStatement.condition = matchesCatchpad
 
                 // Get the label of the goto statement.
@@ -311,17 +313,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val dummyCall =
             newCallExpression(
-                llvmInternalRef("llvm.cleanuppad"),
-                "llvm.cleanuppad",
-                false,
-                rawNode = instr
-            )
-        dummyCall.addArgument(catchswitch, "parentCatchswitch")
+                    llvmInternalRef("llvm.cleanuppad"),
+                    "llvm.cleanuppad",
+                    false,
+                    rawNode = instr
+                )
+                .withChildren {
+                    it.addArgument(catchswitch, "parentCatchswitch")
 
-        for (i in 1 until numOps) {
-            val arg = frontend.getOperandValueAtIndex(instr, i)
-            dummyCall.addArgument(arg, "args_${i-1}")
-        }
+                    for (i in 1 until numOps) {
+                        val arg = frontend.getOperandValueAtIndex(instr, i)
+                        it.addArgument(arg, "args_${i - 1}")
+                    }
+                }
         return declarationOrNot(dummyCall, instr)
     }
 
@@ -1417,21 +1421,26 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
-            val decl =
-                newVariableDeclaration(lhs, frontend.typeOf(valueRef), false, rawNode = valueRef)
-            decl.initializer = rhs
-
-            // add the declaration to the current scope
-            frontend.scopeManager.addDeclaration(decl)
-
-            // add it to our bindings cache
-            frontend.bindingsCache[symbolName] = decl
-
             // Since the declaration statement only contains the single declaration, we can use the
             // same raw node, so we end up with the same code and location
-            val declStatement = newDeclarationStatement(rawNode = valueRef)
-            declStatement.singleDeclaration = decl
-            declStatement
+            newDeclarationStatement(rawNode = valueRef).withChildren {
+                it.singleDeclaration =
+                    newVariableDeclaration(
+                            lhs,
+                            frontend.typeOf(valueRef),
+                            false,
+                            rawNode = valueRef
+                        )
+                        .withChildren { decl ->
+                            decl.initializer = rhs
+
+                            // add the declaration to the current scope
+                            frontend.scopeManager.addDeclaration(decl)
+
+                            // add it to our bindings cache
+                            frontend.bindingsCache[symbolName] = decl
+                        }
+            }
         } else {
             rhs
         }
