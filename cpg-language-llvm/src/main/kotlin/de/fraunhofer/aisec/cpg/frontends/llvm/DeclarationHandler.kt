@@ -74,19 +74,17 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         // the pointer type
         val type = frontend.typeOf(valueRef)
 
-        val variableDeclaration = newVariableDeclaration(name, type, false, rawNode = valueRef)
+        return newVariableDeclaration(name, type, false, rawNode = valueRef).withChildren {
+            // cache binding
+            frontend.bindingsCache[valueRef.symbolName] = it
 
-        // cache binding
-        frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
-
-        val size = LLVMGetNumOperands(valueRef)
-        // the first operand (if it exists) is an initializer
-        if (size > 0) {
-            val expr = frontend.expressionHandler.handle(LLVMGetOperand(valueRef, 0))
-            variableDeclaration.initializer = expr
+            val size = LLVMGetNumOperands(valueRef)
+            // the first operand (if it exists) is an initializer
+            if (size > 0) {
+                val expr = frontend.expressionHandler.handle(LLVMGetOperand(valueRef, 0))
+                it.initializer = expr
+            }
         }
-
-        return variableDeclaration
     }
 
     /**
@@ -97,77 +95,75 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-        val functionDeclaration = newFunctionDeclaration(name.string, rawNode = func)
+        return newFunctionDeclaration(name.string, rawNode = func).withChildren(hasScope = true) {
+            // return types are a bit tricky, because the type of the function is a pointer to the
+            // function type, which then has the return type in it
+            val funcPtrType = LLVMTypeOf(func)
+            val funcType = LLVMGetElementType(funcPtrType)
+            val returnType = LLVMGetReturnType(funcType)
 
-        // return types are a bit tricky, because the type of the function is a pointer to the
-        // function type, which then has the return type in it
-        val funcPtrType = LLVMTypeOf(func)
-        val funcType = LLVMGetElementType(funcPtrType)
-        val returnType = LLVMGetReturnType(funcType)
+            it.type = frontend.typeOf(returnType)
 
-        functionDeclaration.type = frontend.typeOf(returnType)
+            var param = LLVMGetFirstParam(func)
+            while (param != null) {
+                val namePair = frontend.getNameOf(param)
+                val paramName = namePair.first
+                val paramSymbolName = namePair.second
 
-        frontend.scopeManager.enterScope(functionDeclaration)
+                val type = frontend.typeOf(param)
 
-        var param = LLVMGetFirstParam(func)
-        while (param != null) {
-            val namePair = frontend.getNameOf(param)
-            val paramName = namePair.first
-            val paramSymbolName = namePair.second
+                // TODO: support variardic
+                val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
-            val type = frontend.typeOf(param)
+                frontend.scopeManager.addDeclaration(decl)
+                frontend.bindingsCache[paramSymbolName] = decl
 
-            // TODO: support variardic
-            val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
-
-            frontend.scopeManager.addDeclaration(decl)
-            frontend.bindingsCache[paramSymbolName] = decl
-
-            param = LLVMGetNextParam(param)
-        }
-
-        var bb = LLVMGetFirstBasicBlock(func)
-        while (bb != null) {
-            val stmt = frontend.statementHandler.handle(bb)
-
-            // Notice: we have one fundamental challenge here. Basic blocks in LLVM have a flat
-            // hierarchy, meaning that a function has a list of basic blocks, of which one can
-            // be unlabeled and is considered to be the entry. All other blocks need to have
-            // labels and can be reached by branching or jump instructions. If all blocks are
-            // labeled, then the first one is considered to be the entry.
-            //
-            // For our translation into the CPG we translate a basic block into a compound
-            // statement, i.e. a list of statements. However, in the CPG structure, a function
-            // definition does not have an entry, which specifies the first block, but it has a
-            // *body*, which comprises *all* statements within the abstract syntax tree of
-            // that function, hierarchically organized by compound statements. To emulate that, we
-            // take the first basic block as our body and add subsequent blocks as statements to
-            // the body. More specifically, we use the CPG node LabelStatement, which denotes the
-            // use of a label. Its property substatement contains the original basic block, parsed
-            // as a compound statement
-
-            // Take the entry block as our body
-            if (LLVMGetEntryBasicBlock(func) == bb && stmt is Block) {
-                functionDeclaration.body = stmt
-            } else if (LLVMGetEntryBasicBlock(func) == bb) {
-                functionDeclaration.body = newBlock()
-                if (stmt != null) {
-                    (functionDeclaration.body as Block).addStatement(stmt)
-                }
-            } else {
-                // add the label statement, containing this basic block as a compound statement to
-                // our body (if we have none, which we should)
-                if (stmt != null) {
-                    (functionDeclaration.body as? Block)?.addStatement(stmt)
-                }
+                param = LLVMGetNextParam(param)
             }
 
-            bb = LLVMGetNextBasicBlock(bb)
+            var bb = LLVMGetFirstBasicBlock(func)
+            while (bb != null) {
+                val stmt = frontend.statementHandler.handle(bb)
+
+                // Notice: we have one fundamental challenge here. Basic blocks in LLVM have a flat
+                // hierarchy, meaning that a function has a list of basic blocks, of which one can
+                // be unlabeled and is considered to be the entry. All other blocks need to have
+                // labels and can be reached by branching or jump instructions. If all blocks are
+                // labeled, then the first one is considered to be the entry.
+                //
+                // For our translation into the CPG we translate a basic block into a compound
+                // statement, i.e. a list of statements. However, in the CPG structure, a function
+                // definition does not have an entry, which specifies the first block, but it has a
+                // *body*, which comprises *all* statements within the abstract syntax tree of
+                // that function, hierarchically organized by compound statements. To emulate that,
+                // we
+                // take the first basic block as our body and add subsequent blocks as statements to
+                // the body. More specifically, we use the CPG node LabelStatement, which denotes
+                // the
+                // use of a label. Its property substatement contains the original basic block,
+                // parsed
+                // as a compound statement
+
+                // Take the entry block as our body
+                if (LLVMGetEntryBasicBlock(func) == bb && stmt is Block) {
+                    it.body = stmt
+                } else if (LLVMGetEntryBasicBlock(func) == bb) {
+                    it.body = newBlock()
+                    if (stmt != null) {
+                        (it.body as Block).addStatement(stmt)
+                    }
+                } else {
+                    // add the label statement, containing this basic block as a compound statement
+                    // to
+                    // our body (if we have none, which we should)
+                    if (stmt != null) {
+                        (it.body as? Block)?.addStatement(stmt)
+                    }
+                }
+
+                bb = LLVMGetNextBasicBlock(bb)
+            }
         }
-
-        frontend.scopeManager.leaveScope(functionDeclaration)
-
-        return functionDeclaration
     }
 
     /**
@@ -206,25 +202,30 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct")
+        // We need to create a new record declaration but DO NOT create a new scope (yet)
+        record =
+            newRecordDeclaration(name, "struct").withChildren {
+                val size = LLVMCountStructElementTypes(typeRef)
 
-        val size = LLVMCountStructElementTypes(typeRef)
+                for (i in 0 until size) {
+                    val a = LLVMStructGetTypeAtIndex(typeRef, i)
+                    val fieldType = frontend.typeOf(a, alreadyVisited)
 
-        for (i in 0 until size) {
-            val a = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = frontend.typeOf(a, alreadyVisited)
+                    // there are no names, so we need to invent some dummy ones for easier reading
+                    val fieldName = "field_$i"
 
-            // there are no names, so we need to invent some dummy ones for easier reading
-            val fieldName = "field_$i"
+                    // we need to enter the record's scope for each field individually, otherwise
+                    // the above call to typeOf will be inside the record scope and then things go
+                    // wrong
+                    frontend.scopeManager.enterScope(it)
 
-            frontend.scopeManager.enterScope(record)
+                    val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
 
-            val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
+                    frontend.scopeManager.addDeclaration(field)
 
-            frontend.scopeManager.addDeclaration(field)
-
-            frontend.scopeManager.leaveScope(record)
-        }
+                    frontend.scopeManager.leaveScope(it)
+                }
+            }
 
         // add it to the global scope
         frontend.scopeManager.addDeclaration(record)

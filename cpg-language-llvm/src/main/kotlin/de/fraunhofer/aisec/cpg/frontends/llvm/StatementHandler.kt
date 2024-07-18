@@ -71,148 +71,105 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val opcode = instr.opCode
-
-        when (opcode) {
+        return when (opcode) {
             LLVMRet -> {
-                val ret = newReturnStatement(rawNode = instr)
-
-                val numOps = LLVMGetNumOperands(instr)
-                if (numOps != 0) {
-                    ret.returnValue = frontend.getOperandValueAtIndex(instr, 0)
+                newReturnStatement(rawNode = instr).withChildren {
+                    val numOps = LLVMGetNumOperands(instr)
+                    if (numOps != 0) {
+                        it.returnValue = frontend.getOperandValueAtIndex(instr, 0)
+                    }
                 }
-
-                return ret
             }
-            LLVMBr -> {
-                return handleBrStatement(instr)
-            }
-            LLVMSwitch -> {
-                return handleSwitchStatement(instr)
-            }
-            LLVMIndirectBr -> {
-                return handleIndirectbrStatement(instr)
-            }
+            LLVMBr -> handleBrStatement(instr)
+            LLVMSwitch -> handleSwitchStatement(instr)
+            LLVMIndirectBr -> handleIndirectbrStatement(instr)
             LLVMCall,
-            LLVMInvoke -> {
-                return handleFunctionCall(instr)
-            }
+            LLVMInvoke -> handleFunctionCall(instr)
             LLVMUnreachable -> {
                 // Does nothing
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
                 log.error("Cannot parse callbr instruction yet")
+                newProblemExpression("Cannot parse callbr instruction yet")
             }
             LLVMFNeg -> {
-                val fneg = newUnaryOperator("-", postfix = false, prefix = true, rawNode = instr)
-                fneg.input = frontend.getOperandValueAtIndex(instr, 0)
-                return fneg
+                newUnaryOperator("-", postfix = false, prefix = true, rawNode = instr)
+                    .withChildren { it.input = frontend.getOperandValueAtIndex(instr, 0) }
             }
-            LLVMAlloca -> {
-                return handleAlloca(instr)
-            }
-            LLVMLoad -> {
-                return handleLoad(instr)
-            }
-            LLVMStore -> {
-                return handleStore(instr)
-            }
+            LLVMAlloca -> handleAlloca(instr)
+            LLVMLoad -> handleLoad(instr)
+            LLVMStore -> handleStore(instr)
             LLVMExtractValue,
             LLVMGetElementPtr -> {
-                return declarationOrNot(
-                    frontend.expressionHandler.handleGetElementPtr(instr),
-                    instr
-                )
+                declarationOrNot(frontend.expressionHandler.handleGetElementPtr(instr), instr)
             }
-            LLVMICmp -> {
-                return handleIntegerComparison(instr)
-            }
-            LLVMFCmp -> {
-                return handleFloatComparison(instr)
-            }
+            LLVMICmp -> handleIntegerComparison(instr)
+            LLVMFCmp -> handleFloatComparison(instr)
             LLVMPHI -> {
                 frontend.phiList.add(instr)
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMSelect -> {
-                return declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
+                declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
             }
             LLVMUserOp1,
             LLVMUserOp2 -> {
                 log.info(
                     "userop instruction is not a real instruction. Replacing it with empty statement"
                 )
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
-            LLVMVAArg -> {
-                return handleVaArg(instr)
-            }
-            LLVMExtractElement -> {
-                return handleExtractelement(instr)
-            }
-            LLVMInsertElement -> {
-                return handleInsertelement(instr)
-            }
-            LLVMShuffleVector -> {
-                return handleShufflevector(instr)
-            }
-            LLVMInsertValue -> {
-                return handleInsertValue(instr)
-            }
-            LLVMFreeze -> {
-                return handleFreeze(instr)
-            }
-            LLVMFence -> {
-                return handleFence(instr)
-            }
-            LLVMAtomicCmpXchg -> {
-                return handleAtomiccmpxchg(instr)
-            }
-            LLVMAtomicRMW -> {
-                return handleAtomicrmw(instr)
-            }
+            LLVMVAArg -> handleVaArg(instr)
+            LLVMExtractElement -> handleExtractelement(instr)
+            LLVMInsertElement -> handleInsertelement(instr)
+            LLVMShuffleVector -> handleShufflevector(instr)
+            LLVMInsertValue -> handleInsertValue(instr)
+            LLVMFreeze -> handleFreeze(instr)
+            LLVMFence -> handleFence(instr)
+            LLVMAtomicCmpXchg -> handleAtomiccmpxchg(instr)
+            LLVMAtomicRMW -> handleAtomicrmw(instr)
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                return newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
+                newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
             }
-            LLVMLandingPad -> {
-                return handleLandingpad(instr)
-            }
+            LLVMLandingPad -> handleLandingpad(instr)
             LLVMCleanupRet -> {
                 // End of the cleanup basic block(s)
                 // Jump to a label where handling the exception will unwind to next (e.g. a
                 // catchswitch statement)
-                return handleCatchret(instr)
+                handleCatchret(instr)
             }
             LLVMCatchRet -> {
                 // Catch (caught by catchpad instruction) is over.
                 // Jumps to a label where the "normal" function logic continues
-                return handleCatchret(instr)
+                handleCatchret(instr)
             }
             LLVMCatchPad -> {
                 // Actually handles the exception.
-                return handleCatchpad(instr)
+                handleCatchpad(instr)
             }
             LLVMCleanupPad -> {
                 // Beginning of the cleanup basic block(s).
                 // We should model this as the beginning of a catch block
-                return handleCleanuppad(instr)
+                handleCleanuppad(instr)
             }
             LLVMCatchSwitch -> {
                 // Marks the beginning of a "real" catch block
                 // Jumps to one of the handlers specified or to the default handler (if specified)
-                return handleCatchswitch(instr)
+                handleCatchswitch(instr)
+            }
+            else -> {
+                log.error("Not handling instruction opcode {} yet", opcode)
+                newProblemExpression(
+                    "Not handling instruction opcode $opcode yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
         }
-
-        log.error("Not handling instruction opcode {} yet", opcode)
-        return newProblemExpression(
-            "Not handling instruction opcode $opcode yet",
-            ProblemNode.ProblemType.TRANSLATION,
-            rawNode = instr
-        )
     }
 
     /**
@@ -240,13 +197,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
             )
         return if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val gotoStatement = assembleGotoStatement(instr, unwindDest)
-            gotoStatement.name = name
-            gotoStatement
+            assembleGotoStatement(instr, unwindDest).withChildren { it.name = name }
         } else {
-            val emptyStatement = newEmptyStatement(rawNode = instr)
-            emptyStatement.name = name
-            emptyStatement
+            newEmptyStatement(rawNode = instr).withChildren { it.name = name }
         }
     }
 
@@ -263,87 +216,87 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleCatchswitch(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
 
-        val parent = frontend.getOperandValueAtIndex(instr, 0)
-
-        val compoundStatement = newBlock(rawNode = instr)
-
-        val dummyCall =
-            newCallExpression(
-                llvmInternalRef("llvm.catchswitch"),
-                "llvm.catchswitch",
-                false,
-                rawNode = instr
-            )
-        dummyCall.addArgument(parent, "parent")
-
-        val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
-        compoundStatement.addStatement(tokenGeneration)
-
-        val ifStatement = newIfStatement(rawNode = instr)
-        var currentIfStatement: IfStatement? = null
-        var idx = 1
-        while (idx < numOps) {
-            if (currentIfStatement == null) {
-                currentIfStatement = ifStatement
-            } else {
-                val newIf = newIfStatement(rawNode = instr)
-                currentIfStatement.elseStatement = newIf
-                currentIfStatement = newIf
-            }
-
-            // For each of the handlers, we get the first instruction and insert a statement
-            // case llvm.matchesCatchpad(parent, args), where args are used to determine if
-            // this handler accepts the object thrown.
-            val bbTarget = LLVMGetOperand(instr, idx)
-
-            val catchpad = LLVMGetFirstInstruction(LLVMValueAsBasicBlock(bbTarget))
-            val catchOps = LLVMGetNumArgOperands(catchpad)
-
-            val matchesCatchpad =
+        return newBlock(rawNode = instr).withChildren { block ->
+            val dummyCall =
                 newCallExpression(
-                    llvmInternalRef("llvm.matchesCatchpad"),
-                    "llvm.matchesCatchpad",
-                    false,
-                    rawNode = instr
-                )
+                        llvmInternalRef("llvm.catchswitch"),
+                        "llvm.catchswitch",
+                        false,
+                        rawNode = instr
+                    )
+                    .withChildren {
+                        val parent = frontend.getOperandValueAtIndex(instr, 0)
+                        it.addArgument(parent, "parent")
+                    }
 
-            val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
-            val catchswitch = frontend.expressionHandler.handle(parentCatchSwitch) as Expression
-            matchesCatchpad.addArgument(catchswitch, "parentCatchswitch")
+            val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
+            block.addStatement(tokenGeneration)
 
-            for (i in 0 until catchOps) {
-                val arg = frontend.getOperandValueAtIndex(catchpad, i)
-                matchesCatchpad.addArgument(arg, "args_$i")
+            val ifStatement = newIfStatement(rawNode = instr)
+            var currentIfStatement: IfStatement? = null
+            var idx = 1
+            while (idx < numOps) {
+                if (currentIfStatement == null) {
+                    currentIfStatement = ifStatement
+                } else {
+                    val newIf = newIfStatement(rawNode = instr)
+                    currentIfStatement.elseStatement = newIf
+                    currentIfStatement = newIf
+                }
+
+                // For each of the handlers, we get the first instruction and insert a statement
+                // case llvm.matchesCatchpad(parent, args), where args are used to determine if
+                // this handler accepts the object thrown.
+                val bbTarget = LLVMGetOperand(instr, idx)
+
+                val catchpad = LLVMGetFirstInstruction(LLVMValueAsBasicBlock(bbTarget))
+                val catchOps = LLVMGetNumArgOperands(catchpad)
+
+                val matchesCatchpad =
+                    newCallExpression(
+                        llvmInternalRef("llvm.matchesCatchpad"),
+                        "llvm.matchesCatchpad",
+                        false,
+                        rawNode = instr
+                    )
+
+                val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
+                val catchswitch = frontend.expressionHandler.handle(parentCatchSwitch) as Expression
+                matchesCatchpad.addArgument(catchswitch, "parentCatchswitch")
+
+                for (i in 0 until catchOps) {
+                    val arg = frontend.getOperandValueAtIndex(catchpad, i)
+                    matchesCatchpad.addArgument(arg, "args_$i")
+                }
+
+                currentIfStatement.condition = matchesCatchpad
+
+                // Get the label of the goto statement.
+                val gotoStatement = assembleGotoStatement(instr, bbTarget)
+                currentIfStatement.thenStatement = gotoStatement
+
+                idx++
             }
 
-            currentIfStatement.condition = matchesCatchpad
-
-            // Get the label of the goto statement.
-            val gotoStatement = assembleGotoStatement(instr, bbTarget)
-            currentIfStatement.thenStatement = gotoStatement
-
-            idx++
-        }
-
-        val unwindDest = LLVMGetUnwindDest(instr)
-        if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val gotoStatement = assembleGotoStatement(instr, LLVMBasicBlockAsValue(unwindDest))
-            if (currentIfStatement == null) {
-                currentIfStatement = ifStatement
+            val unwindDest = LLVMGetUnwindDest(instr)
+            if (unwindDest != null) { // For "unwind to caller", the destination is null
+                val gotoStatement = assembleGotoStatement(instr, LLVMBasicBlockAsValue(unwindDest))
+                if (currentIfStatement == null) {
+                    currentIfStatement = ifStatement
+                }
+                currentIfStatement.elseStatement = gotoStatement
+            } else {
+                // "unwind to caller". As we don't know where the control flow continues,
+                // the best model would be to throw the exception again. Here, we only know
+                // that we will throw something here but we don't know what. We have to fix
+                // that later once we know in which catch-block this statement is executed.
+                val throwOperation =
+                    newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
+                currentIfStatement?.elseStatement = throwOperation
             }
-            currentIfStatement.elseStatement = gotoStatement
-        } else {
-            // "unwind to caller". As we don't know where the control flow continues,
-            // the best model would be to throw the exception again. Here, we only know
-            // that we will throw something here but we don't know what. We have to fix
-            // that later once we know in which catch-block this statement is executed.
-            val throwOperation =
-                newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
-            currentIfStatement?.elseStatement = throwOperation
-        }
 
-        compoundStatement.addStatement(ifStatement)
-        return compoundStatement
+            block.addStatement(ifStatement)
+        }
     }
 
     /**
@@ -499,12 +452,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val dereference = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
         dereference.input = frontend.getOperandValueAtIndex(instr, 1)
 
-        return newAssignExpression(
-            "=",
-            listOf(dereference),
-            listOf(frontend.getOperandValueAtIndex(instr, 0)),
-            rawNode = instr
-        )
+        return newAssignExpression("=", rawNode = instr).withChildren {
+            it.lhs = listOf(dereference)
+            it.rhs = listOf(frontend.getOperandValueAtIndex(instr, 0))
+        }
     }
 
     /**
@@ -703,12 +654,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
-        val compoundStatement = newBlock(rawNode = instr)
-        val assignment = newAssignExpression("=", listOf(base), listOf(valueToSet), rawNode = instr)
-        compoundStatement.addStatement(copy)
-        compoundStatement.addStatement(assignment)
-
-        return compoundStatement
+        return newBlock(rawNode = instr).withChildren { block ->
+            val assignment =
+                newAssignExpression("=", rawNode = instr).withChildren {
+                    it.lhs = listOf(base)
+                    it.rhs = listOf(valueToSet)
+                }
+            block.addStatement(copy)
+            block.addStatement(assignment)
+        }
     }
 
     /**
@@ -750,11 +704,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // res = (arg != undef && arg != poison) ? arg : llvm.freeze(in)
         val conditional =
             newConditionalExpression(
-                condition,
-                operand,
-                callExpression,
-                operand.type,
-            )
+                    operand.type,
+                )
+                .withChildren {
+                    it.condition = condition
+                    it.thenExpression = operand
+                    it.elseExpression = callExpression
+                }
         return declarationOrNot(conditional, instr)
     }
 
@@ -842,11 +798,16 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         ptrDerefAssign.input = frontend.getOperandValueAtIndex(instr, 0)
 
         val assignment =
-            newAssignExpression("=", listOf(ptrDerefAssign), listOf(value), rawNode = instr)
+            newAssignExpression("=", rawNode = instr).withChildren {
+                it.lhs = listOf(ptrDerefAssign)
+                it.rhs = listOf(value)
+            }
 
-        val ifStatement = newIfStatement(rawNode = instr)
-        ifStatement.condition = cmpExpr
-        ifStatement.thenStatement = assignment
+        val ifStatement =
+            newIfStatement(rawNode = instr).withChildren {
+                it.condition = cmpExpr
+                it.thenStatement = assignment
+            }
 
         compoundStatement.addStatement(ifStatement)
 
@@ -933,11 +894,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
                 val conditional =
                     newConditionalExpression(
-                        condition,
-                        ptrDerefConditional,
-                        value,
-                        ty,
-                    )
+                            ty,
+                        )
+                        .withChildren {
+                            it.condition = condition
+                            it.thenExpression = ptrDerefConditional
+                            it.elseExpression = value
+                        }
                 exchOp.rhs = listOf(conditional)
             }
             LLVMAtomicRMWBinOpUMax,
@@ -963,11 +926,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
                 val conditional =
                     newConditionalExpression(
-                        condition,
-                        ptrDerefConditional,
-                        value,
-                        ty,
-                    )
+                            ty,
+                        )
+                        .withChildren {
+                            it.condition = condition
+                            it.thenExpression = ptrDerefConditional
+                            it.elseExpression = value
+                        }
                 exchOp.rhs = listOf(conditional)
             }
             else -> {
@@ -1243,12 +1208,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
 
         val assignExpr =
-            newAssignExpression(
-                "=",
-                listOf(arrayExpr),
-                listOf(frontend.getOperandValueAtIndex(instr, 1)),
-                rawNode = instr
-            )
+            newAssignExpression("=", rawNode = instr).withChildren {
+                it.lhs = listOf(arrayExpr)
+                it.rhs = listOf(frontend.getOperandValueAtIndex(instr, 1))
+            }
         compoundStatement.addStatement(assignExpr)
 
         return compoundStatement
@@ -1424,12 +1387,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for ((l, r) in labelMap) {
             // Now, we iterate over all the basic blocks and add an assign statement.
             val assignment =
-                newAssignExpression(
-                    "=",
-                    listOf(newReference(varName, type, rawNode = instr)),
-                    listOf(r),
-                    rawNode = instr
-                )
+                newAssignExpression("=", rawNode = instr).withChildren {
+                    it.lhs = listOf(newReference(varName, type, rawNode = instr))
+                    it.rhs = listOf(r)
+                }
             (assignment.lhs.first() as Reference).type = type
             (assignment.lhs.first() as Reference).refersTo = declaration
             flatAST.add(assignment)
