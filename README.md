@@ -128,15 +128,16 @@ Languages are maintained to different degrees, and are noted in the table below 
   
 The current state of languages is:
 
-| Language | Module | Branch | State |
-|---|---|---|---|
-| Java | cpg-language-java | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| C++ | cpg-language-cxx | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| Python | cpg-language-python | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| Go | cpg-language-go | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `incubating` |
-| TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
-| Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
+| Language                 | Module                                | Branch                                                                  | State          |
+|--------------------------|---------------------------------------|-------------------------------------------------------------------------|----------------|
+| Java (Source)            | cpg-language-java                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
 | {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
 
 ### Languages and Configuration

@@ -6,6 +6,7 @@ log4j = "2.23.0"
 sonarqube = "5.1.0.4882"
 spotless = "6.25.0"
 nexus-publish = "2.0.0"
+sootup = "1.3.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -56,6 +57,12 @@ sonarqube-gradle = { module = "org.sonarsource.scanner.gradle:sonarqube-gradle-p
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 
+sootup-core = { module = "org.soot-oss:sootup.core", version.ref = "sootup" }
+sootup-java-core = { module = "org.soot-oss:sootup.java.core", version.ref = "sootup" }
+sootup-java-sourcecode = { module = "org.soot-oss:sootup.java.sourcecode", version.ref = "sootup" }
+sootup-java-bytecode = { module = "org.soot-oss:sootup.java.bytecode", version.ref = "sootup" }
+sootup-jimple-parser = { module = "org.soot-oss:sootup.jimple.parser", version.ref = "sootup" }
+
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
@@ -66,6 +73,7 @@ kotlin-scripting = [
     "kotlin-scripting-dependencies",
     "kotlin-scripting-dependencies-maven-all",
 ]
+sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple-parser"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}

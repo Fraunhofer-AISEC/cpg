@@ -423,9 +423,21 @@ private constructor(
         } else null
     }
 
+    /**
+     * This extension function returns an appropriate [Language] for this [File] based on the
+     * registered file extensions of [TranslationConfiguration.languages]. It will emit a warning if
+     * multiple languages are registered for the same extension (and the first one that was
+     * registered will be returned).
+     */
     private val File.language: Language<*>?
         get() {
-            return config.languages.firstOrNull { it.handlesFile(this) }
+            val languages = config.languages.filter { it.handlesFile(this) }
+            if (languages.size > 1) {
+                log.warn(
+                    "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
+                )
+            }
+            return languages.firstOrNull()
         }
 
     class Builder {
