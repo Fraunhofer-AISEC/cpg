@@ -106,7 +106,6 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // Unary operator
         map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
 
-
         // Special operators, which we need to model as binary/unary operators
         map.put(JInstanceOfExpr::class.java) { handleInstanceOfExpr(it as JInstanceOfExpr) }
         map.put(JLengthExpr::class.java) { handleLengthExpr(it as JLengthExpr) }
