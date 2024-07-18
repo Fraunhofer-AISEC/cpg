@@ -71,7 +71,7 @@ class ReturnStatement : Statement(), ArgumentHolder {
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return this.returnValues.contains(expression)
+        return expression in this.returnValues
     }
 
     override fun equals(other: Any?): Boolean {

@@ -242,6 +242,6 @@ class AssignExpression :
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return this.lhs.contains(expression) || this.rhs.contains(expression)
+        return expression in lhs || expression in rhs
     }
 }
