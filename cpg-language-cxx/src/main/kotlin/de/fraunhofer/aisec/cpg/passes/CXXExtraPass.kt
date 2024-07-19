@@ -116,7 +116,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             //   referred to in the op.
             val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
             cast.language = language
-            cast.castType = language.objectType(fakeUnaryOp.input.name)
+            cast.castType = fakeUnaryOp.objectType(fakeUnaryOp.input.name)
 
             // * create a unary operator with the rhs of the binary operator (and the same
             //   operator code).
