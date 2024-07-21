@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
@@ -112,7 +113,19 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // rid of FunctionPointerType and only deal with FunctionTypes.
         val pointerType: FunctionPointerType =
             when (val type = expr.type) {
-                is FunctionType -> type.pointer() as FunctionPointerType
+                is FunctionType -> {
+                    when (val pointerType = type.pointer()) {
+                        is FunctionPointerType -> pointerType
+                        is ProblemType -> {
+                            log.warn("Function has unexpected type: ProblemType; ignore call")
+                            return
+                        }
+                        else -> {
+                            log.warn("Unexpected function type: ${pointerType}; ignore call")
+                            return
+                        }
+                    }
+                }
                 is FunctionPointerType -> type
                 else -> {
                     // some languages allow other types to derive from a function type, in this case

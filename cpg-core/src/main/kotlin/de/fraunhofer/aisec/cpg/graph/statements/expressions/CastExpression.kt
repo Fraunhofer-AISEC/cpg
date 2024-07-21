@@ -75,6 +75,10 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.expression == expression
+    }
+
     override fun typeChanged(newType: Type, src: HasType) {
         // Nothing to do, the cast type always stays the same
     }

@@ -35,6 +35,12 @@ open class NumericType(
     language: Language<*>? = null,
     val modifier: Modifier = Modifier.SIGNED
 ) : ObjectType(typeName, listOf(), true, language) {
+
+    init {
+        // Built-in types are always resolved
+        this.typeOrigin = Origin.RESOLVED
+    }
+
     /**
      * NumericTypes can have a modifier. The default is signed. Some types (e.g. char in C) may be
      * neither of the signed/unsigned option.

@@ -116,18 +116,39 @@ val translationConfig = TranslationConfiguration
     .build()
 ```
 
-## Development Setup
+## Development
+This section describes languages, how well they are supported, and how to use and develop them yourself.
 
-### Experimental Languages
+### Language Support
+Languages are maintained to different degrees, and are noted in the table below with:
+- `maintained`: if they are mostly feature complete and bugs have priority of being fixed.
+- `incubating`: if the language is currently being worked on to reach a state of feature completeness.
+- `experimental`: if a first working prototype was implemented, e.g., to support research topics, and its future development is unclear.
+- `discontinued`: if the language is no longer actively developed or maintained but is kept for everyone to fork and adapt.
+  
+The current state of languages is:
 
-Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included in the `cpg-core` module but have separate gradle submodules.
-To include the desired submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+| Language                 | Module                                | Branch                                                                  | State          |
+|--------------------------|---------------------------------------|-------------------------------------------------------------------------|----------------|
+| Java (Source)            | cpg-language-java                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
+
+### Languages and Configuration
+`cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
+To include the desired language submodules, simply toggle them on in your local `gradle.properties` file by setting the properties to `true`, e.g., (`enableGoFrontend=true`).
 We provide a sample file with all languages switched on [here](./gradle.properties.example).
-Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
+Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you. Some languages need additional installation of software to run and will be listed below.
 
 #### Golang
 
-In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically store the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS.
+In the case of Golang, additional native code, [libgoast](https://github.com/Fraunhofer-AISEC/libgoast), is used to access the Go `ast` packages. Gradle should automatically download the latest version of this library during the build process. This currently only works for Linux and macOS.
 
 #### Python
 

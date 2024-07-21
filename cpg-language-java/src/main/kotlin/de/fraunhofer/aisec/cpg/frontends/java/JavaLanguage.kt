@@ -71,6 +71,7 @@ open class JavaLanguage :
     @JsonIgnore
     override val builtInTypes =
         mapOf(
+            "void" to IncompleteType(language = this),
             // Boolean Types:
             // https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html#jls-4.2.5
             "boolean" to BooleanType("boolean", language = this),

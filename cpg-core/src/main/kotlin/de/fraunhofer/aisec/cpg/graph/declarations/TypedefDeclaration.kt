@@ -31,7 +31,7 @@ import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
-class TypedefDeclaration : Declaration() {
+class TypedefDeclaration : Declaration() /*, DeclaresType*/ {
     /** The already existing type that is to be aliased */
     var type: Type = UnknownType.getUnknownType(null)
 
@@ -52,4 +52,7 @@ class TypedefDeclaration : Declaration() {
             .append("alias", alias)
             .toString()
     }
+
+    /*override val declaredType: Type
+    get() = alias*/
 }

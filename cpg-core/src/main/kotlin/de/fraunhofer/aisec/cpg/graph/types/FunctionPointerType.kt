@@ -81,12 +81,6 @@ class FunctionPointerType : Type {
         return this
     }
 
-    override fun isSimilar(t: Type?): Boolean {
-        return if (t is FunctionPointerType) {
-            parametersPropertyEdge == t.parametersPropertyEdge && returnType == t.returnType
-        } else false
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is FunctionPointerType) return false

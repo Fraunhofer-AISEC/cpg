@@ -146,6 +146,10 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
         return true
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return expression in this.arguments
+    }
+
     override fun removeArgument(expression: Expression): Boolean {
         arguments -= expression
         return true

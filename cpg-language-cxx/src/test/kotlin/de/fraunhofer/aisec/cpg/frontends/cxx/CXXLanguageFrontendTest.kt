@@ -55,31 +55,36 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.functions["main"]
-        assertNotNull(main)
+        with(tu) {
+            val main = tu.functions["main"]
+            assertNotNull(main)
 
-        val decl = main
-        val ls = decl.variables["ls"]
-        assertNotNull(ls)
-        assertEquals(tu.objectType("std::vector", listOf(tu.objectType("int"))), ls.type)
-        assertLocalName("ls", ls)
+            val decl = main
+            val ls = decl.variables["ls"]
+            assertNotNull(ls)
+            assertEquals(
+                assertResolvedType("std::vector", listOf(assertResolvedType("int"))),
+                ls.type
+            )
+            assertLocalName("ls", ls)
 
-        val forEachStatement = decl.forEachLoops.firstOrNull()
-        assertNotNull(forEachStatement)
+            val forEachStatement = decl.forEachLoops.firstOrNull()
+            assertNotNull(forEachStatement)
 
-        // should loop over ls
-        assertEquals(ls, (forEachStatement.iterable as Reference).refersTo)
+            // should loop over ls
+            assertEquals(ls, (forEachStatement.iterable as Reference).refersTo)
 
-        // should declare auto i (so far no concrete type inferrable)
-        val stmt = forEachStatement.variable
-        assertNotNull(stmt)
-        assertTrue(stmt is DeclarationStatement)
-        assertTrue(stmt.isSingleDeclaration())
+            // should declare auto i (so far no concrete type inferrable)
+            val stmt = forEachStatement.variable
+            assertNotNull(stmt)
+            assertTrue(stmt is DeclarationStatement)
+            assertTrue(stmt.isSingleDeclaration())
 
-        val i = stmt.singleDeclaration as VariableDeclaration
-        assertNotNull(i)
-        assertLocalName("i", i)
-        assertIs<AutoType>(i.type)
+            val i = stmt.singleDeclaration as VariableDeclaration
+            assertNotNull(i)
+            assertLocalName("i", i)
+            assertIs<AutoType>(i.type)
+        }
     }
 
     @Test
@@ -137,7 +142,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val sizeof = i.initializer as? TypeIdExpression
             assertNotNull(sizeof)
             assertLocalName("sizeof", sizeof)
-            assertEquals(tu.objectType("std::size_t"), sizeof.type)
+            assertEquals(assertResolvedType("std::size_t"), sizeof.type)
 
             val typeInfo = funcDecl.variables["typeInfo"]
             assertNotNull(typeInfo)
@@ -146,7 +151,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(typeid)
             assertLocalName("typeid", typeid)
 
-            assertEquals(objectType("std::type_info").ref(), typeid.type)
+            assertEquals(assertResolvedType("std::type_info").ref(), typeid.type)
 
             val j = funcDecl.variables["j"]
             assertNotNull(j)
@@ -155,7 +160,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(sizeof)
             assertNotNull(alignOf)
             assertLocalName("alignof", alignOf)
-            assertEquals(tu.objectType("std::size_t"), alignOf.type)
+            assertEquals(assertResolvedType("std::size_t"), alignOf.type)
         }
     }
 
@@ -173,16 +178,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
             val e = main.variables["e"]
             assertNotNull(e)
-            assertEquals(objectType("ExtendedClass").pointer(), e.type)
+            assertEquals(assertResolvedType("ExtendedClass").pointer(), e.type)
 
             val b = main.variables["b"]
             assertNotNull(b)
-            assertEquals(objectType("BaseClass").pointer(), b.type)
+            assertEquals(assertResolvedType("BaseClass").pointer(), b.type)
 
             // initializer
             var cast = b.initializer as? CastExpression
             assertNotNull(cast)
-            assertEquals(objectType("BaseClass").pointer(), cast.castType)
+            assertEquals(assertResolvedType("BaseClass").pointer(), cast.castType)
 
             val staticCast = main.assigns.getOrNull(0)
             assertNotNull(staticCast)
@@ -386,7 +391,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 (statements[0] as DeclarationStatement).getSingleDeclarationAs(
                     VariableDeclaration::class.java
                 )
-            assertEquals(objectType("SSL_CTX").pointer(), declFromMultiplicateExpression.type)
+            assertEquals(
+                assertResolvedType("SSL_CTX").pointer(),
+                declFromMultiplicateExpression.type
+            )
             assertLocalName("ptr", declFromMultiplicateExpression)
 
             val withInitializer =
@@ -899,20 +907,20 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 (statement.statements[0] as DeclarationStatement).singleDeclaration
                     as VariableDeclaration
             // type should be Integer
-            assertEquals(tu.objectType("Integer"), i.type)
+            assertEquals(assertResolvedType("Integer"), i.type)
 
             // initializer should be a construct expression
             var constructExpr = i.initializer as? ConstructExpression
             assertNotNull(constructExpr)
             // type of the construct expression should also be Integer
-            assertEquals(tu.objectType("Integer"), constructExpr.type)
+            assertEquals(assertResolvedType("Integer"), constructExpr.type)
 
             // auto (Integer) m
             val m =
                 (statement.statements[6] as DeclarationStatement).singleDeclaration
                     as VariableDeclaration
             // type should be Integer*
-            assertEquals(objectType("Integer").pointer(), m.type)
+            assertEquals(assertResolvedType("Integer").pointer(), m.type)
 
             val constructor = constructExpr.constructor
             assertNotNull(constructor)
@@ -923,19 +931,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val newExpression = m.initializer as? NewExpression
             assertNotNull(newExpression)
             // type of the new expression should also be Integer*
-            assertEquals(objectType("Integer").pointer(), newExpression.type)
+            assertEquals(assertResolvedType("Integer").pointer(), newExpression.type)
 
             // initializer should be a construct expression
             constructExpr = newExpression.initializer as? ConstructExpression
             assertNotNull(constructExpr)
             // type of the construct expression should be Integer
-            assertEquals(objectType("Integer"), constructExpr.type)
+            assertEquals(assertResolvedType("Integer"), constructExpr.type)
 
             // argument should be named k and of type m
             val k = constructExpr.arguments[0] as Reference
             assertLocalName("k", k)
             // type of the construct expression should also be Integer
-            assertEquals(primitiveType("int"), k.type)
+            assertEquals(assertResolvedType("int"), k.type)
         }
     }
 
@@ -1256,7 +1264,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         var cast = count.initializer
         assertIs<CastExpression>(cast)
-        assertLocalName("size_t", cast.castType)
+        assertLocalName("int", cast.castType)
         assertLiteralValue(42, cast.expression)
 
         val addr = tu.variables["addr"]
@@ -1353,6 +1361,26 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
+    fun testEnumCPP() {
+        val file = File("src/test/resources/cxx/enum.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
+        // but NOT any EnumConstantDeclarations
+        assertEquals(2, tu.declarations.size)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val returnStatement = main.bodyOrNull<ReturnStatement>()
+        assertNotNull(returnStatement)
+        assertNotNull((returnStatement.returnValue as? Reference)?.refersTo)
+    }
+
+    @Test
+    @Throws(Exception::class)
     fun testStruct() {
         val file = File("src/test/resources/c/struct.c")
         val tu =
@@ -1384,7 +1412,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
             }
         with(tu) {
-            val typedefs = tu.ctx?.scopeManager?.typedefFor(objectType("MyStruct"))
+            val typedefs = tu.ctx?.scopeManager?.typedefFor(Name("MyStruct"))
             assertLocalName("__myStruct", typedefs)
 
             val main = tu.functions["main"]
@@ -1661,36 +1689,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val std = result.namespaces["std"]
-        assertNotNull(std)
+        // There should be no type "string" anymore, only "std::string"
+        assertFalse(result.finalCtx.typeManager.typeExists("string"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::string"))
 
-        val string = std.records["string"]
-        assertNotNull(string)
-
-        val cStr = string.methods["c_str"]
-        assertNotNull(cStr)
-
-        /*val cStrCall = result.mcalls["c_str"]
-        assertNotNull(cStrCall)
-        assertInvokes(cStrCall, cStr)*/
-
-        var scope =
-            result.functions["function1"]?.body?.let {
-                result.finalCtx.scopeManager.lookupScope(it)
-            }
-        assertNotNull(scope)
-
-        var lookup = scope.lookupSymbol("string").singleOrNull()
-        assertEquals(string, lookup)
-
-        scope =
-            result.functions["function2"]?.body?.let {
-                result.finalCtx.scopeManager.lookupScope(it)
-            }
-        assertNotNull(scope)
-
-        lookup = scope.lookupSymbol("string").singleOrNull()
-        assertEquals(string, lookup)
+        // the same applies to "inner::secret"
+        assertFalse(result.finalCtx.typeManager.typeExists("secret"))
+        assertFalse(result.finalCtx.typeManager.typeExists("inner::secret"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::inner::secret"))
     }
 
     @Test

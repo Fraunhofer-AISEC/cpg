@@ -59,7 +59,6 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.graph.allChildren",
                     "import de.fraunhofer.aisec.cpg.graph.ast",
                     "import de.fraunhofer.aisec.cpg.graph.dfgFrom",
-                    "import de.fraunhofer.aisec.cpg.graph.byName",
                     "import de.fraunhofer.aisec.cpg.graph.body",
                     "import de.fraunhofer.aisec.cpg.graph.capacity",
                     "import de.fraunhofer.aisec.cpg.console.printCode",
