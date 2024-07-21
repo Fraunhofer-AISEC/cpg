@@ -64,22 +64,18 @@ interface Reporter {
     }
 
     /**
-     * @return the default path to write the report to
+     * Gets the default path to write the report to. Currently, the default path is
+     * `$(pwd)/reports/report-<yyyy-MM-dd-HH-mm-ss>.sarif`
      *
-     * TODO: base path should be config lookup
+     * @return the default path to write the report to
      */
     fun getDefaultPath(): Path {
         // TODO: duplicates technically possible if multiple reports are generated in the same
         // second
+        // TODO: base path should be configurable
         // eg reports/sarif/report-2021-09-29-15-00-00.sarif
-        return Path.of(
-            "reports",
-            "report-${LocalDateTime.now().format(defaultTimeFormatter)}.sarif"
-        )
-    }
-
-    companion object {
-        internal val defaultTimeFormatter: DateTimeFormatter =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
+        val timestamp: String =
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss"))
+        return Path.of("reports", "report-$timestamp.sarif")
     }
 }

@@ -41,6 +41,7 @@ interface Rule {
 
     /** human readable name of the query */
     val name: String
+
     /**
      * !!only the number!!
      *
