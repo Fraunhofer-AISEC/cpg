@@ -59,6 +59,7 @@ open class CPPLanguage :
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
+    @Transient
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
         mapOf(
@@ -102,7 +103,7 @@ open class CPPLanguage :
 
             // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
             MemberCallExpression::class of "()" to "operator()",
-            BinaryOperator::class of "," to "operator,",
+            BinaryOperator::class of  "," to "operator,",
         )
 
     /**
