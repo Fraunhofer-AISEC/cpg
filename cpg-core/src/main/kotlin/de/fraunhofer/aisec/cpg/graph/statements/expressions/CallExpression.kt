@@ -93,6 +93,13 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @AST var callee: Expression? = null
+        set(value) {
+            field = value
+            // Set the call expression as resolution helper for the callee
+            if (value is Reference) {
+                value.resolutionHelper = this
+            }
+        }
 
     /**
      * The [Name] of this call expression, based on its [callee].

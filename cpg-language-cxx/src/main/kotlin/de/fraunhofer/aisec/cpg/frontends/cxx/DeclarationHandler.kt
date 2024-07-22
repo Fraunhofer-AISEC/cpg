@@ -135,14 +135,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.addDeclaration(declaration)
 
         // Enter the namespace scope
-        frontend.scopeManager.enterScope(declaration)
-
-        // Finally, handle all declarations within that namespace
-        for (child in ctx.declarations) {
-            handle(child)
+        declaration.withChildren(true) {
+            // Finally, handle all declarations within that namespace
+            for (child in ctx.declarations) {
+                handle(child)
+            }
         }
-
-        frontend.scopeManager.leaveScope(declaration)
 
         return declaration
     }
@@ -191,42 +189,40 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // Store the reference to a declaration holder of a named scope.
         val holder = (declaration.scope as? NameScope)?.astNode
 
-        if (holder != null && outsideOfScope) {
+        if (holder != null && outsideOfScope) { // This is a case where we may want a withScope
             // everything inside the method is within the scope of its record or namespace
             frontend.scopeManager.enterScope(holder)
         }
 
         // Enter the scope of our function
-        frontend.scopeManager.enterScope(declaration)
+        declaration.withChildren(true) {
+            // Since this is a definition, the body should always be there, but we need to make sure in
+            // case of parsing errors.
+            if (ctx.body != null) {
+                // Let the statement handler take care of the function body. The outcome should (always)
+                // be a compound statement, holding all other statements.
+                val bodyStatement = frontend.statementHandler.handle(ctx.body)
+                if (bodyStatement is Block) {
+                    val statements = bodyStatement.statementEdges
 
-        // Since this is a definition, the body should always be there, but we need to make sure in
-        // case of parsing errors.
-        if (ctx.body != null) {
-            // Let the statement handler take care of the function body. The outcome should (always)
-            // be a compound statement, holding all other statements.
-            val bodyStatement = frontend.statementHandler.handle(ctx.body)
-            if (bodyStatement is Block) {
-                val statements = bodyStatement.statementEdges
+                    // get the last statement
+                    var lastStatement: Statement? = null
+                    if (statements.isNotEmpty()) {
+                        lastStatement = statements[statements.size - 1].end
+                    }
 
-                // get the last statement
-                var lastStatement: Statement? = null
-                if (statements.isNotEmpty()) {
-                    lastStatement = statements[statements.size - 1].end
+                    // add an implicit return statement, if there is none
+                    if (lastStatement !is ReturnStatement) {
+                        val returnStatement = newReturnStatement()
+                        returnStatement.isImplicit = true
+                        bodyStatement.addStatement(returnStatement)
+                    }
+                    declaration.body = bodyStatement
                 }
-
-                // add an implicit return statement, if there is none
-                if (lastStatement !is ReturnStatement) {
-                    val returnStatement = newReturnStatement()
-                    returnStatement.isImplicit = true
-                    bodyStatement.addStatement(returnStatement)
-                }
-                declaration.body = bodyStatement
             }
+
+            frontend.processAttributes(declaration, ctx)
         }
-
-        frontend.processAttributes(declaration, ctx)
-
-        frontend.scopeManager.leaveScope(declaration)
 
         if (holder != null && outsideOfScope) {
             frontend.scopeManager.leaveScope(holder)
@@ -269,12 +265,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         templateDeclaration.location = frontend.locationOf(ctx)
         frontend.scopeManager.addDeclaration(templateDeclaration)
-        frontend.scopeManager.enterScope(templateDeclaration)
-        addTemplateParameters(ctx, templateDeclaration)
-
-        // Handle Template
-        val innerDeclaration = frontend.declarationHandler.handle(ctx.declaration)
-        frontend.scopeManager.leaveScope(templateDeclaration)
+        var innerDeclaration: Declaration? = null
+        templateDeclaration.withChildren(true) {
+            addTemplateParameters(ctx, templateDeclaration)
+            // Handle Template
+            innerDeclaration = frontend.declarationHandler.handle(ctx.declaration)
+        }
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
             templateDeclaration.name = templateDeclaration.realizations[0].name.clone()
@@ -421,6 +417,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (primaryDeclaration, useNameOfDeclarator) =
             handleDeclarationSpecifier(declSpecifier, ctx, sequence)
 
+        // Todo These are added to the declarators instead of the declaration, those however are created afterwards and
+        // Todo therefore have no astParent, we need to solve this.
         // Fill template params, if needed
         val templateParams: List<Node>? = extractTemplateParams(ctx, declSpecifier)
 
@@ -454,53 +452,55 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val declaration =
                     frontend.declaratorHandler.handle(declarator) as? ValueDeclaration ?: continue
 
-                // Parse the type (with some hints)
-                type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
+                declaration.withChildren {
+                    // Parse the type (with some hints)
+                    type = frontend.typeOf(declarator, declSpecifierToUse, declaration)
 
-                // For function *declarations*, we need to update the return types based on the
-                // function type. For function *definitions*, this is done in
-                // [handleFunctionDefinition].
-                if (declaration is FunctionDeclaration) {
-                    declaration.returnTypes =
-                        (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
-                }
+                    // For function *declarations*, we need to update the return types based on the
+                    // function type. For function *definitions*, this is done in
+                    // [handleFunctionDefinition].
+                    if (declaration is FunctionDeclaration) {
+                        declaration.returnTypes =
+                            (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
+                    }
 
-                // We also need to set the type, based on the declarator type.
-                declaration.type = type
+                    // We also need to set the type, based on the declarator type.
+                    declaration.type = type
 
-                // process attributes
-                frontend.processAttributes(declaration, ctx)
-                sequence.addDeclaration(declaration)
+                    // process attributes
+                    frontend.processAttributes(declaration, ctx)
+                    sequence.addDeclaration(declaration)
 
-                // We want to make sure that we parse the initializer *after* we have set the
-                // type. This has several advantages:
-                // * This way we can deduce, whether our initializer needs to have the
-                //   declared type (in case of a ConstructExpression);
-                // * or if the declaration needs to have the same type as the initializer (when
-                //   an auto-type is used). The latter case is done internally by the
-                //   VariableDeclaration class and its type observer.
-                // * Additionally, it makes sure that the type is known before parsing the
-                //   initializer. This allows us to guess cast vs. call expression in the
-                //   initializer.
-                if (declaration is VariableDeclaration) {
-                    // Set template parameters of the variable (if any)
-                    declaration.templateParameters = templateParams
+                    // We want to make sure that we parse the initializer *after* we have set the
+                    // type. This has several advantages:
+                    // * This way we can deduce, whether our initializer needs to have the
+                    //   declared type (in case of a ConstructExpression);
+                    // * or if the declaration needs to have the same type as the initializer (when
+                    //   an auto-type is used). The latter case is done internally by the
+                    //   VariableDeclaration class and its type observer.
+                    // * Additionally, it makes sure that the type is known before parsing the
+                    //   initializer. This allows us to guess cast vs. call expression in the
+                    //   initializer.
+                    if (declaration is VariableDeclaration) {
+                        // Set template parameters of the variable (if any)
+                        declaration.templateParameters = templateParams
 
-                    // Parse the initializer, if we have one
-                    declarator.initializer?.let {
-                        val initializer = frontend.initializerHandler.handle(it)
-                        when {
-                            // We need to set a resolution "helper" for function pointers, so that a
-                            // reference to this declaration can resolve the function pointer (using
-                            // the type of this declaration). The typical (and only) scenario we
-                            // support here is the assignment of a `&ref` as initializer.
-                            initializer is UnaryOperator && type is FunctionPointerType -> {
-                                val ref = initializer.input as? Reference
-                                ref?.resolutionHelper = declaration
+                        // Parse the initializer, if we have one
+                        declarator.initializer?.let {
+                            val initializer = frontend.initializerHandler.handle(it)
+                            when {
+                                // We need to set a resolution "helper" for function pointers, so that a
+                                // reference to this declaration can resolve the function pointer (using
+                                // the type of this declaration). The typical (and only) scenario we
+                                // support here is the assignment of a `&ref` as initializer.
+                                initializer is UnaryOperator && type is FunctionPointerType -> {
+                                    val ref = initializer.input as? Reference
+                                    ref?.resolutionHelper = declaration
+                                }
                             }
-                        }
 
-                        declaration.initializer = initializer
+                            declaration.initializer = initializer
+                        }
                     }
                 }
             }
@@ -645,26 +645,28 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val entries = mutableListOf<EnumConstantDeclaration>()
         val enum = newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx)
 
-        // Loop through its members
-        for (enumerator in declSpecifier.enumerators) {
-            val enumConst =
-                newEnumConstantDeclaration(
-                    enumerator.name.toString(),
-                    rawNode = enumerator,
-                )
+        enum.withChildren {
+            // Loop through its members
+            for (enumerator in declSpecifier.enumerators) {
+                val enumConst =
+                    newEnumConstantDeclaration(
+                        enumerator.name.toString(),
+                        rawNode = enumerator,
+                    )
 
-            // In C/C++, default enums are of type int
-            enumConst.type = primitiveType("int")
+                // In C/C++, default enums are of type int
+                enumConst.type = primitiveType("int")
 
-            // We need to make them visible to the enclosing scope. However, we do NOT
-            // want to add it to the AST of the enclosing scope, but to the AST of the
-            // EnumDeclaration
-            frontend.scopeManager.addDeclaration(enumConst, false)
+                // We need to make them visible to the enclosing scope. However, we do NOT
+                // want to add it to the AST of the enclosing scope, but to the AST of the
+                // EnumDeclaration
+                frontend.scopeManager.addDeclaration(enumConst, false)
 
-            entries += enumConst
+                entries += enumConst
+            }
+
+            enum.entries = entries
         }
-
-        enum.entries = entries
 
         return enum
     }
@@ -717,26 +719,28 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val node =
             newTranslationUnitDeclaration(translationUnit.filePath, rawNode = translationUnit)
 
-        // There might have been errors in the previous translation unit and in any case
-        // we need to reset the scope manager scope to global, to avoid spilling scope errors into
-        // other translation units
-        frontend.scopeManager.resetToGlobal(node)
-        frontend.currentTU = node
-        val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
+        node.withChildren {
+            // There might have been errors in the previous translation unit and in any case
+            // we need to reset the scope manager scope to global, to avoid spilling scope errors into
+            // other translation units
+            frontend.scopeManager.resetToGlobal(node)
+            frontend.currentTU = node
+            val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
-        for (declaration in translationUnit.declarations) {
-            val decl = handle(declaration) ?: continue
-            (decl as? ProblemDeclaration)?.location?.let {
-                val problems =
-                    problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
-                        HashSet()
-                    }
-                problems.add(decl)
+            for (declaration in translationUnit.declarations) {
+                val decl = handle(declaration) ?: continue
+                (decl as? ProblemDeclaration)?.location?.let {
+                    val problems =
+                        problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
+                            HashSet()
+                        }
+                    problems.add(decl)
+                }
             }
-        }
 
-        if (frontend.config.addIncludesToGraph) {
-            addIncludes(translationUnit, problematicIncludes, node)
+            if (frontend.config.addIncludesToGraph) {
+                addIncludes(translationUnit, problematicIncludes, node)
+            }
         }
 
         return node
@@ -758,6 +762,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         node: TranslationUnitDeclaration
     ) {
         // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.
+        // TODO: Remark KW: Yes, indeed, we should also investigate why include declarations have other include declarations
         // Probably needs to be refactored
 
         // this tree is a bit problematic: If a file was already included before, it will not be

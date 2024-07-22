@@ -119,30 +119,32 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             val fileDeclaration = newTranslationUnitDeclaration(file.toString(), rawNode = context)
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
-            val packDecl = context?.packageDeclaration?.orElse(null)
-            var namespaceDeclaration: NamespaceDeclaration? = null
-            if (packDecl != null) {
-                namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
-                scopeManager.addDeclaration(namespaceDeclaration)
-                scopeManager.enterScope(namespaceDeclaration)
-            }
+            var currentNodeWithChildren: de.fraunhofer.aisec.cpg.graph.Node = fileDeclaration
+            fileDeclaration.withChildren {
+                val packDecl = context?.packageDeclaration?.orElse(null)
+                var namespaceDeclaration: NamespaceDeclaration? = null
+                if (packDecl != null) {
+                    namespaceDeclaration =
+                        newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
+                    scopeManager.addDeclaration(namespaceDeclaration)
+                    currentNodeWithChildren = namespaceDeclaration
+                }
 
-            for (type in context?.types ?: listOf()) {
-                // handle each type. all declaration in this type will be added by the scope manager
-                // along
-                // the way
-                val declaration = declarationHandler.handle(type)
-                scopeManager.addDeclaration(declaration)
-            }
+                currentNodeWithChildren.withChildren(namespaceDeclaration != null){
+                    for (type in context?.types ?: listOf()) {
+                        // handle each type. all declaration in this type will be added by the scope manager
+                        // along
+                        // the way
+                        val declaration = declarationHandler.handle(type)
+                        scopeManager.addDeclaration(declaration)
+                    }
 
-            for (anImport in context?.imports ?: listOf()) {
-                val incl = newIncludeDeclaration(anImport.nameAsString)
-                scopeManager.addDeclaration(incl)
-            }
+                    for (anImport in context?.imports ?: listOf()) {
+                        val incl = newIncludeDeclaration(anImport.nameAsString)
+                        scopeManager.addDeclaration(incl)
+                    }
+                }
 
-            if (namespaceDeclaration != null) {
-                scopeManager.leaveScope(namespaceDeclaration)
             }
             bench.addMeasurement()
             fileDeclaration
@@ -448,33 +450,41 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
             val annotation = newAnnotation(expr.nameAsString, rawNode = expr)
-            val members = ArrayList<AnnotationMember>()
 
-            // annotations can be specified as member / value pairs
-            if (expr.isNormalAnnotationExpr) {
-                for (pair in expr.asNormalAnnotationExpr().pairs) {
-                    val member =
-                        newAnnotationMember(
-                            pair.nameAsString,
-                            expressionHandler.handle(pair.value) as Expression,
-                            rawNode = pair.value
-                        )
-                    members.add(member)
+            annotation.withChildren {
+                val members = ArrayList<AnnotationMember>()
+
+                // annotations can be specified as member / value pairs
+                if (expr.isNormalAnnotationExpr) {
+                    for (pair in expr.asNormalAnnotationExpr().pairs) {
+                        val member =
+                            newAnnotationMember(
+                                pair.nameAsString,
+                                rawNode = pair.value
+                            )
+                        member.withChildren {
+                            it.value = expressionHandler.handle(pair.value) as Expression
+                        }
+                        members.add(member)
+                    }
+                } else if (expr.isSingleMemberAnnotationExpr) {
+                    val value = expr.asSingleMemberAnnotationExpr().memberValue
+                    if (value != null) {
+                        // or as a literal. in this case it is assigned to the annotation member 'value'
+                        val member =
+                            newAnnotationMember(
+                                ANNOTATION_MEMBER_VALUE,
+                                rawNode = value
+                            )
+                        member.withChildren {
+                            it.value = expressionHandler.handle(value) as Expression
+                        }
+                        members.add(member)
+                    }
                 }
-            } else if (expr.isSingleMemberAnnotationExpr) {
-                val value = expr.asSingleMemberAnnotationExpr().memberValue
-                if (value != null) {
-                    // or as a literal. in this case it is assigned to the annotation member 'value'
-                    val member =
-                        newAnnotationMember(
-                            ANNOTATION_MEMBER_VALUE,
-                            expressionHandler.handle(value) as Expression,
-                            rawNode = value
-                        )
-                    members.add(member)
-                }
+                annotation.members = members
             }
-            annotation.members = members
+
             list.add(annotation)
         }
         return list

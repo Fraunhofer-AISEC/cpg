@@ -103,16 +103,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     ): Expression {
         return if (node.declSpecifier is IASTSimpleDeclSpecifier) {
             val cast = newCastExpression(rawNode = node)
-            cast.castType = frontend.typeOf(node.declSpecifier)
+            cast.withChildren {
+                cast.castType = frontend.typeOf(node.declSpecifier)
 
-            // The actual expression that is cast is nested in an initializer. We could forward
-            // this to our initializer handler, but this would create a lot of construct expressions
-            // just for simple type casts, which we want to avoid, so we take a shortcut and do a
-            // direct unwrapping here.
-            val single =
-                (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
-            cast.expression =
-                single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
+                // The actual expression that is cast is nested in an initializer. We could forward
+                // this to our initializer handler, but this would create a lot of construct expressions
+                // just for simple type casts, which we want to avoid, so we take a shortcut and do a
+                // direct unwrapping here.
+                val single =
+                    (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
+                cast.expression =
+                    single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
+            }
             cast
         } else {
             // Otherwise, we try to parse it as an initializer, which must either be an initializer
@@ -121,6 +123,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (initializer is InitializerListExpression) {
                 val construct = newConstructExpression(rawNode = node)
                 construct.arguments = initializer.initializers.toList()
+                // We have to set the ast Parent manually here because we have to construct the initializer first before inferring if we have to wrap it in a construct expressions
+                initializer.astParent = construct
                 construct
             } else initializer ?: newProblemExpression("could not parse initializer")
         }
@@ -129,42 +133,44 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleLambdaExpression(node: CPPASTLambdaExpression): Expression {
         val lambda = newLambdaExpression(rawNode = node)
 
-        // Variables passed by reference are mutable. If we have initializers, we have to model the
-        // variable explicitly.
-        for (capture in node.captures) {
-            if (capture is CPPASTInitCapture) {
-                // TODO: The scope manager isn't able to resolve this correctly.
-                frontend.declaratorHandler.handle(capture.declarator)?.let {
-                    it.isImplicit = true
-                    lambda.addDeclaration(it)
-                }
-            } else {
-                if (capture.isByReference) {
-                    val valueDeclaration =
-                        frontend.scopeManager.resolveReference(
-                            newReference(capture?.identifier?.toString())
-                        )
-                    valueDeclaration?.let { lambda.mutableVariables.add(it) }
+        lambda.withChildren {
+            // Variables passed by reference are mutable. If we have initializers, we have to model the
+            // variable explicitly.
+            for (capture in node.captures) {
+                if (capture is CPPASTInitCapture) {
+                    // TODO: The scope manager isn't able to resolve this correctly.
+                    frontend.declaratorHandler.handle(capture.declarator)?.let {
+                        it.isImplicit = true
+                        lambda.addDeclaration(it)
+                    }
+                } else {
+                    if (capture.isByReference) {
+                        val valueDeclaration =
+                            frontend.scopeManager.resolveReference(
+                                newReference(capture?.identifier?.toString())
+                            )
+                        valueDeclaration?.let { lambda.mutableVariables.add(it) }
+                    }
                 }
             }
+
+            // By default, the outer variables passed by value to the lambda are immutable. But we can
+            // either make the function "mutable" or pass everything by reference.
+            lambda.areVariablesMutable =
+                (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
+                        node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
+
+            val anonymousFunction =
+                node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
+                    ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
+            anonymousFunction.type = FunctionType.computeType(anonymousFunction)
+
+            anonymousFunction.withChildren {
+                anonymousFunction.body = frontend.statementHandler.handle(node.body)
+            }
+
+            lambda.function = anonymousFunction
         }
-
-        // By default, the outer variables passed by value to the lambda are immutable. But we can
-        // either make the function "mutable" or pass everything by reference.
-        lambda.areVariablesMutable =
-            (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
-                node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
-
-        val anonymousFunction =
-            node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
-                ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
-        anonymousFunction.type = FunctionType.computeType(anonymousFunction)
-
-        frontend.scopeManager.enterScope(anonymousFunction)
-        anonymousFunction.body = frontend.statementHandler.handle(node.body)
-        frontend.scopeManager.leaveScope(anonymousFunction)
-
-        lambda.function = anonymousFunction
 
         return lambda
     }
@@ -212,8 +218,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleArraySubscriptExpression(ctx: IASTArraySubscriptExpression): Expression {
         val arraySubsExpression = newSubscriptExpression(rawNode = ctx)
-        handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
-        handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
+        arraySubsExpression.withChildren {
+            handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
+            handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
+        }
         return arraySubsExpression
     }
 
@@ -226,50 +234,54 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             t.array()
             val arrayMods = (ctx.typeId.abstractDeclarator as IASTArrayDeclarator).arrayModifiers
             val arrayCreate = newNewArrayExpression(rawNode = ctx)
-            arrayCreate.type = t
-            for (arrayMod in arrayMods) {
-                val constant = handle(arrayMod.constantExpression)
-                constant?.let { arrayCreate.addDimension(it) }
-            }
-            if (init != null) {
-                arrayCreate.initializer = frontend.initializerHandler.handle(init)
+            arrayCreate.withChildren {
+                arrayCreate.type = t
+                for (arrayMod in arrayMods) {
+                    val constant = handle(arrayMod.constantExpression)
+                    constant?.let { arrayCreate.addDimension(it) }
+                }
+                if (init != null) {
+                    arrayCreate.initializer = frontend.initializerHandler.handle(init)
+                }
             }
             arrayCreate
         } else {
             // new returns a pointer, so we need to reference the type by pointer
             val newExpression = newNewExpression(type = t.pointer(), rawNode = ctx)
-            val declSpecifier = ctx.typeId.declSpecifier as? IASTNamedTypeSpecifier
-            // Resolve possible templates
-            if (declSpecifier?.name is CPPASTTemplateId) {
-                newExpression.templateParameters =
-                    getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
-            }
-
-            val initializer: Expression?
-            if (init != null) {
-                initializer = frontend.initializerHandler.handle(init)
-            } else {
-                // in C++, it is possible to omit the `()` part, when creating an object, such as
-                // `new A`.
-                // Therefore, CDT does not have an explicit construct expression, so we need create
-                // an implicit one
-                initializer =
-                    newConstructExpression(t.name.localName)
-                        .implicit(code = "${t.name.localName}()")
-                initializer.type = t
-            }
-
-            // we also need to "forward" our template parameters (if we have any) to the construct
-            // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters?.isNotEmpty() == true) {
-                newExpression.templateParameters?.let {
-                    addImplicitTemplateParametersToCall(it, initializer as ConstructExpression)
+            newExpression.withChildren {
+                val declSpecifier = ctx.typeId.declSpecifier as? IASTNamedTypeSpecifier
+                // Resolve possible templates
+                if (declSpecifier?.name is CPPASTTemplateId) {
+                    newExpression.templateParameters =
+                        getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
                 }
-            }
 
-            // our initializer, such as a construct expression, will have the non-pointer type
-            initializer?.type = t
-            newExpression.initializer = initializer
+                val initializer: Expression?
+                if (init != null) {
+                    initializer = frontend.initializerHandler.handle(init)
+                } else {
+                    // in C++, it is possible to omit the `()` part, when creating an object, such as
+                    // `new A`.
+                    // Therefore, CDT does not have an explicit construct expression, so we need create
+                    // an implicit one
+                    initializer =
+                        newConstructExpression(t.name.localName)
+                            .implicit(code = "${t.name.localName}()")
+                    initializer.type = t
+                }
+
+                // we also need to "forward" our template parameters (if we have any) to the construct
+                // expression since the construct expression will do the actual template instantiation
+                if (newExpression.templateParameters?.isNotEmpty() == true) {
+                    newExpression.templateParameters?.let {
+                        addImplicitTemplateParametersToCall(it, initializer as ConstructExpression)
+                    }
+                }
+
+                // our initializer, such as a construct expression, will have the non-pointer type
+                initializer?.type = t
+                newExpression.initializer = initializer
+            }
             newExpression
         }
     }
@@ -304,15 +316,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConditionalExpression(ctx: IASTConditionalExpression): ConditionalExpression {
-        val condition =
-            handle(ctx.logicalConditionExpression)
+        val conditionalExpression = newConditionalExpression()
+        conditionalExpression.withChildren {
+            it.condition = handle(ctx.logicalConditionExpression)
                 ?: ProblemExpression("could not parse condition expression")
-        return newConditionalExpression(
-            condition,
-            if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
-            else condition,
-            handle(ctx.negativeResultExpression)
-        )
+            it.thenExpression = if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
+            else it.condition
+            it.elseExpression = handle(ctx.negativeResultExpression)
+        }
+            
+        return conditionalExpression
+
     }
 
     private fun handleDeleteExpression(ctx: CPPASTDeleteExpression): DeleteExpression {

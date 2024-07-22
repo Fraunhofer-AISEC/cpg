@@ -290,62 +290,62 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // Enter the scope of the function itself
-        frontend.scopeManager.enterScope(declaration)
+        declaration.withChildren(true) {
 
-        // Create the method receiver (if this is a method)
-        if (declaration is MethodDeclaration) {
-            createMethodReceiver(declaration)
-        }
+            // Create the method receiver (if this is a method)
+            if (declaration is MethodDeclaration) {
+                createMethodReceiver(declaration)
+            }
 
-        var i = 0
-        for (param in ctx.parameters) {
-            val arg = frontend.parameterDeclarationHandler.handle(param)
+            var i = 0
+            for (param in ctx.parameters) {
+                val arg = frontend.parameterDeclarationHandler.handle(param)
 
-            if (arg is ParameterDeclaration) {
-                // check for void type parameters
-                if (arg.type is IncompleteType) {
-                    if (arg.name.isNotEmpty()) {
-                        Util.warnWithFileLocation(
-                            declaration,
-                            log,
-                            "Named parameter cannot have void type"
-                        )
-                    } else {
-                        // specifying void as first parameter is ok and means that the function has
-                        // no parameters
-                        if (i == 0) {
-                            continue
-                        } else {
+                if (arg is ParameterDeclaration) {
+                    // check for void type parameters
+                    if (arg.type is IncompleteType) {
+                        if (arg.name.isNotEmpty()) {
                             Util.warnWithFileLocation(
                                 declaration,
                                 log,
-                                "void parameter must be the first and only parameter"
+                                "Named parameter cannot have void type"
                             )
+                        } else {
+                            // specifying void as first parameter is ok and means that the function has
+                            // no parameters
+                            if (i == 0) {
+                                continue
+                            } else {
+                                Util.warnWithFileLocation(
+                                    declaration,
+                                    log,
+                                    "void parameter must be the first and only parameter"
+                                )
+                            }
                         }
                     }
+
+                    arg.argumentIndex = i
                 }
-
-                arg.argumentIndex = i
+                // Note that this .addValueDeclaration call already adds arg to the function's
+                // parameters.
+                // This is why the following line has been commented out by @KW
+                frontend.scopeManager.addDeclaration(arg)
+                // declaration.getParameters().add(arg);
+                i++
             }
-            // Note that this .addValueDeclaration call already adds arg to the function's
-            // parameters.
-            // This is why the following line has been commented out by @KW
-            frontend.scopeManager.addDeclaration(arg)
-            // declaration.getParameters().add(arg);
-            i++
-        }
 
-        // Check for varargs. Note the difference to Java: here, we don't have a named array
-        // containing the varargs, but they are rather treated as kind of an invisible arg list that
-        // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
-        // declaration that wraps this list
-        if (ctx.takesVarArgs()) {
-            val varargs = newParameterDeclaration("va_args", unknownType(), true)
-            varargs.isImplicit = true
-            varargs.argumentIndex = i
-            frontend.scopeManager.addDeclaration(varargs)
+            // Check for varargs. Note the difference to Java: here, we don't have a named array
+            // containing the varargs, but they are rather treated as kind of an invisible arg list that
+            // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
+            // declaration that wraps this list
+            if (ctx.takesVarArgs()) {
+                val varargs = newParameterDeclaration("va_args", unknownType(), true)
+                varargs.isImplicit = true
+                varargs.argumentIndex = i
+                frontend.scopeManager.addDeclaration(varargs)
+            }
         }
-        frontend.scopeManager.leaveScope(declaration)
 
         // if we know our record declaration, but are outside the actual record, we
         // need to leave the record scope again afterwards
@@ -456,28 +456,26 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         frontend.scopeManager.addDeclaration(recordDeclaration)
 
-        frontend.scopeManager.enterScope(recordDeclaration)
+        recordDeclaration.withChildren(true) {
+            processMembers(ctx)
 
-        processMembers(ctx)
-
-        if (recordDeclaration.constructors.isEmpty()) {
-            // create an implicit constructor declaration with the same name as the record
-            val constructorDeclaration =
-                newConstructorDeclaration(
+            if (recordDeclaration.constructors.isEmpty()) {
+                // create an implicit constructor declaration with the same name as the record
+                val constructorDeclaration =
+                    newConstructorDeclaration(
                         recordDeclaration.name.localName,
                         recordDeclaration,
                     )
-                    .implicit(code = recordDeclaration.name.localName)
+                        .implicit(code = recordDeclaration.name.localName)
 
-            createMethodReceiver(constructorDeclaration)
+                createMethodReceiver(constructorDeclaration)
 
-            // and set the type, constructors always have implicitly the return type of their class
-            constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
-            recordDeclaration.addConstructor(constructorDeclaration)
-            frontend.scopeManager.addDeclaration(constructorDeclaration)
+                // and set the type, constructors always have implicitly the return type of their class
+                constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
+                recordDeclaration.addConstructor(constructorDeclaration)
+                frontend.scopeManager.addDeclaration(constructorDeclaration)
+            }
         }
-
-        frontend.scopeManager.leaveScope(recordDeclaration)
 
         return recordDeclaration
     }

@@ -67,39 +67,41 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = constructorDeclaration
             )
         frontend.scopeManager.addDeclaration(declaration)
-        frontend.scopeManager.enterScope(declaration)
-        createMethodReceiver(currentRecordDecl, declaration)
-        declaration.addThrowTypes(
-            constructorDeclaration.thrownExceptions.map { type: ReferenceType ->
-                frontend.typeOf(type)
+        declaration.withChildren(hasScope = true) {
+            frontend.scopeManager.enterScope(declaration)
+            createMethodReceiver(currentRecordDecl, declaration)
+            declaration.addThrowTypes(
+                constructorDeclaration.thrownExceptions.map { type: ReferenceType ->
+                    frontend.typeOf(type)
+                }
+            )
+            for (parameter in constructorDeclaration.parameters) {
+                val param =
+                    this.newParameterDeclaration(
+                        parameter.nameAsString,
+                        frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
+                        parameter.isVarArgs,
+                        rawNode = parameter
+                    )
+                declaration.addParameter(param)
+                frontend.scopeManager.addDeclaration(param)
             }
-        )
-        for (parameter in constructorDeclaration.parameters) {
-            val param =
-                this.newParameterDeclaration(
-                    parameter.nameAsString,
-                    frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
-                    parameter.isVarArgs,
-                    rawNode = parameter
-                )
-            declaration.addParameter(param)
-            frontend.scopeManager.addDeclaration(param)
+
+            val record =
+                frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode
+                    as? RecordDeclaration
+            if (record != null) {
+                val type = record.toType()
+                declaration.type = type
+            }
+
+            // check, if constructor has body (i.e. it's not abstract or something)
+            val body = constructorDeclaration.body
+            addImplicitReturn(body)
+            declaration.body = frontend.statementHandler.handle(body)
+            frontend.processAnnotations(declaration, constructorDeclaration)
         }
 
-        val record =
-            frontend.scopeManager.firstScopeOrNull { it is RecordScope }?.astNode
-                as? RecordDeclaration
-        if (record != null) {
-            val type = record.toType()
-            declaration.type = type
-        }
-
-        // check, if constructor has body (i.e. it's not abstract or something)
-        val body = constructorDeclaration.body
-        addImplicitReturn(body)
-        declaration.body = frontend.statementHandler.handle(body)
-        frontend.processAnnotations(declaration, constructorDeclaration)
-        frontend.scopeManager.leaveScope(declaration)
         return declaration
     }
 
@@ -115,47 +117,46 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = methodDecl
             )
-        frontend.scopeManager.enterScope(functionDeclaration)
-        createMethodReceiver(currentRecordDecl, functionDeclaration)
-        functionDeclaration.addThrowTypes(
-            methodDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
-        )
-        for (parameter in methodDecl.parameters) {
-            var resolvedType: Type? =
-                frontend.typeManager.getTypeParameter(
-                    functionDeclaration.recordDeclaration,
-                    parameter.type.toString()
-                )
-            if (resolvedType == null) {
-                resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
+        functionDeclaration.withChildren(hasScope = true) {
+            createMethodReceiver(currentRecordDecl, functionDeclaration)
+            functionDeclaration.addThrowTypes(
+                methodDecl.thrownExceptions.map { type: ReferenceType -> frontend.typeOf(type) }
+            )
+            for (parameter in methodDecl.parameters) {
+                var resolvedType: Type? =
+                    frontend.typeManager.getTypeParameter(
+                        functionDeclaration.recordDeclaration,
+                        parameter.type.toString()
+                    )
+                if (resolvedType == null) {
+                    resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
+                }
+                val param =
+                    this.newParameterDeclaration(
+                        parameter.nameAsString,
+                        resolvedType,
+                        parameter.isVarArgs,
+                        rawNode = parameter
+                    )
+                functionDeclaration.addParameter(param)
+                frontend.processAnnotations(param, parameter)
+                frontend.scopeManager.addDeclaration(param)
             }
-            val param =
-                this.newParameterDeclaration(
-                    parameter.nameAsString,
-                    resolvedType,
-                    parameter.isVarArgs,
-                    rawNode = parameter
-                )
-            functionDeclaration.addParameter(param)
-            frontend.processAnnotations(param, parameter)
-            frontend.scopeManager.addDeclaration(param)
-        }
-        val returnTypes = listOf(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
-        functionDeclaration.returnTypes = returnTypes
-        val type = computeType(functionDeclaration)
-        functionDeclaration.type = type
+            val returnTypes = listOf(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
+            functionDeclaration.returnTypes = returnTypes
+            val type = computeType(functionDeclaration)
+            functionDeclaration.type = type
 
-        // check, if method has body (i.e., it's not abstract or something)
-        val o = methodDecl.body
-        if (o.isEmpty) {
-            frontend.scopeManager.leaveScope(functionDeclaration)
-            return functionDeclaration
+            // check, if method has body (i.e., it's not abstract or something)
+            val o = methodDecl.body
+            if (!o.isEmpty) {
+                val body = o.get()
+                addImplicitReturn(body)
+                functionDeclaration.body = frontend.statementHandler.handle(body)
+                frontend.processAnnotations(functionDeclaration, methodDecl)
+            }
         }
-        val body = o.get()
-        addImplicitReturn(body)
-        functionDeclaration.body = frontend.statementHandler.handle(body)
-        frontend.processAnnotations(functionDeclaration, methodDecl)
-        frontend.scopeManager.leaveScope(functionDeclaration)
+
         return functionDeclaration
     }
 
@@ -201,9 +202,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         processImportDeclarations(recordDeclaration)
 
-        frontend.scopeManager.enterScope(recordDeclaration)
-        processRecordMembers(classInterDecl, recordDeclaration)
-        frontend.scopeManager.leaveScope(recordDeclaration)
+        recordDeclaration.withChildren(hasScope = true) {
+            processRecordMembers(classInterDecl, recordDeclaration)
+        }
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
@@ -228,6 +229,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             val field =
                 this.newFieldDeclaration("this$" + scope.name?.localName, fieldType, listOf())
                     .implicit("this$" + scope.name?.localName)
+            field.astParent = recordDeclaration
             frontend.scopeManager.addDeclaration(field)
             frontend.scopeManager.leaveScope(recordDeclaration)
         }
@@ -241,11 +243,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
 
         for (variable in fieldDecl.variables) {
-            val initializer =
-                variable.initializer
-                    .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
-                    .orElse(null)
-                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+
             var type: Type
             try {
                 // Resolve type first with ParameterizedType
@@ -287,9 +285,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     variable.name.asString(),
                     type,
                     modifiers,
-                    initializer,
                     rawNode = fieldDecl
                 )
+            fieldDeclaration.withChildren {
+                it.initializer =
+                    variable.initializer
+                        .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
+                        .orElse(null)
+                            as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+            }
             frontend.scopeManager.addDeclaration(fieldDeclaration)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
             declarationSequence.addDeclaration(fieldDeclaration)
@@ -308,15 +312,14 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         processImportDeclarations(enumDeclaration)
 
-        frontend.scopeManager.enterScope(enumDeclaration)
+        enumDeclaration.withChildren(true) {
+            processRecordMembers(enumDecl, enumDeclaration)
 
-        processRecordMembers(enumDecl, enumDeclaration)
+            val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
+            entries.forEach { it.type = this.objectType(enumDeclaration.name) }
+            enumDeclaration.entries = entries
+        }
 
-        val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
-        entries.forEach { it.type = this.objectType(enumDeclaration.name) }
-        enumDeclaration.entries = entries
-
-        frontend.scopeManager.leaveScope(enumDeclaration)
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
@@ -424,12 +427,13 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentEnum?.constructors?.singleOrNull {
                     it.matchesSignature(arguments.map { it.type }).isDirectMatch
                 }
-
-            val constructExpr =
-                newConstructExpression(matchingConstructor?.name ?: currentEnum?.name)
-            arguments.forEach { constructExpr.addArgument(it) }
-            matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
-            result.initializer = constructExpr
+            result.withChildren {
+                val constructExpr =
+                    newConstructExpression(matchingConstructor?.name ?: currentEnum?.name)
+                arguments.forEach { constructExpr.addArgument(it) }
+                matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
+                it.initializer = constructExpr
+            }
         }
         return result
     }
@@ -462,13 +466,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         }
         val oInitializer = variable.initializer
         if (oInitializer.isPresent) {
-            val initializer =
-                frontend.expressionHandler.handle(oInitializer.get())
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-            if (initializer is NewArrayExpression) {
-                declaration.isArray = true
+            declaration.withChildren {
+                val initializer =
+                    frontend.expressionHandler.handle(oInitializer.get())
+                            as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                if (initializer is NewArrayExpression) {
+                    declaration.isArray = true
+                }
+                declaration.initializer = initializer
             }
-            declaration.initializer = initializer
         }
 
         return declaration
