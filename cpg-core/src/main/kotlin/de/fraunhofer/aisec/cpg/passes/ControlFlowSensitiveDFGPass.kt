@@ -135,7 +135,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                                 (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
-                        key.addPrevDFG(it)
+                        // In case the previous node is a *-UnaryOperator and its prevDFG is the
+                        // same as it, this should be not a full DFG, but a pointerDataFlow
+                        val prevUnaryOps =
+                            key.prevDFG.filter { it is UnaryOperator && it.operatorCode == "*" }
+                        if (
+                            prevUnaryOps.size == 1 &&
+                                prevUnaryOps.first().prevDFG.size == 1 &&
+                                prevUnaryOps.first().prevDFG.first() == it
+                        ) {
+                            key.addPrevDFG(it, PointerDataflowGranularity())
+                        } else {
+                            key.addPrevDFG(it)
+                        }
                     }
                 }
             }
