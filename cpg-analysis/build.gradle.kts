@@ -51,7 +51,9 @@ dependencies {
     api(projects.cpgLanguageCxx)
     api(projects.cpgLanguageJava)
 
+    api(libs.picocli)
+
     implementation(libs.sarif4k)
 
-    api(libs.picocli)
+    testImplementation(testFixtures(projects.cpgCore))
 }
