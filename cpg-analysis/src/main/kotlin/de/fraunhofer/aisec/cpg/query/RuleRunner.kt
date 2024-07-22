@@ -75,6 +75,7 @@ class RuleRunner(
     private var languages: List<Language>,
     private val reporter: Reporter,
     compilationDatabase: CompilationDatabase,
+    loadIncludes: Boolean
 ) {
     private val config: TranslationConfiguration =
         TranslationConfiguration.builder()
@@ -97,6 +98,7 @@ class RuleRunner(
                 }
                 it
             }
+            .loadIncludes(loadIncludes)
             .defaultPasses()
             .build()
 
@@ -173,6 +175,12 @@ private class Cli : Runnable {
     )
     var outputPath: File? = null
 
+    @CommandLine.Option(
+        names = ["--load-includes"],
+        description = ["Enable TranslationConfiguration option loadIncludes"]
+    )
+    private var loadIncludes: Boolean = false
+
     @SuppressWarnings("unused") // used by picocli
     @CommandLine.Option(
         names = ["-h", "--help"],
@@ -183,34 +191,28 @@ private class Cli : Runnable {
 
     // TODO: add functionality
     //  -> Pass-related options from the neo4j app
-    //  -> don't hardcode rules but load them dynamically (may be similar to the pass system in the neo4j app)
+    //  -> don't hardcode rules but load them dynamically (may be similar to the pass system in the
+    // neo4j app)
 
     /**
      * Runs the rules on the given compilation database and reports the results.
      *
-     * The rules are currently built into the application and cannot be changed without modifying the source code.
-     * The output is a SARIF file because currently the only [Reporter] is the [SarifReporter].
-     * The report's path is determined by the [Reporter.getDefaultPath] method of the respective [Reporter].
+     * The rules are currently built into the application and cannot be changed without modifying
+     * the source code. The output is a SARIF file because currently the only [Reporter] is the
+     * [SarifReporter]. The report's path is determined by the [Reporter.getDefaultPath] method of
+     * the respective [Reporter].
      */
     override fun run() {
         val runner =
             RuleRunner(
                 rules =
                     listOf(
-                        AdditionIntegerOverflow(),
-                        ArrayOverRead(),
-                        ArrayUnderRead(),
-                        AssignmentIntegerOverflow(),
-                        BufferOverflowMemCpySizeLargerThanDest(),
-                        BufferOverflowMemCpySrcLargerThanDest(),
-                        BufferOverreadMemcpy(),
-                        DoubleFree(),
-                        IncrementIntegerOverflow(),
-                        UseAfterFree(),
+                        // empty
                     ),
                 languages = languages,
                 reporter = SarifReporter(),
-                compilationDatabase = CompilationDatabase.fromFile(compilationDatabase)
+                compilationDatabase = CompilationDatabase.fromFile(compilationDatabase),
+                loadIncludes = loadIncludes
             )
         runner.runRules()
         if (outputPath != null) runner.report(minify = minify, path = outputPath!!.toPath())
