@@ -72,7 +72,6 @@ class PythonLanguage :
                 "/" to "__truediv__",
                 "//" to "__floordiv__",
                 "%" to "__mod__",
-                // "divmod()" to "__divmod__",
                 "**" to "__pow__",
                 "<<" to "__lshift__",
                 ">>" to "__rshift__",
@@ -94,7 +93,6 @@ class PythonLanguage :
                 "|=" to "__ior__",
                 "-" to "__neg__", // TODO __sub__
                 "+" to "__pos__", // TODO __add__
-                // "abs()" to "__abs__",
                 "~" to "__invert__",
                 "()" to
                     "__call__", // ... x(arg1, arg2, ...) roughly translates to type(x).__call__(x,
