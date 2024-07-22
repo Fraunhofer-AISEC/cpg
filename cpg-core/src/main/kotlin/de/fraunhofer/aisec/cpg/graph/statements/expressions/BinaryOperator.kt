@@ -39,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), HasBase, HasOperatorCode, ArgumentHolder, HasType.TypeObserver {
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
