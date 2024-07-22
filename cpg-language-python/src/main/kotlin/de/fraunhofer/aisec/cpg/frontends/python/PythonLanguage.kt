@@ -25,16 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.autoType
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Python language. */
-class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperators {
+class PythonLanguage :
+    Language<PythonLanguageFrontend>(), HasShortCircuitOperators, HasOperatorOverloading {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
     @Transient
@@ -48,6 +51,53 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
      */
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
+
+    // https://docs.python.org/3/reference/datamodel.html#special-method-names
+    override val operatorNames: Map<String, Symbol>
+        get() =
+            mapOf(
+                "[]" to
+                    "__getitem__", // ... then x[i] is roughly equivalent to type(x).__getitem__(x,
+                // i)
+                "<" to "__lt__",
+                "<=" to "__le__",
+                "==" to "__eq__",
+                "!=" to "__ne__",
+                ">" to "__gt__",
+                ">=" to "__ge__",
+                "+" to "__add__",
+                "-" to "__sub__",
+                "*" to "__mul__",
+                "@" to "__matmul__",
+                "/" to "__truediv__",
+                "//" to "__floordiv__",
+                "%" to "__mod__",
+                // "divmod()" to "__divmod__",
+                "**" to "__pow__",
+                "<<" to "__lshift__",
+                ">>" to "__rshift__",
+                "&" to "__and__",
+                "^" to "__xor__",
+                "|" to "__or__",
+                "+=" to "__iadd__",
+                "-=" to "__isub__",
+                "*=" to "__imul__",
+                "@=" to "__imatmul__",
+                "/=" to "__itruediv__",
+                "//=" to "__ifloordiv__",
+                "%=" to "__imod__",
+                "**=" to "__ipow__",
+                "<<=" to "__ilshift__",
+                ">>=" to "__irshift__",
+                "&=" to "__iand__",
+                "^=" to "__ixor__",
+                "|=" to "__ior__",
+                "-" to "__neg__", // TODO __sub__
+                "+" to "__pos__", // TODO __add__
+                // "ads()" to "__abs__",
+                "~" to "__invert__",
+                // TODO walrus operator (x := 42) not included in documentation
+            )
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
     @Transient
