@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+// import de.fraunhofer.aisec.cpg.rules.*
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
-// import de.fraunhofer.aisec.cpg.rules.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.system.exitProcess
@@ -203,9 +203,10 @@ private class Cli : Runnable {
     override fun run() {
         val runner =
             RuleRunner(
-                rules = listOf(
-                    // BufferOverreadMemcpy()
-                ),
+                rules =
+                    listOf(
+                        // BufferOverreadMemcpy()
+                    ),
                 languages = languages,
                 reporter = SarifReporter(),
                 compilationDatabase = CompilationDatabase.fromFile(compilationDatabase),
