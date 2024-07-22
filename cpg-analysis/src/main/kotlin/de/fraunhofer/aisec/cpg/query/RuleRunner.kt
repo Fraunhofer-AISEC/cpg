@@ -91,8 +91,7 @@ class RuleRunner(
                     } catch (_: Exception) {
                         // TODO: log
                         println(
-                            "Failed to register language \"$language\", maybe it's not configured in " +
-                                "gradle.properties?"
+                            "Failed to register language \"$language\", maybe it's not configured in gradle.properties?"
                         )
                     }
                 }
@@ -128,9 +127,8 @@ class RuleRunner(
     name = "cpg-analysis",
     description =
         [
-            "Runs a set of rules on a given compilation database and reports the results. " +
-                "The rules are hard-coded in the source code. " +
-                "The output is a SARIF file as no other reporters are implemented."
+            "Runs a set of rules on a given compilation database and reports the results. The rules are hard-coded in " +
+                "the source code. The output is a SARIF file as no other reporters are implemented."
         ]
 )
 private class Cli : Runnable {
@@ -205,10 +203,7 @@ private class Cli : Runnable {
     override fun run() {
         val runner =
             RuleRunner(
-                rules =
-                    listOf(
-                        // empty
-                    ),
+                rules = listOf(BufferOverreadMemcpy()),
                 languages = languages,
                 reporter = SarifReporter(),
                 compilationDatabase = CompilationDatabase.fromFile(compilationDatabase),
