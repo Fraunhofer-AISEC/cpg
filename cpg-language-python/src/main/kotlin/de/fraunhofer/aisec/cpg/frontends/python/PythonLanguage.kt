@@ -96,6 +96,9 @@ class PythonLanguage :
                 "+" to "__pos__", // TODO __add__
                 // "ads()" to "__abs__",
                 "~" to "__invert__",
+                "()" to
+                    "__call__", // ... x(arg1, arg2, ...) roughly translates to type(x).__call__(x,
+                // arg1, ...)
                 // TODO walrus operator (x := 42) not included in documentation
             )
 
