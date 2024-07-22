@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -40,7 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * use-case is access of a member function (method) as part of the [MemberCallExpression.callee]
  * property of a [MemberCallExpression].
  */
-class MemberExpression : Reference(), ArgumentHolder, HasBase {
+class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
     @AST
     override var base: Expression = ProblemExpression("could not parse base expression")
         set(value) {

@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /** Specifies that a certain node has a base on which it executes an operation. */
@@ -39,3 +41,9 @@ interface HasBase : HasOperatorCode {
      */
     override val operatorCode: String?
 }
+
+/**
+ * Specifies that this node (e.g. a [BinaryOperator] contains an operation that can be overloaded by
+ * an [OperatorDeclaration].
+ */
+interface HasOverloadedOperation : HasBase
