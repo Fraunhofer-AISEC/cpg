@@ -56,6 +56,7 @@ class PythonLanguage :
         setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
 
     // https://docs.python.org/3/reference/datamodel.html#special-method-names
+    @Transient
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
         mapOf(
