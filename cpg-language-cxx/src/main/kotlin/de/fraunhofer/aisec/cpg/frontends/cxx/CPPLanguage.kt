@@ -103,7 +103,7 @@ open class CPPLanguage :
 
             // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
             MemberCallExpression::class of "()" to "operator()",
-            BinaryOperator::class of  "," to "operator,",
+            BinaryOperator::class of "," to "operator,",
         )
 
     /**
