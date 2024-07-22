@@ -53,7 +53,7 @@ class PythonLanguage :
         setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
 
     // https://docs.python.org/3/reference/datamodel.html#special-method-names
-    override val operatorNames: Map<String, Symbol>
+    override val overloadedOperatorNames: Map<String, Symbol>
         get() =
             mapOf(
                 "[]" to
