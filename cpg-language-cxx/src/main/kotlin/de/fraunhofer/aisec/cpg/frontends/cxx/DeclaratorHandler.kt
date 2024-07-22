@@ -227,7 +227,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
          * They are regarded as functions and eclipse CDT for some reason introduces a whitespace
          * in the function name, which will complicate things later on. But we only want to replace
          * the whitespace for "standard" operators.
-         * in the function name, which will complicate things later on
          */
         if (nameDecl.name is CPPASTOperatorName && name.replace(" ", "").isKnownOperatorName) {
             name = name.replace(" ", "")
