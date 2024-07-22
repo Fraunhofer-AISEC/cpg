@@ -94,12 +94,11 @@ class PythonLanguage :
                 "|=" to "__ior__",
                 "-" to "__neg__", // TODO __sub__
                 "+" to "__pos__", // TODO __add__
-                // "ads()" to "__abs__",
+                // "abs()" to "__abs__",
                 "~" to "__invert__",
                 "()" to
                     "__call__", // ... x(arg1, arg2, ...) roughly translates to type(x).__call__(x,
                 // arg1, ...)
-                // TODO walrus operator (x := 42) not included in documentation
             )
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
