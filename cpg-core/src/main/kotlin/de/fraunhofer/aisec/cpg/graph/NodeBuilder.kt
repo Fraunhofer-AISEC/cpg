@@ -420,13 +420,19 @@ fun <T : Node> T.withChildren(
 /**
  * This function can be used to set the [Node.astParent] of this node to the current node on the
  * [AstStackProvider]'s stack. This is particularly useful if the node was created outside of the
- * [withChildren] lambda (for example, because it is used in multiple when-branches).
+ * [withChildren] lambda. This is a usual pattern if the node is optionally wrapped in something
+ * else.
  *
  * Example:
  * ```kotlin
- * val binaryOperator = newBinaryOperator("|", rawNode = instr).withChildren {
- *   it.lhs = ptrDeref.withParent()
- *   it.rhs = value.withParent()
+ * val expr = newReference("p")
+ *
+ * return if (isDeref) {
+ *   newUnaryOperator("*").withChildren {
+ *     it.input = expr.withParent()
+ *   }
+ * } else {
+ *   expr
  * }
  * ```
  */

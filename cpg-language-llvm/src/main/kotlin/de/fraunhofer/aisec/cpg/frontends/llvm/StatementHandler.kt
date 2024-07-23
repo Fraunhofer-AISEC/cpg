@@ -1165,25 +1165,26 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // For the "invoke" instruction, the call is surrounded by a try statement which also
             // contains a goto statement after the call.
             newTryStatement(rawNode = instr).withChildren(hasScope = true) { tryStatement ->
-                tryStatement.tryBlock = newBlock(rawNode = instr).withChildren {
-                    it += declarationOrNot(call.withParent(), instr)
-                    it += tryContinue.withParent()
-                }
-
-                val catchClause = newCatchClause(rawNode = instr).withChildren {
-                    it.name = Name(gotoCatch.labelName)
-                    it.parameter =
-                        newVariableDeclaration(
-                            "e_${gotoCatch.labelName}",
-                            unknownType(),
-                            true,
-                            rawNode = instr
-                        )
-
-                    it.body = newBlock(rawNode = instr).withChildren {
-                        it.addStatement(gotoCatch)
+                tryStatement.tryBlock =
+                    newBlock(rawNode = instr).withChildren {
+                        it += declarationOrNot(call.withParent(), instr)
+                        it += tryContinue.withParent()
                     }
-                }
+
+                val catchClause =
+                    newCatchClause(rawNode = instr).withChildren {
+                        it.name = Name(gotoCatch.labelName)
+                        it.parameter =
+                            newVariableDeclaration(
+                                "e_${gotoCatch.labelName}",
+                                unknownType(),
+                                true,
+                                rawNode = instr
+                            )
+
+                        it.body =
+                            newBlock(rawNode = instr).withChildren { it.addStatement(gotoCatch) }
+                    }
                 tryStatement.catchClauses = mutableListOf(catchClause)
             }
         } else {
@@ -1480,7 +1481,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                             rawNode = valueRef
                         )
                         .withChildren { decl ->
-                            decl.initializer = rhs
+                            decl.initializer = rhs.withParent()
 
                             // add the declaration to the current scope
                             frontend.scopeManager.addDeclaration(decl)
@@ -1499,31 +1500,34 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [LabelStatement] if the basic block has a label.
      */
     private fun handleBasicBlock(bb: LLVMBasicBlockRef): Statement {
-        val compound = newBlock(rawNode = bb)
+        val block =
+            newBlock(rawNode = bb).withChildren { block ->
+                var instr = LLVMGetFirstInstruction(bb)
+                while (instr != null) {
+                    log.debug("Parsing {}", frontend.codeOf(instr))
 
-        var instr = LLVMGetFirstInstruction(bb)
-        while (instr != null) {
-            log.debug("Parsing {}", frontend.codeOf(instr))
+                    val stmt = frontend.statementHandler.handle(instr)
+                    if (stmt != null) {
+                        block += stmt
+                    }
 
-            val stmt = frontend.statementHandler.handle(instr)
-            if (stmt != null) {
-                compound.addStatement(stmt)
+                    instr = LLVMGetNextInstruction(instr)
+                }
             }
 
-            instr = LLVMGetNextInstruction(instr)
-        }
-
         val labelName = getBasicBlockName(bb)
+        return if (labelName != "") {
+            val labelStatement =
+                newLabelStatement().withChildren {
+                    it.name = Name(labelName)
+                    it.label = labelName
+                    it.subStatement = block.withParent()
+                }
 
-        if (labelName != "") {
-            val labelStatement = newLabelStatement()
-            labelStatement.name = Name(labelName)
-            labelStatement.label = labelName
-            labelStatement.subStatement = compound
-
-            return labelStatement
+            labelStatement
+        } else {
+            block
         }
-        return compound
     }
 
     /**
@@ -1543,89 +1547,89 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         unsigned: Boolean,
         unordered: Boolean = false
     ): Statement {
-        val op1 = frontend.getOperandValueAtIndex(instr, 0)
-        val op2 = frontend.getOperandValueAtIndex(instr, 1)
+        instr.opCode usesOperands mapOf("op1" to 0, "op2" to 1)
 
-        val binaryOperator: Expression
-        var binOpUnordered: BinaryOperator? = null
-
-        if (op == "uno") {
-            // Unordered comparison operand => Replace with a call to isunordered(x, y)
-            // Resulting statement: i1 lhs = isordered(op1, op2)
-            binaryOperator =
-                newCallExpression(
-                    llvmInternalRef("isunordered"),
-                    "isunordered",
-                    false,
-                    rawNode = instr
-                )
-            binaryOperator.addArgument(op1)
-            binaryOperator.addArgument(op2)
-        } else if (op == "ord") {
-            // Ordered comparison operand => Replace with !isunordered(x, y)
-            // Resulting statement: i1 lhs = !isordered(op1, op2)
-            val unorderedCall =
-                newCallExpression(
-                    llvmInternalRef("isunordered"),
-                    "isunordered",
-                    false,
-                    rawNode = instr
-                )
-            unorderedCall.addArgument(op1)
-            unorderedCall.addArgument(op2)
-            binaryOperator = newUnaryOperator("!", false, true, rawNode = instr)
-            binaryOperator.input = unorderedCall
-        } else {
-            // Resulting statement: lhs = op1 <op> op2.
-            binaryOperator = newBinaryOperator(op, rawNode = instr)
-
-            if (unsigned) {
-                val op1Type = "u${op1.type.name}"
-                val castExprLhs = newCastExpression(rawNode = instr)
-                castExprLhs.castType = objectType(op1Type)
-                castExprLhs.expression = op1
-                binaryOperator.lhs = castExprLhs
-
-                val op2Type = "u${op2.type.name}"
-                val castExprRhs = newCastExpression(rawNode = instr)
-                castExprRhs.castType = objectType(op2Type)
-                castExprRhs.expression = op2
-                binaryOperator.rhs = castExprRhs
-            } else {
-                binaryOperator.lhs = op1
-                binaryOperator.rhs = op2
+        var expr =
+            when (op) {
+                "uno" -> {
+                    // Unordered comparison operand => Replace with a call to isunordered(x, y)
+                    // Resulting statement: i1 lhs = isordered(op1, op2)
+                    newCallExpression(
+                            llvmInternalRef("isunordered"),
+                            "isunordered",
+                            false,
+                            rawNode = instr
+                        )
+                        .withChildren {
+                            it.arguments += instr.operandValue("op1")
+                            it.arguments += instr.operandValue("op2")
+                        }
+                }
+                "ord" -> {
+                    // Ordered comparison operand => Replace with !isunordered(x, y)
+                    // Resulting statement: i1 lhs = !isordered(op1, op2)
+                    newUnaryOperator("!", false, true, rawNode = instr).withChildren {
+                        it.input =
+                            newCallExpression(
+                                    llvmInternalRef("isunordered"),
+                                    "isunordered",
+                                    false,
+                                    rawNode = instr
+                                )
+                                .withChildren {
+                                    it.arguments += instr.operandValue("op1")
+                                    it.arguments += instr.operandValue("op2")
+                                }
+                    }
+                }
+                else -> {
+                    // Resulting statement: lhs = op1 <op> op2.
+                    newBinaryOperator(op, rawNode = instr).withChildren {
+                        if (unsigned) {
+                            it.lhs =
+                                newCastExpression(rawNode = instr).withChildren {
+                                    val op1 = instr.operandValue("op1")
+                                    val op1Type = "u${op1.type.name}"
+                                    it.castType = objectType(op1Type)
+                                    it.expression = op1
+                                }
+                            it.rhs =
+                                newCastExpression(rawNode = instr).withChildren {
+                                    val op2 = instr.operandValue("op2")
+                                    val op2Type = "u${op2.type.name}"
+                                    it.castType = objectType(op2Type)
+                                    it.expression = op2
+                                }
+                        } else {
+                            it.lhs = instr.operandValue("op1")
+                            it.rhs = instr.operandValue("op2")
+                        }
+                    }
+                }
             }
 
-            if (unordered) {
+        return if (unordered) {
                 // Special case for floating point comparisons which check if a value is "unordered
                 // or <op>".
                 // Statement is then lhs = isunordered(op1, op2) || (op1 <op> op2)
-                binOpUnordered = newBinaryOperator("||", rawNode = instr)
-                binOpUnordered.rhs = binaryOperator
-                val unorderedCall =
-                    newCallExpression(
-                        llvmInternalRef("isunordered"),
-                        "isunordered",
-                        false,
-                        rawNode = instr
-                    )
-                unorderedCall.addArgument(op1)
-                unorderedCall.addArgument(op2)
-                binOpUnordered.lhs = unorderedCall
+                newBinaryOperator("||", rawNode = instr).withChildren {
+                    it.rhs = expr.withParent()
+                    it.lhs =
+                        newCallExpression(
+                                llvmInternalRef("isunordered"),
+                                "isunordered",
+                                false,
+                                rawNode = instr
+                            )
+                            .withChildren {
+                                it.arguments += instr.operandValue("op1")
+                                it.arguments += instr.operandValue("op2")
+                            }
+                }
+            } else {
+                expr
             }
-        }
-
-        val declOp = if (unordered) binOpUnordered else binaryOperator
-        val decl =
-            declOp?.let { declarationOrNot(it, instr) }
-                ?: newProblemExpression("Could not parse declaration")
-
-        (decl as? DeclarationStatement)?.let {
-            // cache binding
-            frontend.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
-        }
-
-        return decl
+            .declareIfNecessary(instr)
     }
 
     /**
@@ -1646,7 +1650,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val labelName = LLVMGetBasicBlockName(bb).string
             goto.labelName = labelName
 
-            val label = newLabelStatement().withChildren { it -> it.name = Name(labelName) }
+            val label = newLabelStatement().withChildren { it.name = Name(labelName) }
             // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
             // to the CPG goto statement
             frontend.registerObjectListener(label, assigneeTargetLabel)
@@ -1685,7 +1689,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return newReference(name)
     }
 
-    fun Expression.declareIfNecessary(instr: LLVMValueRef): Statement {
+    private fun Expression.declareIfNecessary(instr: LLVMValueRef): Statement {
         return declarationOrNot(this, instr)
     }
 }
