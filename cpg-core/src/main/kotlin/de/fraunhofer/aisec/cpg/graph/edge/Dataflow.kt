@@ -59,12 +59,6 @@ class PartialDataflowGranularity(
     val partialTarget: Declaration?
 ) : Granularity
 
-/**
- * This dataflow granularity denotes that the data of a pointer is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it.
- */
-class PointerDataflowGranularity() : Granularity
-
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
@@ -80,14 +74,6 @@ fun default() = full()
  */
 fun partial(target: Declaration?): PartialDataflowGranularity {
     return PartialDataflowGranularity(target)
-}
-
-/**
- * Creates a new [PointerDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow.
- */
-fun pointer(): PointerDataflowGranularity {
-    return PointerDataflowGranularity()
 }
 
 /**
