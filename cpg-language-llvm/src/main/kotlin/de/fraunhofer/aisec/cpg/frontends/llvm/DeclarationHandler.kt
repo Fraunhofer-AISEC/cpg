@@ -136,28 +136,28 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 // definition does not have an entry, which specifies the first block, but it has a
                 // *body*, which comprises *all* statements within the abstract syntax tree of
                 // that function, hierarchically organized by compound statements. To emulate that,
-                // we
-                // take the first basic block as our body and add subsequent blocks as statements to
-                // the body. More specifically, we use the CPG node LabelStatement, which denotes
-                // the
-                // use of a label. Its property substatement contains the original basic block,
-                // parsed
-                // as a compound statement
+                // we take the first basic block as our body and add subsequent blocks as statements
+                // to the body. More specifically, we use the CPG node LabelStatement, which denotes
+                // the use of a label. Its property sub-statement contains the original basic block,
+                // parsed as a compound statement
 
                 // Take the entry block as our body
                 if (LLVMGetEntryBasicBlock(func) == bb && stmt is Block) {
                     it.body = stmt
                 } else if (LLVMGetEntryBasicBlock(func) == bb) {
-                    it.body = newBlock()
-                    if (stmt != null) {
-                        (it.body as Block).addStatement(stmt)
-                    }
+                    it.body =
+                        newBlock().withChildren { block ->
+                            if (stmt != null) {
+                                block += stmt.withParent()
+                            }
+                        }
                 } else {
                     // add the label statement, containing this basic block as a compound statement
-                    // to
-                    // our body (if we have none, which we should)
-                    if (stmt != null) {
-                        (it.body as? Block)?.addStatement(stmt)
+                    // to our body (if we have one, which we should)
+                    (it.body as? Block)?.withChildren { block ->
+                        if (stmt != null) {
+                            block += stmt.withParent()
+                        }
                     }
                 }
 
