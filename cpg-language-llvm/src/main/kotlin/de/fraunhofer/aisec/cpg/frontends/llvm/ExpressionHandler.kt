@@ -282,20 +282,19 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // retrieve the type
         val type = frontend.typeOf(value)
 
-        val expr: ConstructExpression = newConstructExpression(frontend.codeOf(value))
-        // map the construct expression to the record declaration of the type
-        expr.instantiates = (type as? ObjectType)?.recordDeclaration
+        return newConstructExpression(frontend.codeOf(value)).withChildren {
+            // map the construct expression to the record declaration of the type
+            it.instantiates = (type as? ObjectType)?.recordDeclaration
 
-        // loop through the operands
-        for (i in 0 until LLVMGetNumOperands(value)) {
-            // and handle them as expressions themselves
-            val arg = this.handle(LLVMGetOperand(value, i))
-            if (arg != null) {
-                expr.addArgument(arg)
+            // loop through the operands
+            for (i in 0 until LLVMGetNumOperands(value)) {
+                // and handle them as expressions themselves
+                val arg = this.handle(LLVMGetOperand(value, i))
+                if (arg != null) {
+                    it.addArgument(arg)
+                }
             }
         }
-
-        return expr
     }
 
     /**
@@ -315,25 +314,25 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val arrayType = LLVMTypeOf(valueRef)
-        val list = newInitializerListExpression(frontend.typeOf(valueRef), rawNode = valueRef)
-        val length =
-            if (LLVMIsAConstantDataArray(valueRef) != null) {
-                LLVMGetArrayLength(arrayType)
-            } else {
-                LLVMGetVectorSize(arrayType)
+        return newInitializerListExpression(frontend.typeOf(valueRef), rawNode = valueRef)
+            .withChildren {
+                val length =
+                    if (LLVMIsAConstantDataArray(valueRef) != null) {
+                        LLVMGetArrayLength(arrayType)
+                    } else {
+                        LLVMGetVectorSize(arrayType)
+                    }
+
+                val initializers = mutableListOf<Expression>()
+
+                for (i in 0 until length) {
+                    val expr = handle(LLVMGetAggregateElement(valueRef, i)) as Expression
+
+                    initializers += expr
+                }
+
+                it.initializers = initializers
             }
-
-        val initializers = mutableListOf<Expression>()
-
-        for (i in 0 until length) {
-            val expr = handle(LLVMGetAggregateElement(valueRef, i)) as Expression
-
-            initializers += expr
-        }
-
-        list.initializers = initializers
-
-        return list
     }
 
     /**
@@ -348,20 +347,16 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         ) {
             newLiteral(null, type, rawNode = value)
         } else {
-            val expr: ConstructExpression =
-                newConstructExpression(frontend.codeOf(value), rawNode = value)
-            // map the construct expression to the record declaration of the type
-            expr.instantiates = (type as? ObjectType)?.recordDeclaration
-            if (expr.instantiates == null) return expr
-
-            // loop through the operands
-            for (field in (expr.instantiates as RecordDeclaration).fields) {
-                // and handle them as expressions themselves
-                val arg = initializeAsUndef(field.type, value)
-                expr.addArgument(arg)
+            newConstructExpression(frontend.codeOf(value), rawNode = value).withChildren {
+                // map the construct expression to the record declaration of the type
+                it.instantiates = (type as? ObjectType)?.recordDeclaration
+                // loop through the operands
+                for (field in (it.instantiates as? RecordDeclaration)?.fields ?: listOf()) {
+                    // and handle them as expressions themselves
+                    val arg = initializeAsUndef(field.type, value)
+                    it.addArgument(arg)
+                }
             }
-
-            expr
         }
     }
 
@@ -376,20 +371,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         ) {
             newLiteral(0, type, rawNode = value)
         } else {
-            val expr: ConstructExpression =
-                newConstructExpression(frontend.codeOf(value), rawNode = value)
-            // map the construct expression to the record declaration of the type
-            expr.instantiates = (type as? ObjectType)?.recordDeclaration
-            if (expr.instantiates == null) return expr
+            newConstructExpression(frontend.codeOf(value), rawNode = value).withChildren {
+                // map the construct expression to the record declaration of the type
+                it.instantiates = (type as? ObjectType)?.recordDeclaration
 
-            // loop through the operands
-            for (field in (expr.instantiates as RecordDeclaration).fields) {
-                // and handle them as expressions themselves
-                val arg = initializeAsZero(field.type, value)
-                expr.addArgument(arg)
+                // loop through the operands
+                for (field in (it.instantiates as? RecordDeclaration)?.fields ?: listOf()) {
+                    // and handle them as expressions themselves
+                    val arg = initializeAsZero(field.type, value)
+                    it.addArgument(arg)
+                }
             }
-
-            expr
         }
     }
 
@@ -464,10 +456,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // check, if the current base type is a pointer -> then we need to handle this as an
             // array access
             if (baseType is PointerType) {
-                val arrayExpr = newSubscriptExpression()
-                arrayExpr.arrayExpression = base
-                arrayExpr.name = Name(index.toString())
-                arrayExpr.subscriptExpression = operand
+                val arrayExpr =
+                    newSubscriptExpression().withChildren {
+                        it.arrayExpression = base
+                        it.name = Name(index.toString())
+                        it.subscriptExpression = operand
+                    }
                 expr = arrayExpr
 
                 // deference the type to get the new base type
@@ -527,6 +521,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 log.info("{}", expr)
 
                 // the current expression is the new base
+                // TODO: we need to manually push this to the AST stack here
                 base = expr
             }
         }
@@ -534,8 +529,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
         // to do a final unary & operation
         if (isGetElementPtr) {
-            val ref = newUnaryOperator("&", postfix = false, prefix = true)
-            ref.input = expr
+            val ref =
+                newUnaryOperator("&", postfix = false, prefix = true).withChildren {
+                    it.input = expr
+                }
             expr = ref
         }
 
@@ -546,26 +543,25 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`select`](https://llvm.org/docs/LangRef.html#i-select) instruction, which
      * behaves like a [ConditionalExpression].
      */
-    fun handleSelect(instr: LLVMValueRef): Expression {
-        val cond = frontend.getOperandValueAtIndex(instr, 0)
-        val value1 = frontend.getOperandValueAtIndex(instr, 1)
-        val value2 = frontend.getOperandValueAtIndex(instr, 2)
+    fun handleSelect(instr: LLVMValueRef) =
+        newConditionalExpression().withChildren {
+            val cond = frontend.getOperandValueAtIndex(instr, 0)
+            val value1 = frontend.getOperandValueAtIndex(instr, 1)
+            val value2 = frontend.getOperandValueAtIndex(instr, 2)
 
-        return newConditionalExpression(value1.type).withChildren {
             it.condition = cond
             it.thenExpression = value1
             it.elseExpression = value2
+            it.type = value1.type
         }
-    }
 
     /**
      * Handles all kinds of instructions which are a
      * [cast instruction](https://llvm.org/docs/LangRef.html#conversion-operations).
      */
-    fun handleCastInstruction(instr: LLVMValueRef): Expression {
-        val castExpr = newCastExpression(rawNode = instr)
-        castExpr.castType = frontend.typeOf(instr)
-        castExpr.expression = frontend.getOperandValueAtIndex(instr, 0)
-        return castExpr
-    }
+    fun handleCastInstruction(instr: LLVMValueRef) =
+        newCastExpression(rawNode = instr).withChildren {
+            it.castType = frontend.typeOf(instr)
+            it.expression = frontend.getOperandValueAtIndex(instr, 0)
+        }
 }
