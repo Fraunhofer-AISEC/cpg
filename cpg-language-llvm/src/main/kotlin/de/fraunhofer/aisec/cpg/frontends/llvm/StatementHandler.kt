@@ -50,6 +50,30 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         map.put(LLVMBasicBlockRef::class.java) { handleBasicBlock(it as LLVMBasicBlockRef) }
     }
 
+    var instructionOperandMap = mutableMapOf<Int, Map<String, Int>>()
+
+    fun LLVMValueRef.registerOperands(vararg pairs: Pair<String, Int>) {
+        instructionOperandMap[this.opCode] = mapOf(*pairs)
+    }
+
+    fun LLVMValueRef.operand(operand: String): LLVMValueRef? {
+        var idx = instructionOperandMap[this.opCode]?.get(operand)
+        if (idx == null) {
+            throw TranslationException("unknown operand $operand for ${this.opCode}")
+        }
+
+        return LLVMGetOperand(this, idx)
+    }
+
+    fun LLVMValueRef.operandValue(operand: String): Expression {
+        var idx = instructionOperandMap[this.opCode]?.get(operand)
+        if (idx == null) {
+            throw TranslationException("unknown operand $operand for ${this.opCode}")
+        }
+
+        return frontend.getOperandValueAtIndex(this, idx)
+    }
+
     /**
      * Handles the parsing of
      * [instructions](https://llvm.org/docs/LangRef.html#instruction-reference). Instructions are
@@ -997,48 +1021,52 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 "Indirectbr statement without address and at least one target"
             )
 
-        val address = frontend.getOperandValueAtIndex(instr, 0)
+        return newSwitchStatement(rawNode = instr).withChildren {
+            val address = frontend.getOperandValueAtIndex(instr, 0)
+            it.selector = address
+            it.statement =
+                newBlock(rawNode = instr).withChildren {
+                    var idx = 1
+                    while (idx < numOps) {
+                        // The case statement is derived from the address of the label which we can
+                        // jump to
+                        val caseBBAddress =
+                            LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
+                        val caseStatement =
+                            newCaseStatement(rawNode = instr).withChildren {
+                                it.caseExpression =
+                                    newLiteral(caseBBAddress, primitiveType("i64"), rawNode = instr)
+                            }
+                        it.addStatement(caseStatement)
 
-        val switchStatement = newSwitchStatement(rawNode = instr)
-        switchStatement.selector = address
-
-        val caseStatements = newBlock(rawNode = instr)
-
-        var idx = 1
-        while (idx < numOps) {
-            // The case statement is derived from the address of the label which we can jump to
-            val caseBBAddress = LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
-            val caseStatement = newCaseStatement(rawNode = instr)
-            caseStatement.caseExpression =
-                newLiteral(caseBBAddress, primitiveType("i64"), rawNode = instr)
-            caseStatements.addStatement(caseStatement)
-
-            // Get the label of the goto statement.
-            val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
-            caseStatements.addStatement(gotoStatement)
-            idx++
+                        // Get the label of the goto statement.
+                        val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
+                        it.addStatement(gotoStatement)
+                        idx++
+                    }
+                }
         }
-
-        switchStatement.statement = caseStatements
-
-        return switchStatement
     }
 
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
+        instr.registerOperands (
+            "cond" to 0,
+            "iftrue" to 1,
+            "iffalse" to 2,
+        )
+
         if (LLVMGetNumOperands(instr) == 3) {
-            // if(op) then {goto label1} else {goto label2}
-            val ifStatement = newIfStatement(rawNode = instr)
-            val condition = frontend.getOperandValueAtIndex(instr, 0)
-            ifStatement.condition = condition
+            // if(cond) then {goto iftrue} else {goto iffalse}
+            return newIfStatement(rawNode = instr).withChildren {
+                it.condition = instr.operandValue("cond")
 
-            // Get the label of the "else" branch
-            ifStatement.elseStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
+                // Get the label of the "else" branch
+                it.elseStatement = assembleGotoStatement(instr, instr.operand("iftrue"))
 
-            // Get the label of the "if" branch
-            ifStatement.thenStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, 2))
-
-            return ifStatement
+                // Get the label of the "if" branch
+                it.thenStatement = assembleGotoStatement(instr, instr.operand("iffalse"))
+            }
         } else if (LLVMGetNumOperands(instr) == 1) {
             // goto defaultLocation
             return assembleGotoStatement(instr, LLVMGetOperand(instr, 0))
@@ -1610,32 +1638,32 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * already been processed or uses the listeners to generate the relation once the label
      * statement has been processed.
      */
-    private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): GotoStatement {
-        val goto = newGotoStatement(rawNode = instr)
-        val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
-            if (to is LabelStatement) {
-                goto.targetLabel = to
-            } else if (goto.targetLabel != to) {
-                log.error("$to is not a LabelStatement")
+    private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef?): GotoStatement {
+        return newGotoStatement(rawNode = instr).withChildren { goto ->
+            val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
+                if (to is LabelStatement) {
+                    goto.targetLabel = to
+                } else if (goto.targetLabel != to) {
+                    log.error("$to is not a LabelStatement")
+                }
+            }
+            val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)
+            val labelName = LLVMGetBasicBlockName(bb).string
+            goto.labelName = labelName
+
+            val label = newLabelStatement().withChildren { it -> it.name = Name(labelName) }
+            // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
+            // to the CPG goto statement
+            frontend.registerObjectListener(label, assigneeTargetLabel)
+            if (goto.targetLabel == null) {
+                // If the Label AST node could not be resolved, the matching is done based on label
+                // names of CPG nodes using the predicate listeners
+                frontend.registerPredicateListener(
+                    { _: Any?, to: Any? -> (to is LabelStatement && to.label == goto.labelName) },
+                    assigneeTargetLabel
+                )
             }
         }
-        val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)
-        val labelName = LLVMGetBasicBlockName(bb).string
-        goto.labelName = labelName
-        val label = newLabelStatement()
-        label.name = Name(labelName)
-        // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
-        // to the CPG goto statement
-        frontend.registerObjectListener(label, assigneeTargetLabel)
-        if (goto.targetLabel == null) {
-            // If the Label AST node could not be resolved, the matching is done based on label
-            // names of CPG nodes using the predicate listeners
-            frontend.registerPredicateListener(
-                { _: Any?, to: Any? -> (to is LabelStatement && to.label == goto.labelName) },
-                assigneeTargetLabel
-            )
-        }
-        return goto
     }
 
     /** Returns the name of the given basic block. */
