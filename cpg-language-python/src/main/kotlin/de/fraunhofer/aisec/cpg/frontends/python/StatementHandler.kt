@@ -40,8 +40,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
-            is Python.ASTFunctionDef -> handleFunctionDef(node)
-            is Python.ASTAsyncFunctionDef -> handleAsyncFunctionDef(node)
+            is Python.ASTFunctionOrAsyncFunctionDef -> handleFunctionDef(node)
             is Python.ASTPass -> return newEmptyStatement(rawNode = node)
             is Python.ASTImportFrom -> handleImportFrom(node)
             is Python.ASTAssign -> handleAssign(node)
@@ -223,22 +222,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             it.operatorCode = op
             it.lhs = listOf(frontend.expressionHandler.handle(node.target))
             it.rhs = listOf(frontend.expressionHandler.handle(node.value))
-        }
-    }
-
-    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
-        return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
-            for (stmt in node.names) {
-                val name =
-                    if (stmt.asname != null) {
-                        stmt.asname
-                    } else {
-                        stmt.name
-                    }
-                val decl = newVariableDeclaration(name = name, rawNode = node)
-                frontend.scopeManager.addDeclaration(decl)
-                it.addDeclaration(decl)
-            }
         }
     }
 
@@ -433,11 +416,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(node: Python.ASTAsyncFunctionDef): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    private fun handleAnnotations(node: Python.ASTFunctionDef): Collection<Annotation> {
+    private fun handleAnnotations(
+        node: Python.ASTFunctionOrAsyncFunctionDef
+    ): Collection<Annotation> {
         return handleDeclaratorList(node, node.decorator_list)
     }
 
