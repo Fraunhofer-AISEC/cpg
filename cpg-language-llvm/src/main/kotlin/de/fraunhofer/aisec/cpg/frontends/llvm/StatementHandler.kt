@@ -825,148 +825,161 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val value = frontend.getOperandValueAtIndex(instr, 1)
         val ty = value.type
 
-        val exchOp = newAssignExpression("=", rawNode = instr).withChildren {
-            it.name = Name("atomicrmw")
+        val exchOp =
+            newAssignExpression("=", rawNode = instr).withChildren {
+                it.name = Name("atomicrmw")
 
-            val ptrDeref = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-            ptrDeref.input = frontend.getOperandValueAtIndex(instr, 0)
+                val ptrDeref =
+                    newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
+                ptrDeref.input = frontend.getOperandValueAtIndex(instr, 0)
 
-            val ptrDerefExch = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-            ptrDerefExch.input = frontend.getOperandValueAtIndex(instr, 0)
-            it.lhs = listOf(ptrDerefExch)
+                val ptrDerefExch =
+                    newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
+                ptrDerefExch.input = frontend.getOperandValueAtIndex(instr, 0)
+                it.lhs = listOf(ptrDerefExch)
 
-            when (operation) {
-                LLVMAtomicRMWBinOpXchg -> {
-                    it.rhs = listOf(value)
-                }
-
-                LLVMAtomicRMWBinOpFAdd,
-                LLVMAtomicRMWBinOpAdd
-                -> {
-                    val binaryOperator = newBinaryOperator("+", rawNode = instr)
-                    binaryOperator.lhs = ptrDeref
-                    binaryOperator.rhs = value
-                    it.rhs = listOf(binaryOperator)
-                }
-
-                LLVMAtomicRMWBinOpFSub,
-                LLVMAtomicRMWBinOpSub
-                -> {
-                    val binaryOperator = newBinaryOperator("-", rawNode = instr)
-                    binaryOperator.lhs = ptrDeref
-                    binaryOperator.rhs = value
-                    it.rhs = listOf(binaryOperator)
-                }
-
-                LLVMAtomicRMWBinOpAnd -> {
-                    val binaryOperator = newBinaryOperator("&", rawNode = instr)
-                    binaryOperator.lhs = ptrDeref
-                    binaryOperator.rhs = value
-                    it.rhs = listOf(binaryOperator)
-                }
-
-                LLVMAtomicRMWBinOpNand -> {
-                    val binaryOperator = newBinaryOperator("|", rawNode = instr)
-                    binaryOperator.lhs = ptrDeref
-                    binaryOperator.rhs = value
-                    val unaryOperator = newUnaryOperator("~", false, true, rawNode = instr)
-                    unaryOperator.input = binaryOperator
-                    it.rhs = listOf(unaryOperator)
-                }
-
-                LLVMAtomicRMWBinOpOr -> {
-                    val binaryOperator = newBinaryOperator("|", rawNode = instr)
-                    binaryOperator.lhs = ptrDeref
-                    binaryOperator.rhs = value
-                    it.rhs = listOf(binaryOperator)
-                }
-
-                LLVMAtomicRMWBinOpXor -> {
-                    val binaryOperator = newBinaryOperator("^", rawNode = instr)
-                    binaryOperator.lhs = ptrDeref
-                    binaryOperator.rhs = value
-                    it.rhs = listOf(binaryOperator)
-                }
-
-                LLVMAtomicRMWBinOpMax,
-                LLVMAtomicRMWBinOpMin
-                -> {
-                    val operatorCode =
-                        if (operation == LLVMAtomicRMWBinOpMin) {
-                            "<"
-                        } else {
-                            ">"
-                        }
-                    val condition = newBinaryOperator(operatorCode, rawNode = instr)
-                    condition.lhs = ptrDeref
-                    condition.rhs = value
-
-                    val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
-                    ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
-                    val conditional =
-                        newConditionalExpression(
-                            ty,
-                        )
-                            .withChildren {
-                                it.condition = condition
-                                it.thenExpression = ptrDerefConditional
-                                it.elseExpression = value
+                when (operation) {
+                    LLVMAtomicRMWBinOpXchg -> {
+                        it.rhs = listOf(value.withParent())
+                    }
+                    LLVMAtomicRMWBinOpFAdd,
+                    LLVMAtomicRMWBinOpAdd -> {
+                        val binaryOperator =
+                            newBinaryOperator("+", rawNode = instr).withChildren {
+                                it.lhs = ptrDeref.withParent()
+                                it.rhs = value.withParent()
                             }
-                    it.rhs = listOf(conditional)
-                }
-
-                LLVMAtomicRMWBinOpUMax,
-                LLVMAtomicRMWBinOpUMin
-                -> {
-                    val operatorCode =
-                        if (operation == LLVMAtomicRMWBinOpUMin) {
-                            "<"
-                        } else {
-                            ">"
-                        }
-                    val condition = newBinaryOperator(operatorCode, rawNode = instr)
-                    val castExprLhs = newCastExpression(rawNode = instr)
-                    castExprLhs.castType = objectType("u${ty.name}")
-                    castExprLhs.expression = ptrDeref
-                    condition.lhs = castExprLhs
-
-                    val castExprRhs = newCastExpression(rawNode = instr)
-                    castExprRhs.castType = objectType("u${ty.name}")
-                    castExprRhs.expression = value
-                    condition.rhs = castExprRhs
-
-                    val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
-                    ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
-                    val conditional =
-                        newConditionalExpression(
-                            ty,
-                        )
-                            .withChildren {
-                                it.condition = condition
-                                it.thenExpression = ptrDerefConditional
-                                it.elseExpression = value
+                        it.rhs = listOf(binaryOperator)
+                    }
+                    LLVMAtomicRMWBinOpFSub,
+                    LLVMAtomicRMWBinOpSub -> {
+                        val binaryOperator =
+                            newBinaryOperator("-", rawNode = instr).withChildren {
+                                it.lhs = ptrDeref.withParent()
+                                it.rhs = value.withParent()
                             }
-                    it.rhs = listOf(conditional)
-                }
-
-                else -> {
-                    throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")
+                        it.rhs = listOf(binaryOperator)
+                    }
+                    LLVMAtomicRMWBinOpAnd -> {
+                        val binaryOperator =
+                            newBinaryOperator("&", rawNode = instr).withChildren {
+                                it.lhs = ptrDeref.withParent()
+                                it.rhs = value.withParent()
+                            }
+                        it.rhs = listOf(binaryOperator)
+                    }
+                    LLVMAtomicRMWBinOpNand -> {
+                        val unaryOperator =
+                            newUnaryOperator("~", false, true, rawNode = instr).withChildren {
+                                it.input =
+                                    newBinaryOperator("|", rawNode = instr).withChildren {
+                                        it.lhs = ptrDeref.withParent()
+                                        it.rhs = value.withParent()
+                                    }
+                            }
+                        it.rhs = listOf(unaryOperator)
+                    }
+                    LLVMAtomicRMWBinOpOr -> {
+                        val binaryOperator =
+                            newBinaryOperator("|", rawNode = instr).withChildren {
+                                it.lhs = ptrDeref.withParent()
+                                it.rhs = value.withParent()
+                            }
+                        it.rhs = listOf(binaryOperator)
+                    }
+                    LLVMAtomicRMWBinOpXor -> {
+                        val binaryOperator =
+                            newBinaryOperator("^", rawNode = instr).withChildren {
+                                it.lhs = ptrDeref.withParent()
+                                it.rhs = value.withParent()
+                            }
+                        it.rhs = listOf(binaryOperator)
+                    }
+                    LLVMAtomicRMWBinOpMax,
+                    LLVMAtomicRMWBinOpMin -> {
+                        val operatorCode =
+                            if (operation == LLVMAtomicRMWBinOpMin) {
+                                "<"
+                            } else {
+                                ">"
+                            }
+                        val conditional =
+                            newConditionalExpression(
+                                    ty,
+                                )
+                                .withChildren {
+                                    it.condition =
+                                        newBinaryOperator(operatorCode, rawNode = instr)
+                                            .withChildren {
+                                                it.lhs = ptrDeref.withParent()
+                                                it.rhs = value.withParent()
+                                            }
+                                    it.thenExpression =
+                                        newUnaryOperator("*", false, true, rawNode = instr)
+                                            .withChildren {
+                                                it.input = frontend.getOperandValueAtIndex(instr, 0)
+                                            }
+                                    it.elseExpression =
+                                        frontend.getOperandValueAtIndex(instr, 1) // value
+                                }
+                        it.rhs = listOf(conditional)
+                    }
+                    LLVMAtomicRMWBinOpUMax,
+                    LLVMAtomicRMWBinOpUMin -> {
+                        val operatorCode =
+                            if (operation == LLVMAtomicRMWBinOpUMin) {
+                                "<"
+                            } else {
+                                ">"
+                            }
+                        val conditional =
+                            newConditionalExpression(
+                                    ty,
+                                )
+                                .withChildren {
+                                    it.condition =
+                                        newBinaryOperator(operatorCode, rawNode = instr)
+                                            .withChildren {
+                                                it.lhs =
+                                                    newCastExpression(rawNode = instr)
+                                                        .withChildren {
+                                                            it.castType = objectType("u${ty.name}")
+                                                            it.expression = ptrDeref.withParent()
+                                                        }
+                                                it.rhs =
+                                                    newCastExpression(rawNode = instr)
+                                                        .withChildren {
+                                                            it.castType = objectType("u${ty.name}")
+                                                            it.expression = value.withParent()
+                                                        }
+                                            }
+                                    it.thenExpression =
+                                        newUnaryOperator("*", false, true, rawNode = instr)
+                                            .withChildren {
+                                                it.input = frontend.getOperandValueAtIndex(instr, 0)
+                                            }
+                                    it.elseExpression =
+                                        frontend.getOperandValueAtIndex(instr, 1) // value
+                                }
+                        it.rhs = listOf(conditional)
+                    }
+                    else -> {
+                        throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")
+                    }
                 }
             }
-        }
 
-        // TODO: too complicated because actually exchOp must be inside the block then :(
         return if (lhs != "") {
             // set lhs = *ptr, then perform the replacement
-            val compoundStatement = newBlock(rawNode = instr)
-
-            val ptrDerefAssignment =
-                newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-            ptrDerefAssignment.input = frontend.getOperandValueAtIndex(instr, 0)
-
-            compoundStatement.statements =
-                listOf(declarationOrNot(ptrDerefAssignment, instr), exchOp)
-            compoundStatement
+            newBlock(rawNode = instr).withChildren {
+                it.statements =
+                    listOf(
+                        newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
+                            .withChildren { it.input = frontend.getOperandValueAtIndex(instr, 0) }
+                            .declareIfNecessary(instr),
+                        exchOp.withParent()
+                    )
+            }
         } else {
             // only perform the replacement
             exchOp

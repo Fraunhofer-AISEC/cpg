@@ -33,15 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
-import java.util.*
 import kotlin.collections.ArrayDeque
 import org.slf4j.LoggerFactory
 
@@ -417,6 +414,25 @@ fun <T : Node> T.withChildren(
 
     (this@AstStackProvider).astStack.removeLast()
 
+    return this
+}
+
+/**
+ * This function can be used to set the [Node.astParent] of this node to the current node on the
+ * [AstStackProvider]'s stack. This is particularly useful if the node was created outside of the
+ * [withChildren] lambda (for example, because it is used in multiple when-branches).
+ *
+ * Example:
+ * ```kotlin
+ * val binaryOperator = newBinaryOperator("|", rawNode = instr).withChildren {
+ *   it.lhs = ptrDeref.withParent()
+ *   it.rhs = value.withParent()
+ * }
+ * ```
+ */
+context(AstStackProvider)
+fun <T : Node> T.withParent(): T {
+    this.astParent = (this@AstStackProvider).astStack.lastOrNull()
     return this
 }
 
