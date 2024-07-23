@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.helpers.ASTParentTester
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
@@ -1255,6 +1256,23 @@ class PythonFrontendTest : BaseTest() {
         call = result.calls["different.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
+    }
+
+    @Test
+    fun testASTParent() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("forloop.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        assert(ASTParentTester.checkASTParents(result))
     }
 
     class PythonValueEvaluator : ValueEvaluator() {
