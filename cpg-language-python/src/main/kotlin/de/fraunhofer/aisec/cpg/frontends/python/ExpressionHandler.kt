@@ -365,6 +365,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     newCallExpression(callee, rawNode = node)
                 }
             }
+
+        callee.astParent = ret // TODO: this is an ugly hack
+
         return ret.withChildren(hasScope = false) {
             for (arg in node.args) {
                 ret.addArgument(handle(arg))
