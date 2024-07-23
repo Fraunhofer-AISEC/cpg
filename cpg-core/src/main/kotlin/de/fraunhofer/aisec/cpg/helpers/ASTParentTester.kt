@@ -27,33 +27,34 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import org.slf4j.LoggerFactory
 
 object ASTParentTester {
-    private val LOGGER = LoggerFactory.getLogger(SubgraphWalker::class.java)
 
     /**
      * This helper functions verifies that every "forward" AST edge has exactly one reverse edge to
      * the AST "parent".
      */
-    fun checkASTParents(result: TranslationResult): Boolean {
-        var allParentsGood = true
+    fun checkASTParents(result: TranslationResult): List<Pair<Node, Node>> {
         val flatAST = SubgraphWalker.flattenAST(result)
+        val errorList = mutableListOf<Pair<Node, Node>>()
         for (parent in flatAST) {
             when (parent) {
                 is TranslationResult,
                 is Component,
+                is NamespaceDeclaration,
                 is TranslationUnitDeclaration -> continue // ignore
                 else -> {}
             }
+            if (parent.isInferred) continue
             for (child in parent.astChildren) {
                 if (parent !== child.astParent) {
-                    allParentsGood = false
-                    LOGGER.error("AST parent mismatch for nodes child $child and parent $parent")
+                    errorList.add(Pair(parent, child))
                 }
             }
         }
-        return allParentsGood
+        return errorList
     }
 }
