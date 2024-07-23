@@ -52,24 +52,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     var instructionOperandMap = mutableMapOf<Int, Map<String, Int>>()
 
-    fun LLVMValueRef.registerOperands(vararg pairs: Pair<String, Int>) {
-        instructionOperandMap[this.opCode] = mapOf(*pairs)
+    private infix fun Int.usesOperands(operands: Map<String, Int>) {
+        instructionOperandMap[this] = operands
     }
 
-    fun LLVMValueRef.operand(operand: String): LLVMValueRef? {
-        var idx = instructionOperandMap[this.opCode]?.get(operand)
-        if (idx == null) {
-            throw TranslationException("unknown operand $operand for ${this.opCode}")
-        }
+    private fun LLVMValueRef.operand(operand: String): LLVMValueRef? {
+        val idx =
+            instructionOperandMap[this.opCode]?.get(operand)
+                ?: throw TranslationException("unknown operand $operand for ${this.opCode}")
 
         return LLVMGetOperand(this, idx)
     }
 
-    fun LLVMValueRef.operandValue(operand: String): Expression {
-        var idx = instructionOperandMap[this.opCode]?.get(operand)
-        if (idx == null) {
-            throw TranslationException("unknown operand $operand for ${this.opCode}")
-        }
+    private fun LLVMValueRef.operandValue(operand: String): Expression {
+        val idx =
+            instructionOperandMap[this.opCode]?.get(operand)
+                ?: throw TranslationException("unknown operand $operand for ${this.opCode}")
 
         return frontend.getOperandValueAtIndex(this, idx)
     }
@@ -1050,11 +1048,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
-        instr.registerOperands (
-            "cond" to 0,
-            "iftrue" to 1,
-            "iffalse" to 2,
-        )
+        LLVMBr usesOperands
+            mapOf(
+                "cond" to 0,
+                "iftrue" to 1,
+                "iffalse" to 2,
+            )
 
         if (LLVMGetNumOperands(instr) == 3) {
             // if(cond) then {goto iftrue} else {goto iffalse}
@@ -1084,38 +1083,35 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Returns a [SwitchStatement].
      */
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
+        LLVMSwitch usesOperands mapOf("value" to 0, "defaultdest" to 1)
+
         val numOps = LLVMGetNumOperands(instr)
         if (numOps < 2 || numOps % 2 != 0)
             throw TranslationException("Switch statement without operand and default branch")
 
-        val operand = frontend.getOperandValueAtIndex(instr, 0)
+        return newSwitchStatement(rawNode = instr).withChildren {
+            it.selector = instr.operandValue("value")
+            it.statement =
+                newBlock(rawNode = instr).withChildren { block ->
+                    var idx = 2
+                    while (idx < numOps) {
+                        // Get the comparison value and add it to the CaseStatement
+                        block +=
+                            newCaseStatement(rawNode = instr).withChildren {
+                                it.caseExpression = frontend.getOperandValueAtIndex(instr, idx)
+                            }
+                        idx++
+                        // Get the "case" statements and add it to the CaseStatement
+                        block += assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
+                        idx++
+                    }
 
-        val switchStatement = newSwitchStatement(rawNode = instr)
-        switchStatement.selector = operand
-
-        val caseStatements = newBlock(rawNode = instr)
-
-        var idx = 2
-        while (idx < numOps) {
-            // Get the comparison value and add it to the CaseStatement
-            val caseStatement = newCaseStatement(rawNode = instr)
-            caseStatement.caseExpression = frontend.getOperandValueAtIndex(instr, idx)
-            caseStatements.addStatement(caseStatement)
-            idx++
-            // Get the "case" statements and add it to the CaseStatement
-            val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
-            caseStatements.addStatement(gotoStatement)
-            idx++
+                    // Get the label of the "default" branch
+                    block += newDefaultStatement(rawNode = instr)
+                    val defaultGoto = assembleGotoStatement(instr, instr.operand("defaultdest"))
+                    block += defaultGoto
+                }
         }
-
-        // Get the label of the "default" branch
-        caseStatements.addStatement(newDefaultStatement(rawNode = instr))
-        val defaultGoto = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
-        caseStatements.addStatement(defaultGoto)
-
-        switchStatement.statement = caseStatements
-
-        return switchStatement
     }
 
     /**
@@ -1154,46 +1150,45 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             )
         }
 
-        val callee = newReference(calledFuncName, frontend.typeOf(calledFunc), rawNode = calledFunc)
+        val call =
+            newCallExpression(null, calledFuncName, false, rawNode = instr).withChildren { call ->
+                call.callee =
+                    newReference(calledFuncName, frontend.typeOf(calledFunc), rawNode = calledFunc)
+                while (idx < max) {
+                    val arg = frontend.getOperandValueAtIndex(instr, idx)
+                    call.arguments += arg
+                    idx++
+                }
+            }
 
-        val callExpr = newCallExpression(callee, calledFuncName, false, rawNode = instr)
-
-        while (idx < max) {
-            val operandName = frontend.getOperandValueAtIndex(instr, idx)
-            callExpr.addArgument(operandName)
-            idx++
-        }
-
-        if (instr.opCode == LLVMInvoke) {
+        return if (instr.opCode == LLVMInvoke) {
             // For the "invoke" instruction, the call is surrounded by a try statement which also
             // contains a goto statement after the call.
-            val tryStatement = newTryStatement(rawNode = instr)
-            frontend.scopeManager.enterScope(tryStatement)
-            val tryBlock = newBlock(rawNode = instr)
-            tryBlock.addStatement(declarationOrNot(callExpr, instr))
-            tryBlock.addStatement(tryContinue)
-            tryStatement.tryBlock = tryBlock
-            frontend.scopeManager.leaveScope(tryStatement)
+            newTryStatement(rawNode = instr).withChildren(hasScope = true) { tryStatement ->
+                tryStatement.tryBlock = newBlock(rawNode = instr).withChildren {
+                    it += declarationOrNot(call.withParent(), instr)
+                    it += tryContinue.withParent()
+                }
 
-            val catchClause = newCatchClause(rawNode = instr)
-            catchClause.name = Name(gotoCatch.labelName)
-            catchClause.parameter =
-                newVariableDeclaration(
-                    "e_${gotoCatch.labelName}",
-                    unknownType(),
-                    true,
-                    rawNode = instr
-                )
+                val catchClause = newCatchClause(rawNode = instr).withChildren {
+                    it.name = Name(gotoCatch.labelName)
+                    it.parameter =
+                        newVariableDeclaration(
+                            "e_${gotoCatch.labelName}",
+                            unknownType(),
+                            true,
+                            rawNode = instr
+                        )
 
-            val catchBlockStatement = newBlock(rawNode = instr)
-            catchBlockStatement.addStatement(gotoCatch)
-            catchClause.body = catchBlockStatement
-            tryStatement.catchClauses = mutableListOf(catchClause)
-
-            return tryStatement
+                    it.body = newBlock(rawNode = instr).withChildren {
+                        it.addStatement(gotoCatch)
+                    }
+                }
+                tryStatement.catchClauses = mutableListOf(catchClause)
+            }
+        } else {
+            call.declareIfNecessary(instr)
         }
-
-        return declarationOrNot(callExpr, instr)
     }
 
     /**
@@ -1464,8 +1459,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Most instructions in LLVM have a variable assignment as part of their instruction. Since LLVM
      * IR is SSA, we need to declare a new variable in this case, which is named according to
-     * [valueRef]. In case the variable assignment is optional, and we directly return the
-     * [Expression] associated with the instruction.
+     * [valueRef]. In case the variable assignment is optional, we directly return the [Expression]
+     * associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
         val namePair = frontend.getNameOf(valueRef)
