@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.collectioneval.ListSizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -113,5 +115,25 @@ class SizeEvaluatorTest {
 
         val strValue = evaluator.evaluate("abcd") as Int
         assertEquals(4, strValue)
+    }
+
+    @Test
+    fun testListSize() {
+        val mainClass = tu.records["MainClass"]
+        assertNotNull(mainClass)
+        val main = mainClass.methods["main"]
+        assertNotNull(main)
+
+        val list = main.bodyOrNull<DeclarationStatement>(7)?.singleDeclaration
+        assertNotNull(list)
+
+        val printCall = main.calls("println").getOrNull(2)
+        assertNotNull(printCall)
+        val printArg = printCall.arguments.first()
+        assertNotNull(printArg)
+
+        val evaluator = ListSizeEvaluator()
+        val value = evaluator.evaluate(printArg)
+        assertEquals(LatticeInterval.Bounded(0, 2), value)
     }
 }
