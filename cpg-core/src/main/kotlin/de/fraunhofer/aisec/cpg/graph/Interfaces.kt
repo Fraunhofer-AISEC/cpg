@@ -34,6 +34,35 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
+/** A simple interface that a node has [language]. */
+interface HasLanguage {
+
+    var language: Language<*>?
+}
+
+/** A simple interface that a node has [name] and [location]. */
+interface HasNameAndLocation : HasLanguage {
+
+    val name: Name
+
+    /** Location of the finding in source code. */
+    val location: PhysicalLocation?
+}
+
+/** A simple interface that a node has [scope]. */
+interface HasScope : HasNameAndLocation {
+
+    /** The scope this node lives in. */
+    val scope: Scope?
+}
+
+/** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
+interface HasOperatorCode : HasScope {
+
+    /** The operator code, identifying an operation executed on one or more [Expression]s */
+    val operatorCode: String?
+}
+
 /** Specifies that a certain node has a base on which it executes an operation. */
 interface HasBase : HasOperatorCode {
 
@@ -48,19 +77,12 @@ interface HasBase : HasOperatorCode {
     override val operatorCode: String?
 }
 
-/** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
-interface HasOperatorCode {
-
-    /** The operator code, identifying an operation executed on one or more [Expression]s */
-    val operatorCode: String?
-}
-
 /**
  * Interface that allows us to mark nodes that contain a default value
  *
  * @param <T> type of the default node </T>
  */
-interface HasDefault<T : Node?> {
+interface HasDefault<T : Node?> : HasScope {
     var default: T
 }
 
@@ -68,7 +90,7 @@ interface HasDefault<T : Node?> {
  * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
  * which the initializer is treated as the first (and only) argument.
  */
-interface HasInitializer : HasType, ArgumentHolder, AssignmentHolder {
+interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
 
     var initializer: Expression?
 
@@ -104,38 +126,16 @@ interface HasInitializer : HasType, ArgumentHolder, AssignmentHolder {
  * Some nodes have aliases, i.e., it potentially references another variable. This means that
  * writing to this node, also writes to its [aliases] and vice-versa.
  */
-interface HasAliases {
+interface HasAliases : HasScope {
     /** The aliases which this node has. */
     var aliases: MutableSet<HasAliases>
-}
-
-/** A simple interface that a node has [language]. */
-interface HasLanguage {
-
-    var language: Language<*>?
-}
-
-/** A simple interface that a node has [name] and [location]. */
-interface HasNameAndLocation {
-
-    val name: Name
-
-    /** Location of the finding in source code. */
-    val location: PhysicalLocation?
-}
-
-/** A simple interface that a node has [scope]. */
-interface HasScope {
-
-    /** The scope this node lives in. */
-    val scope: Scope?
 }
 
 /**
  * Specifies that this node (e.g. a [BinaryOperator] contains an operation that can be overloaded by
  * an [OperatorDeclaration].
  */
-interface HasOverloadedOperation : HasLanguage, HasOperatorCode {
+interface HasOverloadedOperation : HasOperatorCode {
 
     /**
      * Arguments forwarded to the operator. This might not necessarily be all of the regular
