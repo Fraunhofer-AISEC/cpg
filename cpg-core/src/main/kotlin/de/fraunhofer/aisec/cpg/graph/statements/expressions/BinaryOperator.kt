@@ -129,6 +129,14 @@ open class BinaryOperator :
         // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
     }
 
+    /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
+    override val operatorArguments: List<Expression>
+        get() = listOf(rhs)
+
+    /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
+    override val operatorBase: HasType
+        get() = lhs
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -168,7 +176,7 @@ open class BinaryOperator :
         return lhs == expression || rhs == expression
     }
 
-    override val base: Expression?
+    val base: Expression?
         get() {
             return if (operatorCode == ".*" || operatorCode == "->*") {
                 lhs

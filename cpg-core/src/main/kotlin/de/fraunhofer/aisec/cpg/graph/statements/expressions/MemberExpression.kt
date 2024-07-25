@@ -53,6 +53,12 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
 
     override var operatorCode: String? = null
 
+    override val operatorArguments: List<Expression>
+        get() = listOf()
+
+    override val operatorBase: HasType
+        get() = base
+
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
