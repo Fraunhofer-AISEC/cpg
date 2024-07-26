@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.set
@@ -135,7 +137,15 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                                 (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
-                        key.addPrevDFG(it)
+                        // Don't draw a DFG-Edge if key is a pointer - we will instead draw one to
+                        // its UnaryOperator
+                        if (
+                            !(key is Reference &&
+                                (key.type is PointerType ||
+                                    (key.type as? NumericType)?.bitWidth != 64))
+                        ) {
+                            key.addPrevDFG(it)
+                        }
                     }
                 }
             }

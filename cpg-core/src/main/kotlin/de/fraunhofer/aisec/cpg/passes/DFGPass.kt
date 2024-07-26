@@ -28,10 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edge.partial
+import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -322,12 +323,34 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleUnaryOperator(node: UnaryOperator) {
         if ((node.input as? Reference)?.access == AccessValues.WRITE) {
-            node.input.let { node.addNextDFG(it) }
+            node.input.let {
+                val granularity =
+                    if (
+                        node.operatorCode == "*" &&
+                            (it.type is PointerType || (it.type as? NumericType)?.bitWidth == 64)
+                    ) {
+                        PointerDataflowGranularity(true)
+                    } else {
+                        default()
+                    }
+                node.addNextDFG(it, granularity)
+            }
         } else {
             node.input.let {
-                node.addPrevDFG(it)
+                val granularity: Granularity =
+                    if (
+                        node.operatorCode == "*" &&
+                            (it.type is PointerType || (it.type as? NumericType)?.bitWidth == 64)
+                    ) {
+                        PointerDataflowGranularity(true)
+                    } else if (node.operatorCode == "&") {
+                        PointerDataflowGranularity(false)
+                    } else {
+                        default()
+                    }
+                node.addPrevDFG(it, granularity)
                 if (node.operatorCode == "++" || node.operatorCode == "--") {
-                    node.addNextDFG(it)
+                    node.addNextDFG(it, granularity)
                 }
             }
         }

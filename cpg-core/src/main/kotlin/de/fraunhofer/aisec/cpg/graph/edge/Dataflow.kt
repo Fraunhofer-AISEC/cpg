@@ -50,6 +50,12 @@ sealed interface Granularity
 data object FullDataflowGranularity : Granularity
 
 /**
+ * This dataflow granularity denotes that the value or address of a pointer is flowing from
+ * [Dataflow.start] to [Dataflow.end].
+ */
+class PointerDataflowGranularity(val valueAccess: Boolean) : Granularity
+
+/**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
  * [Dataflow.end] but only parts of it. Common examples include [MemberExpression] nodes, where we
  * model a dataflow to the base, but only partially scoped to a particular field.
@@ -74,6 +80,14 @@ fun default() = full()
  */
 fun partial(target: Declaration?): PartialDataflowGranularity {
     return PartialDataflowGranularity(target)
+}
+
+/**
+ * Creates a new [PointerDataflowGranularity]. The [ValueAccess] is specifies if the pointer's value
+ * is accessed, or its address.
+ */
+fun pointer(ValueAccess: Boolean): PointerDataflowGranularity {
+    return PointerDataflowGranularity(ValueAccess)
 }
 
 /**
