@@ -34,9 +34,7 @@ import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 enum class EdgeType {
-    AST,
-    DFG,
-    EOG
+    AST
 }
 
 class Edge(val source: Node, val target: Node, val type: EdgeType)
@@ -78,16 +76,14 @@ object Edges {
 }
 
 /**
- * This pass creates a simple cache of commonly used edges, such as DFG or AST to quickly traverse
- * them in different directions.
+ * This pass creates a simple cache of AST edges to quickly traverse them in different directions.
+ * Mainly used for the [Node.astChildren] extension.
  *
  * The cache itself is stored in the [Edges] object.
+ *
+ * Note: Some passes that run after this pass might influence AST parent / child relationship.
  */
-@DependsOn(EvaluationOrderGraphPass::class)
-@DependsOn(SymbolResolver::class)
-@DependsOn(DFGPass::class)
-@DependsOn(DynamicInvokeResolver::class)
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ReplaceCallCastPass::class)
 class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         Edges.clear()
@@ -98,8 +94,6 @@ class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
                 object : IVisitor<Node>() {
                     override fun visit(t: Node) {
                         visitAST(t)
-                        visitDFG(t)
-                        visitEOG(t)
 
                         super.visit(t)
                     }
@@ -111,30 +105,6 @@ class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun visitAST(n: Node) {
         for (node in SubgraphWalker.getAstChildren(n)) {
             val edge = Edge(n, node, EdgeType.AST)
-            Edges.add(edge)
-        }
-    }
-
-    protected fun visitDFG(n: Node) {
-        for (dfg in n.prevDFG) {
-            val edge = Edge(dfg, n, EdgeType.DFG)
-            Edges.add(edge)
-        }
-
-        for (dfg in n.nextDFG) {
-            val edge = Edge(n, dfg, EdgeType.DFG)
-            Edges.add(edge)
-        }
-    }
-
-    protected fun visitEOG(n: Node) {
-        for (eog in n.prevEOG) {
-            val edge = Edge(eog, n, EdgeType.EOG)
-            Edges.add(edge)
-        }
-
-        for (eog in n.nextEOG) {
-            val edge = Edge(n, eog, EdgeType.EOG)
             Edges.add(edge)
         }
     }
