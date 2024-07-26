@@ -263,7 +263,9 @@ fun MetadataProvider.newCallExpression(
         callee.resolutionHelper = node
     }
 
-    node.callee = callee
+    if (callee != null) {
+        node.callee = callee
+    }
     node.template = template
 
     log(node)
@@ -294,7 +296,9 @@ fun MetadataProvider.newMemberCallExpression(
         callee.resolutionHelper = node
     }
 
-    node.callee = callee
+    if (callee != null) {
+        node.callee = callee
+    }
     node.isStatic = isStatic
 
     log(node)

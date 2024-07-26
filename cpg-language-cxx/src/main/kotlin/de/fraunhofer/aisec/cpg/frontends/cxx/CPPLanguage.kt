@@ -27,14 +27,20 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
+import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
@@ -47,10 +53,58 @@ open class CPPLanguage :
     HasClasses,
     HasUnknownType,
     HasFunctionalCasts,
-    HasFunctionOverloading {
+    HasFunctionOverloading,
+    HasOperatorOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
+
+    @Transient
+    override val overloadedOperatorNames:
+        Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
+        mapOf(
+            // Arithmetic operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_arithmetic
+            UnaryOperator::class of "+" to "operator+",
+            UnaryOperator::class of "-" to "operator-",
+            BinaryOperator::class of "+" to "operator+",
+            BinaryOperator::class of "-" to "operator-",
+            BinaryOperator::class of "*" to "operator*",
+            BinaryOperator::class of "/" to "operator/",
+            BinaryOperator::class of "%" to "operator%",
+            UnaryOperator::class of "~" to "operator~",
+            BinaryOperator::class of "&" to "operator&",
+            BinaryOperator::class of "|" to "operator|",
+            BinaryOperator::class of "^" to "operator^",
+            BinaryOperator::class of "<<" to "operator<<",
+            BinaryOperator::class of ">>" to "operator>>",
+
+            // Increment/decrement operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_incdec
+            UnaryOperator::class of "++" to "operator++",
+            UnaryOperator::class of "--" to "operator--",
+
+            // Comparison operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_comparison
+            BinaryOperator::class of "==" to "operator==",
+            BinaryOperator::class of "!=" to "operator!=",
+            BinaryOperator::class of "<" to "operator<",
+            BinaryOperator::class of ">" to "operator>",
+            BinaryOperator::class of "<=" to "operator<=",
+            BinaryOperator::class of "=>" to "operator=>",
+
+            // Member access operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_member_access
+            MemberExpression::class of "[]" to "operator[]",
+            UnaryOperator::class of "*" to "operator*",
+            UnaryOperator::class of "&" to "operator&",
+            MemberExpression::class of "->" to "operator->",
+            MemberExpression::class of "->*" to "operator->*",
+
+            // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
+            MemberCallExpression::class of "()" to "operator()",
+            BinaryOperator::class of "," to "operator,",
+        )
 
     /**
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a

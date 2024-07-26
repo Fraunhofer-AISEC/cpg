@@ -27,8 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
@@ -45,7 +44,8 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
+open class CallExpression :
+    Expression(), HasOverloadedOperation, HasType.TypeObserver, ArgumentHolder {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
@@ -87,12 +87,18 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
      */
     var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
 
+    /** The list of argument types (aka the signature). */
+    val signature: List<Type>
+        get() {
+            return argumentEdges.map { it.end.type }
+        }
+
     /**
      * The expression that is being "called". This is currently not yet used in the [SymbolResolver]
      * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
-    @AST var callee: Expression? = null
+    @AST var callee: Expression = ProblemExpression("could not parse callee")
 
     /**
      * The [Name] of this call expression, based on its [callee].
@@ -108,7 +114,7 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
             } else if (value is BinaryOperator && value.rhs.type is FunctionPointerType) {
                 value.lhs.type.name.fqn("*" + value.rhs.name.localName)
             } else {
-                value?.name ?: Name(EMPTY_NAME)
+                value.name
             }
         }
         set(_) {
@@ -154,10 +160,6 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
         arguments -= expression
         return true
     }
-
-    /** Returns the function signature as list of types of the call arguments. */
-    val signature: List<Type>
-        get() = argumentEdges.map { it.end.type }
 
     /** Specifies, whether this call has any template arguments. */
     var template = false
@@ -272,6 +274,20 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
     }
+
+    override val operatorCode: String?
+        get() = "()"
+
+    override val operatorArguments: List<Expression>
+        get() = arguments
+
+    /**
+     * Some languages allow to even overload "()", meaning that basically a normal call to [callee]
+     * is overloaded. In this case we want the [operatorBase] to point to [callee], so we can take
+     * its type to lookup the necessary [OperatorDeclaration].
+     */
+    override val operatorBase: HasType
+        get() = callee
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

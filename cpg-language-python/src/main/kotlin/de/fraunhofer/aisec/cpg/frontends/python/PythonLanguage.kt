@@ -25,16 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.of
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.autoType
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Python language. */
-class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperators {
+class PythonLanguage :
+    Language<PythonLanguageFrontend>(), HasShortCircuitOperators, HasOperatorOverloading {
     override val fileExtensions = listOf("py")
     override val namespaceDelimiter = "."
     @Transient
@@ -48,6 +54,55 @@ class PythonLanguage : Language<PythonLanguageFrontend>(), HasShortCircuitOperat
      */
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
+
+    // https://docs.python.org/3/reference/datamodel.html#special-method-names
+    @Transient
+    override val overloadedOperatorNames:
+        Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
+        mapOf(
+            UnaryOperator::class of
+                "[]" to
+                "__getitem__", // ... then x[i] is roughly equivalent to type(x).__getitem__(x, i)
+            BinaryOperator::class of "<" to "__lt__",
+            BinaryOperator::class of "<=" to "__le__",
+            BinaryOperator::class of "==" to "__eq__",
+            BinaryOperator::class of "!=" to "__ne__",
+            BinaryOperator::class of ">" to "__gt__",
+            BinaryOperator::class of ">=" to "__ge__",
+            BinaryOperator::class of "+" to "__add__",
+            BinaryOperator::class of "-" to "__sub__",
+            BinaryOperator::class of "*" to "__mul__",
+            BinaryOperator::class of "@" to "__matmul__",
+            BinaryOperator::class of "/" to "__truediv__",
+            BinaryOperator::class of "//" to "__floordiv__",
+            BinaryOperator::class of "%" to "__mod__",
+            BinaryOperator::class of "**" to "__pow__",
+            BinaryOperator::class of "<<" to "__lshift__",
+            BinaryOperator::class of ">>" to "__rshift__",
+            BinaryOperator::class of "&" to "__and__",
+            BinaryOperator::class of "^" to "__xor__",
+            BinaryOperator::class of "|" to "__or__",
+            BinaryOperator::class of "+=" to "__iadd__",
+            BinaryOperator::class of "-=" to "__isub__",
+            BinaryOperator::class of "*=" to "__imul__",
+            BinaryOperator::class of "@=" to "__imatmul__",
+            BinaryOperator::class of "/=" to "__itruediv__",
+            BinaryOperator::class of "//=" to "__ifloordiv__",
+            BinaryOperator::class of "%=" to "__imod__",
+            BinaryOperator::class of "**=" to "__ipow__",
+            BinaryOperator::class of "<<=" to "__ilshift__",
+            BinaryOperator::class of ">>=" to "__irshift__",
+            BinaryOperator::class of "&=" to "__iand__",
+            BinaryOperator::class of "^=" to "__ixor__",
+            BinaryOperator::class of "|=" to "__ior__",
+            UnaryOperator::class of "-" to "__neg__",
+            UnaryOperator::class of "+" to "__pos__",
+            UnaryOperator::class of "~" to "__invert__",
+            UnaryOperator::class of
+                "()" to
+                "__call__", // ... x(arg1, arg2, ...) roughly translates to type(x).__call__(x,
+            // arg1, ...)
+        )
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
     @Transient

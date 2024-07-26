@@ -1740,4 +1740,22 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val test = result.functions["test"]
         assertNotNull(test)
     }
+
+    @Test
+    @Throws(Exception::class)
+    fun testCastToInferredType() {
+        val file = File("src/test/resources/c/cast_to_inferred.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val assign = tu.assigns.firstOrNull()
+        assertNotNull(assign)
+
+        val cast = assign.rhs.singleOrNull()
+        assertIs<CastExpression>(cast)
+        assertLocalName("mytype", cast.castType)
+    }
 }

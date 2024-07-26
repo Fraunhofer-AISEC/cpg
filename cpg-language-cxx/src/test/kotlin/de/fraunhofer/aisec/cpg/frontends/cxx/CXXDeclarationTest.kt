@@ -232,4 +232,18 @@ class CXXDeclarationTest {
             assertEquals(assertResolvedType("ABC::A"), a.type)
         }
     }
+
+    @Test
+    fun testArithmeticOperator() {
+        val file = File("src/test/resources/cxx/operators/arithmetic.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var plusplus = result.operators["operator++"]
+        assertNotNull(plusplus)
+        assertEquals("++", plusplus.operatorCode)
+    }
 }
