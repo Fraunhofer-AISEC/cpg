@@ -33,11 +33,15 @@ import jep.JepConfig
 import jep.MainInterpreter
 import jep.SharedInterpreter
 import kotlin.io.path.exists
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
 object JepSingleton {
+    val log: Logger = LoggerFactory.getLogger(JepSingleton::class.java)
+
     init {
         // TODO logging
         val config = JepConfig()
@@ -101,20 +105,23 @@ object JepSingleton {
         wellKnownPaths.add(Paths.get("/", "usr", "lib", "libjep.so"))
         wellKnownPaths.add(Paths.get("/", "Library", "Java", "Extensions", "libjep.jnilib"))
 
-        wellKnownPaths.forEach {
-            if (it.exists()) {
+        for (path in wellKnownPaths) {
+            if (path.exists()) {
                 // Jep's configuration must be set before the first instance is created. Later
                 // calls to setJepLibraryPath and co result in failures.
-                MainInterpreter.setJepLibraryPath(it.toString())
+                MainInterpreter.setJepLibraryPath(path.toString())
+
+                log.info("Using Jep native library in {}", path.toString())
 
                 // also add include path so that Python can find jep in case of virtual environment
                 // fixes: jep.JepException: <class 'ModuleNotFoundError'>: No module named 'jep'
                 if (
-                    it.parent.fileName.toString() == "jep" &&
-                        (Paths.get(it.parent.toString(), "__init__.py").exists())
+                    path.parent.fileName.toString() == "jep" &&
+                        (Paths.get(path.parent.toString(), "__init__.py").exists())
                 ) {
-                    config.addIncludePaths(it.parent.parent.toString())
+                    config.addIncludePaths(path.parent.parent.toString())
                 }
+                break
             }
         }
 

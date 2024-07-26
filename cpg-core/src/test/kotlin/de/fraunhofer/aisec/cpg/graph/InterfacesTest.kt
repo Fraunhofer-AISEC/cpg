@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,25 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
-/** Specifies that a certain node has a base on which it executes an operation. */
-interface HasBase : HasOperatorCode {
+class InterfacesTest {
 
-    /** The base. */
-    val base: Expression?
-
-    /**
-     * The operator that is used to access the base. Usually either `.` or `->`, but some languages
-     * offer additional operator codes.
-     */
-    override val operatorCode: String?
+    @Test
+    fun testRemoveArgument() {
+        val v: HasInitializer = VariableDeclaration()
+        val lit = Literal<String>()
+        v.initializer = lit
+        assertTrue(v.removeArgument(lit))
+    }
 }
-
-/**
- * Specifies that this node (e.g. a [BinaryOperator] contains an operation that can be overloaded by
- * an [OperatorDeclaration].
- */
-interface HasOverloadedOperation : HasBase
