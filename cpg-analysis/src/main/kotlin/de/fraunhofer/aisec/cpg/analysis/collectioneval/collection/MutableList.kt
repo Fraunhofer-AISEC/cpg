@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.analysis.collectioneval.collection
 
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 
 class MutableList : Collection {
@@ -71,5 +73,19 @@ class MutableList : Collection {
             }
             else -> current
         }
+    }
+
+    override fun getInitializer(node: Node?): Node? {
+        return when (node) {
+            null -> null!!
+            is Reference -> getInitializer(node.refersTo)
+            is VariableDeclaration -> node.initializer!!
+            else -> getInitializer(node.prevDFG.firstOrNull())
+        }
+    }
+
+    override fun getInitialRange(initializer: Node): LatticeInterval {
+        val size = (initializer as MemberCallExpression).arguments.size
+        return LatticeInterval.Bounded(size, size)
     }
 }

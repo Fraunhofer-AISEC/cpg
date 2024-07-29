@@ -30,4 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 
 interface Collection {
     fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval
+
+    fun getInitializer(node: Node?): Node?
+
+    fun getInitialRange(initializer: Node): LatticeInterval
 }

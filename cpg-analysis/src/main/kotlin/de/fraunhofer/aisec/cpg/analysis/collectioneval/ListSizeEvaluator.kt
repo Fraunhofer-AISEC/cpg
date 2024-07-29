@@ -38,10 +38,10 @@ import kotlin.reflect.full.createInstance
 class ListSizeEvaluator {
     fun evaluate(node: Node): LatticeInterval {
         val name = node.name
-        // TODO: add check whether node operates on a list -> DFG flow to java.util.List?
-        val initializer = getInitializerOf(node)
-        var range = getInitialRange(initializer)
         val type = MutableList::class
+        // TODO: add check whether node operates on a list -> DFG flow to java.util.List?
+        val initializer = getInitializerOf(node, type)!!
+        var range = getInitialRange(initializer, type)
         // TODO: evaluate effect of each operation on the list until we reach "node"
         var current = initializer
         do {
@@ -54,18 +54,12 @@ class ListSizeEvaluator {
         return range
     }
 
-    private fun getInitializerOf(node: Node?): Node {
-        return when (node) {
-            null -> null!!
-            is Reference -> getInitializerOf(node.refersTo)
-            is VariableDeclaration -> node.initializer!!
-            else -> getInitializerOf(node.prevDFG.firstOrNull())
-        }
+    private fun getInitializerOf(node: Node, type: KClass<out Collection>): Node? {
+        return type.createInstance().getInitializer(node)
     }
 
-    private fun getInitialRange(initializer: Node): LatticeInterval {
-        val size = (initializer as MemberCallExpression).arguments.size
-        return LatticeInterval.Bounded(size, size)
+    private fun getInitialRange(initializer: Node, type: KClass<out Collection>): LatticeInterval {
+        return type.createInstance().getInitialRange(initializer)
     }
 
     private fun LatticeInterval.applyEffect(
