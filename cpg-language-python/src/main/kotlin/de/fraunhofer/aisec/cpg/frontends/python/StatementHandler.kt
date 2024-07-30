@@ -237,8 +237,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         frontend.scopeManager.enterScope(cls)
 
-        stmt.keywords.map { TODO() }
-
         for (s in stmt.body) {
             when (s) {
                 is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
@@ -382,20 +380,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         result: FunctionDeclaration,
         recordDeclaration: RecordDeclaration?
     ) {
-        // Handle arguments
-        if (args.posonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`posonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
+        // We can merge posonlyargs and args because both are positional arguments. We do not
+        // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
+        // both in positional as well as keyword style.
+        var positionalArguments = args.posonlyargs + args.args
 
+        // Handle arguments
         if (recordDeclaration != null) {
             // first argument is the `receiver`
-            if (args.args.isEmpty()) {
+            if (positionalArguments.isEmpty()) {
                 val problem =
                     newProblemDeclaration(
                         "Expected a receiver",
@@ -404,11 +397,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 frontend.scopeManager.addDeclaration(problem)
             } else {
-                val recvPythonNode = args.args.first()
+                val recvPythonNode = positionalArguments.firstOrNull()
                 val tpe = recordDeclaration.toType()
                 val recvNode =
                     newVariableDeclaration(
-                        name = recvPythonNode.arg,
+                        name = recvPythonNode?.arg,
                         type = tpe,
                         implicitInitializerAllowed = false,
                         rawNode = recvPythonNode
@@ -424,11 +417,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         if (recordDeclaration != null) {
             // first argument is the receiver
-            for (arg in args.args.subList(1, args.args.size)) {
+            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
                 handleArgument(arg)
             }
         } else {
-            for (arg in args.args) {
+            for (arg in positionalArguments) {
                 handleArgument(arg)
             }
         }
