@@ -1256,6 +1256,22 @@ class PythonFrontendTest : BaseTest() {
         assertInvokes(call, cCompletelyDifferentFunc)
     }
 
+    @Test
+    fun testInterfaceStubs() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("pyi/io.pyi").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

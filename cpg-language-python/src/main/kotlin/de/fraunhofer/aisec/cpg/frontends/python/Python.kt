@@ -1287,6 +1287,8 @@ interface Python {
         val context_expr: ASTBASEexpr by lazy { "context_expr" of pyObject }
         val optional_vars: ASTBASEexpr? by lazy { "optional_vars" of pyObject }
     }
+
+    class Ellipsis(python: PyObject) : AST(python)
 }
 
 private inline infix fun <reified T> String.of(pyObject: PyObject): T {

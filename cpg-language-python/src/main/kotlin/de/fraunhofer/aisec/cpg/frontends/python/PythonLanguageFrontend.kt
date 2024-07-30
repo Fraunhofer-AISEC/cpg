@@ -443,6 +443,7 @@ fun fromPython(pyObject: Any?): Python.AST {
 
             // complex numbers
             "complex" -> TODO("Complex numbers are not supported yet")
+            "ellipsis" -> Python.Ellipsis(pyObject)
             else -> {
                 TODO("Implement for ${pyObject.getAttr("__class__")}")
             }
