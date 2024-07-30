@@ -410,7 +410,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 val tpe = recordDeclaration.toType()
                 val recvNode =
                     newVariableDeclaration(
-                        name = recvPythonNode.arg,
+                        name = recvPythonNode?.arg,
                         type = tpe,
                         implicitInitializerAllowed = false,
                         rawNode = recvPythonNode
