@@ -722,26 +722,32 @@ class ScopeManager : ScopeProvider {
             // result is "problematic"
             if (result.candidateFunctions.size > 1) {
                 result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            } else if (result.candidateFunctions.size == 1) {
+                result.signatureResults =
+                    result.candidateFunctions.associateWith {
+                        SignatureMatches(mutableListOf(DirectMatch))
+                    }
             }
+        } else {
+            // Filter functions that match the signature of our call, either directly or with casts;
+            // those functions are "viable". Take default arguments into account if the language has
+            // them.
+            result.signatureResults =
+                result.candidateFunctions
+                    .map {
+                        Pair(
+                            it,
+                            it.matchesSignature(
+                                call.signature,
+                                call.language is HasDefaultArguments,
+                                call
+                            )
+                        )
+                    }
+                    .filter { it.second is SignatureMatches }
+                    .associate { it }
         }
 
-        // Filter functions that match the signature of our call, either directly or with casts;
-        // those functions are "viable". Take default arguments into account if the language has
-        // them.
-        result.signatureResults =
-            result.candidateFunctions
-                .map {
-                    Pair(
-                        it,
-                        it.matchesSignature(
-                            call.signature,
-                            call.language is HasDefaultArguments,
-                            call
-                        )
-                    )
-                }
-                .filter { it.second is SignatureMatches }
-                .associate { it }
         result.viableFunctions = result.signatureResults.keys
 
         // If we have a "problematic" result, we can stop here. In this case we cannot really
