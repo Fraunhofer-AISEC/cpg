@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
-<<<<<<< HEAD
 import kotlin.test.assertContains
-=======
->>>>>>> 291759a3bb (Supporting `posonlyargs` in Python)
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
