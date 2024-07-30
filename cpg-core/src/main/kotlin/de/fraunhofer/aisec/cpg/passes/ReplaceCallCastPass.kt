@@ -152,7 +152,14 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
             "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
         )
     } else {
+        // Store any eventual EOG nodes and disconnect old node
+        var oldPrevEOG = old.prevEOG
+        var oldNextEOG = old.nextEOG
         old.disconnectFromGraph()
+
+        // Put the stored EOG nodes to the new node
+        new.prevEOG = oldPrevEOG
+        new.nextEOG = oldNextEOG
 
         // Make sure to inform the walker about our change
         this.registerReplacement(old, new)

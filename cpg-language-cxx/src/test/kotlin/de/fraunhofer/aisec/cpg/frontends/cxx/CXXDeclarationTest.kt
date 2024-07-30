@@ -257,17 +257,17 @@ class CXXDeclarationTest {
         val main = result.functions["main"]
         assertNotNull(main)
 
-        var unaryOp = main.operatorCalls.firstOrNull()
+        var unaryOp = main.operatorCalls["++"]
         assertNotNull(unaryOp)
         assertInvokes(unaryOp, plusplus)
 
-        /*val binaryOp0 = main.allChildren<BinaryOperator>().getOrNull(0)
+        val binaryOp0 = main.operatorCalls("+").getOrNull(0)
         assertNotNull(binaryOp0)
         assertInvokes(binaryOp0, plus.getOrNull(0))
 
-        val binaryOp1 = main.allChildren<BinaryOperator>().getOrNull(1)
+        val binaryOp1 = main.operatorCalls("+").getOrNull(1)
         assertNotNull(binaryOp1)
-        assertInvokes(binaryOp1, plus.getOrNull(1))*/
+        assertInvokes(binaryOp1, plus.getOrNull(1))
     }
 
     @Test
