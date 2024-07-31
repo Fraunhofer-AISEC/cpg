@@ -783,7 +783,12 @@ class ValueEvaluatorTest {
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            var cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            var cond =
+                newConditionalExpression().withChildren {
+                    it.condition = comparison
+                    it.thenExpression = newLiteral(2)
+                    it.elseExpression = aRef
+                }
             assertEquals(1, cond.evaluate())
 
             // handle equals
@@ -791,11 +796,21 @@ class ValueEvaluatorTest {
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            cond =
+                newConditionalExpression().withChildren {
+                    it.condition = comparison
+                    it.thenExpression = newLiteral(2)
+                    it.elseExpression = aRef
+                }
             assertEquals(2, cond.evaluate())
 
             // handle invalid
-            cond = newConditionalExpression(newProblemExpression(), newLiteral(2), aRef)
+            cond =
+                newConditionalExpression().withChildren {
+                    it.condition = newProblemExpression()
+                    it.thenExpression = newLiteral(2)
+                    it.elseExpression = aRef
+                }
             assertEquals("{}", cond.evaluate())
         }
     }

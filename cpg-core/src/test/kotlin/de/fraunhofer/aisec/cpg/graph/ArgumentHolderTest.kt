@@ -43,7 +43,7 @@ class ArgumentHolderTest {
                     newCastExpression(),
                     newIfStatement(),
                     newReturnStatement(),
-                    newConditionalExpression(newLiteral(true)),
+                    newConditionalExpression().withChildren { it.condition = newLiteral(true) },
                     newDoStatement(),
                     newInitializerListExpression(),
                     newKeyValueExpression(),

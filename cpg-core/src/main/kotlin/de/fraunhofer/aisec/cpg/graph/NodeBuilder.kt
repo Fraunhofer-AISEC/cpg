@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -39,6 +41,8 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+import java.util.*
+import kotlin.collections.ArrayDeque
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -89,6 +93,10 @@ interface ScopeProvider : MetadataProvider {
  */
 interface NamespaceProvider : MetadataProvider {
     val namespace: Name?
+}
+
+interface AstStackProvider : MetadataProvider {
+    val astStack: ArrayDeque<Node>
 }
 
 /**
@@ -146,6 +154,10 @@ fun Node.applyMetadata(
             "No scope provider was provided when creating the node {}. This might be an error",
             name
         )
+    }
+
+    if (provider is AstStackProvider) {
+        provider.astStack.lastOrNull().let { this.astParent = it }
     }
 
     if (name != null) {
@@ -217,13 +229,10 @@ fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): A
 @JvmOverloads
 fun MetadataProvider.newAnnotationMember(
     name: CharSequence?,
-    value: Expression?,
     rawNode: Any? = null
 ): AnnotationMember {
     val node = AnnotationMember()
     node.applyMetadata(this, name, rawNode, true)
-
-    node.value = value
 
     log(node)
     return node
@@ -379,4 +388,70 @@ private fun <AstNode> Node.setCodeAndLocation(
         }
     }
     this.location = provider.locationOf(rawNode)
+}
+
+context(AstStackProvider, ContextProvider)
+fun <T : Node> T.withChildren(
+    hasScope: Boolean = false,
+    isGlobalScope: Boolean = false,
+    init: (T) -> Unit
+): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+
+    (this@AstStackProvider).astStack.addLast(this@withChildren)
+
+    if (isGlobalScope && this is TranslationUnitDeclaration) {
+        scopeManager.resetToGlobal(this)
+        init(this)
+    } else if (hasScope) {
+        scopeManager.enterScope(this)
+        init(this)
+        scopeManager.leaveScope(this)
+    } else {
+        init(this)
+    }
+
+    (this@AstStackProvider).astStack.removeLast()
+
+    return this
+}
+
+/**
+ * This function can be used to set the [Node.astParent] of this node to the current node on the
+ * [AstStackProvider]'s stack. This is particularly useful if the node was created outside of the
+ * [withChildren] lambda. This is a usual pattern if the node is optionally wrapped in something
+ * else.
+ *
+ * Example:
+ * ```kotlin
+ * val expr = newReference("p")
+ *
+ * return if (isDeref) {
+ *   newUnaryOperator("*", prefix = true, postfix = false).withChildren {
+ *     it.input = expr.withParent()
+ *   }
+ * } else {
+ *   expr
+ * }
+ * ```
+ */
+context(AstStackProvider)
+fun <T : Node> T.withParent(): T {
+    this.astParent = (this@AstStackProvider).astStack.lastOrNull()
+    return this
+}
+
+context(ContextProvider)
+fun <T : Declaration> T.declare(): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+    scopeManager.addDeclaration(this)
+    return this
 }

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.ASTParentTester
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_REFERENCES
 import java.io.File
@@ -153,7 +154,10 @@ fun analyze(
     configModifier?.accept(builder)
     val config = builder.build()
     val analyzer = TranslationManager.builder().config(config).build()
-    return analyzer.analyze().get()
+    val result = analyzer.analyze().get()
+    var errorList = ASTParentTester.checkASTParents(result)
+    assertEquals(listOf(), errorList, "AST parents do not match")
+    return result
 }
 
 /**

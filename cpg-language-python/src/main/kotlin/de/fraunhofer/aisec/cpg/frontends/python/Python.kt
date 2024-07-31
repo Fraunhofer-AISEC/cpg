@@ -137,13 +137,10 @@ interface Python {
      */
     sealed class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
-    /**
-     * ```
-     * ast.FunctionDef = class FunctionDef(stmt)
-     *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
-     * ```
+    /*
+    FunctionDef and AsyncFunctionDef have the same fields. They differ according to the Python grammar, but making them inherent from a mutual class allows us to remove duplicate code.
      */
-    class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+    abstract class ASTFunctionOrAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
         val name: String by lazy { "name" of pyObject }
 
         val args: ASTarguments by lazy { "args" of pyObject }
@@ -156,6 +153,13 @@ interface Python {
 
         val type_comment: String? by lazy { "type_comment" of pyObject }
     }
+    /**
+     * ```
+     * ast.FunctionDef = class FunctionDef(stmt)
+     *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
+     * ```
+     */
+    class ASTFunctionDef(pyObject: PyObject) : ASTFunctionOrAsyncFunctionDef(pyObject)
 
     /**
      * ```
@@ -163,19 +167,7 @@ interface Python {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val name: String by lazy { "name" of pyObject }
-
-        val args: ASTarguments by lazy { "args" of pyObject }
-
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-
-        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
-
-        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
-
-        val type_comment: String? by lazy { "type_comment" of pyObject }
-    }
+    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTFunctionOrAsyncFunctionDef(pyObject)
 
     /**
      * ```

@@ -138,7 +138,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertFullName("print", callExpression)
 
-        val literal = callExpression.arguments.first() as? Literal<*>
+        val literal = callExpression.arguments.firstOrNull() as? Literal<*>
         assertNotNull(literal)
 
         assertEquals("bar(s) here: ", literal.value)
@@ -419,9 +419,8 @@ class PythonFrontendTest : BaseTest() {
         // assertEquals(tu.primitiveType("int"), i.type)
 
         // self.somevar = i
-        val someVarDeclaration =
-            ((bar.body as? Block)?.statements?.get(0) as? AssignExpression)?.declarations?.first()
-                as? FieldDeclaration
+        val someVarDeclaration = recordFoo.declarations["somevar"] as? FieldDeclaration
+
         assertNotNull(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertEquals(i, (someVarDeclaration.firstAssignment as? Reference)?.refersTo)
@@ -540,7 +539,7 @@ class PythonFrontendTest : BaseTest() {
         val ifThen = (countStmt.thenStatement as? Block)?.statements?.get(0) as? CallExpression
         assertNotNull(ifThen)
         assertEquals(methCount, ifThen.invokes.first())
-        assertEquals(countParam, (ifThen.arguments.first() as? Reference)?.refersTo)
+        assertEquals(countParam, (ifThen.arguments.firstOrNull() as? Reference)?.refersTo)
         assertNull(countStmt.elseStatement)
 
         // class c1(counter)
@@ -914,7 +913,7 @@ class PythonFrontendTest : BaseTest() {
 
         val literals = commentedNodes.filterIsInstance<Literal<String>>()
         assertEquals(1, literals.size)
-        assertEquals("# comment start", literals.first().comment)
+        assertEquals("# comment start", literals.firstOrNull()?.comment)
 
         val params = commentedNodes.filterIsInstance<ParameterDeclaration>()
         assertEquals(2, params.size)
@@ -923,12 +922,12 @@ class PythonFrontendTest : BaseTest() {
 
         val assignment = commentedNodes.filterIsInstance<AssignExpression>()
         assertEquals(2, assignment.size)
-        assertEquals("# A comment# a number", assignment.first().comment)
-        assertEquals("# comment end", assignment.last().comment)
+        assertEquals("# A comment# a number", assignment.firstOrNull()?.comment)
+        assertEquals("# comment end", assignment.lastOrNull()?.comment)
 
         val block = commentedNodes.filterIsInstance<Block>()
         assertEquals(1, block.size)
-        assertEquals("# foo", block.first().comment)
+        assertEquals("# foo", block.firstOrNull()?.comment)
 
         val kvs = commentedNodes.filterIsInstance<KeyValueExpression>()
         assertEquals(2, kvs.size)
@@ -1007,10 +1006,10 @@ class PythonFrontendTest : BaseTest() {
         // dataflow from first loop to foo call
         val loopVar = firstLoop.variable as? Reference
         assertNotNull(loopVar)
-        assert(fooCall.arguments.first().prevDFG.contains(loopVar))
+        assert(fooCall.arguments.firstOrNull()?.prevDFG?.contains(loopVar) == true)
 
         // dataflow from var declaration to foo call (in case for loop is not executed)
-        assert(fooCall.arguments.first().prevDFG.contains(varDefinedBeforeLoopRef))
+        assert(fooCall.arguments.firstOrNull()?.prevDFG?.contains(varDefinedBeforeLoopRef) == true)
 
         // dataflow from range call to loop variable
         val secondLoopIterable = secondLoop.iterable as? CallExpression
@@ -1022,7 +1021,7 @@ class PythonFrontendTest : BaseTest() {
         // dataflow from second loop var to bar call
         assertEquals(
             (secondLoop.variable as? Reference),
-            barCall.arguments.first().prevDFG.firstOrNull()
+            barCall.arguments.firstOrNull()?.prevDFG?.firstOrNull()
         )
     }
 

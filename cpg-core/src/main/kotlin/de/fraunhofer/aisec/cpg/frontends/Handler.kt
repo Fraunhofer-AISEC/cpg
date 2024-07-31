@@ -54,7 +54,8 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
     ScopeProvider by frontend,
     NamespaceProvider by frontend,
     ContextProvider by frontend,
-    RawNodeTypeProvider<HandlerNode> {
+    RawNodeTypeProvider<HandlerNode>,
+    AstStackProvider by frontend {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
 

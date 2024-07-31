@@ -260,21 +260,21 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
                 ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
-        scopeManager.resetToGlobal(tud)
-
-        val nsdName = Path(path).nameWithoutExtension
-        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
-        tud.addDeclaration(nsd)
-
-        scopeManager.enterScope(nsd)
-        for (stmt in pythonASTModule.body) {
-            nsd.statements += statementHandler.handle(stmt)
-        }
-        scopeManager.leaveScope(nsd)
-
-        scopeManager.addDeclaration(nsd)
-
+        val tud =
+            newTranslationUnitDeclaration(name = path, rawNode = pythonASTModule).withChildren(
+                isGlobalScope = true
+            ) {
+                val nsdName = Path(path).nameWithoutExtension
+                val nsd =
+                    newNamespaceDeclaration(name = nsdName, rawNode = pythonASTModule).withChildren(
+                        hasScope = true
+                    ) {
+                        for (stmt in pythonASTModule.body) {
+                            it.statements += statementHandler.handle(stmt)
+                        }
+                    }
+                scopeManager.addDeclaration(nsd)
+            }
         return tud
     }
 

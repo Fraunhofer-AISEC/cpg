@@ -551,7 +551,11 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val value1 = frontend.getOperandValueAtIndex(instr, 1)
         val value2 = frontend.getOperandValueAtIndex(instr, 2)
 
-        return newConditionalExpression(cond, value1, value2, value1.type)
+        return newConditionalExpression(value1.type).withChildren {
+            it.condition = cond
+            it.thenExpression = value1
+            it.elseExpression = value2
+        }
     }
 
     /**

@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -41,8 +40,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
-            is Python.ASTFunctionDef -> handleFunctionDef(node)
-            is Python.ASTAsyncFunctionDef -> handleAsyncFunctionDef(node)
+            is Python.ASTFunctionOrAsyncFunctionDef -> handleFunctionDef(node)
             is Python.ASTPass -> return newEmptyStatement(rawNode = node)
             is Python.ASTImportFrom -> handleImportFrom(node)
             is Python.ASTAssign -> handleAssign(node)
@@ -52,7 +50,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTAnnAssign -> handleAnnAssign(node)
             is Python.ASTExpr -> handleExpressionStatement(node)
             is Python.ASTFor -> handleFor(node)
-            is Python.ASTAsyncFor -> handleAsyncFor(node)
+            is Python.ASTAsyncFor -> handleAsyncFor(node) // TODO async duplicate
             is Python.ASTWhile -> handleWhile(node)
             is Python.ASTImport -> handleImport(node)
             is Python.ASTBreak -> newBreakStatement(rawNode = node)
@@ -66,7 +64,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTTry,
             is Python.ASTTryStar,
             is Python.ASTWith,
-            is Python.ASTAsyncWith ->
+            is Python.ASTAsyncWith // TODO async duplicate
+            ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
@@ -75,28 +74,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleImport(node: Python.ASTImport): Statement {
-        val declStmt = newDeclarationStatement(rawNode = node)
-        for (imp in node.names) {
-            val alias = imp.asname
-            val decl =
-                if (alias != null) {
-                    newImportDeclaration(
-                        parseName(imp.name),
-                        false,
-                        parseName(alias),
-                        rawNode = imp
-                    )
-                } else {
-                    newImportDeclaration(parseName(imp.name), false, rawNode = imp)
-                }
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.addToPropertyEdgeDeclaration(decl)
+        return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
+            for (imp in node.names) {
+                val alias = imp.asname
+                val decl =
+                    if (alias != null) {
+                        newImportDeclaration(
+                            parseName(imp.name),
+                            false,
+                            parseName(alias),
+                            rawNode = imp
+                        )
+                    } else {
+                        newImportDeclaration(parseName(imp.name), false, rawNode = imp)
+                    }
+                frontend.scopeManager.addDeclaration(decl)
+                it.addToPropertyEdgeDeclaration(decl)
+            }
         }
-        return declStmt
     }
 
     private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
-        val declStmt = newDeclarationStatement(rawNode = node)
         val level = node.level
         if (level == null || level > 0) {
             return newProblemExpression(
@@ -104,58 +102,70 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             )
         }
 
-        val module = parseName(node.module ?: "")
-        for (imp in node.names) {
-            // We need to differentiate between a wildcard import and an individual symbol.
-            // Wildcards luckily do not have aliases
-            val decl =
-                if (imp.name == "*") {
-                    // In the wildcard case, our "import" is the module name and we set "wildcard"
-                    // to true
-                    newImportDeclaration(module, true, rawNode = imp)
-                } else {
-                    // If we import an individual symbol, we need to FQN the symbol with our module
-                    // name and import that. We also need to take care of any alias
-                    val name = module.fqn(imp.name)
-                    val alias = imp.asname
-                    if (alias != null) {
-                        newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+        return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
+            val module = parseName(node.module ?: "")
+            for (imp in node.names) {
+                // We need to differentiate between a wildcard import and an individual symbol.
+                // Wildcards luckily do not have aliases
+                val decl =
+                    if (imp.name == "*") {
+                        // In the wildcard case, our "import" is the module name and we set
+                        // "wildcard"
+                        // to true
+                        newImportDeclaration(module, true, rawNode = imp)
                     } else {
-                        newImportDeclaration(name, false, rawNode = imp)
+                        // If we import an individual symbol, we need to FQN the symbol with our
+                        // module
+                        // name and import that. We also need to take care of any alias
+                        val name = module.fqn(imp.name)
+                        val alias = imp.asname
+                        if (alias != null) {
+                            newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                        } else {
+                            newImportDeclaration(name, false, rawNode = imp)
+                        }
                     }
-                }
 
-            // Finally, add our declaration to the scope and the declaration statement
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.addToPropertyEdgeDeclaration(decl)
+                // Finally, add our declaration to the scope and the declaration statement
+                frontend.scopeManager.addDeclaration(decl)
+                it.addToPropertyEdgeDeclaration(decl)
+            }
         }
-        return declStmt
     }
 
     private fun handleWhile(node: Python.ASTWhile): Statement {
-        val ret = newWhileStatement(rawNode = node)
-        ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
-        return ret
+        if (node.orelse.isNotEmpty()) {
+            return newProblemExpression("orelse not supported for while statements", rawNode = node)
+        }
+        return newWhileStatement(rawNode = node).withChildren(hasScope = false) {
+            it.condition = frontend.expressionHandler.handle(node.test)
+            it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        }
     }
 
     private fun handleFor(node: Python.ASTFor): Statement {
-        val ret = newForEachStatement(rawNode = node)
-        ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
-        return ret
+        if (node.orelse.isNotEmpty()) {
+            return newProblemExpression("orelse not supported for for statements", rawNode = node)
+        }
+        return newForEachStatement(rawNode = node).withChildren(hasScope = false) {
+            it.iterable = frontend.expressionHandler.handle(node.iter)
+            it.variable = frontend.expressionHandler.handle(node.target)
+            it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        }
     }
 
     private fun handleAsyncFor(node: Python.ASTAsyncFor): Statement {
-        val ret = newForEachStatement(rawNode = node)
-        ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
-        return ret
+        if (node.orelse.isNotEmpty()) {
+            return newProblemExpression(
+                "orelse not supported for asyncfor statements",
+                rawNode = node
+            )
+        }
+        return newForEachStatement(rawNode = node).withChildren(hasScope = false) {
+            it.iterable = frontend.expressionHandler.handle(node.iter)
+            it.variable = frontend.expressionHandler.handle(node.target)
+            it.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        }
     }
 
     private fun handleExpressionStatement(node: Python.ASTExpr): Statement {
@@ -164,89 +174,73 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleAnnAssign(node: Python.ASTAnnAssign): Statement {
         // TODO: annotations
-        val lhs = frontend.expressionHandler.handle(node.target)
-        return if (node.value != null) {
-            newAssignExpression(
-                lhs = listOf(lhs),
-                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
-                rawNode = node
-            )
-        } else {
-            lhs
+        return when (node.value) {
+            null -> frontend.expressionHandler.handle(node.target)
+            else -> {
+                newAssignExpression(rawNode = node).withChildren(hasScope = false) {
+                    it.lhs = listOf(frontend.expressionHandler.handle(node.target))
+                    it.rhs = listOf(frontend.expressionHandler.handle(node.value!!)) // TODO !!
+                }
+            }
         }
     }
 
     private fun handleIf(node: Python.ASTIf): Statement {
-        val ret = newIfStatement(rawNode = node)
-        ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.thenStatement =
-            if (node.body.isNotEmpty()) {
-                makeBlock(node.body).codeAndLocationFromChildren(node)
-            } else {
-                null
-            }
-        ret.elseStatement =
-            if (node.orelse.isNotEmpty()) {
-                makeBlock(node.orelse).codeAndLocationFromChildren(node)
-            } else {
-                null
-            }
-        return ret
+        return newIfStatement(rawNode = node).withChildren(hasScope = false) {
+            it.condition = frontend.expressionHandler.handle(node.test)
+            it.thenStatement =
+                if (node.body.isNotEmpty()) {
+                    makeBlock(node.body).codeAndLocationFromChildren(node)
+                } else {
+                    null
+                }
+            it.elseStatement =
+                if (node.orelse.isNotEmpty()) {
+                    makeBlock(node.orelse).codeAndLocationFromChildren(node)
+                } else {
+                    null
+                }
+        }
     }
 
     private fun handleReturn(node: Python.ASTReturn): Statement {
-        val ret = newReturnStatement(rawNode = node)
-        node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
-        return ret
+        return newReturnStatement(rawNode = node).withChildren(hasScope = false) { ret ->
+            node.value?.let { value -> ret.returnValue = frontend.expressionHandler.handle(value) }
+        }
     }
 
     private fun handleAssign(node: Python.ASTAssign): Statement {
-        val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
-        val rhs = frontend.expressionHandler.handle(node.value)
-        if (rhs is List<*>)
-            newAssignExpression(
-                lhs = lhs,
-                rhs =
-                    rhs.map {
-                        (it as? Expression)
-                            ?: newProblemExpression(
-                                "There was an issue with an argument.",
-                                rawNode = node
-                            )
-                    },
-                rawNode = node
-            )
-        return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
+        return newAssignExpression(rawNode = node).withChildren(hasScope = false) {
+            it.lhs = node.targets.map { target -> frontend.expressionHandler.handle(target) }
+            it.rhs = listOf(frontend.expressionHandler.handle(node.value))
+        }
     }
 
     private fun handleAugAssign(node: Python.ASTAugAssign): Statement {
-        val lhs = frontend.expressionHandler.handle(node.target)
-        val rhs = frontend.expressionHandler.handle(node.value)
         val op = frontend.operatorToString(node.op) + "="
-        return newAssignExpression(
-            operatorCode = op,
-            lhs = listOf(lhs),
-            rhs = listOf(rhs),
-            rawNode = node
-        )
+        return newAssignExpression(rawNode = node).withChildren(hasScope = false) {
+            it.operatorCode = op
+            it.lhs = listOf(frontend.expressionHandler.handle(node.target))
+            it.rhs = listOf(frontend.expressionHandler.handle(node.value))
+        }
     }
 
     private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
-        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
-        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
+        val cls =
+            newRecordDeclaration(stmt.name, "class", rawNode = stmt).withChildren(
+                hasScope = true
+            ) { record ->
+                stmt.bases.map { base -> record.superClasses.add(frontend.typeOf(base)) }
+                stmt.keywords.map { TODO() }
 
-        frontend.scopeManager.enterScope(cls)
-
-        stmt.keywords.map { TODO() }
-
-        for (s in stmt.body) {
-            when (s) {
-                is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.addStatement(handleNode(s))
+                for (s in stmt.body) {
+                    when (s) {
+                        is Python.ASTFunctionDef -> handleFunctionDef(s, record)
+                        else -> record.addStatement(handleNode(s))
+                    }
+                }
             }
-        }
 
-        frontend.scopeManager.leaveScope(cls)
         frontend.scopeManager.addDeclaration(cls)
 
         return wrapDeclarationToStatement(cls)
@@ -266,7 +260,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(
-        s: Python.ASTFunctionDef,
+        s: Python.ASTFunctionOrAsyncFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
         val result =
@@ -288,89 +282,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunctionDeclaration(name = s.name, rawNode = s)
             }
-        frontend.scopeManager.enterScope(result)
 
-        // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.withChildren(hasScope = true) {
+            // Handle decorators (which are translated into CPG "annotations")
+            result.addAnnotations(handleAnnotations(s))
 
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
-        }
-        result.type = FunctionType.computeType(result)
-
-        handleArguments(s.args, result, recordDeclaration)
-
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
-        }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
-        return wrapDeclarationToStatement(result)
-    }
-
-    /**
-     * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [Python.ASTFunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
-     *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [Python.ASTFunctionDef] could be one of
-     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
-     *       [ConstructorDeclaration]
-     *     - a [FunctionDeclaration] if neither of the above apply
-     *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
-     */
-    private fun handleAsyncFunctionDef(
-        s: Python.ASTAsyncFunctionDef,
-        recordDeclaration: RecordDeclaration? = null
-    ): DeclarationStatement {
-        val result =
-            if (recordDeclaration != null) {
-                if (s.name == "__init__") {
-                    newConstructorDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        rawNode = s
-                    )
-                } else {
-                    newMethodDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        isStatic = false,
-                        rawNode = s
-                    )
-                }
+            // Handle return type and calculate function type
+            if (result is ConstructorDeclaration) {
+                // Return type of the constructor is always its record declaration type
+                result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
             } else {
-                newFunctionDeclaration(name = s.name, rawNode = s)
+                result.returnTypes = listOf(frontend.typeOf(s.returns))
             }
-        frontend.scopeManager.enterScope(result)
+            result.type = FunctionType.computeType(result)
 
-        // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+            handleArguments(s.args, result, recordDeclaration)
 
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
-        }
-        result.type = FunctionType.computeType(result)
-
-        handleArguments(s.args, result, recordDeclaration)
-
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+            if (s.body.isNotEmpty()) {
+                result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+            }
         }
 
-        frontend.scopeManager.leaveScope(result)
         frontend.scopeManager.addDeclaration(result)
 
         return wrapDeclarationToStatement(result)
@@ -484,11 +416,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(node: Python.ASTAsyncFunctionDef): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    private fun handleAnnotations(node: Python.ASTFunctionDef): Collection<Annotation> {
+    private fun handleAnnotations(
+        node: Python.ASTFunctionOrAsyncFunctionDef
+    ): Collection<Annotation> {
         return handleDeclaratorList(node, node.decorator_list)
     }
 
@@ -515,31 +445,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             val annotation =
                 newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
+                        name =
+                            Name(
+                                localName = decFuncParsed.name.localName,
+                                parent = decFuncParsed.base.name
+                            ),
+                        rawNode = node
                     )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
-
+                    .withChildren(hasScope = false) {
+                        for (arg in decorator.args) {
+                            val argParsed = frontend.expressionHandler.handle(arg)
+                            it.members +=
+                                newAnnotationMember(
+                                        "annotationArg" + decorator.args.indexOf(arg), // TODO
+                                        rawNode = arg
+                                    )
+                                    .withChildren { it.value = argParsed }
+                        }
+                        for (keyword in decorator.keywords) {
+                            it.members +=
+                                newAnnotationMember(name = keyword.arg, rawNode = keyword)
+                                    .withChildren {
+                                        it.value = frontend.expressionHandler.handle(keyword.value)
+                                    }
+                        }
+                    }
             annotations += annotation
         }
 
@@ -547,11 +477,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun makeBlock(stmts: List<Python.ASTBASEstmt>, rawNode: Python.AST? = null): Block {
-        val result = newBlock(rawNode = rawNode)
-        for (stmt in stmts) {
-            result.addStatement(handle(stmt))
+        return newBlock(rawNode = rawNode).withChildren(hasScope = false) {
+            for (stmt in stmts) {
+                it.addStatement(handle(stmt))
+            }
         }
-        return result
     }
 
     internal fun handleArgument(node: Python.ASTarg) {
