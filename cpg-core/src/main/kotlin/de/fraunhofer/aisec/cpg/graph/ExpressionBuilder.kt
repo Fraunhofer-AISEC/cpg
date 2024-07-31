@@ -99,7 +99,8 @@ fun MetadataProvider.newUnaryOperator(
     operatorCode: String,
     postfix: Boolean,
     prefix: Boolean,
-    rawNode: Any? = null
+    rawNode: Any? = null,
+    init: (UnaryOperator.() -> Unit)? = null,
 ): UnaryOperator {
     val node = UnaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -107,6 +108,10 @@ fun MetadataProvider.newUnaryOperator(
     node.operatorCode = operatorCode
     node.isPostfix = postfix
     node.isPrefix = prefix
+
+    if (init != null) {
+        init(node)
+    }
 
     log(node)
 

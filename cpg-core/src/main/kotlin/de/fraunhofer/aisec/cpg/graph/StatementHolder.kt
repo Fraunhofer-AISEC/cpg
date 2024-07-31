@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
@@ -55,6 +56,7 @@ interface StatementHolder : Holder<Statement> {
             return unwrap(statementEdges)
         }
         set(value) {
+            // TODO: we also need to set the ast parent in this case
             statementEdges = wrap(value, this as Node)
         }
 
@@ -66,7 +68,7 @@ interface StatementHolder : Holder<Statement> {
      * @param s the statement
      */
     fun addStatement(s: Statement) {
-        val propertyEdge = PropertyEdge((this as Node), s)
+        val propertyEdge = AstPropertyEdge((this as Node), s)
         propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
         statementEdges.add(propertyEdge)
     }

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -90,6 +91,23 @@ class ExpressionBuilderTest {
 
             assertEquals(binOp, lit1.astParent)
             assertEquals(binOp, lit2.astParent)
+        }
+    }
+
+    @Test
+    fun testBlock() {
+        with(TestLanguageFrontend()) {
+            val block =
+                newBlock().withScope {
+                    this +=
+                        newUnaryOperator("++", prefix = false, postfix = true) {
+                            input = newReference("a")
+                        }
+                }
+
+            val binOp = block.statements.firstOrNull()
+            assertNotNull(binOp)
+            assertEquals(block, binOp.astParent)
         }
     }
 }

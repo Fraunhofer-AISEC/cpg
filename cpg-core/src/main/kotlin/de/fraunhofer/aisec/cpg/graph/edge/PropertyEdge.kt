@@ -41,6 +41,12 @@ import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
 
+class AstPropertyEdge<T : Node> : PropertyEdge<T> {
+    constructor(start: Node, end: T) : super(start, end) {
+        end.astParent = start
+    }
+}
+
 /**
  * This class represents an edge between two [Node] objects in a Neo4J graph. It can be used to
  * store additional information that relate to the relationship between the two nodes that belong to

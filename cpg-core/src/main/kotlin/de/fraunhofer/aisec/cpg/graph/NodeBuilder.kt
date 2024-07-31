@@ -384,6 +384,21 @@ private fun <AstNode> Node.setCodeAndLocation(
 }
 
 context(ContextProvider)
+fun <T : Node> T.withScope(init: T.() -> Unit): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+
+    scopeManager.enterScope(this)
+    init(this)
+    scopeManager.leaveScope(this)
+
+    return this
+}
+
+context(ContextProvider)
 fun <T : Node> T.withChildren(
     hasScope: Boolean = false,
     isGlobalScope: Boolean = false,
