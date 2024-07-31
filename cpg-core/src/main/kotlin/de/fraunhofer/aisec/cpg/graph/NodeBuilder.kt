@@ -424,7 +424,7 @@ fun <T : Node> T.withChildren(
     return this
 }
 
-class AstProperty<PropertyType : Node, NodeType : Node>(
+class AstProperty<PropertyType : Node?, NodeType : Node>(
     initializer: PropertyType,
     var pre: ((PropertyType) -> Unit)? = null,
     var post: ((PropertyType) -> Unit)? = null
@@ -440,7 +440,7 @@ class AstProperty<PropertyType : Node, NodeType : Node>(
         pre?.let { it(storage) }
 
         storage = value
-        storage.astParent = thisRef
+        storage?.astParent = thisRef
 
         post?.let { it(storage) }
     }
