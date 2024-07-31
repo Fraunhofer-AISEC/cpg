@@ -142,7 +142,12 @@ object SubgraphWalker {
         // We currently need to stick to pure Java reflection, since Kotlin reflection
         // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
         for (field in getAllFields(classType)) {
-            field.getAnnotation(AST::class.java) ?: continue
+            if (
+                field.getAnnotation(AST::class.java) == null &&
+                    field.type != AstProperty::class.java
+            ) {
+                continue
+            }
             try {
                 // We need to synchronize access to the field, because otherwise different
                 // threads might restore the isAccessible property while this thread is still
