@@ -24,6 +24,7 @@
  *
  */
 plugins {
+    id("cpg.application-conventions")
     id("cpg.library-conventions")
 }
 
@@ -40,8 +41,19 @@ publishing {
     }
 }
 
+application {
+    mainClass.set("de.fraunhofer.aisec.cpg.query.RuleRunnerKt")
+}
+
 dependencies {
     api(projects.cpgCore)
+
+    api(projects.cpgLanguageCxx)
+    api(projects.cpgLanguageJava)
+
+    api(libs.picocli)
+
+    implementation(libs.sarif4k)
 
     testImplementation(testFixtures(projects.cpgCore))
 }
