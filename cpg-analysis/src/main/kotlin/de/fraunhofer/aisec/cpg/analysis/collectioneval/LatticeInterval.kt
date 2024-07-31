@@ -95,6 +95,46 @@ sealed class LatticeInterval {
         }
     }
 
+    // Widening
+    fun widen(other: LatticeInterval): LatticeInterval {
+        if (this !is Bounded || other !is Bounded) {
+            return BOTTOM
+        }
+        val lower: Bound = when {
+            max(this.lower, other.lower) == other.lower -> {
+                this.lower
+            }
+            else -> Bound.Value(0)
+        }
+        val upper: Bound = when {
+            max(this.upper, other.upper) == this.upper -> {
+                this.upper
+            }
+            else -> Bound.TOP
+        }
+        return Bounded(lower, upper)
+    }
+
+    // Narrowing
+    fun narrow(other: LatticeInterval): LatticeInterval {
+        if (this !is Bounded || other !is Bounded) {
+            return BOTTOM
+        }
+        val lower: Bound = when {
+            this.lower == Bound.Value(0) -> {
+                other.lower
+            }
+            else -> this.lower
+        }
+        val upper: Bound = when {
+            this.upper == Bound.TOP -> {
+               other.upper
+            }
+            else -> this.upper
+        }
+        return Bounded(lower, upper)
+    }
+
     private fun min(one: Bound, other: Bound): Bound {
         return when {
             one is Bound.TOP -> other
