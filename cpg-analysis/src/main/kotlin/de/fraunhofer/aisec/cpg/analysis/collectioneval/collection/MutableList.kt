@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import org.apache.commons.lang3.NotImplementedException
 
 class MutableList : Collection {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
@@ -85,7 +86,10 @@ class MutableList : Collection {
     }
 
     override fun getInitialRange(initializer: Node): LatticeInterval {
-        val size = (initializer as MemberCallExpression).arguments.size
+        if (initializer !is MemberCallExpression) {
+            throw NotImplementedException()
+        }
+        val size = initializer.arguments.size
         return LatticeInterval.Bounded(size, size)
     }
 }

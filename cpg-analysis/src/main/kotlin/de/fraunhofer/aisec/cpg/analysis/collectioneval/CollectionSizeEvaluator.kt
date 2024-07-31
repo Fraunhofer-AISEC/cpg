@@ -25,20 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.collectioneval
 
+import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Array
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Collection
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.MutableList
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
+import org.apache.commons.lang3.NotImplementedException
 
 // We assume that we only work with lists in this operator
-class ListSizeEvaluator {
+class CollectionSizeEvaluator {
     fun evaluate(node: Node): LatticeInterval {
         val name = node.name
-        val type = MutableList::class
+        val type = getType(node)
         // TODO: add check whether node operates on a list -> DFG flow to java.util.List?
         val initializer = getInitializerOf(node, type)!!
         var range = getInitialRange(initializer, type)
@@ -68,5 +68,17 @@ class ListSizeEvaluator {
         type: KClass<out Collection>
     ): LatticeInterval {
         return type.createInstance().applyEffect(this, node, name)
+    }
+
+    private fun getType(node: Node): KClass<out Collection> {
+        if (node !is Reference) {
+            throw NotImplementedException()
+        }
+        val name = node.type.name.toString()
+        return when {
+            name.startsWith("java.util.List") -> MutableList::class
+            name.endsWith("[]") -> Array::class
+            else -> throw NotImplementedException()
+        }
     }
 }
