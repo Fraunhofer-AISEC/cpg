@@ -50,6 +50,7 @@ open class BinaryOperator :
         )
 
     /** The right-hand expression. */
+    @delegate:AST
     var rhs: Expression by
         AstProperty(
             initializer = ProblemExpression("could not parse rhs"),

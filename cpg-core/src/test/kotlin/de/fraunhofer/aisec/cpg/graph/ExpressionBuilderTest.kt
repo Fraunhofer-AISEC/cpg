@@ -84,7 +84,7 @@ class ExpressionBuilderTest {
             assertNull(lit2.astParent)
 
             val binOp =
-                newBinaryOperator("+").withChildren {
+                newBinaryOperator("+") {
                     lhs = lit1
                     rhs = lit2
                 }
