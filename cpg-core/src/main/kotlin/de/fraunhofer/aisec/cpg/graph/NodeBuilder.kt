@@ -430,7 +430,7 @@ class AstProperty<PropertyType : Node?, NodeType : Node>(
     var post: ((PropertyType) -> Unit)? = null
 ) {
 
-    private var storage: PropertyType = initializer
+    internal var storage: PropertyType = initializer
 
     operator fun getValue(thisRef: NodeType, property: KProperty<*>): PropertyType {
         return storage

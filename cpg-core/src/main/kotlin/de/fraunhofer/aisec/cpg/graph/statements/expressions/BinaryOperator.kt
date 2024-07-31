@@ -41,6 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 open class BinaryOperator :
     Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
+    @delegate:AST
     var lhs: Expression by
         AstProperty(
             initializer = ProblemExpression("could not parse lhs"),
@@ -49,6 +50,7 @@ open class BinaryOperator :
         )
 
     /** The right-hand expression. */
+    @delegate:AST
     var rhs: Expression by
         AstProperty(
             initializer = ProblemExpression("could not parse rhs"),

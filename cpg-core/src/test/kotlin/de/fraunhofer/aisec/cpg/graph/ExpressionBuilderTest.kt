@@ -91,6 +91,9 @@ class ExpressionBuilderTest {
 
             assertEquals(binOp, lit1.astParent)
             assertEquals(binOp, lit2.astParent)
+
+            var children = binOp.astChildren
+            assertEquals(2, children.size)
         }
     }
 

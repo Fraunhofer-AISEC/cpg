@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.AstProperty
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -173,6 +174,9 @@ object SubgraphWalker {
                     }
                     is Collection<*> -> {
                         children.addAll(obj.filterIsInstance<Node>())
+                    }
+                    is AstProperty<*, *> -> {
+                        children.add((obj as AstProperty<Node, *>).storage)
                     }
                     else -> {
                         throw AnnotationFormatError(
