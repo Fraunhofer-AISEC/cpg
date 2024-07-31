@@ -419,9 +419,8 @@ class PythonFrontendTest : BaseTest() {
         // assertEquals(tu.primitiveType("int"), i.type)
 
         // self.somevar = i
-        val someVarDeclaration =
-            ((bar.body as? Block)?.statements?.get(0) as? AssignExpression)?.declarations?.first()
-                as? FieldDeclaration
+        val someVarDeclaration = recordFoo.declarations["somevar"] as? FieldDeclaration
+
         assertNotNull(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertEquals(i, (someVarDeclaration.firstAssignment as? Reference)?.refersTo)
