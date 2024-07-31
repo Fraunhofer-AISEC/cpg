@@ -91,7 +91,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         val resolved = scopeManager.resolveReference(node)
 
         // Nothing to create
-        if (resolved != null) return null
+        if (resolved != null) {
+            return null
+        }
 
         val decl =
             if (scopeManager.isInRecord) {
@@ -128,16 +130,17 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         decl.isImplicit = true
 
         if (decl is FieldDeclaration) {
+            decl.astParent = scopeManager.currentRecord
             scopeManager.currentRecord?.addField(decl)
             scopeManager.withScope(scopeManager.currentRecord?.scope) {
                 scopeManager.addDeclaration(decl)
             }
         } else {
+            // copy the AST parent from the initial reference node
+            decl.astParent = node.astParent
             scopeManager.addDeclaration(decl)
         }
 
-        // copy the AST parent from the initial reference node
-        decl.astParent = node.astParent
         return decl
     }
 
@@ -155,8 +158,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         .findValue(target)
                         ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                    // Add it to our assign expression, so that we can find it in the AST
-                    assignExpression.declarations += handled
+                    // Add it to our assign expression, so that we can find it in the AST.
+                    // [FieldDeclaration]s are stored at the [RecordDeclaration] level.
+                    if (handled !is FieldDeclaration) {
+                        assignExpression.declarations += handled
+                    }
                 }
             }
         }
@@ -167,7 +173,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (node.variable) {
             is Reference -> {
                 val handled = handleReference(node.variable as Reference)
-                if (handled is Declaration) {
+                if (handled is Declaration && node !is FieldDeclaration) {
                     handled.let { node.addDeclaration(it) }
                 }
             }

@@ -293,7 +293,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 // Yes, it's an import, so we need to construct a reference with an FQN
                 newReference(base.name.fqn(node.attr), rawNode = node)
             } else {
-                newMemberExpression(name = node.attr, base = base, rawNode = node)
+                newMemberExpression(name = node.attr, base = base, rawNode = node).withChildren(
+                    hasScope = false
+                ) {
+                    it.base.withParent()
+                }
             }
 
         return ref
@@ -348,7 +352,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
         val ret =
             if (callee is MemberExpression) {
-                newMemberCallExpression(callee, rawNode = node)
+                newMemberCallExpression(callee, rawNode = node).withChildren(hasScope = false) {
+                    it.callee.withParent()
+                }
             } else {
                 // try to resolve -> [ConstructExpression]
                 val currentScope = frontend.scopeManager.currentScope
@@ -362,11 +368,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     constructExpr.type = record.toType()
                     constructExpr
                 } else {
-                    newCallExpression(callee, rawNode = node)
+                    newCallExpression(callee, rawNode = node).withChildren(hasScope = false) {
+                        it.callee.withParent()
+                    }
                 }
             }
-
-        callee.astParent = ret // TODO: this is an ugly hack
 
         return ret.withChildren(hasScope = false) {
             for (arg in node.args) {
