@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.edge
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import java.lang.reflect.Field
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
 import java.util.*
 import kotlin.reflect.KMutableProperty1
@@ -182,70 +181,6 @@ open class PropertyEdge<T : Node> : Persistable {
         }
 
         /**
-         * @param collection is a collection that presumably holds property edges
-         * @param outgoing direction of the edges
-         * @return collection of nodes containing the targets of the edges
-         */
-        private fun unwrapPropertyEdgeCollection(
-            collection: Collection<*>,
-            outgoing: Boolean
-        ): Any {
-            var element: Any? = null
-            val value = collection.stream().findAny()
-            if (value.isPresent) {
-                element = value.get()
-            }
-            if (element is PropertyEdge<*>) {
-                try {
-                    val outputCollection =
-                        collection.javaClass
-                            .getDeclaredConstructor()
-                            .newInstance()
-                            .filterIsInstance<Node>()
-                            .toMutableList()
-                    for (obj in collection) {
-                        if (obj is PropertyEdge<*>) {
-                            if (outgoing) {
-                                outputCollection.add(obj.end)
-                            } else {
-                                outputCollection.add(obj.start)
-                            }
-                        }
-                    }
-                    return outputCollection
-                } catch (e: InstantiationException) {
-                    log.warn("PropertyEdges could not be unwrapped")
-                } catch (e: IllegalAccessException) {
-                    log.warn("PropertyEdges could not be unwrapped")
-                } catch (e: InvocationTargetException) {
-                    log.warn("PropertyEdges could not be unwrapped")
-                } catch (e: NoSuchMethodException) {
-                    log.warn("PropertyEdges could not be unwrapped")
-                }
-            }
-            return collection
-        }
-
-        /**
-         * @param obj PropertyEdge or collection of property edges that must be unwrapped
-         * @param outgoing direction of the edge
-         * @return node or collection representing target of edge
-         */
-        @JvmStatic
-        fun unwrapPropertyEdge(obj: Any, outgoing: Boolean): Any {
-            if (obj is PropertyEdge<*>) {
-                return if (outgoing) {
-                    obj.end
-                } else {
-                    obj.start
-                }
-            } else if (obj is Collection<*> && obj.isNotEmpty()) {
-                return unwrapPropertyEdgeCollection(obj, outgoing)
-            }
-            return obj
-        }
-
-        /**
          * Checks if an Object is a PropertyEdge or a collection of PropertyEdges
          *
          * @param f Field containing the object
@@ -268,35 +203,6 @@ open class PropertyEdge<T : Node> : Persistable {
                 }
             }
             return false
-        }
-
-        fun checkForPropertyEdge(member: KProperty1<out Node, *>, obj: Any?): Boolean {
-            if (obj is PropertyEdge<*>) {
-                return true
-            } else if (obj is Collection<*>) {
-                val returnType = member.returnType
-                return returnType.classifier == List::class &&
-                    returnType.arguments.any { it.type?.classifier == PropertyEdge::class }
-            }
-            return false
-        }
-
-        @JvmStatic
-        fun <T : Node> removeElementFromList(
-            propertyEdges: List<PropertyEdge<T>>,
-            element: T,
-            end: Boolean
-        ): List<PropertyEdge<T>> {
-            val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
-            for (propertyEdge in propertyEdges) {
-                if (end && propertyEdge.end != element) {
-                    newPropertyEdges.add(propertyEdge)
-                }
-                if (!end && propertyEdge.start != element) {
-                    newPropertyEdges.add(propertyEdge)
-                }
-            }
-            return applyIndexProperty(newPropertyEdges)
         }
 
         @JvmStatic
@@ -328,66 +234,25 @@ open class PropertyEdge<T : Node> : Persistable {
 /** Can be used to describe a generic set of property edge. */
 class Dataflows() :
     AbstractPropertyEdges<Node, Dataflow>(
-        init = { start, end, properties -> Dataflow(start, end) }
-    ) {
-    override fun wrap(nodes: Collection<Node>, holder: Node, outgoing: Boolean): Dataflows {
-        var edges = Dataflows()
-        for (n in nodes) {
-            if (outgoing) {
-                edges.add(holder, n)
-            } else {
-                edges.add(n, holder)
-            }
-        }
-
-        return edges
-    }
-}
+        init = { start, end, properties -> Dataflow(start, end) },
+        createEdges = ::Dataflows
+    )
 
 /** Can be used to describe a generic set of property edge. */
 class PropertyEdges<T : Node>() :
-    AbstractPropertyEdges<T, PropertyEdge<T>>(
-        init = { start, end, properties -> PropertyEdge(start, end, properties) }
-    ) {
-    override fun wrap(nodes: Collection<T>, holder: Node, outgoing: Boolean): PropertyEdges<T> {
-        var edges = PropertyEdges<T>()
-        for (n in nodes) {
-            if (outgoing) {
-                edges.add(holder, n)
-            } else {
-                edges.add(n, holder as T)
-            }
-        }
-
-        return edges
-    }
-}
+    AbstractPropertyEdges<T, PropertyEdge<T>>(init = ::PropertyEdge, createEdges = ::PropertyEdges)
 
 /** This property edge list describes elements that are AST children of a node. */
 class AstChildren<T : Node>() :
-    AbstractPropertyEdges<T, AstChild<T>>(
-        init = { start, end, properties -> AstChild(start, end, properties) }
-    ) {
-    override fun wrap(nodes: Collection<T>, holder: Node, outgoing: Boolean): AstChildren<T> {
-        var edges = AstChildren<T>()
-        for (n in nodes) {
-            if (outgoing) {
-                edges.add(holder, n)
-            } else {
-                edges.add(n, holder as T)
-            }
-        }
-
-        return edges
-    }
-}
+    AbstractPropertyEdges<T, AstChild<T>>(init = ::AstChild, createEdges = ::AstChildren)
 
 /**
  * This class extends a list of property edges. This allows us to use list of property edges more
  * conveniently.
  */
 abstract class AbstractPropertyEdges<T : Node, P : PropertyEdge<T>>(
-    var init: (start: Node, end: T, properties: MutableMap<Properties, Any?>) -> P
+    var init: (start: Node, end: T, properties: MutableMap<Properties, Any?>) -> P,
+    var createEdges: () -> AbstractPropertyEdges<T, P>,
 ) : ArrayList<P>() {
 
     override fun add(e: P): Boolean {
@@ -404,6 +269,22 @@ abstract class AbstractPropertyEdges<T : Node, P : PropertyEdge<T>>(
         return super.add(index, element)
     }
 
+    override fun equals(o: Any?): Boolean {
+        if (o !is AbstractPropertyEdges<*, *>) return false
+
+        // Otherwise, try to compare the contents of the lists with the propertyEquals method
+        if (this.size == o.size) {
+            for (i in this.indices) {
+                if (!this[i].propertyEquals(o[i])) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        return false
+    }
+
     fun add(
         start: Node,
         end: T,
@@ -415,11 +296,26 @@ abstract class AbstractPropertyEdges<T : Node, P : PropertyEdge<T>>(
         this.add(edge)
     }
 
-    abstract fun wrap(
+    fun <A : AbstractPropertyEdges<T, P>> wrap(
         nodes: Collection<T>,
         holder: Node,
         outgoing: Boolean = true
-    ): AbstractPropertyEdges<T, P>
+    ): A {
+        var edges = createEdges()
+        for (n in nodes) {
+            if (outgoing) {
+                edges.add(holder, n)
+            } else {
+                edges.add(n, holder as T)
+            }
+        }
+
+        return edges as A
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }
 
 /**

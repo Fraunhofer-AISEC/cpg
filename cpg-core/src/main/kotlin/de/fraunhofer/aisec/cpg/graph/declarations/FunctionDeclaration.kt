@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -189,7 +188,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         return (super.equals(other) &&
             body == other.body &&
             parameters == other.parameters &&
-            propertyEqualsList(parameterEdges, other.parameterEdges) &&
+            parameterEdges == other.parameterEdges &&
             throwsTypes == other.throwsTypes)
     }
 
