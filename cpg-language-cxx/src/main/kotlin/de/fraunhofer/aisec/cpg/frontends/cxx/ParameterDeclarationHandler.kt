@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.withChildren
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
@@ -69,22 +70,24 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
 
         val paramVariableDeclaration = newParameterDeclaration(name, type, false, rawNode = ctx)
 
-        // We cannot really model "const" as part of the type, but we can model it as part of the
-        // parameter, so we can use it later
-        if (ctx.declSpecifier.isConst) {
-            paramVariableDeclaration.modifiers += CONST
-        }
+        paramVariableDeclaration.withChildren {
+            // We cannot really model "const" as part of the type, but we can model it as part of the
+            // parameter, so we can use it later
+            if (ctx.declSpecifier.isConst) {
+                paramVariableDeclaration.modifiers += CONST
+            }
 
-        // Add default values
-        if (ctx.declarator.initializer != null) {
-            paramVariableDeclaration.default =
-                frontend.initializerHandler.handle(ctx.declarator.initializer)
-        }
+            // Add default values
+            if (ctx.declarator.initializer != null) {
+                paramVariableDeclaration.default =
+                    frontend.initializerHandler.handle(ctx.declarator.initializer)
+            }
 
-        // Add default values
-        if (ctx.declarator.initializer != null) {
-            paramVariableDeclaration.default =
-                frontend.initializerHandler.handle(ctx.declarator.initializer)
+            // Add default values
+            if (ctx.declarator.initializer != null) {
+                paramVariableDeclaration.default =
+                    frontend.initializerHandler.handle(ctx.declarator.initializer)
+            }
         }
 
         return paramVariableDeclaration
