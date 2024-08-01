@@ -26,10 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -43,22 +42,13 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     /** The function body. Usually a [Block]. */
     @AST var body: Statement? = null
 
-    /**
-     * Classes and Structs can be declared inside a function and are only valid within the function.
-     */
-    @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges = mutableListOf<PropertyEdge<RecordDeclaration>>()
-
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var parameterEdges = mutableListOf<PropertyEdge<ParameterDeclaration>>()
+    var parameterEdges = astEdgesOf<ParameterDeclaration>()
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
-    var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
-
-    /** Virtual property for accessing [parameterEdges] without property edges. */
-    var records by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
+    var parameters by unwrapping(FunctionDeclaration::parameterEdges)
 
     @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
     var throwsTypes = mutableListOf<Type>()
@@ -157,16 +147,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     val signatureTypes: List<Type>
         get() = parameters.map { it.type }
 
-    fun addParameter(parameterDeclaration: ParameterDeclaration) {
-        val propertyEdge = PropertyEdge(this, parameterDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, parameters.size)
-        parameterEdges.add(propertyEdge)
-    }
-
-    fun removeParameter(parameterDeclaration: ParameterDeclaration) {
-        parameterEdges.removeIf { it.end == parameterDeclaration }
-    }
-
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
@@ -196,10 +176,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is ParameterDeclaration) {
             addIfNotContains(parameterEdges, declaration)
-        }
-
-        if (declaration is RecordDeclaration) {
-            addIfNotContains(recordEdges, declaration)
         }
     }
 

@@ -30,9 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -164,19 +162,19 @@ object SubgraphWalker {
                         (field.getAnnotation(Relationship::class.java).direction ==
                             Relationship.Direction.OUTGOING)
                 }
-                if (checkForPropertyEdge(field, obj) && obj is Collection<*>) {
-                    obj = unwrap(obj.filterIsInstance<PropertyEdge<Node>>(), outgoing)
-                }
                 when (obj) {
                     is Node -> {
                         children.add(obj)
+                    }
+                    is EdgeList<*, *> -> {
+                        children.addAll(obj.toNodeCollection(outgoing))
                     }
                     is Collection<*> -> {
                         children.addAll(obj.filterIsInstance<Node>())
                     }
                     else -> {
                         throw AnnotationFormatError(
-                            "Found @field:SubGraph(\"AST\") on field of type " +
+                            "Found @AST on field of type " +
                                 obj.javaClass +
                                 " but can only used with node graph classes or collections of graph nodes"
                         )

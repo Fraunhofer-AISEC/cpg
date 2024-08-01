@@ -299,7 +299,7 @@ class DFGFunctionSummaries {
                 }
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
-            to?.let { from?.addNextDFG(it) }
+            to?.let { from?.nextDFGEdges += it }
         }
     }
 

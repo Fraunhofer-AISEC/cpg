@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.enhancements.templates
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.test.*
@@ -68,18 +67,18 @@ internal class FunctionTemplateTest : BaseTest() {
         floatType: ObjectType,
         int3: Literal<*>
     ) {
-        assertEquals(2, callFloat3.templateParameters.size)
-        assertEquals(floatType, (callFloat3.templateParameters[0] as TypeExpression).type)
-        assertEquals(0, callFloat3.templateParameterEdges!![0].getProperty(Properties.INDEX))
+        assertEquals(2, callFloat3.templateArguments.size)
+        assertEquals(floatType, (callFloat3.templateArguments[0] as TypeExpression).type)
+        assertEquals(0, callFloat3.templateArgumentEdges!![0].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParameterEdges!![0].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateArgumentEdges!![0].instantiation
         )
-        assertEquals(int3, callFloat3.templateParameters[1])
-        assertEquals(1, callFloat3.templateParameterEdges!![1].getProperty(Properties.INDEX))
+        assertEquals(int3, callFloat3.templateArguments[1])
+        assertEquals(1, callFloat3.templateArgumentEdges!![1].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateParameterEdges!![1].getProperty(Properties.INSTANTIATION)
+            callFloat3.templateArgumentEdges!![1].instantiation
         )
     }
 
@@ -220,9 +219,9 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check template parameters
         val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
-        assertEquals(2, call.templateParameters.size)
-        assertEquals(doubleType, (call.templateParameters[0] as TypeExpression).type)
-        assertEquals(literal5, call.templateParameters[1])
+        assertEquals(2, call.templateArguments.size)
+        assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
+        assertEquals(literal5, call.templateArguments[1])
 
         // Check return value
         assertEquals(doubleType, call.type)
@@ -262,9 +261,9 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check template parameters
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
-        assertEquals(2, call.templateParameters.size)
-        assertLocalName("double", call.templateParameters[0])
-        assertEquals(literal5, call.templateParameters[1])
+        assertEquals(2, call.templateArguments.size)
+        assertLocalName("double", call.templateArguments[0])
+        assertEquals(literal5, call.templateArguments[1])
 
         // Check return value
         assertLocalName("double", call.type)
@@ -311,9 +310,9 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val literal5 =
             findByUniquePredicate<Literal<*>>(result.literals) { l: Literal<*> -> l.value == 5 }
-        assertEquals(2, call.templateParameters.size)
-        assertEquals(intType, (call.templateParameters[0] as TypeExpression).type)
-        assertEquals(literal5, call.templateParameters[1])
+        assertEquals(2, call.templateArguments.size)
+        assertEquals(intType, (call.templateArguments[0] as TypeExpression).type)
+        assertEquals(literal5, call.templateArguments[1])
 
         // Check return value
         assertEquals(intType, call.type)
@@ -357,9 +356,9 @@ internal class FunctionTemplateTest : BaseTest() {
         // Check template parameters
         val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
-        assertEquals(2, call.templateParameters.size)
-        assertEquals(doubleType, (call.templateParameters[0] as TypeExpression).type)
-        assertEquals(literal5, call.templateParameters[1])
+        assertEquals(2, call.templateArguments.size)
+        assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
+        assertEquals(literal5, call.templateArguments[1])
 
         // Check return value
         assertEquals(doubleType, call.type)
@@ -406,9 +405,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name.localName == "int"
             }
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
-        assertEquals(2, call.templateParameters.size)
-        assertEquals(intType, (call.templateParameters[0] as TypeExpression).type)
-        assertEquals(literal5, call.templateParameters[1])
+        assertEquals(2, call.templateArguments.size)
+        assertEquals(intType, (call.templateArguments[0] as TypeExpression).type)
+        assertEquals(literal5, call.templateArguments[1])
 
         // Check return value
         assertEquals(intType, call.type)
@@ -512,20 +511,20 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callExpression.invokes.size)
         assertEquals(methodDeclaration, callExpression.invokes[0])
         assertEquals(templateDeclaration, callExpression.templateInstantiation)
-        assertEquals(2, callExpression.templateParameters.size)
-        assertLocalName("int", callExpression.templateParameters[0])
+        assertEquals(2, callExpression.templateArguments.size)
+        assertLocalName("int", callExpression.templateArguments[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callExpression.templateParameterEdges?.get(0)?.getProperty(Properties.INSTANTIATION)
+            callExpression.templateArgumentEdges?.get(0)?.instantiation
         )
-        assertEquals(0, callExpression.templateParameterEdges!![0].getProperty(Properties.INDEX))
+        assertEquals(0, callExpression.templateArgumentEdges!![0].index)
         val int5 =
             findByUniquePredicate(result.literals, Predicate { l: Literal<*> -> l.value == 5 })
-        assertEquals(int5, callExpression.templateParameters[1])
-        assertEquals(1, callExpression.templateParameterEdges!![1].getProperty(Properties.INDEX))
+        assertEquals(int5, callExpression.templateArguments[1])
+        assertEquals(1, callExpression.templateArgumentEdges!![1].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            callExpression.templateParameterEdges!![1].getProperty(Properties.INSTANTIATION)
+            callExpression.templateArgumentEdges!![1].instantiation
         )
     }
 
@@ -565,7 +564,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callInt2.invokes.size)
         assertEquals(fixedDivision, callInt2.invokes[0])
         assertTrue(
-            callInt2.templateParameters[1].nextDFG.contains(templateDeclaration.parameters[1])
+            callInt2.templateArguments[1].nextDFG.contains(templateDeclaration.parameters[1])
         )
 
         // Check inferred for second fixed_division call
@@ -591,7 +590,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callDouble3.invokes.size)
         assertEquals(fixedDivision, callDouble3.invokes[0])
         assertTrue(
-            callDouble3.templateParameters[1].nextDFG.contains(templateDeclaration.parameters[1])
+            callDouble3.templateArguments[1].nextDFG.contains(templateDeclaration.parameters[1])
         )
 
         // Check return values

@@ -30,8 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -112,7 +110,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifSimple.thenStatement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifSimple)
             )
         )
@@ -131,7 +129,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifSimple,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifSimple.thenStatement)
             )
         )
@@ -163,7 +161,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifBranched,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifBranched.thenStatement)
             )
         )
@@ -172,7 +170,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifBranched,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(ifBranched.elseStatement)
             )
         )
@@ -185,7 +183,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched.thenStatement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifBranched)
             )
         )
@@ -196,7 +194,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched.elseStatement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(ifBranched)
             )
         )
@@ -238,7 +236,7 @@ internal class EOGTest : BaseTest() {
                     en = Util.Edge.ENTRIES,
                     n = bo.rhs,
                     cr = Connect.SUBTREE,
-                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode == "&&")),
+                    branch = (bo.operatorCode == "&&"),
                     refs = listOf(bo.lhs)
                 )
             )
@@ -269,7 +267,7 @@ internal class EOGTest : BaseTest() {
                     en = Util.Edge.ENTRIES,
                     n = bo,
                     cr = Connect.SUBTREE,
-                    props = mutableMapOf(Properties.BRANCH to (bo.operatorCode != "&&")),
+                    branch = (bo.operatorCode != "&&"),
                     refs = listOf(bo.lhs)
                 )
             )
@@ -400,7 +398,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[2])
             )
         )
@@ -473,7 +471,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = wstat.statement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(wstat)
             )
         )
@@ -485,7 +483,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
                 n = wstat,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[1])
             )
         )
@@ -518,7 +516,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = dostat,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(dostat.statement)
             )
         )
@@ -539,7 +537,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
                 n = dostat,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[2])
             )
         )
@@ -759,17 +757,17 @@ internal class EOGTest : BaseTest() {
         assertNotNull(a)
         val b = result.refs[{ it.location?.region?.startLine == 7 && it.name.localName == "b" }]
         assertNotNull(b)
-        var nextEOG: List<PropertyEdge<Node>> = firstIf.nextEOGEdges
+        var nextEOG = firstIf.nextEOGEdges
         assertEquals(2, nextEOG.size)
         for (edge in nextEOG) {
             assertEquals(firstIf, edge.start)
             if (edge.end == b) {
-                assertEquals(true, edge.getProperty(Properties.BRANCH))
-                assertEquals(0, edge.getProperty(Properties.INDEX))
+                assertEquals(true, edge.branch)
+                assertEquals(0, edge.index)
             } else {
                 assertEquals(a, edge.end)
-                assertEquals(false, edge.getProperty(Properties.BRANCH))
-                assertEquals(1, edge.getProperty(Properties.INDEX))
+                assertEquals(false, edge.branch)
+                assertEquals(1, edge.index)
             }
         }
         val elseIf: IfStatement =
@@ -786,12 +784,12 @@ internal class EOGTest : BaseTest() {
         for (edge in nextEOG) {
             assertEquals(elseIf, edge.start)
             if (edge.end == b2) {
-                assertEquals(true, edge.getProperty(Properties.BRANCH))
-                assertEquals(0, edge.getProperty(Properties.INDEX))
+                assertEquals(true, edge.branch)
+                assertEquals(0, edge.index)
             } else {
                 assertEquals(x, edge.end)
-                assertEquals(false, edge.getProperty(Properties.BRANCH))
-                assertEquals(1, edge.getProperty(Properties.INDEX))
+                assertEquals(false, edge.branch)
+                assertEquals(1, edge.index)
             }
         }
     }

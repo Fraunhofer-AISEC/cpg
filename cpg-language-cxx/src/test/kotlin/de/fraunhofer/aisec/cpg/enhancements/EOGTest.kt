@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -111,7 +110,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifSimple.thenStatement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifSimple)
             )
         )
@@ -130,7 +129,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifSimple,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifSimple.thenStatement)
             )
         )
@@ -162,7 +161,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifBranched,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifBranched.thenStatement)
             )
         )
@@ -171,7 +170,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifBranched,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(ifBranched.elseStatement)
             )
         )
@@ -184,7 +183,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched.thenStatement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(ifBranched)
             )
         )
@@ -195,7 +194,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched.elseStatement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(ifBranched)
             )
         )
@@ -284,7 +283,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[1])
             )
         )
@@ -345,7 +344,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[2])
             )
         )
@@ -406,7 +405,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[4])
             )
         )
@@ -511,7 +510,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = wstat.statement,
                 cr = Connect.NODE,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(wstat)
             )
         )
@@ -523,7 +522,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
                 n = wstat,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[1])
             )
         )
@@ -556,7 +555,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = dostat,
-                props = mutableMapOf(Properties.BRANCH to true),
+                branch = true,
                 refs = listOf(dostat.statement)
             )
         )
@@ -577,7 +576,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
                 n = dostat,
-                props = mutableMapOf(Properties.BRANCH to false),
+                branch = false,
                 refs = listOf(prints[2])
             )
         )

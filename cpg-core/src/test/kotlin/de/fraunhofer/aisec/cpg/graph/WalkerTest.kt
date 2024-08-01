@@ -69,9 +69,8 @@ class WalkerTest : BaseTest() {
                     lit.value = k
                     decl.initializer = lit
 
-                    stmt.addToPropertyEdgeDeclaration(decl)
-
-                    comp.addStatement(stmt)
+                    stmt.declarationEdges += decl
+                    comp.statementEdges += stmt
                 }
 
                 method.body = comp
@@ -119,7 +118,7 @@ class WalkerTest : BaseTest() {
             val decl = VariableDeclaration()
             decl.name = Name("var${k}")
 
-            stmt.addToPropertyEdgeDeclaration(decl)
+            stmt.declarationEdges.add(decl)
         }
 
         val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")

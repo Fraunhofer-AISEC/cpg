@@ -263,7 +263,7 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
     val node = newBlock()
 
     scopeIfNecessary(needsScope, node, init)
-    (this@StatementHolder).addStatement(node)
+    (this@StatementHolder).statementEdges += node
 
     return node
 }
@@ -375,7 +375,7 @@ fun LanguageFrontend<*, *>.variable(
     val node = newVariableDeclaration(name, type)
     if (init != null) init(node)
 
-    addToPropertyEdgeDeclaration(node)
+    declarationEdges += node
 
     scopeManager.addDeclaration(node)
 
