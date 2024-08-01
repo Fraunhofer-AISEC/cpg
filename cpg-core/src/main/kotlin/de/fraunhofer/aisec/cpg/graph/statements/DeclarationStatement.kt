@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -48,7 +49,7 @@ open class DeclarationStatement : Statement() {
      */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    var declarationEdges = PropertyEdges<Declaration>(astChildren = true)
 
     override var declarations by PropertyEdgeDelegate(DeclarationStatement::declarationEdges)
 

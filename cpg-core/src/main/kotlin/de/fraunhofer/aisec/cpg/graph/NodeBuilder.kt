@@ -33,14 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
-import kotlin.reflect.KProperty
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -424,7 +422,20 @@ fun <T : Node> T.withChildren(
     return this
 }
 
-class AstProperty<PropertyType : Node?, NodeType : Node>(
+/*
+/**
+ * Helper function to create a [AstPropertyDelegate]. For now this only directly returns a new
+ * delegate. But in future this could allow us to do more things here.
+ */
+fun <PropertyType : Node?, NodeType : Node> astChild(
+    initializer: PropertyType,
+    pre: ((PropertyType) -> Unit)? = null,
+    post: ((PropertyType) -> Unit)? = null
+): AstPropertyDelegate<PropertyType, NodeType> {
+    return AstPropertyDelegate(initializer, pre, post)
+}
+
+class AstPropertyDelegate<PropertyType : Node?, NodeType : Node>(
     initializer: PropertyType,
     var pre: ((PropertyType) -> Unit)? = null,
     var post: ((PropertyType) -> Unit)? = null
@@ -445,3 +456,4 @@ class AstProperty<PropertyType : Node?, NodeType : Node>(
         post?.let { it(storage) }
     }
 }
+*/

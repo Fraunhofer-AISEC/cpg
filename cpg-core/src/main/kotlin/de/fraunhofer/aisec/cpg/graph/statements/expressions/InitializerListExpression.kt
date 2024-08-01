@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -47,7 +47,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
+    var initializerEdges = PropertyEdges<Expression>(astChildren = true)
         set(value) {
             field.forEach { it.end.unregisterTypeObserver(this) }
             field = value

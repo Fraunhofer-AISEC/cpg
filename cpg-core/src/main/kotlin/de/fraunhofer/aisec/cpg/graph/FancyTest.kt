@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,25 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 
-class EnumDeclaration : RecordDeclaration() {
-    @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var entryEdges = PropertyEdges<EnumConstantDeclaration>(astChildren = true)
+class FancyTest<T : Node>(override val size: Int) : Collection<PropertyEdge<T>> {
+    override fun contains(element: PropertyEdge<T>): Boolean {
+        TODO("Not yet implemented")
+    }
 
-    var entries by PropertyEdgeDelegate(EnumDeclaration::entryEdges)
+    override fun containsAll(elements: Collection<PropertyEdge<T>>): Boolean {
+        TODO("Not yet implemented")
+    }
 
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("entries", entries)
-            .toString()
+    override fun isEmpty(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun iterator(): Iterator<PropertyEdge<T>> {
+        TODO("Not yet implemented")
     }
 }

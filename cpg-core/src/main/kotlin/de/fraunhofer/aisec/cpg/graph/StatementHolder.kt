@@ -27,10 +27,9 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
 /**
@@ -44,7 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
  */
 interface StatementHolder : Holder<Statement> {
     /** List of statements as property edges. */
-    var statementEdges: MutableList<PropertyEdge<Statement>>
+    var statementEdges: PropertyEdges<Statement>
 
     /**
      * Virtual property to access [statementEdges] without property edges.
@@ -56,8 +55,7 @@ interface StatementHolder : Holder<Statement> {
             return unwrap(statementEdges)
         }
         set(value) {
-            // TODO: we also need to set the ast parent in this case
-            statementEdges = wrap(value, this as Node)
+            statementEdges = wrap(value, this as Node, astChild = true)
         }
 
     /**

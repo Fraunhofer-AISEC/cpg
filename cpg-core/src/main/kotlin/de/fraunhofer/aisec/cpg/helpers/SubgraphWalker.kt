@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.AstProperty
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -142,10 +142,8 @@ object SubgraphWalker {
         // We currently need to stick to pure Java reflection, since Kotlin reflection
         // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
         for (field in getAllFields(classType)) {
-            if (
-                field.getAnnotation(AST::class.java) == null &&
-                    field.type != AstProperty::class.java
-            ) {
+            if (field.getAnnotation(AST::class.java) == null /*&&
+                    field.type != AstPropertyDelegate::class.java*/) {
                 continue
             }
             try {
@@ -177,12 +175,18 @@ object SubgraphWalker {
                     is Node -> {
                         children.add(obj)
                     }
+                    is PropertyEdges<*> -> {
+                        children.addAll(unwrap(obj, outgoing))
+                    }
                     is Collection<*> -> {
                         children.addAll(obj.filterIsInstance<Node>())
                     }
-                    is AstProperty<*, *> -> {
-                        children.add((obj as AstProperty<Node, *>).storage)
-                    }
+                    /*is AstPropertyDelegate<*, *> -> {
+                        var storage = (obj as AstPropertyDelegate<Node?, *>).storage
+                        if (storage != null) {
+                            children.add(storage)
+                        }
+                    }*/
                     else -> {
                         throw AnnotationFormatError(
                             "Found @field:SubGraph(\"AST\") on field of type " +
@@ -298,8 +302,12 @@ object SubgraphWalker {
                     replacements.remove(toReplace)
                 }
 
-                val unseenChildren =
-                    strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                val unseenChildren = mutableListOf<Node>()
+                strategy(current).forEach {
+                    if (it !in seen) {
+                        unseenChildren.add(it)
+                    }
+                }
 
                 seen.addAll(unseenChildren)
                 unseenChildren.asReversed().forEach { child: Node ->

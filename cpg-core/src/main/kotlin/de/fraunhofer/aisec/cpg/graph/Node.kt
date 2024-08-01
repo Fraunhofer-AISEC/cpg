@@ -113,13 +113,13 @@ open class Node :
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var prevEOGEdges = PropertyEdges<Node>()
         protected set
 
     /** Outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var nextEOGEdges = PropertyEdges<Node>()
         protected set
 
     /**
@@ -128,7 +128,7 @@ open class Node :
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var nextCDGEdges = PropertyEdges<Node>()
         protected set
 
     var nextCDG by PropertyEdgeDelegate(Node::nextCDGEdges, true)
@@ -139,7 +139,7 @@ open class Node :
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var prevCDGEdges = PropertyEdges<Node>()
         protected set
 
     var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, false)
@@ -158,7 +158,7 @@ open class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @Relationship("AST") var astParent: Node? = null
+    var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
@@ -244,7 +244,11 @@ open class Node :
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @AST var annotations: MutableList<Annotation> = ArrayList()
+    @AST
+    var annotations: MutableList<Annotation> = ArrayList()
+        set(value) = makeSureAstParentIsSet(value)
+
+    fun makeSureAstParentIsSet(value: List<Annotation>) {}
 
     fun removePrevEOGEntry(eog: Node) {
         removePrevEOGEntries(listOf(eog))

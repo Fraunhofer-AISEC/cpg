@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -56,7 +57,7 @@ class TranslationUnitDeclaration :
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
+    override var statementEdges = PropertyEdges<Statement>(astChildren = true)
 
     override val declarations: List<Declaration>
         get() = unwrap(declarationEdges)

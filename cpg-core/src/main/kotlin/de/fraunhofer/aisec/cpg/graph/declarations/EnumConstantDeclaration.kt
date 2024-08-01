@@ -34,5 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
  * explicit initializer value.
  */
 class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
-    @AST override var initializer: Expression? = null
+    @AST
+    override var initializer: Expression? = null
+        set(value) {
+            field = value
+            value?.astParent = this
+        }
 }

@@ -26,12 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
@@ -41,24 +39,29 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
     /** The function body. Usually a [Block]. */
-    @AST var body: Statement? = null
+    @AST
+    var body: Statement? = null
+        set(value) {
+            field = value
+            value?.astParent = this
+        }
 
     /**
      * Classes and Structs can be declared inside a function and are only valid within the function.
      */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges = mutableListOf<PropertyEdge<RecordDeclaration>>()
+    var recordEdges = PropertyEdges<RecordDeclaration>()
+
+    /** Virtual property for accessing [parameterEdges] without property edges. */
+    var records by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var parameterEdges = mutableListOf<PropertyEdge<ParameterDeclaration>>()
+    var parameterEdges = PropertyEdges<ParameterDeclaration>(astChildren = true)
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
-
-    /** Virtual property for accessing [parameterEdges] without property edges. */
-    var records by PropertyEdgeDelegate(FunctionDeclaration::recordEdges)
 
     @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
     var throwsTypes = mutableListOf<Type>()
@@ -158,9 +161,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         get() = parameters.map { it.type }
 
     fun addParameter(parameterDeclaration: ParameterDeclaration) {
-        val propertyEdge = PropertyEdge(this, parameterDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, parameters.size)
-        parameterEdges.add(propertyEdge)
+        parameterEdges.add(this, parameterDeclaration)
     }
 
     fun removeParameter(parameterDeclaration: ParameterDeclaration) {

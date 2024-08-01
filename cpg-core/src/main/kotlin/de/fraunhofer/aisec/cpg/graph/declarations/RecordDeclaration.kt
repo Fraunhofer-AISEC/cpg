@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -45,38 +45,38 @@ open class RecordDeclaration :
 
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var fieldEdges: MutableList<PropertyEdge<FieldDeclaration>> = ArrayList()
+    var fieldEdges = PropertyEdges<FieldDeclaration>(astChildren = true)
 
     var fields by PropertyEdgeDelegate(RecordDeclaration::fieldEdges)
 
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var methodEdges: MutableList<PropertyEdge<MethodDeclaration>> = ArrayList()
+    var methodEdges = PropertyEdges<MethodDeclaration>(astChildren = true)
 
     var methods by PropertyEdgeDelegate(RecordDeclaration::methodEdges)
 
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var constructorEdges: MutableList<PropertyEdge<ConstructorDeclaration>> = ArrayList()
+    var constructorEdges = PropertyEdges<ConstructorDeclaration>(astChildren = true)
 
     var constructors by PropertyEdgeDelegate(RecordDeclaration::constructorEdges)
 
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var recordEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
+    var recordEdges = PropertyEdges<RecordDeclaration>(astChildren = true)
 
     var records by PropertyEdgeDelegate(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
     @AST
-    var templateEdges: MutableList<PropertyEdge<TemplateDeclaration>> = ArrayList()
+    var templateEdges = PropertyEdges<TemplateDeclaration>(astChildren = true)
 
     var templates by PropertyEdgeDelegate(RecordDeclaration::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
+    override var statementEdges = PropertyEdges<Statement>(astChildren = true)
 
     override var statements by PropertyEdgeDelegate(RecordDeclaration::statementEdges)
 

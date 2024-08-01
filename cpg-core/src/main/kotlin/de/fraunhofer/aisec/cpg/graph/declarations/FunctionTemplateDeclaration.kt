@@ -26,10 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -42,7 +43,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
     @AST
-    private val realizationEdges: MutableList<PropertyEdge<FunctionDeclaration>> = ArrayList()
+    private val realizationEdges = PropertyEdges<FunctionDeclaration>(astChildren = true)
 
     val realization: List<FunctionDeclaration> by
         PropertyEdgeDelegate(FunctionTemplateDeclaration::realizationEdges)
@@ -51,7 +52,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         get() = ArrayList<Declaration>(realization)
 
     fun addRealization(realizedFunction: FunctionDeclaration) {
-        val propertyEdge = PropertyEdge(this, realizedFunction)
+        val propertyEdge = AstPropertyEdge(this, realizedFunction)
         propertyEdge.addProperty(Properties.INDEX, realizationEdges.size)
         realizationEdges.add(propertyEdge)
     }

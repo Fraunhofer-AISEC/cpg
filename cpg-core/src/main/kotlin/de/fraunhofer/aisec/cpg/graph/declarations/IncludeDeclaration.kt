@@ -26,10 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -38,11 +37,15 @@ import org.neo4j.ogm.annotation.Relationship
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
     @AST
-    private val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
+    private val includeEdges = PropertyEdges<IncludeDeclaration>(astChildren = true)
+
+    val includes: List<IncludeDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
     @AST
-    private val problemEdges: MutableList<PropertyEdge<ProblemDeclaration>> = ArrayList()
+    private val problemEdges = PropertyEdges<ProblemDeclaration>(astChildren = true)
+
+    val problems: List<ProblemDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::problemEdges)
 
     /**
      * This property refers to the file or directory or path. For example, in C this refers to an
@@ -50,15 +53,9 @@ class IncludeDeclaration : Declaration() {
      */
     var filename: String? = null
 
-    val includes: List<IncludeDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::includeEdges)
-
-    val problems: List<ProblemDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::problemEdges)
-
     fun addInclude(includeDeclaration: IncludeDeclaration?) {
         if (includeDeclaration == null) return
-        val propertyEdge = PropertyEdge(this, includeDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, includeEdges.size)
-        includeEdges.add(propertyEdge)
+        includeEdges.add(this, includeDeclaration)
     }
 
     fun addProblems(c: Collection<ProblemDeclaration>) {
@@ -68,9 +65,7 @@ class IncludeDeclaration : Declaration() {
     }
 
     fun addProblem(problemDeclaration: ProblemDeclaration) {
-        val propertyEdge = PropertyEdge(this, problemDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, problemEdges.size)
-        problemEdges.add(propertyEdge)
+        problemEdges.add(this, problemDeclaration)
     }
 
     override fun toString(): String {

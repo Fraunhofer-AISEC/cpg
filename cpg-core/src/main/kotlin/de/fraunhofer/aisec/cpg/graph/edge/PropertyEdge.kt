@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
@@ -41,8 +39,13 @@ import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
 
+@RelationshipEntity
 class AstPropertyEdge<T : Node> : PropertyEdge<T> {
-    constructor(start: Node, end: T) : super(start, end) {
+    constructor(
+        start: Node,
+        end: T,
+        properties: MutableMap<Properties, Any?>? = null
+    ) : super(start, end, properties) {
         end.astParent = start
     }
 }
@@ -70,10 +73,15 @@ open class PropertyEdge<T : Node> : Persistable {
     // Node where the edge is ingoing
     @field:EndNode var end: T
 
-    constructor(start: Node, end: T) {
+    constructor(start: Node, end: T, properties: MutableMap<Properties, Any?>? = null) {
         this.start = start
         this.end = end
-        properties = EnumMap(Properties::class.java)
+        this.properties =
+            if (properties != null) {
+                properties
+            } else {
+                EnumMap(Properties::class.java)
+            }
     }
 
     constructor(propertyEdge: PropertyEdge<T>) {
@@ -81,12 +89,6 @@ open class PropertyEdge<T : Node> : Persistable {
         end = propertyEdge.end
         properties = EnumMap(Properties::class.java)
         properties.putAll(propertyEdge.properties)
-    }
-
-    constructor(start: Node, end: T, properties: MutableMap<Properties, Any?>) {
-        this.start = start
-        this.end = end
-        this.properties = properties
     }
 
     open val label: String = "EDGE"
@@ -174,19 +176,18 @@ open class PropertyEdge<T : Node> : Persistable {
         fun <T : Node> wrap(
             nodes: List<T>,
             commonRelationshipNode: Node,
-            outgoing: Boolean = true
-        ): MutableList<PropertyEdge<T>> {
-            val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
+            outgoing: Boolean = true,
+            astChild: Boolean = false,
+        ): PropertyEdges<T> {
+            val propertyEdges = PropertyEdges<T>(astChild)
             for (n in nodes) {
-                val propertyEdge =
-                    if (outgoing) {
-                        PropertyEdge(commonRelationshipNode, n)
-                    } else {
-                        PropertyEdge(n, commonRelationshipNode)
-                    }
-                propertyEdge.addProperty(Properties.INDEX, propertyEdges.size)
-                propertyEdges.add(propertyEdge as PropertyEdge<T>)
+                if (outgoing) {
+                    propertyEdges.add(commonRelationshipNode, n)
+                } else {
+                    propertyEdges.add(n, commonRelationshipNode as T)
+                }
             }
+
             return propertyEdges
         }
 
@@ -352,6 +353,43 @@ open class PropertyEdge<T : Node> : Persistable {
 }
 
 /**
+ * This class extends a list of property edges. This allows us to use list of property edges more
+ * conveniently.
+ */
+class PropertyEdges<T : Node>(val astChildren: Boolean = false) : ArrayList<PropertyEdge<T>>() {
+
+    override fun add(e: PropertyEdge<T>): Boolean {
+        // Make sure, the index is always set
+        e.addProperty(Properties.INDEX, this.size)
+
+        return super.add(e)
+    }
+
+    override fun add(index: Int, element: PropertyEdge<T>) {
+        // Make sure, the index is always set
+        element.addProperty(Properties.INDEX, index)
+
+        return super.add(index, element)
+    }
+
+    fun add(
+        start: Node,
+        end: T,
+        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
+    ) {
+        val edge =
+            if (astChildren) {
+                AstPropertyEdge(start, end, properties)
+            } else {
+                PropertyEdge(start, end, properties)
+            }
+
+        // Add it
+        this.add(edge)
+    }
+}
+
+/**
  * This class can be used to implement
  * [delegated properties](https://kotlinlang.org/docs/delegated-properties.html) in [Node] classes.
  * The most common use case is to have a property that is a list of [PropertyEdge] objects (for
@@ -363,7 +401,7 @@ open class PropertyEdge<T : Node> : Persistable {
  *
  * class MyNode {
  *   @Relationship(value = "EXPRESSIONS", direction = "OUTGOING")
- *   @field:SubGraph("AST")
+ *   @AST
  *   var expressionsEdges = mutableListOf<PropertyEdge<Expression>>()
  *   var expressions by PropertyEdgeDelegate(MyNode::expressionsEdges)
  * }
@@ -374,19 +412,26 @@ open class PropertyEdge<T : Node> : Persistable {
  * persisted in the graph database.
  */
 @Transient
-class PropertyEdgeDelegate<T : Node, S : Node>(
-    val edge: KProperty1<S, List<PropertyEdge<T>>>,
-    val outgoing: Boolean = true
+class PropertyEdgeDelegate<PropertyType : Node, NodeType : Node>(
+    val edgeProperty: KProperty1<NodeType, PropertyEdges<PropertyType>>,
+    val outgoing: Boolean = true,
 ) {
-    operator fun getValue(thisRef: S, property: KProperty<*>): List<T> {
-        return PropertyEdge.unwrap(edge.get(thisRef), outgoing)
+    operator fun getValue(thisRef: NodeType, property: KProperty<*>): List<PropertyType> {
+        return PropertyEdge.unwrap<PropertyType>(
+            edgeProperty.get(thisRef) as List<PropertyEdge<PropertyType>>,
+            outgoing
+        )
     }
 
-    operator fun setValue(thisRef: S, property: KProperty<*>, value: List<T>) {
-        if (edge is KMutableProperty1) {
-            val callable = edge.setter
+    operator fun setValue(thisRef: NodeType, property: KProperty<*>, value: List<PropertyType>) {
+        var list = edgeProperty.get(thisRef)
+        if (edgeProperty is KMutableProperty1) {
+            val callable = edgeProperty.setter
             callable.isAccessible = true
-            edge.setter.call(thisRef, PropertyEdge.wrap(value, thisRef as Node, outgoing))
+            edgeProperty.setter.call(
+                thisRef,
+                PropertyEdge.wrap(value, thisRef as Node, outgoing, list.astChildren)
+            )
         }
     }
 }
@@ -395,7 +440,8 @@ class PropertyEdgeDelegate<T : Node, S : Node>(
 @Transient
 class PropertyEdgeSetDelegate<T : Node, S : Node>(
     val edge: KProperty1<S, Collection<PropertyEdge<T>>>,
-    val outgoing: Boolean = true
+    val outgoing: Boolean = true,
+    val astChild: Boolean = false,
 ) {
     operator fun getValue(thisRef: S, property: KProperty<*>): MutableSet<T> {
         return PropertyEdge.unwrap(edge.get(thisRef).toList(), outgoing).toMutableSet()
@@ -405,7 +451,10 @@ class PropertyEdgeSetDelegate<T : Node, S : Node>(
         if (edge is KMutableProperty1) {
             val callable = edge.setter
             callable.isAccessible = true
-            edge.setter.call(thisRef, PropertyEdge.wrap(value.toList(), thisRef as Node, outgoing))
+            edge.setter.call(
+                thisRef,
+                PropertyEdge.wrap(value.toList(), thisRef as Node, outgoing, astChild)
+            )
         }
     }
 }

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -56,7 +56,7 @@ class NewArrayExpression : Expression() {
      */
     @Relationship(value = "DIMENSIONS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var dimensionEdges = mutableListOf<PropertyEdge<Expression>>()
+    var dimensionEdges = PropertyEdges<Expression>(astChildren = true)
 
     /** Virtual property to access [dimensionEdges] without property edges. */
     var dimensions by PropertyEdgeDelegate(NewArrayExpression::dimensionEdges)

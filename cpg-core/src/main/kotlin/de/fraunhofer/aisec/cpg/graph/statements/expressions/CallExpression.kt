@@ -79,7 +79,7 @@ open class CallExpression :
      */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var argumentEdges = mutableListOf<PropertyEdge<Expression>>()
+    var argumentEdges = PropertyEdges<Expression>(astChildren = true)
 
     /**
      * The list of arguments as a simple list. This is a delegated property delegated to
@@ -98,8 +98,7 @@ open class CallExpression :
      * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
-    @delegate:AST
-    var callee: Expression by AstProperty(initializer = ProblemExpression("could not parse callee"))
+    @AST var callee: Expression = ProblemExpression("could not parse callee")
 
     /**
      * The [Name] of this call expression, based on its [callee].

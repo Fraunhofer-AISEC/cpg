@@ -61,6 +61,9 @@ class AssignExpression :
         set(value) {
             field = value
             field.forEach {
+                // Unfortunately the logic of this setter is tool complex to delegate to the AST
+                // property delegate so we need to set the AST parent manually for now.
+                it.astParent = this
                 var base = (it as? MemberExpression)?.base as? MemberExpression
                 while (base != null) {
                     base.access = AccessValues.READWRITE
@@ -79,7 +82,12 @@ class AssignExpression :
         set(value) {
             field.forEach { it.unregisterTypeObserver(this) }
             field = value
-            value.forEach { it.registerTypeObserver(this) }
+            value.forEach {
+                // Unfortunately the logic of this setter is tool complex to delegate to the AST
+                // property delegate so we need to set the AST parent manually for now.
+                it.astParent = this
+                it.registerTypeObserver(this)
+            }
         }
 
     /**

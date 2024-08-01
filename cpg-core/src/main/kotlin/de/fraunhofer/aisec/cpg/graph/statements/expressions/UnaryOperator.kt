@@ -42,6 +42,7 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         set(value) {
             field.unregisterTypeObserver(this)
             field = value
+            value.astParent = this
             input.registerTypeObserver(this)
             changeExpressionAccess()
         }

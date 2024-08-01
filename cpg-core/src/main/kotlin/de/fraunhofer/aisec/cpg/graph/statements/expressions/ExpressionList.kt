@@ -30,15 +30,15 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
-import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
 
 class ExpressionList : Expression() {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
     @AST
-    var expressionEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
+    var expressionEdges = PropertyEdges<Statement>(astChildren = true)
 
     var expressions: List<Statement> by PropertyEdgeDelegate(ExpressionList::expressionEdges, true)
 

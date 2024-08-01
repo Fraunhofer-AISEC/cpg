@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -42,7 +43,7 @@ open class Block : Expression(), StatementHolder {
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    override var statementEdges = mutableListOf<PropertyEdge<Statement>>()
+    override var statementEdges = PropertyEdges<Statement>(astChildren = true)
 
     /**
      * This variable helps to differentiate between static and non static initializer blocks. Static

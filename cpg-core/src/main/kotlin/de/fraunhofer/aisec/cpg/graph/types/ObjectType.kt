@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
@@ -57,7 +57,7 @@ open class ObjectType : Type {
         }
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
-    var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
+    var genericsPropertyEdges = PropertyEdges<Type>()
         private set
 
     var generics by PropertyEdgeDelegate(ObjectType::genericsPropertyEdges)
@@ -87,7 +87,6 @@ open class ObjectType : Type {
 
     /** Empty default constructor for use in Neo4J persistence. */
     constructor() : super() {
-        genericsPropertyEdges = ArrayList()
         isPrimitive = false
     }
 
