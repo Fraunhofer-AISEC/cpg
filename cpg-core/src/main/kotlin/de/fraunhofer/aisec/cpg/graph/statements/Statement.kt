@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.*
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
@@ -51,7 +51,7 @@ abstract class Statement : Node(), DeclarationHolder {
      */
     @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var localEdges = PropertyEdges<VariableDeclaration>(astChildren = true)
+    var localEdges = AstChildren<VariableDeclaration>()
 
     /** Virtual property to access [localEdges] without property edges. */
     var locals by PropertyEdgeDelegate(Statement::localEdges)

@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -41,7 +41,7 @@ class RecordTemplateDeclaration : TemplateDeclaration() {
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
     @AST
-    val realizationEdges = PropertyEdges<RecordDeclaration>(astChildren = true)
+    val realizationEdges = AstChildren<RecordDeclaration>()
 
     override val realizations: List<Declaration> by
         PropertyEdgeDelegate(RecordTemplateDeclaration::realizationEdges)

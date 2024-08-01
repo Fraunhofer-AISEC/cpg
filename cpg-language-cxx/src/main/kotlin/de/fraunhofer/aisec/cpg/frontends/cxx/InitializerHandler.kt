@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
@@ -83,10 +81,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
         for (clause in ctx.clauses) {
             frontend.expressionHandler.handle(clause)?.let {
-                val edge = PropertyEdge(expression, it)
-                edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
-
-                expression.initializerEdges.add(edge)
+                expression.initializerEdges.add(expression, it)
                 expression.addPrevDFG(it)
             }
         }

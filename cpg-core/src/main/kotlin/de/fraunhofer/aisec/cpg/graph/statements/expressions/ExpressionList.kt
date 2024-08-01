@@ -26,11 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -38,14 +36,12 @@ import org.neo4j.ogm.annotation.Relationship
 class ExpressionList : Expression() {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
     @AST
-    var expressionEdges = PropertyEdges<Statement>(astChildren = true)
+    var expressionEdges = AstChildren<Statement>()
 
     var expressions: List<Statement> by PropertyEdgeDelegate(ExpressionList::expressionEdges, true)
 
     fun addExpression(expression: Statement) {
-        val propertyEdge = PropertyEdge(this, expression)
-        propertyEdge.addProperty(Properties.INDEX, expressionEdges.size)
-        expressionEdges.add(propertyEdge)
+        expressionEdges.add(this, expression)
     }
 
     override fun equals(other: Any?): Boolean {

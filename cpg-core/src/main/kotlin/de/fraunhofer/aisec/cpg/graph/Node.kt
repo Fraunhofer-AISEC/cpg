@@ -29,14 +29,9 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
-import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
@@ -171,7 +166,7 @@ open class Node :
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFGEdges: MutableList<Dataflow> = mutableListOf()
+    var prevDFGEdges = Dataflows()
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
@@ -190,7 +185,7 @@ open class Node :
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
-    var nextDFGEdges: MutableList<Dataflow> = mutableListOf()
+    var nextDFGEdges = Dataflows()
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
@@ -207,7 +202,7 @@ open class Node :
     /** Outgoing Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: MutableSet<PropertyEdge<Node>> = mutableSetOf()
+    var nextPDGEdges = PropertyEdges<Node>()
         protected set
 
     /** Virtual property for accessing the children of the Program Dependence Graph (PDG). */
@@ -216,7 +211,7 @@ open class Node :
     /** Incoming Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: MutableSet<PropertyEdge<Node>> = mutableSetOf()
+    var prevPDGEdges = PropertyEdges<Node>()
         protected set
 
     /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */

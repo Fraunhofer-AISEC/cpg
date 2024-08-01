@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
 
 @RelationshipEntity
-class AstPropertyEdge<T : Node> : PropertyEdge<T> {
+class AstChild<T : Node> : PropertyEdge<T> {
     constructor(
         start: Node,
         end: T,
@@ -161,33 +161,6 @@ open class PropertyEdge<T : Node> : Persistable {
             for ((counter, propertyEdge) in propertyEdges.withIndex()) {
                 propertyEdge.addProperty(Properties.INDEX, counter)
             }
-            return propertyEdges
-        }
-
-        /**
-         * Transforms a List of Nodes into targets of PropertyEdges. Include Index Property as Lists
-         * are indexed
-         *
-         * @param nodes List of nodes that should be transformed into PropertyEdges
-         * @param commonRelationshipNode node where all the Edges should start
-         * @return List of PropertyEdges with the targets of the nodes and index property.
-         */
-        @JvmStatic
-        fun <T : Node> wrap(
-            nodes: List<T>,
-            commonRelationshipNode: Node,
-            outgoing: Boolean = true,
-            astChild: Boolean = false,
-        ): PropertyEdges<T> {
-            val propertyEdges = PropertyEdges<T>(astChild)
-            for (n in nodes) {
-                if (outgoing) {
-                    propertyEdges.add(commonRelationshipNode, n)
-                } else {
-                    propertyEdges.add(n, commonRelationshipNode as T)
-                }
-            }
-
             return propertyEdges
         }
 
@@ -352,20 +325,79 @@ open class PropertyEdge<T : Node> : Persistable {
     }
 }
 
+/** Can be used to describe a generic set of property edge. */
+class Dataflows() :
+    AbstractPropertyEdges<Node, Dataflow>(
+        init = { start, end, properties -> Dataflow(start, end) }
+    ) {
+    override fun wrap(nodes: Collection<Node>, holder: Node, outgoing: Boolean): Dataflows {
+        var edges = Dataflows()
+        for (n in nodes) {
+            if (outgoing) {
+                edges.add(holder, n)
+            } else {
+                edges.add(n, holder)
+            }
+        }
+
+        return edges
+    }
+}
+
+/** Can be used to describe a generic set of property edge. */
+class PropertyEdges<T : Node>() :
+    AbstractPropertyEdges<T, PropertyEdge<T>>(
+        init = { start, end, properties -> PropertyEdge(start, end, properties) }
+    ) {
+    override fun wrap(nodes: Collection<T>, holder: Node, outgoing: Boolean): PropertyEdges<T> {
+        var edges = PropertyEdges<T>()
+        for (n in nodes) {
+            if (outgoing) {
+                edges.add(holder, n)
+            } else {
+                edges.add(n, holder as T)
+            }
+        }
+
+        return edges
+    }
+}
+
+/** This property edge list describes elements that are AST children of a node. */
+class AstChildren<T : Node>() :
+    AbstractPropertyEdges<T, AstChild<T>>(
+        init = { start, end, properties -> AstChild(start, end, properties) }
+    ) {
+    override fun wrap(nodes: Collection<T>, holder: Node, outgoing: Boolean): AstChildren<T> {
+        var edges = AstChildren<T>()
+        for (n in nodes) {
+            if (outgoing) {
+                edges.add(holder, n)
+            } else {
+                edges.add(n, holder as T)
+            }
+        }
+
+        return edges
+    }
+}
+
 /**
  * This class extends a list of property edges. This allows us to use list of property edges more
  * conveniently.
  */
-class PropertyEdges<T : Node>(val astChildren: Boolean = false) : ArrayList<PropertyEdge<T>>() {
+abstract class AbstractPropertyEdges<T : Node, P : PropertyEdge<T>>(
+    var init: (start: Node, end: T, properties: MutableMap<Properties, Any?>) -> P
+) : ArrayList<P>() {
 
-    override fun add(e: PropertyEdge<T>): Boolean {
+    override fun add(e: P): Boolean {
         // Make sure, the index is always set
         e.addProperty(Properties.INDEX, this.size)
 
         return super.add(e)
     }
 
-    override fun add(index: Int, element: PropertyEdge<T>) {
+    override fun add(index: Int, element: P) {
         // Make sure, the index is always set
         element.addProperty(Properties.INDEX, index)
 
@@ -377,16 +409,17 @@ class PropertyEdges<T : Node>(val astChildren: Boolean = false) : ArrayList<Prop
         end: T,
         properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
     ) {
-        val edge =
-            if (astChildren) {
-                AstPropertyEdge(start, end, properties)
-            } else {
-                PropertyEdge(start, end, properties)
-            }
+        val edge = init(start, end, properties)
 
         // Add it
         this.add(edge)
     }
+
+    abstract fun wrap(
+        nodes: Collection<T>,
+        holder: Node,
+        outgoing: Boolean = true
+    ): AbstractPropertyEdges<T, P>
 }
 
 /**
@@ -413,7 +446,8 @@ class PropertyEdges<T : Node>(val astChildren: Boolean = false) : ArrayList<Prop
  */
 @Transient
 class PropertyEdgeDelegate<PropertyType : Node, NodeType : Node>(
-    val edgeProperty: KProperty1<NodeType, PropertyEdges<PropertyType>>,
+    val edgeProperty:
+        KProperty1<NodeType, AbstractPropertyEdges<PropertyType, out PropertyEdge<PropertyType>>>,
     val outgoing: Boolean = true,
 ) {
     operator fun getValue(thisRef: NodeType, property: KProperty<*>): List<PropertyType> {
@@ -428,33 +462,32 @@ class PropertyEdgeDelegate<PropertyType : Node, NodeType : Node>(
         if (edgeProperty is KMutableProperty1) {
             val callable = edgeProperty.setter
             callable.isAccessible = true
-            edgeProperty.setter.call(
-                thisRef,
-                PropertyEdge.wrap(value, thisRef as Node, outgoing, list.astChildren)
-            )
+            edgeProperty.setter.call(thisRef, list.wrap(value, thisRef as Node, outgoing))
         }
     }
 }
 
 /** Similar to a [PropertyEdgeDelegate], but with a [Set] instead of [List]. */
 @Transient
-class PropertyEdgeSetDelegate<T : Node, S : Node>(
-    val edge: KProperty1<S, Collection<PropertyEdge<T>>>,
+class PropertyEdgeSetDelegate<PropertyType : Node, NodeType : Node>(
+    val edgeProperty:
+        KProperty1<NodeType, AbstractPropertyEdges<PropertyType, out PropertyEdge<PropertyType>>>,
     val outgoing: Boolean = true,
-    val astChild: Boolean = false,
 ) {
-    operator fun getValue(thisRef: S, property: KProperty<*>): MutableSet<T> {
-        return PropertyEdge.unwrap(edge.get(thisRef).toList(), outgoing).toMutableSet()
+    operator fun getValue(thisRef: NodeType, property: KProperty<*>): MutableSet<PropertyType> {
+        return PropertyEdge.unwrap(edgeProperty.get(thisRef).toList(), outgoing).toMutableSet()
     }
 
-    operator fun setValue(thisRef: S, property: KProperty<*>, value: MutableSet<T>) {
-        if (edge is KMutableProperty1) {
-            val callable = edge.setter
+    operator fun setValue(
+        thisRef: NodeType,
+        property: KProperty<*>,
+        value: MutableSet<PropertyType>
+    ) {
+        var list = edgeProperty.get(thisRef)
+        if (edgeProperty is KMutableProperty1) {
+            val callable = edgeProperty.setter
             callable.isAccessible = true
-            edge.setter.call(
-                thisRef,
-                PropertyEdge.wrap(value.toList(), thisRef as Node, outgoing, astChild)
-            )
+            edgeProperty.setter.call(thisRef, list.wrap(value, thisRef, outgoing))
         }
     }
 }

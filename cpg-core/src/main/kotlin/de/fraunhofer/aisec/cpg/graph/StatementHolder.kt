@@ -25,11 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
 /**
@@ -43,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
  */
 interface StatementHolder : Holder<Statement> {
     /** List of statements as property edges. */
-    var statementEdges: PropertyEdges<Statement>
+    var statementEdges: AstChildren<Statement>
 
     /**
      * Virtual property to access [statementEdges] without property edges.
@@ -55,7 +54,7 @@ interface StatementHolder : Holder<Statement> {
             return unwrap(statementEdges)
         }
         set(value) {
-            statementEdges = wrap(value, this as Node, astChild = true)
+            statementEdges = statementEdges.wrap(value, this as Node)
         }
 
     /**
@@ -66,7 +65,7 @@ interface StatementHolder : Holder<Statement> {
      * @param s the statement
      */
     fun addStatement(s: Statement) {
-        val propertyEdge = AstPropertyEdge((this as Node), s)
+        val propertyEdge = AstChild((this as Node), s)
         propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
         statementEdges.add(propertyEdge)
     }

@@ -26,11 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -42,22 +41,22 @@ class TranslationUnitDeclaration :
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
-    val declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    val declarationEdges = AstChildren<Declaration>()
 
     /** A list of includes within this unit. */
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
     @AST
-    val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
+    val includeEdges = AstChildren<IncludeDeclaration>()
 
     /** A list of namespaces within this unit. */
     @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
     @AST
-    val namespaceEdges: MutableList<PropertyEdge<NamespaceDeclaration>> = ArrayList()
+    val namespaceEdges = AstChildren<NamespaceDeclaration>()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    override var statementEdges = PropertyEdges<Statement>(astChildren = true)
+    override var statementEdges = AstChildren<Statement>()
 
     override val declarations: List<Declaration>
         get() = unwrap(declarationEdges)

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -69,7 +68,7 @@ open class ObjectType : Type {
         primitive: Boolean,
         language: Language<*>?
     ) : super(typeName, language) {
-        this.genericsPropertyEdges = wrap(generics, this)
+        this.genericsPropertyEdges = genericsPropertyEdges.wrap(generics, this)
         isPrimitive = primitive
         this.language = language
     }
@@ -81,7 +80,7 @@ open class ObjectType : Type {
         language: Language<*>?
     ) : super(type) {
         this.language = language
-        this.genericsPropertyEdges = wrap(generics, this)
+        this.genericsPropertyEdges = genericsPropertyEdges.wrap(generics, this)
         isPrimitive = primitive
     }
 

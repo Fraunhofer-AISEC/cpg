@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -51,10 +51,10 @@ class LabelStatement : Statement(), StatementHolder {
             .toString()
     }
 
-    override var statementEdges: PropertyEdges<Statement>
+    override var statementEdges: AstChildren<Statement>
         get() =
-            subStatement?.let { PropertyEdge.wrap(listOf(it), this, astChild = true) }
-                ?: PropertyEdges<Statement>(astChildren = true)
+            subStatement?.let { AstChildren<Statement>().wrap(listOf(it), this) }
+                ?: AstChildren<Statement>()
         set(value) {
             subStatement = PropertyEdge.unwrap(value).firstOrNull()
         }

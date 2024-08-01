@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -37,13 +37,13 @@ import org.neo4j.ogm.annotation.Relationship
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
     @AST
-    private val includeEdges = PropertyEdges<IncludeDeclaration>(astChildren = true)
+    private val includeEdges = AstChildren<IncludeDeclaration>()
 
     val includes: List<IncludeDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
     @AST
-    private val problemEdges = PropertyEdges<ProblemDeclaration>(astChildren = true)
+    private val problemEdges = AstChildren<ProblemDeclaration>()
 
     val problems: List<ProblemDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::problemEdges)
 

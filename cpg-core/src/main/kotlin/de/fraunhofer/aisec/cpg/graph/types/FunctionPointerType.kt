@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -58,7 +57,7 @@ class FunctionPointerType : Type {
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
     ) : super(EMPTY_NAME, language) {
-        parametersPropertyEdge = wrap(parameters, this)
+        parametersPropertyEdge = parametersPropertyEdge.wrap(parameters, this)
         this.returnType = returnType
     }
 
@@ -68,7 +67,7 @@ class FunctionPointerType : Type {
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
     ) : super(type) {
-        parametersPropertyEdge = wrap(parameters, this)
+        parametersPropertyEdge = parametersPropertyEdge.wrap(parameters, this)
         this.returnType = returnType
         this.language = language
     }

@@ -26,15 +26,15 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 class EnumDeclaration : RecordDeclaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
     @AST
-    var entryEdges = PropertyEdges<EnumConstantDeclaration>(astChildren = true)
+    var entryEdges = AstChildren<EnumConstantDeclaration>()
 
     var entries by PropertyEdgeDelegate(EnumDeclaration::entryEdges)
 

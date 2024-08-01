@@ -44,8 +44,8 @@ interface DeclarationHolder {
         }
     }
 
-    fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
+    fun <T : Node, P : PropertyEdge<T>> addIfNotContains(
+        collection: MutableCollection<P>,
         declaration: T
     ) {
         addIfNotContains(collection, declaration, true)
@@ -59,8 +59,8 @@ interface DeclarationHolder {
      * @param <T> the type of the declaration
      * @param outgoing whether the property is outgoing </T>
      */
-    fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
+    fun <T : Node, P : PropertyEdge<T>> addIfNotContains(
+        collection: MutableCollection<P>,
         declaration: T,
         outgoing: Boolean
     ) {
@@ -79,7 +79,7 @@ interface DeclarationHolder {
             }
         }
         if (!contains) {
-            collection.add(propertyEdge)
+            collection.add(propertyEdge as P)
         }
     }
 

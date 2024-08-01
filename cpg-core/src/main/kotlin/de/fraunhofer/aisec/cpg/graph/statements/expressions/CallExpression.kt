@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
@@ -52,7 +51,7 @@ open class CallExpression :
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
+    var invokeEdges = PropertyEdges<FunctionDeclaration>()
         protected set
 
     /**
@@ -70,7 +69,7 @@ open class CallExpression :
         }
         set(value) {
             unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
-            invokeEdges = wrap(value, this)
+            invokeEdges = invokeEdges.wrap(value, this)
             value.forEach { it.registerTypeObserver(this) }
         }
 
@@ -79,7 +78,7 @@ open class CallExpression :
      */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var argumentEdges = PropertyEdges<Expression>(astChildren = true)
+    var argumentEdges = AstChildren<Expression>()
 
     /**
      * The list of arguments as a simple list. This is a delegated property delegated to
@@ -131,14 +130,13 @@ open class CallExpression :
 
     /** Adds the specified [expression] with an optional [name] to this call. */
     fun addArgument(expression: Expression, name: String? = null) {
-        val edge = PropertyEdge(this, expression)
-        edge.addProperty(Properties.INDEX, argumentEdges.size)
+        val properties = mutableMapOf<Properties, Any?>()
 
         if (name != null) {
-            edge.addProperty(Properties.NAME, name)
+            properties[Properties.NAME] = name
         }
 
-        argumentEdges.add(edge)
+        argumentEdges.add(this, expression, properties)
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {

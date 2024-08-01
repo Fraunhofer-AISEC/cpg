@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
@@ -58,7 +59,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var parameterEdges = PropertyEdges<ParameterDeclaration>(astChildren = true)
+    var parameterEdges = AstChildren<ParameterDeclaration>()
 
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
