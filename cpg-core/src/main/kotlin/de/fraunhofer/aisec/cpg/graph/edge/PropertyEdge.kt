@@ -296,21 +296,15 @@ abstract class AbstractPropertyEdges<T : Node, P : PropertyEdge<T>>(
         this.add(edge)
     }
 
-    fun <A : AbstractPropertyEdges<T, P>> wrap(
-        nodes: Collection<T>,
-        holder: Node,
-        outgoing: Boolean = true
-    ): A {
-        var edges = createEdges()
+    fun resetTo(nodes: Collection<T>, holder: Node, outgoing: Boolean = true) {
+        clear()
         for (n in nodes) {
             if (outgoing) {
-                edges.add(holder, n)
+                add(holder, n)
             } else {
-                edges.add(n, holder as T)
+                add(n, holder as T)
             }
         }
-
-        return edges as A
     }
 
     override fun hashCode(): Int {
@@ -358,7 +352,7 @@ class PropertyEdgeDelegate<PropertyType : Node, NodeType : Node>(
         if (edgeProperty is KMutableProperty1) {
             val callable = edgeProperty.setter
             callable.isAccessible = true
-            edgeProperty.setter.call(thisRef, list.wrap(value, thisRef as Node, outgoing))
+            list.resetTo(value, thisRef as Node, outgoing)
         }
     }
 }
@@ -383,7 +377,10 @@ class PropertyEdgeSetDelegate<PropertyType : Node, NodeType : Node>(
         if (edgeProperty is KMutableProperty1) {
             val callable = edgeProperty.setter
             callable.isAccessible = true
-            edgeProperty.setter.call(thisRef, list.wrap(value, thisRef, outgoing))
+            list.resetTo(value, thisRef, outgoing)
+            edgeProperty.setter.call(
+                thisRef,
+            )
         }
     }
 }

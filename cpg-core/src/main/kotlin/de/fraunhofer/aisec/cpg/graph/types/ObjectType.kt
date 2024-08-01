@@ -68,7 +68,7 @@ open class ObjectType : Type {
         primitive: Boolean,
         language: Language<*>?
     ) : super(typeName, language) {
-        this.genericsPropertyEdges = genericsPropertyEdges.wrap(generics, this)
+        genericsPropertyEdges.resetTo(generics, this)
         isPrimitive = primitive
         this.language = language
     }
@@ -80,7 +80,7 @@ open class ObjectType : Type {
         language: Language<*>?
     ) : super(type) {
         this.language = language
-        this.genericsPropertyEdges = genericsPropertyEdges.wrap(generics, this)
+        genericsPropertyEdges.resetTo(generics, this)
         isPrimitive = primitive
     }
 

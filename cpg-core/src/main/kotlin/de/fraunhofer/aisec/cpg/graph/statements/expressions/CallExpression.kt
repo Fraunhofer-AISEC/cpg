@@ -69,7 +69,7 @@ open class CallExpression :
         }
         set(value) {
             unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
-            invokeEdges = invokeEdges.wrap(value, this)
+            invokeEdges.resetTo(value, this)
             value.forEach { it.registerTypeObserver(this) }
         }
 

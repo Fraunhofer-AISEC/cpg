@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.edge.AstChild
 import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
@@ -54,7 +52,7 @@ interface StatementHolder : Holder<Statement> {
             return unwrap(statementEdges)
         }
         set(value) {
-            statementEdges = statementEdges.wrap(value, this as Node)
+            statementEdges.resetTo(value, this as Node)
         }
 
     /**
@@ -65,9 +63,7 @@ interface StatementHolder : Holder<Statement> {
      * @param s the statement
      */
     fun addStatement(s: Statement) {
-        val propertyEdge = AstChild((this as Node), s)
-        propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
-        statementEdges.add(propertyEdge)
+        statementEdges.add((this as Node), s)
     }
 
     /** Inserts the statement [s] before the statement specified in [before]. */

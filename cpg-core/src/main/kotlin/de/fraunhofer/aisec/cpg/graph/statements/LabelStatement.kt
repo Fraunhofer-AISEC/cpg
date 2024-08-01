@@ -52,9 +52,11 @@ class LabelStatement : Statement(), StatementHolder {
     }
 
     override var statementEdges: AstChildren<Statement>
-        get() =
-            subStatement?.let { AstChildren<Statement>().wrap(listOf(it), this) }
-                ?: AstChildren<Statement>()
+        get() {
+            var edges = AstChildren<Statement>()
+            subStatement?.let { AstChildren<Statement>().resetTo(listOf(it), this) }
+            return edges
+        }
         set(value) {
             subStatement = PropertyEdge.unwrap(value).firstOrNull()
         }
