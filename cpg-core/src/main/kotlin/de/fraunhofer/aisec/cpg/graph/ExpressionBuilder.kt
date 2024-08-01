@@ -25,12 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
-import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
@@ -567,18 +565,26 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.file = this.file
     duplicate.name = this.name.clone()
     for (next in this.nextDFGEdges) {
-        duplicate.addNextDFG(
-            next.end,
-            next.granularity,
-            (next as? ContextSensitiveDataflow)?.callingContext
-        )
+        if (next is ContextSensitiveDataflow) {
+            duplicate.nextDFGEdges.addContextSensitive(
+                next.end,
+                next.granularity,
+                next.callingContext
+            )
+        } else {
+            duplicate.nextDFGEdges += next
+        }
     }
     for (next in this.prevDFGEdges) {
-        duplicate.addPrevDFG(
-            next.start,
-            next.granularity,
-            (next as? ContextSensitiveDataflow)?.callingContext
-        )
+        if (next is ContextSensitiveDataflow) {
+            duplicate.prevDFGEdges.addContextSensitive(
+                next.start,
+                next.granularity,
+                next.callingContext
+            )
+        } else {
+            duplicate.prevDFGEdges += next
+        }
     }
     // TODO: This loses the properties of the edges.
     duplicate.nextEOG = this.nextEOG

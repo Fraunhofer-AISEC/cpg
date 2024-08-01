@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -213,7 +212,7 @@ open class CPPLanguage :
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
-                (templateCall.templateParameters.size <=
+                (templateCall.templateArguments.size <=
                     functionTemplateDeclaration.parameters.size) &&
                     (templateCall.arguments.size <=
                         functionTemplateDeclaration.realization[0].parameters.size)
@@ -265,13 +264,10 @@ open class CPPLanguage :
             val functionTemplateDeclaration =
                 holder?.startInference(ctx)?.inferFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
-            val edges = templateCall.templateParameterEdges
+            val edges = templateCall.templateArgumentEdges
             // Set instantiation propertyEdges
-            for (instantiationParameter in edges ?: listOf()) {
-                instantiationParameter.addProperty(
-                    Properties.INSTANTIATION,
-                    TemplateDeclaration.TemplateInitialization.EXPLICIT
-                )
+            for (edge in edges ?: listOf()) {
+                edge.instantiation = TemplateDeclaration.TemplateInitialization.EXPLICIT
             }
 
             if (functionTemplateDeclaration == null) {

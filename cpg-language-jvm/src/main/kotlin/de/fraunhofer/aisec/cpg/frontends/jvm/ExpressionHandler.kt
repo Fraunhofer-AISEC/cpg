@@ -187,7 +187,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val callee = newMemberExpression(invokeExpr.methodSignature.name, base)
 
         val call = newMemberCallExpression(callee, rawNode = invokeExpr)
-        call.arguments = invokeExpr.args.mapNotNull { handle(it) }
+        call.arguments = invokeExpr.args.mapNotNull { handle(it) }.toMutableList()
 
         return call
     }
@@ -217,7 +217,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
             construct.callee = newReference(Name("<init>", type.name))
             construct.type = type
 
-            construct.arguments = invokeExpr.args.mapNotNull { handle(it) }
+            construct.arguments = invokeExpr.args.mapNotNull { handle(it) }.toMutableList()
 
             construct
         } else {
@@ -233,7 +233,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // sure ow to model this
         val callee = dynamicInvokeExpr.methodSignature.toStaticRef()
         val call = newCallExpression(callee, rawNode = dynamicInvokeExpr)
-        call.arguments = dynamicInvokeExpr.args.mapNotNull { handle(it) }
+        call.arguments = dynamicInvokeExpr.args.mapNotNull { handle(it) }.toMutableList()
         call.type = frontend.typeOf(dynamicInvokeExpr.methodSignature.type)
 
         return call
@@ -243,7 +243,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val ref = staticInvokeExpr.methodSignature.toStaticRef()
 
         val call = newCallExpression(ref, rawNode = staticInvokeExpr)
-        call.arguments = staticInvokeExpr.args.mapNotNull { handle(it) }
+        call.arguments = staticInvokeExpr.args.mapNotNull { handle(it) }.toMutableList()
         call.type = frontend.typeOf(staticInvokeExpr.type)
 
         return call
@@ -260,7 +260,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): NewArrayExpression {
         val new = newNewArrayExpression(rawNode = newArrayExpr)
         new.type = frontend.typeOf(newArrayExpr.type)
-        new.dimensions = listOfNotNull(handle(newArrayExpr.size))
+        new.dimensions = listOfNotNull(handle(newArrayExpr.size)).toMutableList()
 
         return new
     }
@@ -268,7 +268,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): NewArrayExpression {
         val new = newNewArrayExpression(rawNode = newMultiArrayExpr)
         new.type = frontend.typeOf(newMultiArrayExpr.type)
-        new.dimensions = newMultiArrayExpr.sizes.mapNotNull { handle(it) }
+        new.dimensions = newMultiArrayExpr.sizes.mapNotNull { handle(it) }.toMutableList()
 
         return new
     }

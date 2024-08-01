@@ -183,7 +183,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         return with(builtin) {
             val len = newFunctionDeclaration("len", localNameOnly = true)
-            len.parameters = listOf(newParameterDeclaration("v", autoType()))
+            len.parameters = mutableListOf(newParameterDeclaration("v", autoType()))
             len.returnTypes = listOf(primitiveType("int"))
             addBuiltInFunction(len)
 
@@ -194,7 +194,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              */
             val append = newFunctionDeclaration("append", localNameOnly = true)
             append.parameters =
-                listOf(
+                mutableListOf(
                     newParameterDeclaration("slice", autoType().array()),
                     newParameterDeclaration("elems", autoType(), variadic = true),
                 )
@@ -207,7 +207,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * ```
              */
             val panic = newFunctionDeclaration("panic", localNameOnly = true)
-            panic.parameters = listOf(newParameterDeclaration("v", primitiveType("any")))
+            panic.parameters = mutableListOf(newParameterDeclaration("v", primitiveType("any")))
             addBuiltInFunction(panic)
 
             /**

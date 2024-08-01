@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -120,7 +119,7 @@ class PythonFrontendTest : BaseTest() {
 
         val edge = callExpression.argumentEdges[1]
         assertNotNull(edge)
-        assertEquals("s2", edge.getProperty(Properties.NAME))
+        assertEquals("s2", edge.name)
 
         val s = bar.parameters.first()
         assertNotNull(s)

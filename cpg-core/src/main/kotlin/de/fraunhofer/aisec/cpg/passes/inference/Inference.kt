@@ -317,11 +317,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 tu?.inferFunction(call, ctx = ctx)
             }
 
-        inferredRealization?.let { inferred.addRealization(it) }
+        inferredRealization?.let { inferred.realization += it }
 
         var typeCounter = 0
         var nonTypeCounter = 0
-        for (node in call.templateParameters) {
+        for (node in call.templateArguments) {
             if (node is TypeExpression) {
                 // Template Parameter
                 val inferredTypeIdentifier = "T$typeCounter"
@@ -338,7 +338,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                         .startInference(ctx)
                         ?.inferNonTypeTemplateParameter(inferredNonTypeIdentifier)
                 if (paramVariableDeclaration != null) {
-                    node.addNextDFG(paramVariableDeclaration)
+                    node.nextDFGEdges += paramVariableDeclaration
                 }
                 nonTypeCounter++
                 if (paramVariableDeclaration != null) {

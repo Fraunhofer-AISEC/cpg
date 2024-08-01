@@ -440,7 +440,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         owner: NodeWithAnnotations<*>
     ) {
         if (config.processAnnotations) {
-            node.addAnnotations(handleAnnotations(owner))
+            node.annotations += handleAnnotations(owner)
         }
     }
 

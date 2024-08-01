@@ -104,7 +104,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             currentTU = tu
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = tu.allEOGStarters.filter { it.prevEOG.isEmpty() }
+            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -484,7 +484,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     false
                 )
             if (ok) {
-                call.invokes = candidates
+                call.invokes = candidates.toMutableList()
                 return
             }
         }
@@ -527,19 +527,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 log.error(
                     "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
-                call.invokes = result.bestViable.toList()
+                call.invokes = result.bestViable.toMutableList()
             }
             AMBIGUOUS -> {
                 log.warn(
                     "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
                 )
-                call.invokes = result.bestViable.toList()
+                call.invokes = result.bestViable.toMutableList()
             }
             SUCCESSFUL -> {
-                call.invokes = result.bestViable.toList()
+                call.invokes = result.bestViable.toMutableList()
             }
             UNRESOLVED -> {
-                call.invokes = tryFunctionInference(call, result)
+                call.invokes = tryFunctionInference(call, result).toMutableList()
             }
         }
 
@@ -693,10 +693,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 template is RecordTemplateDeclaration &&
                     recordDeclaration != null &&
                     recordDeclaration in template.realizations &&
-                    (constructExpression.templateParameters.size <= template.parameters.size)
+                    (constructExpression.templateArguments.size <= template.parameters.size)
             ) {
                 val defaultDifference =
-                    template.parameters.size - constructExpression.templateParameters.size
+                    template.parameters.size - constructExpression.templateArguments.size
                 if (defaultDifference <= template.parameterDefaults.size) {
                     // Check if predefined template value is used as default in next value
                     addRecursiveDefaultTemplateArgs(constructExpression, template, scopeManager)
@@ -704,7 +704,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     // Add missing defaults
                     val missingNewParams: List<Node?> =
                         template.parameterDefaults.subList(
-                            constructExpression.templateParameters.size,
+                            constructExpression.templateArguments.size,
                             template.parameterDefaults.size
                         )
                     for (missingParam in missingNewParams) {

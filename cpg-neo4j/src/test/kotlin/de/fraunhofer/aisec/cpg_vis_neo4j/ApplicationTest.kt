@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.io.File
 import java.nio.file.Files
@@ -62,6 +62,7 @@ class ApplicationTest {
     @Test
     fun testSerializeCpgViaOGM() {
         val (application, translationResult) = createTranslationResult()
+
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, translationResult.functions.size)
 

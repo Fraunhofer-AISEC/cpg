@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, Python.ASTBASEstmt>(::ProblemExpression, frontend) {
@@ -92,7 +93,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                 }
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.addToPropertyEdgeDeclaration(decl)
+            declStmt.declarationEdges += decl
         }
         return declStmt
     }
@@ -129,7 +130,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             // Finally, add our declaration to the scope and the declaration statement
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.addToPropertyEdgeDeclaration(decl)
+            declStmt.declarationEdges += decl
         }
         return declStmt
     }
@@ -248,7 +249,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         for (s in stmt.body) {
             when (s) {
                 is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.addStatement(handleNode(s))
+                else -> cls.statements += handleNode(s)
             }
         }
 
@@ -297,7 +298,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -359,7 +360,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -550,7 +551,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun makeBlock(stmts: List<Python.ASTBASEstmt>, rawNode: Python.AST? = null): Block {
         val result = newBlock(rawNode = rawNode)
         for (stmt in stmts) {
-            result.addStatement(handle(stmt))
+            result.statements += handle(stmt)
         }
         return result
     }

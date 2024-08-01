@@ -41,9 +41,9 @@ import kotlin.reflect.KClass
  * This is a test language that can be used for unit test, where we need a language but do not have
  * a specific one.
  */
-open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLanguageFrontend>() {
+open class TestLanguage(final override var namespaceDelimiter: String = "::") :
+    Language<TestLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf()
-    final override val namespaceDelimiter: String
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
@@ -61,10 +61,6 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
             "string" to StringType("string", this),
         )
 
-    init {
-        this.namespaceDelimiter = namespaceDelimiter
-    }
-
     override fun newFrontend(ctx: TranslationContext): TestLanguageFrontend {
         return TestLanguageFrontend(language = this, ctx = ctx)
     }
@@ -72,6 +68,13 @@ open class TestLanguage(namespaceDelimiter: String = "::") : Language<TestLangua
 
 class StructTestLanguage(namespaceDelimiter: String = "::") :
     TestLanguage(namespaceDelimiter), HasStructs, HasClasses, HasDefaultArguments
+
+fun testFrontend(builder: (TranslationConfiguration.Builder) -> Unit): TestLanguageFrontend {
+    var config = TranslationConfiguration.builder().also(builder).build()
+
+    var ctx: TranslationContext = TranslationContext(config, ScopeManager(), TypeManager())
+    return TestLanguageFrontend(ctx = ctx)
+}
 
 open class TestLanguageFrontend(
     namespaceDelimiter: String = "::",

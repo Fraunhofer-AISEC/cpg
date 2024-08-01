@@ -984,7 +984,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             ptrDerefAssignment.input = frontend.getOperandValueAtIndex(instr, 0)
 
             compoundStatement.statements =
-                listOf(declarationOrNot(ptrDerefAssignment, instr), exchOp)
+                mutableListOf(declarationOrNot(ptrDerefAssignment, instr), exchOp)
             compoundStatement
         } else {
             // only perform the replacement

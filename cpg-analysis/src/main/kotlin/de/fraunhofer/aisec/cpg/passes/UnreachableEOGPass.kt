@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
- * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
+ * by setting the [EvaluationOrder.unreachable] property to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
 class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
@@ -68,7 +68,7 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
             for ((key, value) in finalState) {
                 if (value.elements == Reachability.UNREACHABLE) {
-                    key.addProperty(Properties.UNREACHABLE, true)
+                    (key as? EvaluationOrder)?.unreachable = true
                 }
             }
         }
@@ -90,9 +90,9 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  * Returns the updated state and true because we always expect an update of the state.
  */
 fun transfer(
-    currentEdge: PropertyEdge<Node>,
-    currentState: State<PropertyEdge<Node>, Reachability>
-): State<PropertyEdge<Node>, Reachability> {
+    currentEdge: Edge<Node>,
+    currentState: State<Edge<Node>, Reachability>
+): State<Edge<Node>, Reachability> {
     when (val currentNode = currentEdge.end) {
         is IfStatement -> {
             handleIfStatement(currentEdge, currentNode, currentState)
@@ -117,22 +117,22 @@ fun transfer(
  * All other cases simply copy the state which led us here.
  */
 private fun handleIfStatement(
-    enteringEdge: PropertyEdge<Node>,
+    enteringEdge: Edge<Node>,
     n: IfStatement,
-    state: State<PropertyEdge<Node>, Reachability>
+    state: State<Edge<Node>, Reachability>
 ) {
     val evalResult = ValueEvaluator().evaluate(n.condition)
 
     val (unreachableEdge, remainingEdges) =
         if (evalResult is Boolean && evalResult == true) {
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.getProperty(Properties.INDEX) == 1 },
-                n.nextEOGEdges.filter { e -> e.getProperty(Properties.INDEX) != 1 }
+                n.nextEOGEdges.firstOrNull { e -> e.index == 1 },
+                n.nextEOGEdges.filter { e -> e.index != 1 }
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.getProperty(Properties.INDEX) == 0 },
-                n.nextEOGEdges.filter { e -> e.getProperty(Properties.INDEX) != 0 }
+                n.nextEOGEdges.firstOrNull { e -> e.index == 0 },
+                n.nextEOGEdges.filter { e -> e.index != 0 }
             )
         } else {
             Pair(null, n.nextEOGEdges)
@@ -156,9 +156,9 @@ private fun handleIfStatement(
  * us here.
  */
 private fun handleWhileStatement(
-    enteringEdge: PropertyEdge<Node>,
+    enteringEdge: Edge<Node>,
     n: WhileStatement,
-    state: State<PropertyEdge<Node>, Reachability>
+    state: State<Edge<Node>, Reachability>
 ) {
     /*
      * Note: It does not understand that code like
@@ -173,13 +173,13 @@ private fun handleWhileStatement(
     val (unreachableEdge, remainingEdges) =
         if (evalResult is Boolean && evalResult == true) {
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.getProperty(Properties.INDEX) == 1 },
-                n.nextEOGEdges.filter { e -> e.getProperty(Properties.INDEX) != 1 }
+                n.nextEOGEdges.firstOrNull { e -> e.index == 1 },
+                n.nextEOGEdges.filter { e -> e.index != 1 }
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.getProperty(Properties.INDEX) == 0 },
-                n.nextEOGEdges.filter { e -> e.getProperty(Properties.INDEX) != 0 }
+                n.nextEOGEdges.firstOrNull { e -> e.index == 0 },
+                n.nextEOGEdges.filter { e -> e.index != 0 }
             )
         } else {
             Pair(null, n.nextEOGEdges)
@@ -221,7 +221,7 @@ enum class Reachability {
 }
 
 /**
- * A state which actually holds a state for all [PropertyEdge]s, one only for declarations and one
- * for ReturnStatements.
+ * A state which actually holds a state for all [Edge]s, one only for declarations and one for
+ * ReturnStatements.
  */
-class UnreachabilityState : State<PropertyEdge<Node>, Reachability>()
+class UnreachabilityState : State<Edge<Node>, Reachability>()
