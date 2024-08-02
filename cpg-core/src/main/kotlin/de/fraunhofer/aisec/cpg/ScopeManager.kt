@@ -981,14 +981,11 @@ class ScopeManager : ScopeProvider {
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            // TODO(oxisto): extractScope does not return null in all cases, so we need to make sure
-            //  that the returned scope is NOT our startscope
-            if (scope != null && scope is NameScope && scope != startScope) {
+            if (scope != null) {
                     scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
-                }
-                // Otherwise, we can look up the symbol alone (without any FQN) starting from the
-                // startScope
-                else {
+                } else {
+                    // Otherwise, we can look up the symbol alone (without any FQN) starting from
+                    // the startScope
                     startScope?.lookupSymbol(n.localName, predicate = predicate)
                 }
                 ?.toMutableList() ?: return listOf()
