@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
@@ -128,18 +127,6 @@ open class CLanguage :
         // interchangeable
         if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
             return ImplicitCast
-        }
-
-        // Another special rule is that if we have a const reference (e.g. const T&) in a function
-        // call, this will match the type T because this means that the parameter is given by
-        // reference rather than by value.
-        if (
-            targetType is ReferenceType &&
-                targetType.elementType == type &&
-                targetHint is ParameterDeclaration &&
-                CONST in targetHint.modifiers
-        ) {
-            return DirectMatch
         }
 
         return CastNotPossible

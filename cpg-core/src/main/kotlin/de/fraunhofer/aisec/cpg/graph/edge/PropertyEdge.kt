@@ -370,7 +370,7 @@ open class PropertyEdge<T : Node> : Persistable {
 @Transient
 class PropertyEdgeDelegate<T : Node, S : Node>(
     val edge: KProperty1<S, List<PropertyEdge<T>>>,
-    val outgoing: Boolean = true
+    val outgoing: Boolean = true,
 ) {
     operator fun getValue(thisRef: S, property: KProperty<*>): List<T> {
         return PropertyEdge.unwrap(edge.get(thisRef), outgoing)
