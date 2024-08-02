@@ -34,8 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.set
@@ -137,15 +135,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                                 (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
-                        // Don't draw a DFG-Edge if key is a pointer - we will instead draw one to
-                        // its UnaryOperator
-                        if (
-                            !(key is Reference &&
-                                (key.type is PointerType ||
-                                    (key.type as? NumericType)?.bitWidth != 64))
-                        ) {
-                            key.addPrevDFG(it)
-                        }
+                        key.addPrevDFG(it)
                     }
                 }
             }
@@ -200,6 +190,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         state: State<Node, Set<Node>>,
         worklist: Worklist<PropertyEdge<Node>, Node, Set<Node>>
     ): State<Node, Set<Node>> {
+        println("In transfer")
         // We will set this if we write to a variable
         val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
@@ -307,24 +298,30 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
                 // This was the last write to the respective declaration.
-                val declPair: Pair<Declaration, Node>? =
+                val declPair: Pair<Declaration, Node?>? =
                     if (assignment.target is Declaration)
                         Pair(assignment.target as Declaration, assignment.target)
                     else {
                         val unwrappedTarget = (assignment.target as? Expression).unwrapReference()
-                        if (assignment.target is SubscriptExpression) {
-                            val subscriptExpression = assignment.target as? SubscriptExpression
-                            val unwrappedBufTarget =
-                                subscriptExpression?.arrayExpression?.unwrapReference()
-                            unwrappedBufTarget?.refersTo?.let { Pair(it, assignment.target) }
-                        } else if (unwrappedTarget?.refersTo == null) {
-                            null
-                        } else {
-                            Pair(unwrappedTarget.refersTo!!, unwrappedTarget)
-                        }
+                        if (unwrappedTarget is Reference) {
+                            if (assignment.target is SubscriptExpression) {
+                                val subscriptExpression = assignment.target as? SubscriptExpression
+                                val unwrappedBufTarget =
+                                    subscriptExpression?.arrayExpression?.unwrapReference()
+                                if (unwrappedBufTarget is Reference) {
+                                    unwrappedBufTarget.refersTo?.let { Pair(it, assignment.target) }
+                                } else null
+                            } else if (unwrappedTarget?.refersTo == null) {
+                                null
+                            } else {
+                                Pair(unwrappedTarget.refersTo!!, unwrappedTarget)
+                            }
+                        } else null
                     }
                 declPair?.let { (decl, target) ->
-                    doubleState.declarationsState[decl] = PowersetLattice(identitySetOf(target))
+                    if (target != null) {
+                        doubleState.declarationsState[decl] = PowersetLattice(identitySetOf(target))
+                    }
                 }
             }
         } else if (isIncOrDec(currentNode)) {
@@ -350,17 +347,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
             // The write operation goes to the variable in the lhs
             val lhs = currentNode.lhs.singleOrNull()
-            writtenDeclaration = lhs.unwrapReference()?.refersTo
+            val lhsref = lhs.unwrapReference()
+            if (lhsref is Reference) {
+                writtenDeclaration = lhsref.refersTo
 
-            if (writtenDeclaration != null && lhs != null) {
-                val prev = doubleState.declarationsState[writtenDeclaration]
-                findAndSetProperties(prev?.elements ?: setOf(), currentNode)
-                // Data flows from the last writes to the lhs variable to this node
-                state.push(lhs, prev)
+                if (writtenDeclaration != null && lhs != null) {
+                    val prev = doubleState.declarationsState[writtenDeclaration]
+                    findAndSetProperties(prev?.elements ?: setOf(), currentNode)
+                    // Data flows from the last writes to the lhs variable to this node
+                    state.push(lhs, prev)
 
-                // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDeclaration] =
-                    PowersetLattice(identitySetOf(lhs))
+                    // The whole current node is the place of the last update, not (only) the lhs!
+                    doubleState.declarationsState[writtenDeclaration] =
+                        PowersetLattice(identitySetOf(lhs))
+                }
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&

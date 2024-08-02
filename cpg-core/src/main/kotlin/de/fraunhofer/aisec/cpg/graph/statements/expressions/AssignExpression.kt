@@ -71,17 +71,21 @@ class AssignExpression :
             if (isSimpleAssignment) {
                 field.forEach {
                     val unwrapped = it.unwrapReference()
-                    unwrapped?.let {
-                        it.access = AccessValues.WRITE
-                        it.dfgHandlerHint = true
+                    if (unwrapped is Reference) {
+                        unwrapped.let {
+                            it.access = AccessValues.WRITE
+                            it.dfgHandlerHint = true
+                        }
                     }
                 }
             } else {
                 field.forEach {
                     val unwrapped = it.unwrapReference()
-                    unwrapped?.let {
-                        it.access = AccessValues.READWRITE
-                        it.dfgHandlerHint = true
+                    if (unwrapped is Reference) {
+                        unwrapped.let {
+                            it.access = AccessValues.READWRITE
+                            it.dfgHandlerHint = true
+                        }
                     }
                 }
 
