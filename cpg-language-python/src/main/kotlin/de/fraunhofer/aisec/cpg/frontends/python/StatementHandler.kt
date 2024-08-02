@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, Python.ASTBASEstmt>(::ProblemExpression, frontend) {
+
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
@@ -418,11 +420,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         if (recordDeclaration != null) {
             // first argument is the receiver
             for (arg in positionalArguments.subList(1, positionalArguments.size)) {
-                handleArgument(arg)
+                handleArgument(arg, arg in args.posonlyargs)
             }
         } else {
             for (arg in positionalArguments) {
-                handleArgument(arg)
+                handleArgument(arg, arg in args.posonlyargs)
             }
         }
 
@@ -547,9 +549,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return result
     }
 
-    internal fun handleArgument(node: Python.ASTarg) {
+    internal fun handleArgument(node: Python.ASTarg, isPosOnly: Boolean = false) {
         val type = frontend.typeOf(node.annotation)
         val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
+        if (isPosOnly) {
+            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        }
 
         frontend.scopeManager.addDeclaration(arg)
     }

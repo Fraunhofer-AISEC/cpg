@@ -159,4 +159,14 @@ class PythonLanguage :
         // The rest behaves like other languages
         return super.propagateTypeOfBinaryOperation(operation)
     }
+
+    companion object {
+        /**
+         * This is a "modifier" to differentiate parameters in functions that are "positional" only.
+         * This information will be stored in
+         * [de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration.modifiers] so that we
+         * can use is later in call resolving.
+         */
+        const val MODIFIER_POSITIONAL_ONLY_ARGUMENT = "posonlyarg"
+    }
 }
