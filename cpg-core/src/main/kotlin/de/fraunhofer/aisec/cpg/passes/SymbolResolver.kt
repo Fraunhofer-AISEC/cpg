@@ -639,8 +639,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Find invokes by supertypes
         if (candidates.isEmpty() && symbol.isNotEmpty()) {
             val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
-            candidates =
-                getInvocationCandidatesFromParents(symbol, records).toMutableSet()
+            candidates = getInvocationCandidatesFromParents(symbol, records).toMutableSet()
         }
 
         // Add overridden invokes
