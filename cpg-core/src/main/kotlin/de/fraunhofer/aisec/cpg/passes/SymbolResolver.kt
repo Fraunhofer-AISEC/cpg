@@ -830,8 +830,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         call: CallExpression,
         result: CallResolutionResult,
     ): List<FunctionDeclaration> {
-        // We need to see, whether we have any suitable base (e.g. a class) or not; but only if
-        // the call itself is not already scoped (e.g. to a namespace)
+        // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
+        // main cases
+        // a) we have a member expression -> easy
+        // b) we have a call expression -> not so easy. This could be a member call with an implicit
+        //    this (in which case we want to explore the base type). But that is only possible if
+        //    the callee is not qualified, because otherwise we are in a static call like
+        //    MyClass::doSomething() or in a namespace call (in case we do not want to explore the
+        //    base type here yet). This will change in a future PR.
         val (suitableBases, bestGuess) =
             if (call.callee is MemberExpression || !call.callee.name.isQualified()) {
                 getPossibleContainingTypes(call)
