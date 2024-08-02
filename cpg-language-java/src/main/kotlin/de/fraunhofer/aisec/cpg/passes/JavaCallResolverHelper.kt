@@ -45,10 +45,9 @@ class JavaCallResolverHelper {
          * conforming to JLS13 §15.12.1.
          *
          * This function basically sets the correct type of the [Reference] containing the "super"
-         * keyword. Afterward, we can use the regular [SymbolResolver.resolveMemberByName] to
-         * resolve the [MemberExpression].
+         * keyword.
          *
-         * @param me The member expression that needs to be adjusted
+         * @param memberExpression The member expression that needs to be adjusted
          * @param curClass The class containing the call
          */
         fun handleSuperExpression(

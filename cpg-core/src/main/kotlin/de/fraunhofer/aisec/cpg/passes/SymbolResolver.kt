@@ -630,28 +630,28 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         symbol: String,
         possibleContainingTypes: Set<Type>
     ): Set<Declaration> {
-        var invocationCandidates = mutableSetOf<Declaration>()
+        var candidates = mutableSetOf<Declaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
-            invocationCandidates.addAll(ctx.scopeManager.findSymbols(record.name.fqn(symbol)))
+            candidates.addAll(ctx.scopeManager.findSymbols(record.name.fqn(symbol)))
         }
 
         // Find invokes by supertypes
-        if (invocationCandidates.isEmpty() && symbol.isNotEmpty()) {
+        if (candidates.isEmpty() && symbol.isNotEmpty()) {
             val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
-            invocationCandidates =
+            candidates =
                 getInvocationCandidatesFromParents(symbol, records).toMutableSet()
         }
 
         // Add overridden invokes
-        invocationCandidates.addAll(
-            invocationCandidates
+        candidates.addAll(
+            candidates
                 .filterIsInstance<FunctionDeclaration>()
                 .map { getOverridingCandidates(possibleContainingTypes, it) }
                 .flatten()
         )
 
-        return invocationCandidates
+        return candidates
     }
 
     /**
