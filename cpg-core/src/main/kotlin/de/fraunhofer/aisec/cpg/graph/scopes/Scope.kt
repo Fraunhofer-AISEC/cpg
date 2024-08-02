@@ -105,9 +105,21 @@ abstract class Scope(
     /**
      * Looks up a list of [Declaration] nodes for the specified [symbol]. Optionally, [predicate]
      * can be used for additional filtering.
+     *
+     * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
+     * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
+     * qualified lookups, where we want to stay in our lookup-scope.
+     *
+     * @param symbol the symbol to lookup
+     * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
+     *   its parents if no match was found.
+     * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
+     *   wildcards should be replaced with their actual nodes
+     * @param predicate An optional predicate which should be used in the lookup.
      */
     fun lookupSymbol(
         symbol: Symbol,
+        thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null
     ): List<Declaration> {
@@ -141,8 +153,12 @@ abstract class Scope(
                 break
             }
 
-            // If we do not have a hit, we can go up one scope
-            scope = scope.parent
+            // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
+            if (!thisScopeOnly) {
+                scope = scope.parent
+            } else {
+                break
+            }
         }
 
         return list ?: listOf()

@@ -194,12 +194,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             }
 
         // try to see, if the struct already exists as a record declaration
-        var record =
-            frontend.scopeManager
-                .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                    it.name.toString() == name
-                }
-                .firstOrNull()
+        var record = frontend.scopeManager.getRecordForName(Name(name))
 
         // if yes, return it
         if (record != null) {

@@ -48,7 +48,6 @@ open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
-    HasComplexCallResolution,
     HasStructs,
     HasClasses,
     HasUnknownType,
@@ -160,43 +159,6 @@ open class CPPLanguage :
             // Other commonly used extension types
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
-
-    /**
-     * @param call
-     * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
-     *   resolution techniques
-     */
-    override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
-        possibleContainingTypes: Set<Type>,
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
-        callResolver: SymbolResolver
-    ): List<FunctionDeclaration> {
-        var invocationCandidates = mutableListOf<FunctionDeclaration>()
-        val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
-        for (record in records) {
-            invocationCandidates.addAll(
-                callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
-            )
-        }
-        if (invocationCandidates.isEmpty()) {
-            // This could be a regular function call that somehow ends up here because of weird
-            // complexity of the old call resolver
-            val result = ctx.scopeManager.resolveCall(call)
-            invocationCandidates.addAll(result.bestViable)
-        }
-
-        // Make sure, that our invocation candidates for member call expressions are really METHODS,
-        // otherwise this will lead to false positives. This is a hotfix until we rework the call
-        // resolver completely.
-        if (call is MemberCallExpression) {
-            invocationCandidates =
-                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableList()
-        }
-        return invocationCandidates
-    }
 
     override fun tryCast(
         type: Type,
