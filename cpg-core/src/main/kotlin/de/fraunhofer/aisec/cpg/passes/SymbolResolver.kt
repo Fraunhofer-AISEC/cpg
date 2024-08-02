@@ -323,8 +323,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         if (base is Reference) {
-            // The base should have been resolved by now. Maybe we have some other clue about
+            // The base has been resolved by now. Maybe we have some other clue about
             // this base from the type system, so we can set the declaration accordingly.
+            // TODO(oxisto): It is actually not really a good approach, but it is currently
+            //  needed to make the java frontend happy, but this needs to be removed at some point
             if (base.refersTo == null) {
                 base.refersTo = base.type.recordDeclaration
             }
@@ -583,12 +585,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val (scope, _) = ctx.scopeManager.extractScope(source, source.scope)
         result.actualStartScope = scope ?: source.scope
 
-        if (source.language !is HasFunctionOverloading) {
-            // If the function does not allow function overloading, and we have multiple candidate
-            // symbols, the result is "problematic"
-            if (result.candidateFunctions.size > 1) {
-                result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
-            }
+        // If the function does not allow function overloading, and we have multiple candidate
+        // symbols, the result is "problematic"
+        if (source.language !is HasFunctionOverloading && result.candidateFunctions.size > 1) {
+            result.success = PROBLEMATIC
         }
 
         // Filter functions that match the signature of our call, either directly or with casts;

@@ -110,10 +110,10 @@ open class JavaLanguage :
     }
 
     override fun handleSuperExpression(
-        callee: MemberExpression,
+        memberExpression: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
-    ) = JavaCallResolverHelper.handleSuperExpression(callee, curClass, scopeManager)
+    ) = JavaCallResolverHelper.handleSuperExpression(memberExpression, curClass, scopeManager)
 
     override val startCharacter = '<'
     override val endCharacter = '>'

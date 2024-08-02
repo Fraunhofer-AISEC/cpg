@@ -115,7 +115,7 @@ interface HasSuperClasses : LanguageTrait {
     val superClassKeyword: String
 
     fun handleSuperExpression(
-        me: MemberExpression,
+        memberExpression: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
     ): Boolean

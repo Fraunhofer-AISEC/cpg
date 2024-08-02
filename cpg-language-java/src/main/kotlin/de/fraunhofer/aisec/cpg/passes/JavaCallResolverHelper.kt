@@ -52,7 +52,7 @@ class JavaCallResolverHelper {
          * @param curClass The class containing the call
          */
         fun handleSuperExpression(
-            me: MemberExpression,
+            memberExpression: MemberExpression,
             curClass: RecordDeclaration,
             scopeManager: ScopeManager
         ): Boolean {
@@ -60,7 +60,7 @@ class JavaCallResolverHelper {
             // still need to connect the super reference to the receiver of this method.
             val func = scopeManager.currentFunction
             if (func is MethodDeclaration) {
-                (me.base as Reference?)?.refersTo = func.receiver
+                (memberExpression.base as Reference?)?.refersTo = func.receiver
             }
 
             // In the next step we can "cast" the base to the correct type, by setting the base
@@ -68,12 +68,12 @@ class JavaCallResolverHelper {
 
             // In case the reference is just called "super", this is a direct superclass, either
             // defined explicitly or java.lang.Object by default
-            if (me.base.name.toString() == JavaLanguage().superClassKeyword) {
+            if (memberExpression.base.name.toString() == JavaLanguage().superClassKeyword) {
                 if (curClass.superClasses.isNotEmpty()) {
                     target = curClass.superClasses[0].root.recordDeclaration
                 } else {
                     Util.warnWithFileLocation(
-                        me,
+                        memberExpression,
                         LOGGER,
                         "super call without direct superclass! Expected java.lang.Object to be present at least!"
                     )
@@ -81,23 +81,23 @@ class JavaCallResolverHelper {
             } else {
                 // BaseName.super.call(), might either be in order to specify an enclosing class or
                 // an interface that is implemented
-                target = handleSpecificSupertype(me, curClass)
+                target = handleSpecificSupertype(memberExpression, curClass)
             }
 
             if (target != null) {
                 val superType = target.toType()
                 // Explicitly set the type of the call's base to the super type, basically "casting"
                 // the "this" object to the super class
-                me.base.type = superType
+                memberExpression.base.type = superType
 
-                val refersTo = (me.base as? Reference)?.refersTo
+                val refersTo = (memberExpression.base as? Reference)?.refersTo
                 if (refersTo is HasType) {
                     refersTo.type = superType
                     refersTo.assignedTypes = mutableSetOf(superType)
                 }
 
                 // Make sure that really only our super class is in the list of assigned types
-                me.base.assignedTypes = mutableSetOf(superType)
+                memberExpression.base.assignedTypes = mutableSetOf(superType)
 
                 return true
             }
