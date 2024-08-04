@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.*
@@ -42,7 +41,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
     @AST
-    private val realizationEdges: MutableList<PropertyEdge<FunctionDeclaration>> = ArrayList()
+    private val realizationEdges = AstChildren<FunctionDeclaration>()
 
     val realization: List<FunctionDeclaration> by
         PropertyEdgeDelegate(FunctionTemplateDeclaration::realizationEdges)
@@ -51,9 +50,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         get() = ArrayList<Declaration>(realization)
 
     fun addRealization(realizedFunction: FunctionDeclaration) {
-        val propertyEdge = PropertyEdge(this, realizedFunction)
-        propertyEdge.addProperty(Properties.INDEX, realizationEdges.size)
-        realizationEdges.add(propertyEdge)
+        realizationEdges.add(this, realizedFunction)
     }
 
     fun removeRealization(realizedFunction: FunctionDeclaration?) {

@@ -27,8 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import java.util.Objects
@@ -48,7 +47,7 @@ open class DeclarationStatement : Statement() {
      */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    var declarationEdges = AstChildren<Declaration>()
 
     override var declarations by PropertyEdgeDelegate(DeclarationStatement::declarationEdges)
 
@@ -57,9 +56,7 @@ open class DeclarationStatement : Statement() {
         set(value) {
             if (value == null) return
             declarationEdges.clear()
-            val propertyEdge = PropertyEdge(this, value)
-            propertyEdge.addProperty(Properties.INDEX, 0)
-            declarationEdges.add(propertyEdge)
+            declarationEdges.add(this, value)
         }
 
     fun isSingleDeclaration(): Boolean {
@@ -71,9 +68,7 @@ open class DeclarationStatement : Statement() {
     }
 
     fun addToPropertyEdgeDeclaration(declaration: Declaration) {
-        val propertyEdge = PropertyEdge(this, declaration)
-        propertyEdge.addProperty(Properties.INDEX, declarationEdges.size)
-        declarationEdges.add(propertyEdge)
+        declarationEdges.add(this, declaration)
     }
 
     override fun toString(): String {

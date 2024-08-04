@@ -46,6 +46,7 @@ open class BinaryOperator :
         set(value) {
             disconnectOldLhs()
             field = value
+            value.astParent = this
             connectNewLhs(value)
         }
 
@@ -55,6 +56,7 @@ open class BinaryOperator :
         set(value) {
             disconnectOldRhs()
             field = value
+            value.astParent = this
             connectNewRhs(value)
         }
 

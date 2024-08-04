@@ -26,7 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
@@ -54,15 +55,15 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     override val branchedBy: Node?
         get() = iterable
 
-    override var statementEdges: MutableList<PropertyEdge<Statement>>
+    override var statementEdges: AstChildren<Statement>
         get() {
-            val statements = mutableListOf<PropertyEdge<Statement>>()
-            variable?.let { statements.add(PropertyEdge(this, it)) }
-            iterable?.let { statements.add(PropertyEdge(this, it)) }
-            statement?.let { statements.add(PropertyEdge(this, it)) }
+            val statements = AstChildren<Statement>()
+            variable?.let { statements.add(AstChild(this, it)) }
+            iterable?.let { statements.add(AstChild(this, it)) }
+            statement?.let { statements.add(AstChild(this, it)) }
             return statements
         }
-        set(value) {
+        set(_) {
             // Nothing to do here
         }
 

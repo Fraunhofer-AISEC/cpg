@@ -25,11 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
 /**
@@ -43,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
  */
 interface StatementHolder : Holder<Statement> {
     /** List of statements as property edges. */
-    var statementEdges: MutableList<PropertyEdge<Statement>>
+    var statementEdges: AstChildren<Statement>
 
     /**
      * Virtual property to access [statementEdges] without property edges.
@@ -55,7 +52,7 @@ interface StatementHolder : Holder<Statement> {
             return unwrap(statementEdges)
         }
         set(value) {
-            statementEdges = wrap(value, this as Node)
+            statementEdges.resetTo(value, this as Node)
         }
 
     /**
@@ -66,9 +63,7 @@ interface StatementHolder : Holder<Statement> {
      * @param s the statement
      */
     fun addStatement(s: Statement) {
-        val propertyEdge = PropertyEdge((this as Node), s)
-        propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
-        statementEdges.add(propertyEdge)
+        statementEdges.add((this as Node), s)
     }
 
     /** Inserts the statement [s] before the statement specified in [before]. */

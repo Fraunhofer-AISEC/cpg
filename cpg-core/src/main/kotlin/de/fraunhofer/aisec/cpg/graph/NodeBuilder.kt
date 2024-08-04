@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -380,3 +380,80 @@ private fun <AstNode> Node.setCodeAndLocation(
     }
     this.location = provider.locationOf(rawNode)
 }
+
+context(ContextProvider)
+fun <T : Node> T.withScope(init: T.() -> Unit): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+
+    scopeManager.enterScope(this)
+    init(this)
+    scopeManager.leaveScope(this)
+
+    return this
+}
+
+context(ContextProvider)
+fun <T : Node> T.withChildren(
+    hasScope: Boolean = false,
+    isGlobalScope: Boolean = false,
+    init: T.() -> Unit
+): T {
+    val scopeManager =
+        this@ContextProvider.ctx?.scopeManager
+            ?: throw TranslationException(
+                "Trying to create node children without a ContextProvider. This will fail."
+            )
+
+    if (isGlobalScope && this is TranslationUnitDeclaration) {
+        scopeManager.resetToGlobal(this)
+        init(this)
+    } else if (hasScope) {
+        scopeManager.enterScope(this)
+        init(this)
+        scopeManager.leaveScope(this)
+    } else {
+        init(this)
+    }
+
+    return this
+}
+
+/*
+/**
+ * Helper function to create a [AstPropertyDelegate]. For now this only directly returns a new
+ * delegate. But in future this could allow us to do more things here.
+ */
+fun <PropertyType : Node?, NodeType : Node> astChild(
+    initializer: PropertyType,
+    pre: ((PropertyType) -> Unit)? = null,
+    post: ((PropertyType) -> Unit)? = null
+): AstPropertyDelegate<PropertyType, NodeType> {
+    return AstPropertyDelegate(initializer, pre, post)
+}
+
+class AstPropertyDelegate<PropertyType : Node?, NodeType : Node>(
+    initializer: PropertyType,
+    var pre: ((PropertyType) -> Unit)? = null,
+    var post: ((PropertyType) -> Unit)? = null
+) {
+
+    internal var storage: PropertyType = initializer
+
+    operator fun getValue(thisRef: NodeType, property: KProperty<*>): PropertyType {
+        return storage
+    }
+
+    operator fun setValue(thisRef: NodeType, property: KProperty<*>, value: PropertyType) {
+        pre?.let { it(storage) }
+
+        storage = value
+        storage?.astParent = thisRef
+
+        post?.let { it(storage) }
+    }
+}
+*/

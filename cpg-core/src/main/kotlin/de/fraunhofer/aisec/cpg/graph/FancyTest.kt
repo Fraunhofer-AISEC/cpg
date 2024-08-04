@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.HasInitializer
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 
-/**
- * Represents a constant within an [EnumDeclaration]. Depending on the language, this might have an
- * explicit initializer value.
- */
-class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
-    @AST
-    override var initializer: Expression? = null
-        set(value) {
-            field = value
-            value?.astParent = this
-        }
+class FancyTest<T : Node>(override val size: Int) : Collection<PropertyEdge<T>> {
+    override fun contains(element: PropertyEdge<T>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun containsAll(elements: Collection<PropertyEdge<T>>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun isEmpty(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun iterator(): Iterator<PropertyEdge<T>> {
+        TODO("Not yet implemented")
+    }
 }

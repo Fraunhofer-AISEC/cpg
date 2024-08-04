@@ -28,8 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import org.neo4j.ogm.annotation.NodeEntity
@@ -54,7 +53,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var parameterEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    var parameterEdges = AstChildren<Declaration>()
 
     val parameters by PropertyEdgeDelegate(TemplateDeclaration::parameterEdges)
 
@@ -86,15 +85,11 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         }
 
     fun addParameter(parameterizedType: TypeParameterDeclaration) {
-        val propertyEdge = PropertyEdge<Declaration>(this, parameterizedType)
-        propertyEdge.addProperty(Properties.INDEX, parameterEdges.size)
-        parameterEdges.add(propertyEdge)
+        parameterEdges.add(this, parameterizedType)
     }
 
     fun addParameter(nonTypeTemplateParamDeclaration: ParameterDeclaration) {
-        val propertyEdge = PropertyEdge<Declaration>(this, nonTypeTemplateParamDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, parameterEdges.size)
-        parameterEdges.add(propertyEdge)
+        parameterEdges.add(this, nonTypeTemplateParamDeclaration)
     }
 
     override val declarations: List<Declaration>

@@ -26,10 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdges
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -46,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class FunctionPointerType : Type {
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var parametersPropertyEdge: MutableList<PropertyEdge<Type>> = mutableListOf()
+    var parametersPropertyEdge = PropertyEdges<Type>()
         private set
 
     var returnType: Type
@@ -58,7 +57,7 @@ class FunctionPointerType : Type {
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
     ) : super(EMPTY_NAME, language) {
-        parametersPropertyEdge = wrap(parameters, this)
+        parametersPropertyEdge.resetTo(parameters, this)
         this.returnType = returnType
     }
 
@@ -68,7 +67,7 @@ class FunctionPointerType : Type {
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
     ) : super(type) {
-        parametersPropertyEdge = wrap(parameters, this)
+        parametersPropertyEdge.resetTo(parameters, this)
         this.returnType = returnType
         this.language = language
     }

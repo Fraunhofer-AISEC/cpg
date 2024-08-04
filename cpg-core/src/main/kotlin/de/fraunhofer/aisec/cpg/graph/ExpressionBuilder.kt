@@ -67,7 +67,11 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = null): BinaryOperator {
+fun MetadataProvider.newBinaryOperator(
+    operatorCode: String,
+    rawNode: Any? = null,
+    init: (BinaryOperator.() -> Unit)? = null
+): BinaryOperator {
     val node =
         if (
             this is LanguageProvider &&
@@ -83,6 +87,7 @@ fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = nul
 
     node.operatorCode = operatorCode
 
+    init?.invoke(node)
     log(node)
 
     return node
@@ -99,7 +104,8 @@ fun MetadataProvider.newUnaryOperator(
     operatorCode: String,
     postfix: Boolean,
     prefix: Boolean,
-    rawNode: Any? = null
+    rawNode: Any? = null,
+    init: (UnaryOperator.() -> Unit)? = null,
 ): UnaryOperator {
     val node = UnaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -108,6 +114,7 @@ fun MetadataProvider.newUnaryOperator(
     node.isPostfix = postfix
     node.isPrefix = prefix
 
+    init?.invoke(node)
     log(node)
 
     return node

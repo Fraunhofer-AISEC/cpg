@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
@@ -90,7 +90,7 @@ class PerformanceRegressionTest {
 
             for (i in 0 until 50000) {
                 list.initializerEdges.add(
-                    PropertyEdge(
+                    AstChild(
                         list,
                         newLiteral(
                             i,

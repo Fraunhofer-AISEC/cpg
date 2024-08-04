@@ -40,6 +40,7 @@ open class Component : Node() {
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+        tu.astParent = this
         translationUnits.add(tu)
     }
 

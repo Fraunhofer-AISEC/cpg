@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.AstChildren
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -37,8 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
 class TryStatement : Statement() {
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
     @AST
-    var resourceEdges = mutableListOf<PropertyEdge<Statement>>()
-
+    var resourceEdges = AstChildren<Statement>()
     var resources by PropertyEdgeDelegate(TryStatement::resourceEdges)
 
     @AST var tryBlock: Block? = null
@@ -47,8 +46,7 @@ class TryStatement : Statement() {
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
     @AST
-    var catchClauseEdges = mutableListOf<PropertyEdge<CatchClause>>()
-
+    var catchClauseEdges = AstChildren<CatchClause>()
     var catchClauses by PropertyEdgeDelegate(TryStatement::catchClauseEdges)
 
     override fun equals(other: Any?): Boolean {
