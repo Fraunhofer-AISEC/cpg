@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis.collectioneval
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Array
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Collection
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.MutableList
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -40,32 +41,18 @@ import org.apache.commons.lang3.NotImplementedException
 // We assume that we only work with lists in this operator
 class CollectionSizeEvaluator {
     fun evaluate(node: Node): LatticeInterval {
-        val name = node.name
+        val name = node.name.toString()
         val type = getType(node)
         val initializer = getInitializerOf(node, type)!!
         var range = getInitialRange(initializer, type)
         // evaluate effect of each operation on the list until we reach "node"
         var current = initializer
-        // TODO: de preprocessing: remove all node types that we do not need
+        // TODO: do preprocessing: remove all node types that we do not need
         do {
-            val next: Node
-            if (
-                current is ForStatement ||
-                    current is WhileStatement ||
-                    current is ForEachStatement ||
-                    current is DoStatement
-            ) {
-                // TODO: is there an interface for loop heads?
-                val (lRange, lNext) = handleLoop(range, current, name.toString(), type, node)
-                range = lRange
-                next = lNext
-            } else {
-                // TODO: apply each effect only once if EOG branches (see interface BranchingNode)
-                range = range.applyEffect(current, name.toString(), type).first
-                next = current.nextEOG.first()
-            }
-            current = next
-        } while (next != node)
+            val (newRange, newCurrent) = handleNext(range, current, name, type, node)
+            range = newRange
+            current = newCurrent
+        } while (current != node)
 
         return range
     }
@@ -96,6 +83,23 @@ class CollectionSizeEvaluator {
             name.startsWith("java.util.List") -> MutableList::class
             name.endsWith("[]") -> Array::class
             else -> MutableList::class // throw NotImplementedException()
+        }
+    }
+
+    private fun handleNext(
+        range: LatticeInterval,
+        node: Node,
+        name: String,
+        type: KClass<out Collection>,
+        goalNode: Node
+    ): Pair<LatticeInterval, Node> {
+        return when (node) {
+            is ForStatement,
+            is WhileStatement,
+            is ForEachStatement,
+            is DoStatement -> handleLoop(range, node, name, type, goalNode)
+            is BranchingNode -> handleBranch(range, node, name, type, goalNode)
+            else -> range.applyEffect(node, name, type).first to node.nextEOG.first()
         }
     }
 
@@ -193,5 +197,62 @@ class CollectionSizeEvaluator {
             return newRange to goalNode
         }
         return newRange to afterLoop
+    }
+
+    private fun handleBranch(
+        range: LatticeInterval,
+        node: Node,
+        name: String,
+        type: KClass<out Collection>,
+        goalNode: Node
+    ): Pair<LatticeInterval, Node> {
+        val mergeNode = findMergeNode(node)
+        val branchNumber = node.nextEOG.size
+        val finalBranchRanges = Array<LatticeInterval>(branchNumber) { range }
+        for (i in 0 until branchNumber) {
+            var current = node.nextEOG[i]
+            // if we arrive at the mergeNode we are done with this branch
+            while (current != mergeNode) {
+                // If at any point we find the goal node in a branch, we stop and ignore other all
+                // branches
+                if (current == goalNode) {
+                    return finalBranchRanges[i] to current
+                }
+                val (nextRange, nextNode) =
+                    handleNext(finalBranchRanges[i], current, name, type, goalNode)
+                finalBranchRanges[i] = nextRange
+                current = nextNode
+            }
+        }
+        val finalMergedRange = finalBranchRanges.reduce { acc, r -> acc.join(r) }
+        return finalMergedRange to mergeNode
+    }
+
+    private fun findMergeNode(node: Node): Node {
+        if (node !is BranchingNode) {
+            return node.nextEOG.first()
+        }
+
+        val branchNumber = node.nextEOG.size
+        val branches = Array(branchNumber) { Node() }
+        val visited = Array(branchNumber) { mutableSetOf<Node>() }
+        for (index in 0 until branchNumber) {
+            branches[index] = node.nextEOG[index]
+        }
+        while (true) {
+            for (index in 0 until branchNumber) {
+                val current = branches[index]
+                if (current in visited[index]) {
+                    continue
+                }
+                visited[index].add(current)
+                // If all paths contain the current node it merges all branches
+                if (visited.all { it.contains(current) }) {
+                    return current
+                }
+                val next = current.nextEOG.firstOrNull() ?: break
+                branches[index] = next
+            }
+        }
     }
 }
