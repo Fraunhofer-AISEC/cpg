@@ -29,7 +29,20 @@ import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
 
 interface Collection {
-    fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval
+    /**
+     * Applies the effect of a Node to the Interval describing possible values of a collection. Also
+     * returns true if the node was "valid" node that could have an influence on the Interval.
+     *
+     * Examples:
+     * - list.add(x) on [0, 0] -> ([1, 1], true)
+     * - list.clear(x) on [0, 0] -> ([0, 0], true)
+     * - println(list) on [0, 0] -> ([0, 0], false)
+     */
+    fun applyEffect(
+        current: LatticeInterval,
+        node: Node,
+        name: String
+    ): Pair<LatticeInterval, Boolean>
 
     fun getInitializer(node: Node?): Node?
 

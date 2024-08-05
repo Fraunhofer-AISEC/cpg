@@ -97,21 +97,25 @@ sealed class LatticeInterval {
 
     // Widening
     fun widen(other: LatticeInterval): LatticeInterval {
-        if (this !is Bounded || other !is Bounded) {
-            return BOTTOM
+        if (this !is Bounded) {
+            return other
+        } else if (other !is Bounded) {
+            return this
         }
-        val lower: Bound = when {
-            max(this.lower, other.lower) == other.lower -> {
-                this.lower
+        val lower: Bound =
+            when {
+                max(this.lower, other.lower) == other.lower -> {
+                    this.lower
+                }
+                else -> Bound.Value(0)
             }
-            else -> Bound.Value(0)
-        }
-        val upper: Bound = when {
-            max(this.upper, other.upper) == this.upper -> {
-                this.upper
+        val upper: Bound =
+            when {
+                max(this.upper, other.upper) == this.upper -> {
+                    this.upper
+                }
+                else -> Bound.TOP
             }
-            else -> Bound.TOP
-        }
         return Bounded(lower, upper)
     }
 
@@ -120,18 +124,20 @@ sealed class LatticeInterval {
         if (this !is Bounded || other !is Bounded) {
             return BOTTOM
         }
-        val lower: Bound = when {
-            this.lower == Bound.Value(0) -> {
-                other.lower
+        val lower: Bound =
+            when {
+                this.lower == Bound.Value(0) -> {
+                    other.lower
+                }
+                else -> this.lower
             }
-            else -> this.lower
-        }
-        val upper: Bound = when {
-            this.upper == Bound.TOP -> {
-               other.upper
+        val upper: Bound =
+            when {
+                this.upper == Bound.TOP -> {
+                    other.upper
+                }
+                else -> this.upper
             }
-            else -> this.upper
-        }
         return Bounded(lower, upper)
     }
 

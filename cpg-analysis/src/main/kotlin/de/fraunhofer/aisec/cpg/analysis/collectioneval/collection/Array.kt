@@ -36,10 +36,14 @@ import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
-class Array : Collection {
-    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
+class Array<T> : Collection {
+    override fun applyEffect(
+        current: LatticeInterval,
+        node: Node,
+        name: String
+    ): Pair<LatticeInterval, Boolean> {
         // There are no functions that change the size of a Java array without destroying it
-        return current
+        return current to false
     }
 
     override fun getInitializer(node: Node?): Node? {

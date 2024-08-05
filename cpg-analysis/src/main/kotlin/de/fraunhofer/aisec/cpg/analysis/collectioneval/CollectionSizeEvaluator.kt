@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Array
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Collection
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.MutableList
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -39,15 +42,28 @@ class CollectionSizeEvaluator {
     fun evaluate(node: Node): LatticeInterval {
         val name = node.name
         val type = getType(node)
-        // TODO: add check whether node operates on a list -> DFG flow to java.util.List?
         val initializer = getInitializerOf(node, type)!!
         var range = getInitialRange(initializer, type)
-        // TODO: evaluate effect of each operation on the list until we reach "node"
+        // evaluate effect of each operation on the list until we reach "node"
         var current = initializer
+        // TODO: de preprocessing: remove all node types that we do not need
         do {
-            val next = current.nextEOG.first()
-            // TODO: apply each effect only once if EOG branches
-            range = range.applyEffect(next, name.toString(), type)
+            val next: Node
+            if (
+                current is ForStatement ||
+                    current is WhileStatement ||
+                    current is ForEachStatement ||
+                    current is DoStatement
+            ) {
+                // TODO: is there an interface for loop heads?
+                val (lRange, lNext) = handleLoop(range, current, name.toString(), type, node)
+                range = lRange
+                next = lNext
+            } else {
+                // TODO: apply each effect only once if EOG branches (see interface BranchingNode)
+                range = range.applyEffect(current, name.toString(), type).first
+                next = current.nextEOG.first()
+            }
             current = next
         } while (next != node)
 
@@ -66,7 +82,7 @@ class CollectionSizeEvaluator {
         node: Node,
         name: String,
         type: KClass<out Collection>
-    ): LatticeInterval {
+    ): Pair<LatticeInterval, Boolean> {
         return type.createInstance().applyEffect(this, node, name)
     }
 
@@ -76,9 +92,106 @@ class CollectionSizeEvaluator {
         }
         val name = node.type.name.toString()
         return when {
+            // TODO: could be linkedList, arrayList, ...
             name.startsWith("java.util.List") -> MutableList::class
             name.endsWith("[]") -> Array::class
+            else -> MutableList::class // throw NotImplementedException()
+        }
+    }
+
+    private fun handleLoop(
+        range: LatticeInterval,
+        node: Node,
+        name: String,
+        type: KClass<out Collection>,
+        goalNode: Node
+    ): Pair<LatticeInterval, Node> {
+        val afterLoop = node.nextEOG[1]
+        val body: kotlin.Array<Statement>
+        var newRange = range
+        when (node) {
+            is ForStatement -> {
+                body =
+                    when (node.statement) {
+                        is Block -> node.statement.statements.toTypedArray()
+                        null -> arrayOf()
+                        else -> arrayOf(node.statement!!)
+                    }
+            }
+            is WhileStatement -> {
+                body =
+                    when (node.statement) {
+                        is Block -> node.statement.statements.toTypedArray()
+                        null -> arrayOf()
+                        else -> arrayOf(node.statement!!)
+                    }
+            }
+            is ForEachStatement -> {
+                body =
+                    when (node.statement) {
+                        is Block -> node.statement.statements.toTypedArray()
+                        null -> arrayOf()
+                        else -> arrayOf(node.statement!!)
+                    }
+            }
+            is DoStatement -> {
+                body =
+                    when (node.statement) {
+                        is Block -> node.statement.statements.toTypedArray()
+                        null -> arrayOf()
+                        else -> arrayOf(node.statement!!)
+                    }
+            }
             else -> throw NotImplementedException()
         }
+
+        // Initialize the intervals for the previous loop iteration
+        val prevBodyIntervals = Array<LatticeInterval>(body.size) { LatticeInterval.BOTTOM }
+        // WIDENING
+        // TODO: get max amount of iterations for the loop!
+        // TODO: maybe only widen at one point (loop separator) for better results
+        outer@ while (true) {
+            for (index in body.indices) {
+                // First apply the effect
+                val (lRange, effect) = newRange.applyEffect(body[index], name, type)
+                if (effect) {
+                    newRange = lRange
+                    // Then widen using the previous iteration
+                    newRange = prevBodyIntervals[index].widen(newRange)
+                    // If nothing changed we can abort
+                    if (newRange == prevBodyIntervals[index]) {
+                        break@outer
+                    } else {
+                        prevBodyIntervals[index] = newRange
+                    }
+                }
+            }
+        }
+        // NARROWING
+        // TODO: what is the right termination condition?
+        outer@ while (true) {
+            for (index in body.indices) {
+                // First apply the effect
+                val (lRange, effect) = newRange.applyEffect(body[index], name, type)
+                if (effect) {
+                    newRange = lRange
+                    // Then widen using the previous iteration
+                    newRange = prevBodyIntervals[index].narrow(newRange)
+                    // If nothing changed we can abort
+                    if (newRange == prevBodyIntervals[index]) {
+                        break@outer
+                    } else {
+                        prevBodyIntervals[index] = newRange
+                    }
+                }
+            }
+        }
+
+        // return goalNode as next node if it was in the loop to prevent skipping loop termination
+        // condition
+        if (body.contains(goalNode)) {
+            return newRange to goalNode
+        }
+        return newRange to afterLoop
     }
 }

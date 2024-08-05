@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.CollectionSizeEvaluator
+import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
