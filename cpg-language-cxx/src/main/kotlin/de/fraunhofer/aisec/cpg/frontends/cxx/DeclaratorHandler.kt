@@ -311,7 +311,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                                 "Named parameter cannot have void type"
                             )
                         } else {
-                            // specifying void as first parameter is ok and means that the function has
+                            // specifying void as first parameter is ok and means that the function
+                            // has
                             // no parameters
                             if (i == 0) {
                                 continue
@@ -336,8 +337,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             }
 
             // Check for varargs. Note the difference to Java: here, we don't have a named array
-            // containing the varargs, but they are rather treated as kind of an invisible arg list that
-            // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
+            // containing the varargs, but they are rather treated as kind of an invisible arg list
+            // that
+            // is appended to the original ones. For coherent graph behaviour, we introduce an
+            // implicit
             // declaration that wraps this list
             if (ctx.takesVarArgs()) {
                 val varargs = newParameterDeclaration("va_args", unknownType(), true)
@@ -463,14 +466,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 // create an implicit constructor declaration with the same name as the record
                 val constructorDeclaration =
                     newConstructorDeclaration(
-                        recordDeclaration.name.localName,
-                        recordDeclaration,
-                    )
+                            recordDeclaration.name.localName,
+                            recordDeclaration,
+                        )
                         .implicit(code = recordDeclaration.name.localName)
 
                 createMethodReceiver(constructorDeclaration)
 
-                // and set the type, constructors always have implicitly the return type of their class
+                // and set the type, constructors always have implicitly the return type of their
+                // class
                 constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
                 recordDeclaration.addConstructor(constructorDeclaration)
                 frontend.scopeManager.addDeclaration(constructorDeclaration)

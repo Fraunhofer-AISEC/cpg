@@ -107,13 +107,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 cast.castType = frontend.typeOf(node.declSpecifier)
 
                 // The actual expression that is cast is nested in an initializer. We could forward
-                // this to our initializer handler, but this would create a lot of construct expressions
-                // just for simple type casts, which we want to avoid, so we take a shortcut and do a
+                // this to our initializer handler, but this would create a lot of construct
+                // expressions
+                // just for simple type casts, which we want to avoid, so we take a shortcut and do
+                // a
                 // direct unwrapping here.
                 val single =
                     (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
                 cast.expression =
-                    single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
+                    single?.let { handle(it) }
+                        ?: newProblemExpression("could not parse initializer")
             }
             cast
         } else {
@@ -123,7 +126,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (initializer is InitializerListExpression) {
                 val construct = newConstructExpression(rawNode = node)
                 construct.arguments = initializer.initializers.toList()
-                // We have to set the ast Parent manually here because we have to construct the initializer first before inferring if we have to wrap it in a construct expressions
+                // We have to set the ast Parent manually here because we have to construct the
+                // initializer first before inferring if we have to wrap it in a construct
+                // expressions
                 initializer.astParent = construct
                 construct
             } else initializer ?: newProblemExpression("could not parse initializer")
@@ -134,7 +139,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val lambda = newLambdaExpression(rawNode = node)
 
         lambda.withChildren {
-            // Variables passed by reference are mutable. If we have initializers, we have to model the
+            // Variables passed by reference are mutable. If we have initializers, we have to model
+            // the
             // variable explicitly.
             for (capture in node.captures) {
                 if (capture is CPPASTInitCapture) {
@@ -154,18 +160,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
             }
 
-            // By default, the outer variables passed by value to the lambda are immutable. But we can
+            // By default, the outer variables passed by value to the lambda are immutable. But we
+            // can
             // either make the function "mutable" or pass everything by reference.
             lambda.areVariablesMutable =
                 (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
-                        node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
+                    node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
 
             val anonymousFunction =
-                node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
-                    ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
+                node.declarator?.let {
+                    frontend.declaratorHandler.handle(it) as? FunctionDeclaration
+                } ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
             anonymousFunction.type = FunctionType.computeType(anonymousFunction)
 
-            anonymousFunction.withChildren {
+            anonymousFunction.withChildren(true) {
                 anonymousFunction.body = frontend.statementHandler.handle(node.body)
             }
 
@@ -260,9 +268,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 if (init != null) {
                     initializer = frontend.initializerHandler.handle(init)
                 } else {
-                    // in C++, it is possible to omit the `()` part, when creating an object, such as
+                    // in C++, it is possible to omit the `()` part, when creating an object, such
+                    // as
                     // `new A`.
-                    // Therefore, CDT does not have an explicit construct expression, so we need create
+                    // Therefore, CDT does not have an explicit construct expression, so we need
+                    // create
                     // an implicit one
                     initializer =
                         newConstructExpression(t.name.localName)
@@ -270,8 +280,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     initializer.type = t
                 }
 
-                // we also need to "forward" our template parameters (if we have any) to the construct
-                // expression since the construct expression will do the actual template instantiation
+                // we also need to "forward" our template parameters (if we have any) to the
+                // construct
+                // expression since the construct expression will do the actual template
+                // instantiation
                 if (newExpression.templateParameters?.isNotEmpty() == true) {
                     newExpression.templateParameters?.let {
                         addImplicitTemplateParametersToCall(it, initializer as ConstructExpression)
@@ -318,14 +330,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleConditionalExpression(ctx: IASTConditionalExpression): ConditionalExpression {
         val conditionalExpression = newConditionalExpression()
         conditionalExpression.withChildren {
-            it.condition = handle(ctx.logicalConditionExpression)
-                ?: ProblemExpression("could not parse condition expression")
-            it.thenExpression = if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression) else it.condition
+            it.condition =
+                handle(ctx.logicalConditionExpression)
+                    ?: ProblemExpression("could not parse condition expression")
+            it.thenExpression =
+                if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
+                else it.condition
             it.elseExpression = handle(ctx.negativeResultExpression)
         }
-            
-        return conditionalExpression
 
+        return conditionalExpression
     }
 
     private fun handleDeleteExpression(ctx: CPPASTDeleteExpression): DeleteExpression {
@@ -333,9 +347,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (name in ctx.implicitDestructorNames) {
             log.debug("Implicit constructor name {}", name)
         }
-        deleteExpression.withChildren {
-            deleteExpression.operand = handle(ctx.operand)
-        }
+        deleteExpression.withChildren { deleteExpression.operand = handle(ctx.operand) }
         return deleteExpression
     }
 
@@ -363,23 +375,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleFieldReference(ctx: IASTFieldReference): Expression {
         // We need some special handling for templates (of course). Since we only want the basic
         // name without any arguments as a name
-        val memberExpression = newMemberExpression(
-            if (ctx.fieldName is CPPASTTemplateId) {
-                (ctx.fieldName as CPPASTTemplateId).templateName.toString()
-            } else {
-                ctx.fieldName.toString()
-            },
-            memberType = unknownType(),
-            operatorCode = if (ctx.isPointerDereference) "->" else ".",
-            rawNode = ctx
-        )
+        val memberExpression =
+            newMemberExpression(
+                if (ctx.fieldName is CPPASTTemplateId) {
+                    (ctx.fieldName as CPPASTTemplateId).templateName.toString()
+                } else {
+                    ctx.fieldName.toString()
+                },
+                memberType = unknownType(),
+                operatorCode = if (ctx.isPointerDereference) "->" else ".",
+                rawNode = ctx
+            )
         var base: Expression? = null
-        memberExpression.withChildren {
-            base = handle(ctx.fieldOwner)
-        }
-        if(base == null){
+        memberExpression.withChildren { base = handle(ctx.fieldOwner) }
+        if (base == null) {
             return newProblemExpression("base of field is null")
-        }else{
+        } else {
             memberExpression.base = base as Expression
         }
         return memberExpression
@@ -407,13 +418,21 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // something similar, we want to keep the information that this is an expression
                 // wrapped in parentheses. The best way to do this is to create a unary expression
                 if (ctx.operand is IASTIdExpression && ctx.parent !is IASTFunctionCallExpression) {
-                    unaryOperator = newUnaryOperator("()", postfix = true, prefix = true, rawNode = ctx)
+                    unaryOperator =
+                        newUnaryOperator("()", postfix = true, prefix = true, rawNode = ctx)
+                            .withChildren {
+                                if (ctx.operand != null) {
+                                    it.input = handle(ctx.operand) ?: it.input
+                                }
+                            }
+
+                    return unaryOperator
                 }
 
                 // In all other cases, e.g., if the parenthesis is nested or part of a function
                 // call, we just return the unwrapped expression, because in this case we do not
                 // need to information about the parenthesis.
-                return input as Expression
+                return handle(ctx.operand) as Expression
             }
             IASTUnaryExpression.op_throw -> operatorCode = "throw"
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
@@ -424,7 +443,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             else ->
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
-        if(unaryOperator == null){
+        if (unaryOperator == null) {
             unaryOperator =
                 newUnaryOperator(
                     operatorCode,
@@ -509,7 +528,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // Important: we don't really need the reference node, but even its temporary creation might
         // leave unwanted artifacts behind in the final graph!
         reference?.disconnectFromGraph()
-        // Unfortunately when the construction of the parent depends on the type of children, we have to set the parent manully
+        // Unfortunately when the construction of the parent depends on the type of children, we
+        // have to set the parent manully
         callExpression.astChildren.forEach { it.astParent = callExpression }
 
         return callExpression
@@ -765,8 +785,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCXXDesignatedInitializer(ctx: CPPASTDesignatedInitializer): Expression {
 
-
-
         // We need to check the first designator first
         val des = ctx.designators.firstOrNull()
         if (des == null) {
@@ -781,7 +799,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     as? IASTDeclarator)
                 ?.name
                 .toString()
-        var ref:Reference?= null
+        var ref: Reference? = null
 
         val assignExpression = newAssignExpression(rawNode = ctx)
 
@@ -797,17 +815,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         sub
                     }
                     is CPPASTFieldDesignator -> {
-                        // Then we loop through all designators and chain them. Only field designators
+                        // Then we loop through all designators and chain them. Only field
+                        // designators
                         // can be chained in this way
                         for (field in
-                        ctx.designators.toList().filterIsInstance<CPPASTFieldDesignator>()) {
+                            ctx.designators.toList().filterIsInstance<CPPASTFieldDesignator>()) {
                             // the old ref is our new base
                             ref = newMemberExpression(field.name.toString(), rawNode = field)
                             (ref as MemberExpression).withChildren {
                                 it.base = newReference(baseName)
                             }
                         }
-                        ref?:newReference(baseName)
+                        ref ?: newReference(baseName)
                     }
                     else -> {
                         Util.errorWithFileLocation(
@@ -873,18 +892,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         sub
                     }
                     is CASTFieldDesignator -> {
-                        // Then we loop through all designators and chain them. Only field designators
+                        // Then we loop through all designators and chain them. Only field
+                        // designators
                         // can be chained in this way
                         var ref: Reference? = null
                         for (field in
-                        ctx.designators.toList().filterIsInstance<CASTFieldDesignator>()) {
+                            ctx.designators.toList().filterIsInstance<CASTFieldDesignator>()) {
                             // the old ref is our new base
                             ref = newMemberExpression(field.name.toString(), rawNode = field)
-                            ref.withChildren {
-                                ref.base = newReference(baseName)
-                            }
+                            ref.withChildren { ref.base = newReference(baseName) }
                         }
-                        ref?: newReference(baseName)
+                        ref ?: newReference(baseName)
                     }
                     else -> {
                         Util.errorWithFileLocation(
@@ -915,7 +933,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // The only supported initializer is an initializer list
             (ctx.initializer as? IASTInitializerList)?.let {
                 construct.arguments =
-                    it.clauses.map { handle(it) ?: newProblemExpression("could not parse argument") }
+                    it.clauses.map {
+                        handle(it) ?: newProblemExpression("could not parse argument")
+                    }
             }
         }
 

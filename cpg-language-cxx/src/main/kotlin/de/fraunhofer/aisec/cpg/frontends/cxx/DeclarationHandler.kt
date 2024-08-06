@@ -196,10 +196,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Enter the scope of our function
         declaration.withChildren(true) {
-            // Since this is a definition, the body should always be there, but we need to make sure in
+            // Since this is a definition, the body should always be there, but we need to make sure
+            // in
             // case of parsing errors.
             if (ctx.body != null) {
-                // Let the statement handler take care of the function body. The outcome should (always)
+                // Let the statement handler take care of the function body. The outcome should
+                // (always)
                 // be a compound statement, holding all other statements.
                 val bodyStatement = frontend.statementHandler.handle(ctx.body)
                 if (bodyStatement is Block) {
@@ -417,7 +419,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (primaryDeclaration, useNameOfDeclarator) =
             handleDeclarationSpecifier(declSpecifier, ctx, sequence)
 
-        // Todo These are added to the declarators instead of the declaration, those however are created afterwards and
+        // Todo These are added to the declarators instead of the declaration, those however are
+        // created afterwards and
         // Todo therefore have no astParent, we need to solve this.
         // Fill template params, if needed
         val templateParams: List<Node>? = extractTemplateParams(ctx, declSpecifier)
@@ -489,8 +492,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         declarator.initializer?.let {
                             val initializer = frontend.initializerHandler.handle(it)
                             when {
-                                // We need to set a resolution "helper" for function pointers, so that a
-                                // reference to this declaration can resolve the function pointer (using
+                                // We need to set a resolution "helper" for function pointers, so
+                                // that a
+                                // reference to this declaration can resolve the function pointer
+                                // (using
                                 // the type of this declaration). The typical (and only) scenario we
                                 // support here is the assignment of a `&ref` as initializer.
                                 initializer is UnaryOperator && type is FunctionPointerType -> {
@@ -721,7 +726,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         node.withChildren {
             // There might have been errors in the previous translation unit and in any case
-            // we need to reset the scope manager scope to global, to avoid spilling scope errors into
+            // we need to reset the scope manager scope to global, to avoid spilling scope errors
+            // into
             // other translation units
             frontend.scopeManager.resetToGlobal(node)
             frontend.currentTU = node
@@ -762,7 +768,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         node: TranslationUnitDeclaration
     ) {
         // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.
-        // TODO: Remark KW: Yes, indeed, we should also investigate why include declarations have other include declarations
+        // TODO: Remark KW: Yes, indeed, we should also investigate why include declarations have
+        // other include declarations
         // Probably needs to be refactored
 
         // this tree is a bit problematic: If a file was already included before, it will not be

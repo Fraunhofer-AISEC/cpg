@@ -60,7 +60,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 for (parameter in lambdaExpr.parameters) {
                     val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
                     val param =
-                        newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
+                        newParameterDeclaration(
+                            parameter.nameAsString,
+                            resolvedType,
+                            parameter.isVarArgs
+                        )
                     anonymousFunction.addParameter(param)
                     frontend.processAnnotations(param, parameter)
                     frontend.scopeManager.addDeclaration(param)
@@ -85,14 +89,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         castExpression.withChildren {
             val expression =
                 handle(castExpr.expression)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                     ?: newProblemExpression("could not parse expression")
             it.expression = expression
             it.setCastOperator(2)
             val t = frontend.getTypeAsGoodAsPossible(castExpr.type)
             it.castType = t
             if (castExpr.type.isPrimitiveType) {
-                // Set Type based on the Casting type as it will result in a conversion for primitive
+                // Set Type based on the Casting type as it will result in a conversion for
+                // primitive
                 // types
                 it.type = frontend.typeOf(castExpr.type.resolve().asPrimitive())
             } else {
@@ -125,7 +130,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             // dimensions are only present if you specify them explicitly, such as new int[1]
             for (lvl in arrayCreationExpr.levels) {
                 lvl.dimension.ifPresent {
-                    (handle(it) as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
+                    (handle(it)
+                            as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
                         ?.let { creationExpression.addDimension(it) }
                 }
             }
@@ -204,14 +210,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         conditionExpression.withChildren {
             it.condition =
                 handle(conditionalExpr.condition)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                     ?: newProblemExpression("Could not parse condition")
             it.thenExpression =
                 handle(conditionalExpr.thenExpr)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
             it.elseExpression =
                 handle(conditionalExpr.elseExpr)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
         }
         return conditionExpression
     }
@@ -219,23 +225,24 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleAssignmentExpression(expr: Expression): AssignExpression {
         val assignExpr = expr.asAssignExpr()
 
-        val assign = newAssignExpression(
-            assignExpr.operator.asString(),
-            rawNode = assignExpr
-        )
+        val assign = newAssignExpression(assignExpr.operator.asString(), rawNode = assignExpr)
 
         assign.withChildren {
             // first, handle the target. this is the first argument of the operator call
-            it.lhs = listOf(
-                handle(assignExpr.target)
+            it.lhs =
+                listOf(
+                    handle(assignExpr.target)
                         as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                    ?: newProblemExpression("could not parse lhs"))
+                        ?: newProblemExpression("could not parse lhs")
+                )
 
             // second, handle the value. this is the second argument of the operator call
-            it.rhs = listOf(
-                handle(assignExpr.value)
+            it.rhs =
+                listOf(
+                    handle(assignExpr.value)
                         as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                    ?: newProblemExpression("could not parse lhs"))
+                        ?: newProblemExpression("could not parse lhs")
+                )
         }
 
         return assign
@@ -299,12 +306,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 }
             isStaticAccess = true
         }
-        memberExpression = newMemberExpression(
-            fieldAccessExpr.name.identifier,
-            memberType = fieldType?:unknownType(),
-            operatorCode = ".",
-            rawNode = expr
-        )
+        memberExpression =
+            newMemberExpression(
+                fieldAccessExpr.name.identifier,
+                memberType = fieldType ?: unknownType(),
+                operatorCode = ".",
+                rawNode = expr
+            )
         memberExpression.isStaticAccess = isStaticAccess
 
         memberExpression.withChildren {
@@ -374,11 +382,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base.isStaticAccess = isStaticAccess
             } else if (scope.isFieldAccessExpr) {
                 base =
-                    handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    handle(scope)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                         ?: newProblemExpression("Could not parse base")
                 var tester = base
                 while (tester is MemberExpression) {
-                    // we need to check if any base is only a static access, otherwise, this is a member
+                    // we need to check if any base is only a static access, otherwise, this is a
+                    // member
                     // access
                     // to this base
                     tester = tester.base
@@ -402,12 +412,17 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                             unknownType()
                         }
                     base =
-                        newReference(scope.asFieldAccessExpr().nameAsString, baseType, rawNode = scope)
+                        newReference(
+                            scope.asFieldAccessExpr().nameAsString,
+                            baseType,
+                            rawNode = scope
+                        )
                     base.isStaticAccess = true
                 }
             } else {
                 base =
-                    handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    handle(scope)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                         ?: newProblemExpression("Could not parse base")
             }
             if (base.location == null) {
@@ -648,12 +663,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 unaryExpr.isPrefix,
                 rawNode = unaryExpr
             )
-        unaryOperator.withChildren {         // handle the 'inner' expression, which is affected by the unary expression
-            unaryOperator.input =
-                handle(unaryExpr.expression)
+        unaryOperator
+            .withChildren { // handle the 'inner' expression, which is affected by the unary
+                // expression
+                unaryOperator.input =
+                    handle(unaryExpr.expression)
                         as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                    ?: newProblemExpression("could not parse input")
-        }
+                        ?: newProblemExpression("could not parse input")
+            }
         return unaryOperator
     }
 
@@ -664,13 +681,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             // first, handle the target. this is the first argument of the operator call
             binaryOperator.lhs =
                 handle(binaryExpr.left)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                     ?: newProblemExpression("could not parse lhs")
 
             // second, handle the value. this is the second argument of the operator call
             binaryOperator.rhs =
                 handle(binaryExpr.right)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                     ?: newProblemExpression("could not parse rhs")
         }
 
@@ -708,7 +725,6 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             isStatic = true
         }
 
-
         callExpression = newMemberCallExpression(isStatic = isStatic, rawNode = expr)
         callExpression.type = typeString?.let { this.objectType(it) } ?: unknownType()
 
@@ -719,7 +735,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             if (o.isPresent) {
                 val scope = o.get()
                 base =
-                    handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    handle(scope)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                         ?: newProblemExpression("Could not parse base")
 
                 // If the base directly refers to a record, then this is a static call
@@ -747,9 +764,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     baseType = this.objectType(baseName ?: Type.UNKNOWN_TYPE_STRING)
                     base = newReference(baseName, baseType)
                 } else {
-                    // Since it is possible to omit the "this" keyword, some methods in java do not have
+                    // Since it is possible to omit the "this" keyword, some methods in java do not
+                    // have
                     // a base.
-                    // However, they are still scoped to the local class, meaning we should insert an
+                    // However, they are still scoped to the local class, meaning we should insert
+                    // an
                     // implicit
                     // "this" reference, to make the life for our call resolver easier.
                     base = createImplicitThis()
@@ -763,7 +782,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             for (i in arguments.indices) {
                 val argument =
                     handle(arguments[i])
-                            as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                 argument?.argumentIndex = i
                 callExpression.addArgument(
                     argument ?: newProblemExpression("Could not parse the argument")
@@ -815,18 +834,21 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 for (i in arguments.indices) {
                     val argument =
                         handle(arguments[i])
-                                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression ?: continue
+                            as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                            ?: continue
                     argument.argumentIndex = i
                     ctor.addArgument(argument)
                 }
                 newExpression.initializer = ctor
 
                 if (objectCreationExpr.anonymousClassBody.isPresent) {
-                    // We have an anonymous class and will create a RecordDeclaration for it and add all the
+                    // We have an anonymous class and will create a RecordDeclaration for it and add
+                    // all the
                     // implemented methods.
                     val locationHash = frontend.locationOf(objectCreationExpr)?.hashCode()
 
-                    // We use the hash of the location to distinguish multiple instances of the anonymous
+                    // We use the hash of the location to distinguish multiple instances of the
+                    // anonymous
                     // class' superclass
                     val anonymousClassName = "$constructorName$locationHash"
                     val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
@@ -836,7 +858,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         anonymousRecord.addSuperClass(objectType(constructorName))
                         val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
                         for (classBody in anonymousClassBody) {
-                            // Whatever is implemented in the anonymous class has to be added to the record
+                            // Whatever is implemented in the anonymous class has to be added to the
+                            // record
                             // declaration
                             val classBodyDecl = frontend.declarationHandler.handle(classBody)
                             classBodyDecl?.let { anonymousRecord.addDeclaration(it) }
@@ -845,9 +868,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         if (anonymousRecord.constructors.isEmpty()) {
                             val constructorDeclaration =
                                 newConstructorDeclaration(
-                                    anonymousRecord.name.localName,
-                                    anonymousRecord,
-                                )
+                                        anonymousRecord.name.localName,
+                                        anonymousRecord,
+                                    )
                                     .implicit(anonymousRecord.name.localName)
 
                             ctor.arguments.forEachIndexed { i, arg ->

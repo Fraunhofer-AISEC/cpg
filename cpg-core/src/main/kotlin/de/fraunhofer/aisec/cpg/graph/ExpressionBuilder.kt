@@ -308,7 +308,7 @@ fun MetadataProvider.newMemberExpression(
     val node = MemberExpression()
     node.applyMetadata(this, name, rawNode, true)
 
-    base?.let {  node.base = it }
+    base?.let { node.base = it }
     node.operatorCode = operatorCode
     node.type = memberType
 

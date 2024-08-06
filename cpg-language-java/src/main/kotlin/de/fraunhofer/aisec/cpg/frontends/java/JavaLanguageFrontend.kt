@@ -130,9 +130,10 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     currentNodeWithChildren = namespaceDeclaration
                 }
 
-                currentNodeWithChildren.withChildren(namespaceDeclaration != null){
+                currentNodeWithChildren.withChildren(namespaceDeclaration != null) {
                     for (type in context?.types ?: listOf()) {
-                        // handle each type. all declaration in this type will be added by the scope manager
+                        // handle each type. all declaration in this type will be added by the scope
+                        // manager
                         // along
                         // the way
                         val declaration = declarationHandler.handle(type)
@@ -144,7 +145,6 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         scopeManager.addDeclaration(incl)
                     }
                 }
-
             }
             bench.addMeasurement()
             fileDeclaration
@@ -457,11 +457,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 // annotations can be specified as member / value pairs
                 if (expr.isNormalAnnotationExpr) {
                     for (pair in expr.asNormalAnnotationExpr().pairs) {
-                        val member =
-                            newAnnotationMember(
-                                pair.nameAsString,
-                                rawNode = pair.value
-                            )
+                        val member = newAnnotationMember(pair.nameAsString, rawNode = pair.value)
                         member.withChildren {
                             it.value = expressionHandler.handle(pair.value) as Expression
                         }
@@ -470,12 +466,9 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 } else if (expr.isSingleMemberAnnotationExpr) {
                     val value = expr.asSingleMemberAnnotationExpr().memberValue
                     if (value != null) {
-                        // or as a literal. in this case it is assigned to the annotation member 'value'
-                        val member =
-                            newAnnotationMember(
-                                ANNOTATION_MEMBER_VALUE,
-                                rawNode = value
-                            )
+                        // or as a literal. in this case it is assigned to the annotation member
+                        // 'value'
+                        val member = newAnnotationMember(ANNOTATION_MEMBER_VALUE, rawNode = value)
                         member.withChildren {
                             it.value = expressionHandler.handle(value) as Expression
                         }

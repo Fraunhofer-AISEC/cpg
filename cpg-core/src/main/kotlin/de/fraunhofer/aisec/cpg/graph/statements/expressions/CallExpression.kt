@@ -92,7 +92,8 @@ open class CallExpression : Expression(), HasType.TypeObserver, ArgumentHolder {
      * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
-    @AST var callee: Expression? = null
+    @AST
+    var callee: Expression? = null
         set(value) {
             field = value
             // Set the call expression as resolution helper for the callee

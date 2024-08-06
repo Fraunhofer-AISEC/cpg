@@ -71,7 +71,8 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         val paramVariableDeclaration = newParameterDeclaration(name, type, false, rawNode = ctx)
 
         paramVariableDeclaration.withChildren {
-            // We cannot really model "const" as part of the type, but we can model it as part of the
+            // We cannot really model "const" as part of the type, but we can model it as part of
+            // the
             // parameter, so we can use it later
             if (ctx.declSpecifier.isConst) {
                 paramVariableDeclaration.modifiers += CONST

@@ -142,7 +142,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 frontend.processAnnotations(param, parameter)
                 frontend.scopeManager.addDeclaration(param)
             }
-            val returnTypes = listOf(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
+            val returnTypes =
+                listOf(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
             functionDeclaration.returnTypes = returnTypes
             val type = computeType(functionDeclaration)
             functionDeclaration.type = type
@@ -292,7 +293,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     variable.initializer
                         .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                         .orElse(null)
-                            as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             }
             frontend.scopeManager.addDeclaration(fieldDeclaration)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
@@ -319,7 +320,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             entries.forEach { it.type = this.objectType(enumDeclaration.name) }
             enumDeclaration.entries = entries
         }
-
 
         if (frontend.scopeManager.currentScope is RecordScope) {
             // We need special handling if this is a so called "inner class". In this case we need
@@ -469,7 +469,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             declaration.withChildren {
                 val initializer =
                     frontend.expressionHandler.handle(oInitializer.get())
-                            as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
                 if (initializer is NewArrayExpression) {
                     declaration.isArray = true
                 }

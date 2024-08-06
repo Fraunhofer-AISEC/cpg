@@ -92,67 +92,72 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): TryStatement {
-        val tryStatement = newTryStatement().withChildren(true) {
-            val statement = handle(tryBlockStatement.tryBody) as Block?
-            val catchClauses =
-                Arrays.stream(tryBlockStatement.catchHandlers)
-                    .map { handleCatchHandler(it) }
-                    .collect(Collectors.toList())
-            it.tryBlock = statement
-            it.catchClauses = catchClauses
-        }
+        val tryStatement =
+            newTryStatement().withChildren(true) {
+                val statement = handle(tryBlockStatement.tryBody) as Block?
+                val catchClauses =
+                    Arrays.stream(tryBlockStatement.catchHandlers)
+                        .map { handleCatchHandler(it) }
+                        .collect(Collectors.toList())
+                it.tryBlock = statement
+                it.catchClauses = catchClauses
+            }
         return tryStatement
     }
 
     private fun handleCatchHandler(catchHandler: ICPPASTCatchHandler): CatchClause {
-        val catchClause = newCatchClause(rawNode = catchHandler).withChildren(true) {
-            val body = frontend.statementHandler.handle(catchHandler.catchBody)
+        val catchClause =
+            newCatchClause(rawNode = catchHandler).withChildren(true) {
+                val body = frontend.statementHandler.handle(catchHandler.catchBody)
 
-            // TODO: can also be an 'unnamed' parameter. In this case we should not declare a variable
-            var decl: Declaration? = null
-            if (catchHandler.declaration != null) { // can be null for "catch(...)"
-                decl = frontend.declarationHandler.handle(catchHandler.declaration)
+                // TODO: can also be an 'unnamed' parameter. In this case we should not declare a
+                // variable
+                var decl: Declaration? = null
+                if (catchHandler.declaration != null) { // can be null for "catch(...)"
+                    decl = frontend.declarationHandler.handle(catchHandler.declaration)
+                }
+
+                it.body = body as? Block
+
+                if (decl != null) {
+                    it.parameter = decl as? VariableDeclaration
+                }
             }
-
-            it.body = body as? Block
-
-            if (decl != null) {
-                it.parameter = decl as? VariableDeclaration
-            }
-        }
         return catchClause
     }
 
     private fun handleIfStatement(ctx: IASTIfStatement): IfStatement {
-        val statement = newIfStatement(rawNode = ctx).withChildren(true) {
-            // We need some special treatment for C++ IfStatements
-            if (ctx is CPPASTIfStatement) {
-                if (ctx.initializerStatement != null) {
-                    it.initializerStatement = handle(ctx.initializerStatement)
-                }
-                if (ctx.conditionDeclaration != null) {
-                    it.conditionDeclaration =
-                        frontend.declarationHandler.handle(ctx.conditionDeclaration)
+        val statement =
+            newIfStatement(rawNode = ctx).withChildren(true) {
+                // We need some special treatment for C++ IfStatements
+                if (ctx is CPPASTIfStatement) {
+                    if (ctx.initializerStatement != null) {
+                        it.initializerStatement = handle(ctx.initializerStatement)
+                    }
+                    if (ctx.conditionDeclaration != null) {
+                        it.conditionDeclaration =
+                            frontend.declarationHandler.handle(ctx.conditionDeclaration)
+                    }
+
+                    it.isConstExpression = ctx.isConstexpr
                 }
 
-                it.isConstExpression = ctx.isConstexpr
+                if (ctx.conditionExpression != null)
+                    it.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
+                it.thenStatement = handle(ctx.thenClause)
+                if (ctx.elseClause != null) {
+                    it.elseStatement = handle(ctx.elseClause)
+                }
             }
-
-            if (ctx.conditionExpression != null)
-                it.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
-            it.thenStatement = handle(ctx.thenClause)
-            if (ctx.elseClause != null) {
-                it.elseStatement = handle(ctx.elseClause)
-            }
-        }
 
         return statement
     }
 
     private fun handleLabelStatement(ctx: IASTLabelStatement): LabelStatement {
-        val statement = newLabelStatement(rawNode = ctx).withChildren {
-            it.subStatement = handle(ctx.nestedStatement)
-        }
+        val statement =
+            newLabelStatement(rawNode = ctx).withChildren {
+                it.subStatement = handle(ctx.nestedStatement)
+            }
         statement.label = ctx.name.toString()
         return statement
     }
@@ -183,74 +188,79 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleWhileStatement(ctx: IASTWhileStatement): WhileStatement {
-        val statement = newWhileStatement(rawNode = ctx).withChildren(true) {
-            // Special treatment for C++ while
-            if (ctx is CPPASTWhileStatement && ctx.conditionDeclaration != null) {
-                it.conditionDeclaration =
-                    frontend.declarationHandler.handle(ctx.conditionDeclaration)
-            }
+        val statement =
+            newWhileStatement(rawNode = ctx).withChildren(true) {
+                // Special treatment for C++ while
+                if (ctx is CPPASTWhileStatement && ctx.conditionDeclaration != null) {
+                    it.conditionDeclaration =
+                        frontend.declarationHandler.handle(ctx.conditionDeclaration)
+                }
 
-            if (ctx.condition != null) {
-                it.condition = frontend.expressionHandler.handle(ctx.condition)
-            }
+                if (ctx.condition != null) {
+                    it.condition = frontend.expressionHandler.handle(ctx.condition)
+                }
 
-            it.statement = handle(ctx.body)
-        }
+                it.statement = handle(ctx.body)
+            }
 
         return statement
     }
 
     private fun handleDoStatement(ctx: IASTDoStatement): DoStatement {
-        val statement = newDoStatement(rawNode = ctx).withChildren {
-            it.condition = frontend.expressionHandler.handle(ctx.condition)
-            it.statement = handle(ctx.body)
-        }
+        val statement =
+            newDoStatement(rawNode = ctx).withChildren(true) {
+                it.condition = frontend.expressionHandler.handle(ctx.condition)
+                it.statement = handle(ctx.body)
+            }
         return statement
     }
 
     private fun handleForStatement(ctx: IASTForStatement): ForStatement {
-        val statement = newForStatement(rawNode = ctx).withChildren(true) {
-            it.initializerStatement = handle(ctx.initializerStatement)
+        val statement =
+            newForStatement(rawNode = ctx).withChildren(true) {
+                it.initializerStatement = handle(ctx.initializerStatement)
 
-            // Special treatment for C++ while
-            if (ctx is CPPASTForStatement && ctx.conditionDeclaration != null) {
-                it.conditionDeclaration =
-                    frontend.declarationHandler.handle(ctx.conditionDeclaration)
+                // Special treatment for C++ while
+                if (ctx is CPPASTForStatement && ctx.conditionDeclaration != null) {
+                    it.conditionDeclaration =
+                        frontend.declarationHandler.handle(ctx.conditionDeclaration)
+                }
+
+                if (ctx.conditionExpression != null) {
+                    it.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
+                }
+
+                // Adds true expression node where default empty condition evaluates to true, remove
+                // here
+                // and in java StatementAnalyzer
+                if (it.conditionDeclaration == null && it.condition == null) {
+                    val literal: Literal<*> =
+                        newLiteral(true, primitiveType("bool")).implicit(code = "true")
+                    it.condition = literal
+                }
+
+                if (ctx.iterationExpression != null) {
+                    it.iterationStatement =
+                        frontend.expressionHandler.handle(ctx.iterationExpression)
+                }
+
+                it.statement = handle(ctx.body)
             }
-
-            if (ctx.conditionExpression != null) {
-                it.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
-            }
-
-            // Adds true expression node where default empty condition evaluates to true, remove here
-            // and in java StatementAnalyzer
-            if (it.conditionDeclaration == null && it.condition == null) {
-                val literal: Literal<*> =
-                    newLiteral(true, primitiveType("bool")).implicit(code = "true")
-                it.condition = literal
-            }
-
-            if (ctx.iterationExpression != null) {
-                it.iterationStatement =
-                    frontend.expressionHandler.handle(ctx.iterationExpression)
-            }
-
-            it.statement = handle(ctx.body)
-        }
 
         return statement
     }
 
     private fun handleForEachStatement(ctx: CPPASTRangeBasedForStatement): ForEachStatement {
-        val statement = newForEachStatement(rawNode = ctx).withChildren(true) {
-            val decl = frontend.declarationHandler.handle(ctx.declaration)
-            val `var` = newDeclarationStatement()
-            `var`.singleDeclaration = decl
-            val iterable: Statement? = frontend.expressionHandler.handle(ctx.initializerClause)
-            it.variable = `var`
-            it.iterable = iterable
-            it.statement = handle(ctx.body)
-        }
+        val statement =
+            newForEachStatement(rawNode = ctx).withChildren(true) {
+                val decl = frontend.declarationHandler.handle(ctx.declaration)
+                val `var` = newDeclarationStatement()
+                `var`.singleDeclaration = decl
+                val iterable: Statement? = frontend.expressionHandler.handle(ctx.initializerClause)
+                it.variable = `var`
+                it.iterable = iterable
+                it.statement = handle(ctx.body)
+            }
         return statement
     }
 
@@ -278,68 +288,73 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             //  frontend for sub-block if available
             newDistinctLanguageBlock(rawNode = ctx)
         } else {
-            val declarationStatement = newDeclarationStatement(rawNode = ctx).withChildren {
-                val declaration = frontend.declarationHandler.handle(ctx.declaration)
-                if (declaration is DeclarationSequence) {
-                    it.declarations = declaration.asList()
-                } else {
-                    it.singleDeclaration = declaration
+            val declarationStatement =
+                newDeclarationStatement(rawNode = ctx).withChildren {
+                    val declaration = frontend.declarationHandler.handle(ctx.declaration)
+                    if (declaration is DeclarationSequence) {
+                        it.declarations = declaration.asList()
+                    } else {
+                        it.singleDeclaration = declaration
+                    }
                 }
-            }
             declarationStatement
         }
     }
 
     private fun handleReturnStatement(ctx: IASTReturnStatement): ReturnStatement {
-        val returnStatement = newReturnStatement(rawNode = ctx).withChildren {
-            // Parse the return value
-            if (ctx.returnValue != null) {
-                it.returnValue = frontend.expressionHandler.handle(ctx.returnValue)
+        val returnStatement =
+            newReturnStatement(rawNode = ctx).withChildren {
+                // Parse the return value
+                if (ctx.returnValue != null) {
+                    it.returnValue = frontend.expressionHandler.handle(ctx.returnValue)
+                }
             }
-        }
         return returnStatement
     }
 
     private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
-        val block = newBlock(rawNode = ctx).withChildren(true){
-            for (statement in ctx.statements) {
-                val handled = handle(statement)
-                if (handled != null) {
-                    it.addStatement(handled)
+        val block =
+            newBlock(rawNode = ctx).withChildren(true) {
+                for (statement in ctx.statements) {
+                    val handled = handle(statement)
+                    if (handled != null) {
+                        it.addStatement(handled)
+                    }
                 }
             }
-        }
 
         return block
     }
 
     private fun handleSwitchStatement(ctx: IASTSwitchStatement): SwitchStatement {
-        val switchStatement = newSwitchStatement(rawNode = ctx).withChildren(true) {
-            // Special treatment for C++ switch
-            if (ctx is CPPASTSwitchStatement) {
-                if (ctx.initializerStatement != null) {
-                    it.initializerStatement = handle(ctx.initializerStatement)
+        val switchStatement =
+            newSwitchStatement(rawNode = ctx).withChildren(true) {
+                // Special treatment for C++ switch
+                if (ctx is CPPASTSwitchStatement) {
+                    if (ctx.initializerStatement != null) {
+                        it.initializerStatement = handle(ctx.initializerStatement)
+                    }
+                    if (ctx.controllerDeclaration != null) {
+                        it.selectorDeclaration =
+                            frontend.declarationHandler.handle(ctx.controllerDeclaration)
+                    }
                 }
-                if (ctx.controllerDeclaration != null) {
-                    it.selectorDeclaration =
-                        frontend.declarationHandler.handle(ctx.controllerDeclaration)
+
+                if (ctx.controllerExpression != null) {
+                    it.selector = frontend.expressionHandler.handle(ctx.controllerExpression)
                 }
-            }
 
-            if (ctx.controllerExpression != null) {
-                it.selector = frontend.expressionHandler.handle(ctx.controllerExpression)
+                it.statement = handle(ctx.body)
             }
-
-            it.statement = handle(ctx.body)
-        }
 
         return switchStatement
     }
 
     private fun handleCaseStatement(ctx: IASTCaseStatement): CaseStatement {
-        val caseStatement = newCaseStatement(rawNode = ctx).withChildren {
-            it.caseExpression = frontend.expressionHandler.handle(ctx.expression)
-        }
+        val caseStatement =
+            newCaseStatement(rawNode = ctx).withChildren {
+                it.caseExpression = frontend.expressionHandler.handle(ctx.expression)
+            }
         return caseStatement
     }
 

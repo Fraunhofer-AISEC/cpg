@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
@@ -415,19 +414,20 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         val code = String(token.tokenCharImage)
         val annotationMember = newAnnotationMember("", rawNode = token)
         annotationMember.withChildren {
-            it.value = when (token.tokenType) {
-                1 -> // a variable
+            it.value =
+                when (token.tokenType) {
+                    1 -> // a variable
                     newReference(code, unknownType(), rawNode = token)
-                2 -> // an integer
+                    2 -> // an integer
                     newLiteral(code.toInt(), primitiveType("int"), rawNode = token)
-                130 -> // a string
+                    130 -> // a string
                     newLiteral(
-                        if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                        primitiveType("char").pointer(),
-                        rawNode = token
-                    )
-                else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
-            }
+                            if (code.length >= 2) code.substring(1, code.length - 1) else "",
+                            primitiveType("char").pointer(),
+                            rawNode = token
+                        )
+                    else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
+                }
         }
 
         return annotationMember

@@ -83,7 +83,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             this.newUnaryOperator("throw", postfix = false, prefix = true, rawNode = stmt)
         throwOperation.withChildren {
             throwOperation.input =
-            frontend.expressionHandler.handle(throwStmt.expression)
+                frontend.expressionHandler.handle(throwStmt.expression)
                     as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         return throwOperation
@@ -105,7 +105,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 // handle the expression as the first argument
                 expression =
                     frontend.expressionHandler.handle(expr)
-                            as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             }
 
             // expressionRefersToDeclaration to arguments, if there are any
@@ -124,7 +124,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             ifStatement.thenStatement = handle(thenStatement)
             ifStatement.condition =
                 frontend.expressionHandler.handle(conditionExpression)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
         }
         return ifStatement
@@ -138,7 +138,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         assertStatement.withChildren {
             assertStatement.condition =
                 frontend.expressionHandler.handle(conditionExpression)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             thenStatement.ifPresent {
                 assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
             }
@@ -151,11 +151,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val conditionExpression = whileStmt.condition
         val statement = whileStmt.body
         val whileStatement = newWhileStatement(rawNode = stmt)
-        whileStatement.withChildren(true){
+        whileStatement.withChildren(true) {
             whileStatement.statement = handle(statement)
             whileStatement.condition =
                 frontend.expressionHandler.handle(conditionExpression)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         return whileStatement
     }
@@ -204,10 +204,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             forStmt.compare.ifPresent { condition: Expression ->
                 statement.condition =
                     frontend.expressionHandler.handle(condition)
-                            as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             }
 
-            // Adds true expression node where default empty condition evaluates to true, remove here
+            // Adds true expression node where default empty condition evaluates to true, remove
+            // here
             // and in cpp StatementHandler
             if (statement.condition == null) {
                 val literal: Literal<*> =
@@ -250,7 +251,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             doStatement.statement = handle(statement)
             doStatement.condition =
                 frontend.expressionHandler.handle(conditionExpression)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         return doStatement
     }
@@ -264,7 +265,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val synchronizedCPG = newSynchronizedStatement(rawNode = stmt)
         synchronizedCPG.withChildren {
             synchronizedCPG.expression =
-            frontend.expressionHandler.handle(synchronizedJava.expression)
+                frontend.expressionHandler.handle(synchronizedJava.expression)
                     as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             synchronizedCPG.block = handle(synchronizedJava.body) as Block?
         }
@@ -302,7 +303,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
         // first of, all we need a compound statement
         val block = newBlock(rawNode = stmt)
-        block.withChildren {
+        block.withChildren(true) {
             for (child in blockStmt.statements) {
                 val statement = handle(child)
                 statement?.let { block.addStatement(it) }
@@ -354,7 +355,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         caseStatement.withChildren {
             caseStatement.caseExpression =
                 frontend.expressionHandler.handle(caseExpression)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
         caseStatement.location = getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
         return caseStatement
@@ -428,11 +429,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val switchStmt = stmt.asSwitchStmt()
         val switchStatement = newSwitchStatement(rawNode = stmt)
 
-        switchStatement.withChildren(true) {        switchStatement.selector =
-            frontend.expressionHandler.handle(switchStmt.selector)
+        switchStatement.withChildren(true) {
+            switchStatement.selector =
+                frontend.expressionHandler.handle(switchStmt.selector)
                     as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-            // Compute region and code for self generated compound statement to match the c++ versions
+            // Compute region and code for self generated compound statement to match the c++
+            // versions
             var start: JavaToken? = null
             var end: JavaToken? = null
             val tokenRange = switchStmt.tokenRange
@@ -443,7 +446,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             val compoundStatement = this.newBlock()
             compoundStatement.code = getCodeBetweenTokens(start, end)
-            compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
+            compoundStatement.location =
+                getLocationsFromTokens(switchStatement.location, start, end)
             compoundStatement.withChildren {
                 for (sentry in switchStmt.entries) {
                     if (sentry.labels.isEmpty()) {
@@ -496,7 +500,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val arguments =
                 explicitConstructorInvocationStmt.arguments
                     .map(frontend.expressionHandler::handle)
-                    .filterIsInstance<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression>()
+                    .filterIsInstance<
+                        de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    >()
             constructExpr.arguments = arguments
         }
         return constructExpr
@@ -534,14 +540,15 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         catchCls: CatchClause
     ): de.fraunhofer.aisec.cpg.graph.statements.CatchClause {
         val cClause = newCatchClause(rawNode = catchCls)
-        cClause.withChildren {
+        cClause.withChildren(true) {
             val possibleTypes = mutableSetOf<Type>()
             val concreteType: Type
             if (catchCls.parameter.type is UnionType) {
                 for (t in (catchCls.parameter.type as UnionType).elements) {
                     possibleTypes.add(frontend.getTypeAsGoodAsPossible(t))
                 }
-                // we do not know which of the exceptions was actually thrown, so we assume this might
+                // we do not know which of the exceptions was actually thrown, so we assume this
+                // might
                 // be any
                 concreteType = this.objectType("java.lang.Throwable")
                 concreteType.typeOrigin = Type.Origin.GUESSED
