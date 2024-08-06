@@ -568,7 +568,7 @@ class ScopeManager : ScopeProvider {
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
-        val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+        val typedefs = mutableMapOf<Name, TypedefDeclaration>()
 
         val path = mutableListOf<ValueDeclarationScope>()
         var current = searchScope
@@ -781,7 +781,8 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function extracts a scope for the [Name], e.g. if the name is fully qualified.
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
+     * returned, if no scope can be extracted.
      *
      * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
      * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
@@ -822,7 +823,7 @@ class ScopeManager : ScopeProvider {
                         LOGGER,
                         "Could not find the scope $scopeName needed to resolve $n"
                     )
-                    scope
+                    null
                 } else {
                     scopes[0]
                 }
@@ -833,13 +834,19 @@ class ScopeManager : ScopeProvider {
 
     /**
      * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
-     * the given [Name].
+     * the given [Name]. It also does this recursively.
      */
     fun resolveParentAlias(name: Name, scope: Scope?): Name {
-        val parentName = name.parent ?: return name
+        var parentName = name.parent ?: return name
+        parentName = resolveParentAlias(parentName, scope)
 
-        // This is not 100 % ideal, but at least somewhat compatible to the previous approach
-        var newName = name
+        // Build a new name based on the eventual resolved parent alias
+        var newName =
+            if (parentName != name.parent) {
+                Name(name.localName, parentName, delimiter = name.delimiter)
+            } else {
+                name
+            }
         var decl =
             scope?.lookupSymbol(parentName.localName)?.singleOrNull {
                 it is NamespaceDeclaration || it is RecordDeclaration
@@ -847,6 +854,16 @@ class ScopeManager : ScopeProvider {
         if (decl != null && parentName != decl.name) {
             // This is probably an already resolved alias so, we take this one
             return Name(newName.localName, decl.name, delimiter = newName.delimiter)
+        }
+
+        // Some special handling of typedefs; this should somehow be merged with the above but not
+        // exactly sure how. The issue is that we cannot take the "name" of the typedef declaration,
+        // but we rather want its original type name.
+        // TODO: This really needs to be handled better somehow, maybe a common interface for
+        //  typedefs, namespaces and records that return the correct name?
+        decl = scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
+        if ((decl as? TypedefDeclaration) != null) {
+            return Name(newName.localName, decl.type.name, delimiter = newName.delimiter)
         }
 
         // If we do not have a match yet, it could be that we are trying to resolve an FQN type
@@ -993,8 +1010,8 @@ class ScopeManager : ScopeProvider {
         return findSymbols(name).filterIsInstance<RecordDeclaration>().singleOrNull()
     }
 
-    fun typedefFor(alias: Type): Type? {
-        var current = currentScope
+    fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
+        var current = scope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
         // a local definition overwrites / shadows one that was there on a higher scope.
@@ -1010,7 +1027,7 @@ class ScopeManager : ScopeProvider {
                 // This process has several steps:
                 // First, do a quick local lookup, to see if we have a typedef our current scope
                 // (only do this if the name is not qualified)
-                if (!alias.name.isQualified() && current == currentScope) {
+                if (!alias.isQualified() && current == currentScope) {
                     val decl = current.typedefs[alias]
                     if (decl != null) {
                         return decl.type
@@ -1021,7 +1038,7 @@ class ScopeManager : ScopeProvider {
                 // qualified based on the current namespace
                 val key =
                     current.typedefs.keys.firstOrNull {
-                        var lookupName = alias.name
+                        var lookupName = alias
 
                         // If the lookup name is already a FQN, we can use the name directly
                         lookupName =
@@ -1033,7 +1050,7 @@ class ScopeManager : ScopeProvider {
                                 currentNamespace?.fqn(lookupName.localName) ?: lookupName
                             }
 
-                        it.name.lastPartsMatch(lookupName)
+                        it.lastPartsMatch(lookupName)
                     }
                 if (key != null) {
                     return current.typedefs[key]?.type
@@ -1064,9 +1081,12 @@ class ScopeManager : ScopeProvider {
         name: Name,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val (scope, n) = extractScope(name, location, startScope)
-        val list = scope?.lookupSymbol(n.localName)?.toMutableList() ?: mutableListOf()
+        val list =
+            scope?.lookupSymbol(n.localName, predicate = predicate)?.toMutableList()
+                ?: mutableListOf()
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition

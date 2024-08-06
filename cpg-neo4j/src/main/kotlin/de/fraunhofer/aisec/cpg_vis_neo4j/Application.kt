@@ -263,7 +263,6 @@ class Application : Callable<Int> {
     private var passClassList =
         listOf(
             TypeHierarchyResolver::class,
-            JavaImportResolver::class,
             SymbolResolver::class,
             DFGPass::class,
             EvaluationOrderGraphPass::class,

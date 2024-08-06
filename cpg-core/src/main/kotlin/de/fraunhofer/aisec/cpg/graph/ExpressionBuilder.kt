@@ -258,7 +258,14 @@ fun MetadataProvider.newCallExpression(
     val node = CallExpression()
     node.applyMetadata(this, fqn, rawNode, true)
 
-    node.callee = callee
+    // Set the call expression as resolution helper for the callee
+    if (callee is Reference) {
+        callee.resolutionHelper = node
+    }
+
+    if (callee != null) {
+        node.callee = callee
+    }
     node.template = template
 
     log(node)
@@ -284,7 +291,14 @@ fun MetadataProvider.newMemberCallExpression(
         rawNode
     )
 
-    node.callee = callee
+    // Set the call expression as resolution helper for the callee
+    if (callee is Reference) {
+        callee.resolutionHelper = node
+    }
+
+    if (callee != null) {
+        node.callee = callee
+    }
     node.isStatic = isStatic
 
     log(node)

@@ -39,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), HasBase, HasOperatorCode, ArgumentHolder, HasType.TypeObserver {
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     /** The left-hand expression. */
     @AST
     var lhs: Expression = ProblemExpression("could not parse lhs")
@@ -129,6 +129,14 @@ open class BinaryOperator :
         // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
     }
 
+    /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
+    override val operatorArguments: List<Expression>
+        get() = listOf(rhs)
+
+    /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
+    override val operatorBase: HasType
+        get() = lhs
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -164,7 +172,11 @@ open class BinaryOperator :
         }
     }
 
-    override val base: Expression?
+    override fun hasArgument(expression: Expression): Boolean {
+        return lhs == expression || rhs == expression
+    }
+
+    val base: Expression?
         get() {
             return if (operatorCode == ".*" || operatorCode == "->*") {
                 lhs

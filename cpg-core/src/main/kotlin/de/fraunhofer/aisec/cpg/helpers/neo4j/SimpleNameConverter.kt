@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.helpers.neo4j
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.parseName
+import org.neo4j.ogm.typeconversion.AttributeConverter
 
-/** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
-interface HasOperatorCode {
+/**
+ * This converter converts a [Name] into a single [String] (in contrast to the [NameConverter],
+ * which splits it up into several properties).
+ */
+class SimpleNameConverter : AttributeConverter<Name, String> {
+    override fun toGraphProperty(value: Name?): String {
+        return value.toString()
+    }
 
-    /** The operator code, identifying an operation executed on one or more [Expression]s */
-    val operatorCode: String?
+    override fun toEntityAttribute(value: String?): Name? {
+        if (value == null) {
+            return null
+        }
+
+        // We cannot really know what the actual delimiter was, so we need to supply some delimiters
+        // and hope for the best. Unfortunately, we do not get access to the "language" node here...
+        return parseName(value, ".", ",", "::")
+    }
 }

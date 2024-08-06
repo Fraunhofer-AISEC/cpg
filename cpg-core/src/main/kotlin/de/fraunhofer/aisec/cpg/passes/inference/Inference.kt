@@ -446,7 +446,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
     }
 
-    fun inferNamespaceDeclaration(name: Name, path: String?, origin: Node): NamespaceDeclaration? {
+    fun inferNamespaceDeclaration(name: Name, path: String?, origin: Node?): NamespaceDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferNamespaces) {
             return null
         }

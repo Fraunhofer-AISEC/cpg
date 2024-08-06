@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -52,7 +53,14 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, ContextProvider {
+open class Node :
+    IVisitable<Node>,
+    Persistable,
+    LanguageProvider,
+    ScopeProvider,
+    ContextProvider,
+    HasNameAndLocation,
+    HasScope {
     /**
      * Because we are updating type information in the properties of the node, we need a reference
      * to managers such as the [TypeManager] instance which is responsible for this particular node.
@@ -61,11 +69,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
 
-    /**
-     * This property holds the full name using our new [Name] class. It is currently not persisted
-     * in the graph database.
-     */
-    @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)
+    /** This property holds the full name using our new [Name] class. */
+    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -97,8 +102,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Optional comment of this node. */
     var comment: String? = null
 
-    /** Location of the finding in source code. */
-    @Convert(LocationConverter::class) var location: PhysicalLocation? = null
+    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just

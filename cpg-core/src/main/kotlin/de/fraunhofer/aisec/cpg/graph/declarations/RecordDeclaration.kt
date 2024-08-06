@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -37,7 +38,8 @@ import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+open class RecordDeclaration :
+    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder, DeclaresType {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -229,4 +231,7 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
         type.superTypes.addAll(this.superTypes)
         return type
     }
+
+    override val declaredType: Type
+        get() = toType()
 }

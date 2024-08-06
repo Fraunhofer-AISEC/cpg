@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -75,17 +76,59 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleImport(node: Python.ASTImport): Statement {
         return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
             for (imp in node.names) {
-                val v =
-                    if (imp.asname != null) {
-                        newVariableDeclaration(
-                            imp.asname,
+                val alias = imp.asname
+                val decl =
+                    if (alias != null) {
+                        newImportDeclaration(
+                            parseName(imp.name),
+                            false,
+                            parseName(alias),
                             rawNode = imp
-                        ) // TODO refers to original????
+                        )
                     } else {
-                        newVariableDeclaration(imp.name, rawNode = imp)
+                        newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                     }
-                frontend.scopeManager.addDeclaration(v)
-                it.addDeclaration(v)
+                frontend.scopeManager.addDeclaration(decl)
+                it.addToPropertyEdgeDeclaration(decl)
+            }
+        }
+    }
+
+    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
+        val level = node.level
+        if (level == null || level > 0) {
+            return newProblemExpression(
+                "not supporting relative paths in from (...) import syntax yet"
+            )
+        }
+
+        return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
+            val module = parseName(node.module ?: "")
+            for (imp in node.names) {
+                // We need to differentiate between a wildcard import and an individual symbol.
+                // Wildcards luckily do not have aliases
+                val decl =
+                    if (imp.name == "*") {
+                        // In the wildcard case, our "import" is the module name and we set
+                        // "wildcard"
+                        // to true
+                        newImportDeclaration(module, true, rawNode = imp)
+                    } else {
+                        // If we import an individual symbol, we need to FQN the symbol with our
+                        // module
+                        // name and import that. We also need to take care of any alias
+                        val name = module.fqn(imp.name)
+                        val alias = imp.asname
+                        if (alias != null) {
+                            newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                        } else {
+                            newImportDeclaration(name, false, rawNode = imp)
+                        }
+                    }
+
+                // Finally, add our declaration to the scope and the declaration statement
+                frontend.scopeManager.addDeclaration(decl)
+                it.addToPropertyEdgeDeclaration(decl)
             }
         }
     }
@@ -179,22 +222,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             it.operatorCode = op
             it.lhs = listOf(frontend.expressionHandler.handle(node.target))
             it.rhs = listOf(frontend.expressionHandler.handle(node.value))
-        }
-    }
-
-    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
-        return newDeclarationStatement(rawNode = node).withChildren(hasScope = false) {
-            for (stmt in node.names) {
-                val name =
-                    if (stmt.asname != null) {
-                        stmt.asname
-                    } else {
-                        stmt.name
-                    }
-                val decl = newVariableDeclaration(name = name, rawNode = node)
-                frontend.scopeManager.addDeclaration(decl)
-                it.addDeclaration(decl)
-            }
         }
     }
 
@@ -391,16 +418,29 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleAnnotations(
         node: Python.ASTFunctionOrAsyncFunctionDef
-    ): Collection<de.fraunhofer.aisec.cpg.graph.Annotation> {
-        val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-        for (decorator in node.decorator_list) {
+    ): Collection<Annotation> {
+        return handleDeclaratorList(node, node.decorator_list)
+    }
+
+    fun handleDeclaratorList(
+        node: Python.AST,
+        decoratorList: List<Python.ASTBASEexpr>
+    ): List<Annotation> {
+        val annotations = mutableListOf<Annotation>()
+        for (decorator in decoratorList) {
             if (decorator !is Python.ASTCall) {
-                TODO()
+                log.warn(
+                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
+                )
+                continue
             }
 
             val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
             if (decFuncParsed !is MemberExpression) {
-                TODO()
+                log.warn(
+                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
+                )
+                continue
             }
 
             val annotation =
@@ -414,27 +454,25 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                     .withChildren(hasScope = false) {
                         for (arg in decorator.args) {
+                            val argParsed = frontend.expressionHandler.handle(arg)
                             it.members +=
                                 newAnnotationMember(
-                                        name =
-                                            "annotationArg" + decorator.args.indexOf(arg), // TODO
+                                        "annotationArg" + decorator.args.indexOf(arg), // TODO
                                         rawNode = arg
                                     )
-                                    .withChildren(hasScope = false) { member ->
-                                        member.value = frontend.expressionHandler.handle(arg)
-                                    }
+                                    .withChildren { it.value = argParsed }
                         }
                         for (keyword in decorator.keywords) {
                             it.members +=
                                 newAnnotationMember(name = keyword.arg, rawNode = keyword)
-                                    .withChildren(hasScope = false) { member ->
-                                        member.value =
-                                            frontend.expressionHandler.handle(keyword.value)
+                                    .withChildren {
+                                        it.value = frontend.expressionHandler.handle(keyword.value)
                                     }
                         }
                     }
             annotations += annotation
         }
+
         return annotations
     }
 

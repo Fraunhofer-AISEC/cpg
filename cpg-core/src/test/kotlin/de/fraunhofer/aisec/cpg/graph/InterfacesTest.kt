@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-/**
- * Interface that allows us to mark nodes that contain a default value
- *
- * @param <T> type of the default node </T>
- */
-interface HasDefault<T : Node?> {
-    var default: T
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import kotlin.test.Test
+import kotlin.test.assertTrue
+
+class InterfacesTest {
+
+    @Test
+    fun testRemoveArgument() {
+        val v: HasInitializer = VariableDeclaration()
+        val lit = Literal<String>()
+        v.initializer = lit
+        assertTrue(v.removeArgument(lit))
+    }
 }

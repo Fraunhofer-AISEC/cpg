@@ -111,6 +111,10 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
         }
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return arrayExpression == expression || subscriptExpression == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SubscriptExpression) return false

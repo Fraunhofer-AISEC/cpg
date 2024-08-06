@@ -26,7 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import kotlin.test.Test
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class NodeBuilderTest {
@@ -49,6 +53,36 @@ class NodeBuilderTest {
             tu.nodes
                 .filter { it != tu }
                 .forEach { assertNotNull(it.astParent, "${it.name} has no parent") }
+        }
+    }
+
+    @Test
+    fun testWithParent() {
+        with(TestLanguageFrontend()) {
+            fun create(isDeref: Boolean): Expression {
+                return newBlock().withChildren {
+                    val expr = newReference("p")
+
+                    it +=
+                        if (isDeref) {
+                            newUnaryOperator("*", prefix = true, postfix = false).withChildren {
+                                it.input = expr.withParent()
+                            }
+                        } else {
+                            expr
+                        }
+                }
+            }
+
+            val node1 = create(false)
+            var ref = node1.refs.firstOrNull()
+            assertNotNull(ref)
+            assertIs<Block>(ref.astParent)
+
+            val node2 = create(true)
+            ref = node2.refs.firstOrNull()
+            assertNotNull(ref)
+            assertIs<UnaryOperator>(ref.astParent)
         }
     }
 }

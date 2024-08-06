@@ -74,7 +74,10 @@ internal class VariableResolverCppTest : BaseTest() {
             listOf("scope_variables.cpp", "external_class.cpp").map {
                 topLevel.resolve(it).toFile()
             }
-        val result = analyze(files, topLevel, true) { it.registerLanguage<CPPLanguage>() }
+        val result =
+            analyze(files, topLevel, true) {
+                it.registerLanguage<CPPLanguage>().useUnityBuild(true)
+            }
         val calls = result.calls { it.name.localName == "printLog" }
         val records = result.records
         val functions = result.functions

@@ -294,11 +294,11 @@ class ValueEvaluationTests {
                                 declare {
                                     variable("a", t("int")) {
                                         this.initializer =
-                                            newConditionalExpression(
-                                                ref("b") lt literal(2, t("int")),
-                                                literal(3, t("int")),
-                                                literal(5, t("int")).inc()
-                                            )
+                                            newConditionalExpression().withChildren {
+                                                it.condition = ref("b") lt literal(2, t("int"))
+                                                it.thenExpression = literal(3, t("int"))
+                                                it.elseExpression = literal(5, t("int")).inc()
+                                            }
                                     }
                                 }
 

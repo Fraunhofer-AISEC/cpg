@@ -326,7 +326,9 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                     // global scope to avoid namespace issues
                     var record =
                         scopeManager.withScope(scopeManager.globalScope) {
-                            specificationHandler.buildRecordDeclaration(type, name)
+                            var record = specificationHandler.buildRecordDeclaration(type, name)
+                            scopeManager.addDeclaration(record)
+                            record
                         }
 
                     record.toType()

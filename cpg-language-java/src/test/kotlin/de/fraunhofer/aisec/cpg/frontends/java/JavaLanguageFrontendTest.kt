@@ -187,12 +187,23 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         scope = firstCatch.scope
         assertNotNull(scope)
 
-        // first exception type was? resolved, so we can expect a FQN
-        assertEquals(tu.objectType("java.lang.NumberFormatException"), firstCatch.parameter?.type)
-        // second one could not be resolved so we do not have an FQN
-        assertEquals(tu.objectType("NotResolvableTypeException"), catchClauses[1].parameter?.type)
-        // third type should have been resolved through the import
-        assertEquals(tu.objectType("some.ImportedException"), (catchClauses[2].parameter)?.type)
+        with(tu) {
+            // first exception type was? resolved, so we can expect a FQN
+            assertEquals(
+                assertResolvedType("java.lang.NumberFormatException"),
+                firstCatch.parameter?.type
+            )
+            // second one could not be resolved so we do not have an FQN
+            assertEquals(
+                assertResolvedType("NotResolvableTypeException"),
+                catchClauses[1].parameter?.type
+            )
+            // third type should have been resolved through the import
+            assertEquals(
+                assertResolvedType("some.ImportedException"),
+                (catchClauses[2].parameter)?.type
+            )
+        }
 
         // and 1 finally
         val finallyBlock = tryStatement.finallyBlock
@@ -603,6 +614,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         val tu =
             findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
+
         val namespace = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespace)
 
@@ -617,7 +629,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
         assertNotNull(receiver)
         assertLocalName("this", receiver)
-        assertEquals(tu.objectType("my.Animal"), receiver.type)
+        assertEquals(tu.assertResolvedType("my.Animal"), receiver.type)
     }
 
     @Test

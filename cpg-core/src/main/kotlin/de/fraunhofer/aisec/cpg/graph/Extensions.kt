@@ -529,6 +529,10 @@ val Node?.casts: List<CastExpression>
 val Node?.methods: List<MethodDeclaration>
     get() = this.allChildren()
 
+/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
+val Node?.operators: List<OperatorDeclaration>
+    get() = this.allChildren()
+
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
 val Node?.fields: List<FieldDeclaration>
     get() = this.allChildren()
@@ -611,6 +615,10 @@ val Node?.returns: List<ReturnStatement>
 
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
 val Node?.assigns: List<AssignExpression>
+    get() = this.allChildren()
+
+/** Returns all [ProblemNode] children in this graph, starting with this [Node]. */
+val Node?.problems: List<ProblemNode>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */

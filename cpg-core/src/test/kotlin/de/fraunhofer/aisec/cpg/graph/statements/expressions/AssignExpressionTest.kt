@@ -42,7 +42,11 @@ class AssignExpressionTest {
             val refB = newReference("b")
 
             // Simple assignment from "b" to "a". Both types are unknown at this point
-            val stmt = newAssignExpression(lhs = listOf(refA), rhs = listOf(refB))
+            val stmt =
+                newAssignExpression().withChildren {
+                    it.lhs = listOf(refA)
+                    it.rhs = listOf(refB)
+                }
 
             // Type listeners should be configured
             assertContains(refB.typeObservers, stmt)
@@ -78,7 +82,10 @@ class AssignExpressionTest {
 
                             // Assignment from "func()" to "a" and "err".
                             val stmt =
-                                newAssignExpression(lhs = listOf(refA, refErr), rhs = listOf(call))
+                                newAssignExpression().withChildren {
+                                    it.lhs = listOf(refA, refErr)
+                                    it.rhs = listOf(call)
+                                }
 
                             body = newBlock()
                             body as Block += stmt

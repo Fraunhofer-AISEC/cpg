@@ -544,10 +544,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         // typedef'd name is called S. However, to make things a little bit easier
                         // we also transfer the name to the record declaration.
                         ctx.declarators.firstOrNull()?.name?.toString()?.let {
-                            primaryDeclaration?.name = parseName(it)
-                            // We need to inform the later steps that we want to take the name
-                            // of this declaration as the basis for the result type of the typedef
-                            useNameOfDeclarator = true
+                            primaryDeclaration.name = parseName(it)
+                            useNameOfDeclarator = false
                         }
                     }
                     frontend.processAttributes(primaryDeclaration, ctx)
@@ -656,6 +654,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             rawNode = enumerator,
                         )
 
+
                     // In C/C++, default enums are of type int
                     enumConst.type = primitiveType("int")
 
@@ -666,7 +665,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                     entries += enumConst
                 }
-
                 it.entries = entries
             }
 

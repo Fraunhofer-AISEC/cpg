@@ -64,7 +64,6 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLiteralExpression
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateId
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTypeId
-import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
@@ -500,9 +499,6 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     }
 
     fun typeOf(specifier: IASTDeclSpecifier, hint: Declaration? = null): Type {
-        // Retrieve the "name" of this type, including qualifiers.
-        val name = ASTStringUtil.getSignatureString(specifier, null)
-
         var resolveTypeDef = false
 
         var type =
@@ -523,24 +519,20 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                         resolveTypeDef = true
                         typeOf(specifier.name)
                     } else {
-                        // Case b: Peek into our symbols. This is most likely limited to our current
-                        // translation unit
                         resolveTypeDef = true
 
-                        val decl = scopeManager.getRecordForName(Name(name))
-
-                        // We found a symbol, so we can use its name
-                        if (decl != null) {
-                            objectType(decl.name)
+                        // It could be, that this is a parameterized type
+                        val paramType =
+                            typeManager.searchTemplateScopeForDefinedParameterizedTypes(
+                                scopeManager.currentScope,
+                                specifier.name.toString()
+                            )
+                        if (paramType != null) {
+                            paramType
                         } else {
-                            // It could be, that this is a parameterized type
-                            val paramType =
-                                typeManager.searchTemplateScopeForDefinedParameterizedTypes(
-                                    scopeManager.currentScope,
-                                    specifier.name.toString()
-                                )
-                            // Otherwise, we keep it as a local name and hope for the best
-                            paramType ?: typeOf(specifier.name)
+                            // Otherwise, we keep it as a local name and the type normalizer will
+                            // take care of it
+                            typeOf(specifier.name)
                         }
                     }
                 }
@@ -549,13 +541,13 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     // in handleSimpleDeclaration, but we might want to move it here
                     resolveTypeDef = true
 
-                    objectType(specifier.name.toString())
+                    objectType(specifier.name.toString(), rawNode = specifier)
                 }
                 is IASTElaboratedTypeSpecifier -> {
                     resolveTypeDef = true
 
                     // A class or struct
-                    objectType(specifier.name.toString())
+                    objectType(specifier.name.toString(), rawNode = specifier)
                 }
                 else -> {
                     unknownType()
@@ -588,28 +580,35 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
             // __typeof__ type
             specifier.type == IASTSimpleDeclSpecifier.t_typeof -> {
-                objectType("typeof(${specifier.declTypeExpression.rawSignature})")
+                objectType(
+                    "typeof(${specifier.declTypeExpression.rawSignature})",
+                    rawNode = specifier
+                )
             }
             // A decl type
             specifier.type == IASTSimpleDeclSpecifier.t_decltype -> {
-                objectType("decltype(${specifier.declTypeExpression.rawSignature})")
+                objectType(
+                    "decltype(${specifier.declTypeExpression.rawSignature})",
+                    rawNode = specifier
+                )
             }
             // The type of constructor declaration is always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
                 hint is ConstructorDeclaration -> {
-                hint.name.parent?.let { objectType(it) } ?: unknownType()
+                hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
                 hint is MethodDeclaration &&
                 hint.name.localName == "operator#0" -> {
-                hint.name.parent?.let { objectType(it) } ?: unknownType()
+                hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
                 hint is MethodDeclaration &&
                 hint.name.localName == "operator#0*" -> {
-                hint.name.parent?.let { objectType(it).pointer() } ?: unknownType()
+                hint.name.parent?.let { objectType(it, rawNode = specifier).pointer() }
+                    ?: unknownType()
             }
             // The type of destructor is unspecified, but we model it as a void type to make it
             // compatible with other methods.
@@ -686,7 +685,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 }
             }
 
-            return objectType(fqn, generics)
+            return objectType(fqn, generics, rawNode = name)
         }
 
         var typeName =
@@ -696,14 +695,10 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 parseName(name.toString())
             }
 
-        // Rather hacky, but currently the only way to do this, until we redesign the aliases in the
-        // scope manager to be valid for a scope and not for a location
-        val location = currentTU?.location
-
         // We need to take name(space) aliases into account.
         typeName = scopeManager.resolveParentAlias(typeName, scopeManager.currentScope)
 
-        return objectType(typeName)
+        return objectType(typeName, rawNode = name)
     }
 
     /**

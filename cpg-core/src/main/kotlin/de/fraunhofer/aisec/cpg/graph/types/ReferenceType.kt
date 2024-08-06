@@ -68,10 +68,6 @@ class ReferenceType : Type, SecondOrderType {
         return elementType.dereference()
     }
 
-    override fun isSimilar(t: Type?): Boolean {
-        return t is ReferenceType && t.elementType == this && super.isSimilar(t)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ReferenceType) return false

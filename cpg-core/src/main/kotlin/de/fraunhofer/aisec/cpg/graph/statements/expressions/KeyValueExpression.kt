@@ -67,6 +67,10 @@ class KeyValueExpression : Expression(), ArgumentHolder {
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return key == expression || value == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is KeyValueExpression) return false

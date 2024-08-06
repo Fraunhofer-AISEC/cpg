@@ -690,9 +690,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleGotoStatement(node: GotoStatement) {
         pushToEOG(node)
         node.targetLabel?.let {
-            processedListener.registerObjectListener(it) { _: Any?, to: Any? ->
-                addEOGEdge(node, to as Node)
-            }
+            processedListener.registerObjectListener(it) { _, to -> addEOGEdge(node, to) }
         }
         currentPredecessors.clear()
     }

@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.enhancements.types
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
@@ -80,7 +79,7 @@ internal class TypedefTest : BaseTest() {
             assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
             assertEquals(uintfp1.type, uintfp2?.type)
 
-            val type = tu.ctx?.scopeManager?.typedefFor(objectType("test"))
+            val type = tu.ctx?.scopeManager?.typedefFor(Name("test"))
             assertIs<IntegerType>(type)
             assertLocalName("uint8_t", type)
         }
@@ -159,7 +158,7 @@ internal class TypedefTest : BaseTest() {
             val fPtr2 = tu.variables["intFptr2"]
             assertEquals(fPtr1?.type, fPtr2?.type)
 
-            val type = tu.ctx?.scopeManager?.typedefFor(objectType("type_B"))
+            val type = tu.ctx?.scopeManager?.typedefFor(Name("type_B"))
             assertLocalName("template_class_A", type)
             assertIs<ObjectType>(type)
             assertEquals(listOf(primitiveType("int"), primitiveType("int")), type.generics)

@@ -420,6 +420,31 @@ fun <T : Node> T.withChildren(
     return this
 }
 
+/**
+ * This function can be used to set the [Node.astParent] of this node to the current node on the
+ * [AstStackProvider]'s stack. This is particularly useful if the node was created outside of the
+ * [withChildren] lambda. This is a usual pattern if the node is optionally wrapped in something
+ * else.
+ *
+ * Example:
+ * ```kotlin
+ * val expr = newReference("p")
+ *
+ * return if (isDeref) {
+ *   newUnaryOperator("*", prefix = true, postfix = false).withChildren {
+ *     it.input = expr.withParent()
+ *   }
+ * } else {
+ *   expr
+ * }
+ * ```
+ */
+context(AstStackProvider)
+fun <T : Node> T.withParent(): T {
+    this.astParent = (this@AstStackProvider).astStack.lastOrNull()
+    return this
+}
+
 context(ContextProvider)
 fun <T : Declaration> T.declare(): T {
     val scopeManager =

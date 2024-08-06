@@ -54,4 +54,6 @@ dependencies {
     // Command line interface support
     api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
+
+    testImplementation(testFixtures(projects.cpgCore))
 }

@@ -219,11 +219,11 @@ class TypePropagationTest {
 
             val b = main.variables["b"]
             assertNotNull(b)
-            assertEquals(objectType("BaseClass").pointer(), b.type)
+            assertEquals(assertResolvedType("BaseClass").pointer(), b.type)
             assertEquals(
                 setOf(
-                    objectType("BaseClass").pointer(),
-                    objectType("DerivedClass").pointer(),
+                    assertResolvedType("BaseClass").pointer(),
+                    assertResolvedType("DerivedClass").pointer(),
                 ),
                 b.assignedTypes
             )
