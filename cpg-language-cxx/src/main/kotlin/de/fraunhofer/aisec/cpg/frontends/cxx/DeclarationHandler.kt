@@ -130,17 +130,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
-        val declaration = newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx)
-
-        frontend.scopeManager.addDeclaration(declaration)
-
         // Enter the namespace scope
-        declaration.withChildren(true) {
-            // Finally, handle all declarations within that namespace
-            for (child in ctx.declarations) {
-                handle(child)
+        val declaration =
+            newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx).withChildren(true) {
+                // Finally, handle all declarations within that namespace
+                for (child in ctx.declarations) {
+                    handle(child)
+                }
             }
-        }
+        frontend.scopeManager.addDeclaration(declaration)
 
         return declaration
     }
@@ -648,30 +646,29 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         declSpecifier: IASTEnumerationSpecifier
     ): EnumDeclaration {
         val entries = mutableListOf<EnumConstantDeclaration>()
-        val enum = newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx)
+        val enum =
+            newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx).withChildren {
+                // Loop through its members
+                for (enumerator in declSpecifier.enumerators) {
+                    val enumConst =
+                        newEnumConstantDeclaration(
+                            enumerator.name.toString(),
+                            rawNode = enumerator,
+                        )
 
-        enum.withChildren {
-            // Loop through its members
-            for (enumerator in declSpecifier.enumerators) {
-                val enumConst =
-                    newEnumConstantDeclaration(
-                        enumerator.name.toString(),
-                        rawNode = enumerator,
-                    )
+                    // In C/C++, default enums are of type int
+                    enumConst.type = primitiveType("int")
 
-                // In C/C++, default enums are of type int
-                enumConst.type = primitiveType("int")
+                    // We need to make them visible to the enclosing scope. However, we do NOT
+                    // want to add it to the AST of the enclosing scope, but to the AST of the
+                    // EnumDeclaration
+                    frontend.scopeManager.addDeclaration(enumConst, false)
 
-                // We need to make them visible to the enclosing scope. However, we do NOT
-                // want to add it to the AST of the enclosing scope, but to the AST of the
-                // EnumDeclaration
-                frontend.scopeManager.addDeclaration(enumConst, false)
+                    entries += enumConst
+                }
 
-                entries += enumConst
+                it.entries = entries
             }
-
-            enum.entries = entries
-        }
 
         return enum
     }
@@ -723,31 +720,33 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnitDeclaration {
         val node =
             newTranslationUnitDeclaration(translationUnit.filePath, rawNode = translationUnit)
+                .withChildren {
+                    // There might have been errors in the previous translation unit and in any case
+                    // we need to reset the scope manager scope to global, to avoid spilling scope
+                    // errors
+                    // into
+                    // other translation units
+                    frontend.scopeManager.resetToGlobal(it)
+                    frontend.currentTU = it
+                    val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
-        node.withChildren {
-            // There might have been errors in the previous translation unit and in any case
-            // we need to reset the scope manager scope to global, to avoid spilling scope errors
-            // into
-            // other translation units
-            frontend.scopeManager.resetToGlobal(node)
-            frontend.currentTU = node
-            val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
-
-            for (declaration in translationUnit.declarations) {
-                val decl = handle(declaration) ?: continue
-                (decl as? ProblemDeclaration)?.location?.let {
-                    val problems =
-                        problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
-                            HashSet()
+                    for (declaration in translationUnit.declarations) {
+                        val decl = handle(declaration) ?: continue
+                        (decl as? ProblemDeclaration)?.location?.let {
+                            val problems =
+                                problematicIncludes.computeIfAbsent(
+                                    it.artifactLocation.toString()
+                                ) {
+                                    HashSet()
+                                }
+                            problems.add(decl)
                         }
-                    problems.add(decl)
-                }
-            }
+                    }
 
-            if (frontend.config.addIncludesToGraph) {
-                addIncludes(translationUnit, problematicIncludes, node)
-            }
-        }
+                    if (frontend.config.addIncludesToGraph) {
+                        addIncludes(translationUnit, problematicIncludes, it)
+                    }
+                }
 
         return node
     }

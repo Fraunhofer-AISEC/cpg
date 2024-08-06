@@ -283,18 +283,18 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             }
             val fieldDeclaration =
                 this.newFieldDeclaration(
-                    variable.name.asString(),
-                    type,
-                    modifiers,
-                    rawNode = fieldDecl
-                )
-            fieldDeclaration.withChildren {
-                it.initializer =
-                    variable.initializer
-                        .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
-                        .orElse(null)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-            }
+                        variable.name.asString(),
+                        type,
+                        modifiers,
+                        rawNode = fieldDecl
+                    )
+                    .withChildren {
+                        it.initializer =
+                            variable.initializer
+                                .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
+                                .orElse(null)
+                                as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    }
             frontend.scopeManager.addDeclaration(fieldDeclaration)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
             declarationSequence.addDeclaration(fieldDeclaration)

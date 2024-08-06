@@ -385,14 +385,14 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation = newAnnotation(String(attribute.name), rawNode = owner)
-            annotation.withChildren {
-                // go over the parameters
-                if (attribute.argumentClause is IASTTokenList) {
-                    val members = handleTokenList(attribute.argumentClause as IASTTokenList)
-                    annotation.members = members
+            val annotation =
+                newAnnotation(String(attribute.name), rawNode = owner).withChildren {
+                    // go over the parameters
+                    if (attribute.argumentClause is IASTTokenList) {
+                        val members = handleTokenList(attribute.argumentClause as IASTTokenList)
+                        it.members = members
+                    }
                 }
-            }
             list.add(annotation)
         }
         return list
@@ -412,23 +412,23 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
     private fun handleToken(token: IASTToken): AnnotationMember {
         val code = String(token.tokenCharImage)
-        val annotationMember = newAnnotationMember("", rawNode = token)
-        annotationMember.withChildren {
-            it.value =
-                when (token.tokenType) {
-                    1 -> // a variable
-                    newReference(code, unknownType(), rawNode = token)
-                    2 -> // an integer
-                    newLiteral(code.toInt(), primitiveType("int"), rawNode = token)
-                    130 -> // a string
-                    newLiteral(
-                            if (code.length >= 2) code.substring(1, code.length - 1) else "",
-                            primitiveType("char").pointer(),
-                            rawNode = token
-                        )
-                    else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
-                }
-        }
+        val annotationMember =
+            newAnnotationMember("", rawNode = token).withChildren {
+                it.value =
+                    when (token.tokenType) {
+                        1 -> // a variable
+                        newReference(code, unknownType(), rawNode = token)
+                        2 -> // an integer
+                        newLiteral(code.toInt(), primitiveType("int"), rawNode = token)
+                        130 -> // a string
+                        newLiteral(
+                                if (code.length >= 2) code.substring(1, code.length - 1) else "",
+                                primitiveType("char").pointer(),
+                                rawNode = token
+                            )
+                        else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
+                    }
+            }
 
         return annotationMember
     }

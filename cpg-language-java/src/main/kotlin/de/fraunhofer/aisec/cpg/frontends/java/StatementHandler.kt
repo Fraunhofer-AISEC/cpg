@@ -81,11 +81,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val throwStmt = stmt as ThrowStmt
         val throwOperation =
             this.newUnaryOperator("throw", postfix = false, prefix = true, rawNode = stmt)
-        throwOperation.withChildren {
-            throwOperation.input =
-                frontend.expressionHandler.handle(throwStmt.expression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        }
+                .withChildren {
+                    it.input =
+                        frontend.expressionHandler.handle(throwStmt.expression)
+                            as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                }
         return throwOperation
     }
 
@@ -94,23 +94,23 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val optionalExpression = returnStmt.expression
         var expression: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? = null
 
-        val returnStatement = this.newReturnStatement(rawNode = stmt)
+        val returnStatement =
+            this.newReturnStatement(rawNode = stmt).withChildren { returnStatement ->
+                if (optionalExpression.isPresent) {
+                    val expr = optionalExpression.get()
+
+                    // handle the expression as the first argument
+                    expression =
+                        frontend.expressionHandler.handle(expr)
+                            as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                }
+
+                // expressionRefersToDeclaration to arguments, if there are any
+                expression?.let { returnStatement.returnValue = it }
+            }
         // JavaParser seems to add implicit return statements, that are not part of the original
         // source code. We mark it as such
         returnStatement.isImplicit = !returnStmt.tokenRange.isPresent
-        returnStatement.withChildren {
-            if (optionalExpression.isPresent) {
-                val expr = optionalExpression.get()
-
-                // handle the expression as the first argument
-                expression =
-                    frontend.expressionHandler.handle(expr)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-            }
-
-            // expressionRefersToDeclaration to arguments, if there are any
-            expression?.let { returnStatement.returnValue = it }
-        }
         return returnStatement
     }
 
@@ -119,14 +119,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val conditionExpression = ifStmt.condition
         val thenStatement = ifStmt.thenStmt
         val optionalElseStatement = ifStmt.elseStmt
-        val ifStatement = newIfStatement(rawNode = stmt)
-        ifStatement.withChildren(true) {
-            ifStatement.thenStatement = handle(thenStatement)
-            ifStatement.condition =
-                frontend.expressionHandler.handle(conditionExpression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-            optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
-        }
+        val ifStatement =
+            newIfStatement(rawNode = stmt).withChildren(true) { ifStatement ->
+                ifStatement.thenStatement = handle(thenStatement)
+                ifStatement.condition =
+                    frontend.expressionHandler.handle(conditionExpression)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
+            }
         return ifStatement
     }
 
@@ -134,15 +134,15 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val assertStmt = stmt.asAssertStmt()
         val conditionExpression = assertStmt.check
         val thenStatement = assertStmt.message
-        val assertStatement = newAssertStatement(rawNode = stmt)
-        assertStatement.withChildren {
-            assertStatement.condition =
-                frontend.expressionHandler.handle(conditionExpression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-            thenStatement.ifPresent {
-                assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
+        val assertStatement =
+            newAssertStatement(rawNode = stmt).withChildren { assertStatement ->
+                assertStatement.condition =
+                    frontend.expressionHandler.handle(conditionExpression)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                thenStatement.ifPresent {
+                    assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
+                }
             }
-        }
         return assertStatement
     }
 
@@ -150,95 +150,97 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val whileStmt = stmt.asWhileStmt()
         val conditionExpression = whileStmt.condition
         val statement = whileStmt.body
-        val whileStatement = newWhileStatement(rawNode = stmt)
-        whileStatement.withChildren(true) {
-            whileStatement.statement = handle(statement)
-            whileStatement.condition =
-                frontend.expressionHandler.handle(conditionExpression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        }
+        val whileStatement =
+            newWhileStatement(rawNode = stmt).withChildren(true) {
+                it.statement = handle(statement)
+                it.condition =
+                    frontend.expressionHandler.handle(conditionExpression)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+            }
         return whileStatement
     }
 
     private fun handleForEachStatement(stmt: Statement): ForEachStatement {
-        val statement = newForEachStatement(rawNode = stmt)
-        statement.withChildren(true) {
-            val forEachStmt = stmt.asForEachStmt()
-            val variable = frontend.expressionHandler.handle(forEachStmt.variable)
-            val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
-            if (variable !is DeclarationStatement) {
-                log.error("Expected a DeclarationStatement but received: {}", variable?.name)
-            } else {
-                statement.variable = variable
+        val statement =
+            newForEachStatement(rawNode = stmt).withChildren(true) {
+                val forEachStmt = stmt.asForEachStmt()
+                val variable = frontend.expressionHandler.handle(forEachStmt.variable)
+                val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
+                if (variable !is DeclarationStatement) {
+                    log.error("Expected a DeclarationStatement but received: {}", variable?.name)
+                } else {
+                    it.variable = variable
+                }
+                it.iterable = iterable
+                it.statement = handle(forEachStmt.body)
             }
-            statement.iterable = iterable
-            statement.statement = handle(forEachStmt.body)
-        }
         return statement
     }
 
     private fun handleForStatement(stmt: Statement): ForStatement {
         val forStmt = stmt.asForStmt()
-        val statement = this.newForStatement(rawNode = stmt)
-        statement.withChildren(true) {
-            if (forStmt.initialization.size > 1) {
-                // code will be set later
-                val initExprList = this.newExpressionList()
-                initExprList.withChildren {
-                    for (initExpr in forStmt.initialization) {
-                        val s = frontend.expressionHandler.handle(initExpr)
-                        s?.let { initExprList.addExpression(it) }
+        val statement =
+            this.newForStatement(rawNode = stmt).withChildren(true) { statement ->
+                if (forStmt.initialization.size > 1) {
+                    // code will be set later
+                    val initExprList =
+                        this.newExpressionList().withChildren { initExprList ->
+                            for (initExpr in forStmt.initialization) {
+                                val s = frontend.expressionHandler.handle(initExpr)
+                                s?.let { initExprList.addExpression(it) }
 
-                        // can not update location
-                        if (s?.location == null) {
-                            continue
+                                // can not update location
+                                if (s?.location == null) {
+                                    continue
+                                }
+                            }
                         }
-                    }
+
+                    statement.initializerStatement = initExprList.codeAndLocationFromChildren(stmt)
+                } else if (forStmt.initialization.size == 1) {
+                    statement.initializerStatement =
+                        frontend.expressionHandler.handle(forStmt.initialization[0])
+                }
+                forStmt.compare.ifPresent { condition: Expression ->
+                    statement.condition =
+                        frontend.expressionHandler.handle(condition)
+                            as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
                 }
 
-                statement.initializerStatement = initExprList.codeAndLocationFromChildren(stmt)
-            } else if (forStmt.initialization.size == 1) {
-                statement.initializerStatement =
-                    frontend.expressionHandler.handle(forStmt.initialization[0])
-            }
-            forStmt.compare.ifPresent { condition: Expression ->
-                statement.condition =
-                    frontend.expressionHandler.handle(condition)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-            }
-
-            // Adds true expression node where default empty condition evaluates to true, remove
-            // here
-            // and in cpp StatementHandler
-            if (statement.condition == null) {
-                val literal: Literal<*> =
-                    this.newLiteral(true, this.primitiveType("boolean")).implicit("true")
-                statement.condition = literal
-            }
-            if (forStmt.update.size > 1) {
-                // code will be set later
-                val iterationExprList = this.newExpressionList()
-                iterationExprList.withChildren {
-                    for (updateExpr in forStmt.update) {
-                        val s = frontend.expressionHandler.handle(updateExpr)
-                        s?.let {
-                            // make sure location is set
-                            iterationExprList.addExpression(it)
-                        }
-
-                        // can not update location
-                        if (s?.location == null) {
-                            continue
-                        }
-                    }
+                // Adds true expression node where default empty condition evaluates to true, remove
+                // here
+                // and in cpp StatementHandler
+                if (statement.condition == null) {
+                    val literal: Literal<*> =
+                        this.newLiteral(true, this.primitiveType("boolean")).implicit("true")
+                    statement.condition = literal
                 }
+                if (forStmt.update.size > 1) {
+                    // code will be set later
+                    val iterationExprList =
+                        this.newExpressionList().withChildren { iterationExprList ->
+                            for (updateExpr in forStmt.update) {
+                                val s = frontend.expressionHandler.handle(updateExpr)
+                                s?.let {
+                                    // make sure location is set
+                                    iterationExprList.addExpression(it)
+                                }
 
-                statement.iterationStatement = iterationExprList.codeAndLocationFromChildren(stmt)
-            } else if (forStmt.update.size == 1) {
-                statement.iterationStatement = frontend.expressionHandler.handle(forStmt.update[0])
+                                // can not update location
+                                if (s?.location == null) {
+                                    continue
+                                }
+                            }
+                        }
+
+                    statement.iterationStatement =
+                        iterationExprList.codeAndLocationFromChildren(stmt)
+                } else if (forStmt.update.size == 1) {
+                    statement.iterationStatement =
+                        frontend.expressionHandler.handle(forStmt.update[0])
+                }
+                statement.statement = handle(forStmt.body)
             }
-            statement.statement = handle(forStmt.body)
-        }
         return statement
     }
 
@@ -246,13 +248,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val doStmt = stmt.asDoStmt()
         val conditionExpression = doStmt.condition
         val statement = doStmt.body
-        val doStatement = newDoStatement(rawNode = stmt)
-        doStatement.withChildren(true) {
-            doStatement.statement = handle(statement)
-            doStatement.condition =
-                frontend.expressionHandler.handle(conditionExpression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        }
+        val doStatement =
+            newDoStatement(rawNode = stmt).withChildren(true) {
+                it.statement = handle(statement)
+                it.condition =
+                    frontend.expressionHandler.handle(conditionExpression)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+            }
         return doStatement
     }
 
@@ -262,13 +264,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleSynchronizedStatement(stmt: Statement): SynchronizedStatement {
         val synchronizedJava = stmt.asSynchronizedStmt()
-        val synchronizedCPG = newSynchronizedStatement(rawNode = stmt)
-        synchronizedCPG.withChildren {
-            synchronizedCPG.expression =
-                frontend.expressionHandler.handle(synchronizedJava.expression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-            synchronizedCPG.block = handle(synchronizedJava.body) as Block?
-        }
+        val synchronizedCPG =
+            newSynchronizedStatement(rawNode = stmt).withChildren {
+                it.expression =
+                    frontend.expressionHandler.handle(synchronizedJava.expression)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                it.block = handle(synchronizedJava.body) as Block?
+            }
         return synchronizedCPG
     }
 
@@ -276,11 +278,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val labelStmt = stmt.asLabeledStmt()
         val label = labelStmt.label.identifier
         val statement = labelStmt.statement
-        val labelStatement = newLabelStatement(rawNode = stmt)
-        labelStatement.withChildren {
-            labelStatement.subStatement = handle(statement)
-            labelStatement.label = label
-        }
+        val labelStatement =
+            newLabelStatement(rawNode = stmt).withChildren {
+                it.subStatement = handle(statement)
+                it.label = label
+            }
         return labelStatement
     }
 
@@ -302,13 +304,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val blockStmt = stmt.asBlockStmt()
 
         // first of, all we need a compound statement
-        val block = newBlock(rawNode = stmt)
-        block.withChildren(true) {
-            for (child in blockStmt.statements) {
-                val statement = handle(child)
-                statement?.let { block.addStatement(it) }
+        val block =
+            newBlock(rawNode = stmt).withChildren(true) { block ->
+                for (child in blockStmt.statements) {
+                    val statement = handle(child)
+                    statement?.let { block.addStatement(it) }
+                }
             }
-        }
         return block
     }
 
@@ -351,12 +353,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     getNextTokenWith(":", caseExprTokenRange.get().end)
                 )
         }
-        val caseStatement = this.newCaseStatement()
-        caseStatement.withChildren {
-            caseStatement.caseExpression =
-                frontend.expressionHandler.handle(caseExpression)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        }
+        val caseStatement =
+            this.newCaseStatement().withChildren {
+                it.caseExpression =
+                    frontend.expressionHandler.handle(caseExpression)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+            }
         caseStatement.location = getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
         return caseStatement
     }
@@ -427,44 +429,43 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     fun handleSwitchStatement(stmt: Statement): SwitchStatement {
         val switchStmt = stmt.asSwitchStmt()
-        val switchStatement = newSwitchStatement(rawNode = stmt)
+        val switchStatement =
+            newSwitchStatement(rawNode = stmt).withChildren(true) {
+                it.selector =
+                    frontend.expressionHandler.handle(switchStmt.selector)
+                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-        switchStatement.withChildren(true) {
-            switchStatement.selector =
-                frontend.expressionHandler.handle(switchStmt.selector)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-
-            // Compute region and code for self generated compound statement to match the c++
-            // versions
-            var start: JavaToken? = null
-            var end: JavaToken? = null
-            val tokenRange = switchStmt.tokenRange
-            val tokenRangeSelector = switchStmt.selector.tokenRange
-            if (tokenRange.isPresent && tokenRangeSelector.isPresent) {
-                start = getNextTokenWith("{", tokenRangeSelector.get().end)
-                end = getPreviousTokenWith("}", tokenRange.get().end)
-            }
-            val compoundStatement = this.newBlock()
-            compoundStatement.code = getCodeBetweenTokens(start, end)
-            compoundStatement.location =
-                getLocationsFromTokens(switchStatement.location, start, end)
-            compoundStatement.withChildren {
-                for (sentry in switchStmt.entries) {
-                    if (sentry.labels.isEmpty()) {
-                        compoundStatement.addStatement(handleCaseDefaultStatement(null, sentry))
-                    }
-                    for (caseExp in sentry.labels) {
-                        compoundStatement.addStatement(handleCaseDefaultStatement(caseExp, sentry))
-                    }
-                    for (subStmt in sentry.statements) {
-                        compoundStatement.addStatement(
-                            handle(subStmt) ?: ProblemExpression("Could not parse statement")
-                        )
-                    }
+                // Compute region and code for self generated compound statement to match the c++
+                // versions
+                var start: JavaToken? = null
+                var end: JavaToken? = null
+                val tokenRange = switchStmt.tokenRange
+                val tokenRangeSelector = switchStmt.selector.tokenRange
+                if (tokenRange.isPresent && tokenRangeSelector.isPresent) {
+                    start = getNextTokenWith("{", tokenRangeSelector.get().end)
+                    end = getPreviousTokenWith("}", tokenRange.get().end)
                 }
+                val compoundStatement =
+                    this.newBlock().withChildren {
+                        for (sentry in switchStmt.entries) {
+                            if (sentry.labels.isEmpty()) {
+                                it.addStatement(handleCaseDefaultStatement(null, sentry))
+                            }
+                            for (caseExp in sentry.labels) {
+                                it.addStatement(handleCaseDefaultStatement(caseExp, sentry))
+                            }
+                            for (subStmt in sentry.statements) {
+                                it.addStatement(
+                                    handle(subStmt)
+                                        ?: ProblemExpression("Could not parse statement")
+                                )
+                            }
+                        }
+                    }
+                compoundStatement.code = getCodeBetweenTokens(start, end)
+                compoundStatement.location = getLocationsFromTokens(it.location, start, end)
+                it.statement = compoundStatement
             }
-            switchStatement.statement = compoundStatement
-        }
         return switchStatement
     }
 
@@ -481,57 +482,56 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
 
         val name = containingClass
-        val constructExpr = this.newConstructExpression(name, rawNode = null)
-        constructExpr.withChildren {
-            constructExpr.type = unknownType()
+        val constructExpr =
+            this.newConstructExpression(name, rawNode = null).withChildren { constructExpr ->
+                constructExpr.type = unknownType()
 
-            // Create a reference either to "this"
-            if (explicitConstructorInvocationStmt.isThis) {
-                frontend.scopeManager.currentRecord?.toType()?.let { constructExpr.type = it }
-                constructExpr.callee = this.newReference(name)
-            } else {
-                // or to our direct (first) super type
-                frontend.scopeManager.currentRecord?.superTypes?.firstOrNull()?.let {
-                    constructExpr.type = it
-                    constructExpr.callee = this.newReference(it.name)
+                // Create a reference either to "this"
+                if (explicitConstructorInvocationStmt.isThis) {
+                    frontend.scopeManager.currentRecord?.toType()?.let { constructExpr.type = it }
+                    constructExpr.callee = this.newReference(name)
+                } else {
+                    // or to our direct (first) super type
+                    frontend.scopeManager.currentRecord?.superTypes?.firstOrNull()?.let {
+                        constructExpr.type = it
+                        constructExpr.callee = this.newReference(it.name)
+                    }
                 }
-            }
 
-            val arguments =
-                explicitConstructorInvocationStmt.arguments
-                    .map(frontend.expressionHandler::handle)
-                    .filterIsInstance<
-                        de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                    >()
-            constructExpr.arguments = arguments
-        }
+                val arguments =
+                    explicitConstructorInvocationStmt.arguments
+                        .map(frontend.expressionHandler::handle)
+                        .filterIsInstance<
+                            de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                        >()
+                constructExpr.arguments = arguments
+            }
         return constructExpr
     }
 
     private fun handleTryStatement(stmt: Statement): TryStatement {
         val tryStmt = stmt.asTryStmt()
-        val tryStatement = newTryStatement(rawNode = stmt)
-        tryStatement.withChildren(true) {
-            val resources =
-                tryStmt.resources.mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
-            val tryBlock = handleBlockStatement(tryStmt.tryBlock)
-            val catchClauses = tryStmt.catchClauses.map(::handleCatchClause)
-            val finallyBlock = tryStmt.finallyBlock.map(::handleBlockStatement).orElse(null)
-            frontend.scopeManager.leaveScope(tryStatement)
-            tryStatement.resources = resources
-            tryStatement.tryBlock = tryBlock
-            tryStatement.finallyBlock = finallyBlock
-            tryStatement.catchClauses = catchClauses
-            for (r in resources) {
-                if (r is DeclarationStatement) {
-                    for (d in r.declarations) {
-                        if (d is VariableDeclaration) {
-                            frontend.scopeManager.addDeclaration(d)
+        val tryStatement =
+            newTryStatement(rawNode = stmt).withChildren(true) {
+                val resources =
+                    tryStmt.resources.mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
+                val tryBlock = handleBlockStatement(tryStmt.tryBlock)
+                val catchClauses = tryStmt.catchClauses.map(::handleCatchClause)
+                val finallyBlock = tryStmt.finallyBlock.map(::handleBlockStatement).orElse(null)
+                it.resources = resources
+                it.tryBlock = tryBlock
+                it.finallyBlock = finallyBlock
+                it.catchClauses = catchClauses
+                for (r in resources) {
+                    if (r is DeclarationStatement) {
+                        for (d in r.declarations) {
+                            if (d is VariableDeclaration) {
+                                frontend.scopeManager.addDeclaration(d)
+                            }
                         }
                     }
                 }
             }
-        }
 
         return tryStatement
     }
@@ -539,35 +539,35 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     private fun handleCatchClause(
         catchCls: CatchClause
     ): de.fraunhofer.aisec.cpg.graph.statements.CatchClause {
-        val cClause = newCatchClause(rawNode = catchCls)
-        cClause.withChildren(true) {
-            val possibleTypes = mutableSetOf<Type>()
-            val concreteType: Type
-            if (catchCls.parameter.type is UnionType) {
-                for (t in (catchCls.parameter.type as UnionType).elements) {
-                    possibleTypes.add(frontend.getTypeAsGoodAsPossible(t))
+        val cClause =
+            newCatchClause(rawNode = catchCls).withChildren(true) {
+                val possibleTypes = mutableSetOf<Type>()
+                val concreteType: Type
+                if (catchCls.parameter.type is UnionType) {
+                    for (t in (catchCls.parameter.type as UnionType).elements) {
+                        possibleTypes.add(frontend.getTypeAsGoodAsPossible(t))
+                    }
+                    // we do not know which of the exceptions was actually thrown, so we assume this
+                    // might
+                    // be any
+                    concreteType = this.objectType("java.lang.Throwable")
+                    concreteType.typeOrigin = Type.Origin.GUESSED
+                } else {
+                    concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)
+                    possibleTypes.add(concreteType)
                 }
-                // we do not know which of the exceptions was actually thrown, so we assume this
-                // might
-                // be any
-                concreteType = this.objectType("java.lang.Throwable")
-                concreteType.typeOrigin = Type.Origin.GUESSED
-            } else {
-                concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)
-                possibleTypes.add(concreteType)
+                val parameter =
+                    this.newVariableDeclaration(
+                        catchCls.parameter.name.toString(),
+                        concreteType,
+                        rawNode = catchCls.parameter
+                    )
+                parameter.addAssignedTypes(possibleTypes)
+                val body = handleBlockStatement(catchCls.body)
+                it.body = body
+                it.parameter = parameter
+                frontend.scopeManager.addDeclaration(parameter)
             }
-            val parameter =
-                this.newVariableDeclaration(
-                    catchCls.parameter.name.toString(),
-                    concreteType,
-                    rawNode = catchCls.parameter
-                )
-            parameter.addAssignedTypes(possibleTypes)
-            val body = handleBlockStatement(catchCls.body)
-            cClause.body = body
-            cClause.parameter = parameter
-            frontend.scopeManager.addDeclaration(parameter)
-        }
         return cClause
     }
 

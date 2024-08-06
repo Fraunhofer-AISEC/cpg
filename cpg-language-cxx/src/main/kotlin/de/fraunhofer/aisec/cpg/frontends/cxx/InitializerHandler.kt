@@ -54,19 +54,18 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = newConstructExpression(rawNode = ctx)
-        constructExpression.type =
-            (frontend.declaratorHandler.lastNode as? VariableDeclaration)?.type ?: unknownType()
-
-        constructExpression.withChildren {
-            for ((i, argument) in ctx.arguments.withIndex()) {
-                val arg = frontend.expressionHandler.handle(argument)
-                arg?.let {
-                    it.argumentIndex = i
-                    constructExpression.addArgument(it)
+        val constructExpression =
+            newConstructExpression(rawNode = ctx).withChildren { constructExpression ->
+                for ((i, argument) in ctx.arguments.withIndex()) {
+                    val arg = frontend.expressionHandler.handle(argument)
+                    arg?.let {
+                        it.argumentIndex = i
+                        constructExpression.addArgument(it)
+                    }
                 }
             }
-        }
+        constructExpression.type =
+            (frontend.declaratorHandler.lastNode as? VariableDeclaration)?.type ?: unknownType()
 
         return constructExpression
     }
@@ -78,19 +77,18 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         val targetType =
             (frontend.declaratorHandler.lastNode as? ValueDeclaration)?.type ?: unknownType()
 
-        val expression = newInitializerListExpression(targetType, rawNode = ctx)
+        val expression =
+            newInitializerListExpression(targetType, rawNode = ctx).withChildren { expression ->
+                for (clause in ctx.clauses) {
+                    frontend.expressionHandler.handle(clause)?.let {
+                        val edge = PropertyEdge(expression, it)
+                        edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
 
-        expression.withChildren {
-            for (clause in ctx.clauses) {
-                frontend.expressionHandler.handle(clause)?.let {
-                    val edge = PropertyEdge(expression, it)
-                    edge.addProperty(Properties.INDEX, expression.initializerEdges.size)
-
-                    expression.initializerEdges.add(edge)
-                    expression.addPrevDFG(it)
+                        expression.initializerEdges.add(edge)
+                        expression.addPrevDFG(it)
+                    }
                 }
             }
-        }
 
         return expression
     }

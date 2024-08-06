@@ -449,34 +449,35 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     private fun handleAnnotations(owner: NodeWithAnnotations<*>): List<Annotation> {
         val list = ArrayList<Annotation>()
         for (expr in owner.annotations) {
-            val annotation = newAnnotation(expr.nameAsString, rawNode = expr)
+            val annotation =
+                newAnnotation(expr.nameAsString, rawNode = expr).withChildren {
+                    val members = ArrayList<AnnotationMember>()
 
-            annotation.withChildren {
-                val members = ArrayList<AnnotationMember>()
-
-                // annotations can be specified as member / value pairs
-                if (expr.isNormalAnnotationExpr) {
-                    for (pair in expr.asNormalAnnotationExpr().pairs) {
-                        val member = newAnnotationMember(pair.nameAsString, rawNode = pair.value)
-                        member.withChildren {
-                            it.value = expressionHandler.handle(pair.value) as Expression
+                    // annotations can be specified as member / value pairs
+                    if (expr.isNormalAnnotationExpr) {
+                        for (pair in expr.asNormalAnnotationExpr().pairs) {
+                            val member =
+                                newAnnotationMember(pair.nameAsString, rawNode = pair.value)
+                            member.withChildren {
+                                it.value = expressionHandler.handle(pair.value) as Expression
+                            }
+                            members.add(member)
                         }
-                        members.add(member)
-                    }
-                } else if (expr.isSingleMemberAnnotationExpr) {
-                    val value = expr.asSingleMemberAnnotationExpr().memberValue
-                    if (value != null) {
-                        // or as a literal. in this case it is assigned to the annotation member
-                        // 'value'
-                        val member = newAnnotationMember(ANNOTATION_MEMBER_VALUE, rawNode = value)
-                        member.withChildren {
-                            it.value = expressionHandler.handle(value) as Expression
+                    } else if (expr.isSingleMemberAnnotationExpr) {
+                        val value = expr.asSingleMemberAnnotationExpr().memberValue
+                        if (value != null) {
+                            // or as a literal. in this case it is assigned to the annotation member
+                            // 'value'
+                            val member =
+                                newAnnotationMember(ANNOTATION_MEMBER_VALUE, rawNode = value)
+                                    .withChildren {
+                                        it.value = expressionHandler.handle(value) as Expression
+                                    }
+                            members.add(member)
                         }
-                        members.add(member)
                     }
+                    it.members = members
                 }
-                annotation.members = members
-            }
 
             list.add(annotation)
         }
