@@ -428,6 +428,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             if (base.location == null) {
                 base.location = frontend.locationOf(fieldAccessExpr)
             }
+            memberExpression.base = base
         }
 
         return memberExpression
