@@ -654,7 +654,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             rawNode = enumerator,
                         )
 
-
                     // In C/C++, default enums are of type int
                     enumConst.type = primitiveType("int")
 
