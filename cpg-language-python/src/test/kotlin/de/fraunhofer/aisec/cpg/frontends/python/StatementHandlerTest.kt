@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -56,10 +57,16 @@ class StatementHandlerTest {
         var func = result.functions["pos_only_and_args"]
         assertNotNull(func)
 
-        val list = listOf("a", "b", "c")
-        list.forEachIndexed { idx, name ->
+        val list = mapOf("a" to true, "b" to true, "c" to false)
+        list.keys.forEachIndexed { idx, name ->
             var param = func.parameterEdges.firstOrNull { it.end.name.localName == name }
             assertNotNull(param, "$name should not be empty")
+            if (list[name] == true) {
+                assertContains(
+                    param.end.modifiers,
+                    PythonLanguage.MODIFIER_POSITIONAL_ONLY_ARGUMENT
+                )
+            }
             assertEquals(idx, param.getProperty(Properties.INDEX))
         }
     }

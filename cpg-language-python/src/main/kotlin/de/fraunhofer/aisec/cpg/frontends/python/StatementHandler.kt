@@ -239,6 +239,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         frontend.scopeManager.enterScope(cls)
 
+        stmt.keywords.forEach {
+            frontend.currentTU?.addDeclaration(
+                newProblemDeclaration("could not parse keyword $it in class")
+            )
+        }
+
         for (s in stmt.body) {
             when (s) {
                 is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
@@ -390,7 +396,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Handle arguments
         if (recordDeclaration != null) {
             // first argument is the `receiver`
-            if (positionalArguments.isEmpty()) {
+            val recvPythonNode = positionalArguments.firstOrNull()
+            if (recvPythonNode == null) {
                 val problem =
                     newProblemDeclaration(
                         "Expected a receiver",
@@ -399,11 +406,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 frontend.scopeManager.addDeclaration(problem)
             } else {
-                val recvPythonNode = positionalArguments.firstOrNull()
                 val tpe = recordDeclaration.toType()
                 val recvNode =
                     newVariableDeclaration(
-                        name = recvPythonNode?.arg,
+                        name = recvPythonNode.arg,
                         type = tpe,
                         implicitInitializerAllowed = false,
                         rawNode = recvPythonNode
