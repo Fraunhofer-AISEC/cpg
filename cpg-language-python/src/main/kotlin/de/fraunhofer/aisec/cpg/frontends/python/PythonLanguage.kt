@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.of
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.autoType
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -158,5 +159,21 @@ class PythonLanguage :
 
         // The rest behaves like other languages
         return super.propagateTypeOfBinaryOperation(operation)
+    }
+
+    companion object {
+        /**
+         * This is a "modifier" to differentiate parameters in functions that are "positional" only.
+         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
+         * later in call resolving.
+         */
+        const val MODIFIER_POSITIONAL_ONLY_ARGUMENT = "posonlyarg"
+
+        /**
+         * This is a "modifier" to differentiate parameters in functions that are "keyword" only.
+         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
+         * later in call resolving.
+         */
+        const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
     }
 }
