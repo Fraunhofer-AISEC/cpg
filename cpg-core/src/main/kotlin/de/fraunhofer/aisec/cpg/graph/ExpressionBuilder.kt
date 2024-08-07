@@ -280,7 +280,7 @@ fun MetadataProvider.newCallExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberCallExpression(
-    callee: Expression?,
+    callee: Expression? = null,
     isStatic: Boolean = false,
     rawNode: Any? = null
 ): MemberCallExpression {
@@ -314,7 +314,7 @@ fun MetadataProvider.newMemberCallExpression(
 @JvmOverloads
 fun MetadataProvider.newMemberExpression(
     name: CharSequence?,
-    base: Expression,
+    base: Expression? = null,
     memberType: Type = unknownType(),
     operatorCode: String? = ".",
     rawNode: Any? = null
@@ -322,7 +322,7 @@ fun MetadataProvider.newMemberExpression(
     val node = MemberExpression()
     node.applyMetadata(this, name, rawNode, true)
 
-    node.base = base
+    base?.let { node.base = it }
     node.operatorCode = operatorCode
     node.type = memberType
 
