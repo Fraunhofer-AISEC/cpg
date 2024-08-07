@@ -28,14 +28,13 @@ package de.fraunhofer.aisec.cpg.graph.edges.ast
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
-import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
 @RelationshipEntity
 open class AstEdge<T : Node> : Edge<T> {
     constructor(start: Node, end: T) : super(start, end) {
-        // In a future PR, we will set the astParent here
+        end.astParent = start
     }
 }
 
@@ -45,17 +44,6 @@ fun <NodeType : Node> Node.astEdgesOf(
     postRemove: ((AstEdge<NodeType>) -> Unit)? = null,
 ): AstEdges<NodeType, AstEdge<NodeType>> {
     return AstEdges(this, postAdd, postRemove)
-}
-
-fun <NodeType : Node> Node.astEdgeOf(
-    of: NodeType,
-): EdgeSingletonList<NodeType, AstEdge<NodeType>> {
-    return EdgeSingletonList<NodeType, AstEdge<NodeType>>(
-        thisRef = this,
-        init = ::AstEdge,
-        outgoing = true,
-        of = of
-    )
 }
 
 /** This property edge list describes elements that are AST children of a node. */

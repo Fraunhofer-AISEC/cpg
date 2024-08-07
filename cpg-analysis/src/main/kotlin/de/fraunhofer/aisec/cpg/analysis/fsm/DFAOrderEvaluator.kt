@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.passes.astParent
+import de.fraunhofer.aisec.cpg.passes.astParentLegacy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -304,7 +304,7 @@ open class DFAOrderEvaluator(
     fun getBaseOfNode(node: CallExpression) =
         when {
             node is MemberCallExpression -> node.base
-            node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
+            node is ConstructExpression -> node.astParentLegacy?.getSuitableDFGTarget()
             node.thisPosition != null ->
                 node.getBaseOfCallExpressionUsingArgument(node.thisPosition!!)
             else -> {

@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.astParent
+import de.fraunhofer.aisec.cpg.passes.astParentLegacy
 import kotlin.math.absoluteValue
 
 /**
@@ -694,7 +694,7 @@ fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
     var checkedNode: Node? = this
     while (checkedNode !is FunctionDeclaration) {
-        checkedNode = checkedNode?.astParent
+        checkedNode = checkedNode?.astParentLegacy
         if (checkedNode == null) {
             break
         }
