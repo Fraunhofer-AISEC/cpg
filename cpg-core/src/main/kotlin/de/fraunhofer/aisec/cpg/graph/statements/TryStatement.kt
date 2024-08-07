@@ -25,10 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -36,16 +37,16 @@ import org.neo4j.ogm.annotation.Relationship
 /** A [Statement] which represents a try/catch block, primarily used for exception handling. */
 class TryStatement : Statement() {
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
-    @AST
     var resourceEdges = astEdgesOf<Statement>()
     var resources by unwrapping(TryStatement::resourceEdges)
 
-    @AST var tryBlock: Block? = null
+    @Relationship(value = "TRY_BLOCK") var tryBlockEdge = astOptionalEdgeOf<Block>()
+    var tryBlock by unwrappingOptional(TryStatement::tryBlockEdge)
 
-    @AST var finallyBlock: Block? = null
+    @Relationship(value = "FINALLY_BLOCK") var finallyBlockEdge = astOptionalEdgeOf<Block>()
+    var finallyBlock by unwrappingOptional(TryStatement::finallyBlockEdge)
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
-    @AST
     var catchClauseEdges = astEdgesOf<CatchClause>()
     var catchClauses by unwrapping(TryStatement::catchClauseEdges)
 

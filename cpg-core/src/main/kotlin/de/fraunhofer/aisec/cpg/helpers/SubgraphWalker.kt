@@ -27,17 +27,16 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Consumer
-import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
 /** A type for a node visitor callback for the [SubgraphWalker]. */
@@ -55,7 +54,7 @@ object SubgraphWalker {
      * @param classType the class type
      * @return its fields, including the ones from its superclass
      */
-    private fun getAllFields(classType: Class<*>): Collection<Field> {
+    fun getAllEdgeFields(classType: Class<*>): Collection<Field> {
         if (classType.superclass != null) {
             val cacheKey = classType.name
 
@@ -65,8 +64,8 @@ object SubgraphWalker {
                 return fieldCache[cacheKey] ?: ArrayList()
             }
             val fields = ArrayList<Field>()
-            fields.addAll(getAllFields(classType.superclass))
-            fields.addAll(listOf(*classType.declaredFields))
+            fields.addAll(getAllEdgeFields(classType.superclass))
+            fields.addAll(listOf(*classType.declaredFields).filter { it.name.contains("Edge") })
 
             // update the cache
             fieldCache[cacheKey] = fields
@@ -76,8 +75,8 @@ object SubgraphWalker {
     }
 
     /**
-     * Retrieves a list of AST children of the specified node by iterating all fields that are
-     * annotated with the [AST] annotation.
+     * Retrieves a list of AST children of the specified node by iterating all edge fields that are
+     * of type [AstEdge].
      *
      * Please note, that you SHOULD NOT call this directly in a recursive function, since the AST
      * might have loops and you will probably run into a [StackOverflowError]. Therefore, use of
@@ -92,54 +91,9 @@ object SubgraphWalker {
         if (node == null) return children
         val classType: Class<*> = node.javaClass
 
-        /*for (member in node::class.members) {
-            val subGraph = member.findAnnotation<SubGraph>()
-            if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
-                val old = member.isAccessible
-
-                member.isAccessible = true
-
-                val obj = member.call(node)
-
-                // skip, if null
-                if (obj == null) {
-                    continue
-                }
-
-                member.isAccessible = old
-
-                var outgoing = true // default
-                var relationship = member.findAnnotation<Relationship>()
-                if (relationship != null) {
-                    outgoing =
-                        relationship.direction ==
-                                Relationship.Direction.OUTGOING)
-                }
-                if (checkForPropertyEdge(field, obj)) {
-                    obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
-                }
-                when (obj) {
-                    is Node -> {
-                        children.add(obj)
-                    }
-                    is Collection<*> -> {
-                        children.addAll(obj as Collection<Node>)
-                    }
-                    else -> {
-                        throw AnnotationFormatError(
-                            "Found @field:SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
-                        )
-                    }
-                }
-            }
-        }*/
-
         // We currently need to stick to pure Java reflection, since Kotlin reflection
         // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
-        for (field in getAllFields(classType)) {
-            field.getAnnotation(AST::class.java) ?: continue
+        for (field in getAllEdgeFields(classType)) {
             try {
                 // We need to synchronize access to the field, because otherwise different
                 // threads might restore the isAccessible property while this thread is still
@@ -155,28 +109,15 @@ object SubgraphWalker {
                         obj
                     } ?: continue
 
-                // skip, if null
-                var outgoing = true // default
-                if (field.getAnnotation(Relationship::class.java) != null) {
-                    outgoing =
-                        (field.getAnnotation(Relationship::class.java).direction ==
-                            Relationship.Direction.OUTGOING)
-                }
                 when (obj) {
-                    is Node -> {
-                        children.add(obj)
-                    }
-                    is EdgeList<*, *> -> {
-                        children.addAll(obj.toNodeCollection(outgoing))
-                    }
-                    is Collection<*> -> {
-                        children.addAll(obj.filterIsInstance<Node>())
+                    is EdgeCollection<*, *> -> {
+                        children.addAll(obj.toNodeCollection({ it is AstEdge<*> }))
                     }
                     else -> {
                         throw AnnotationFormatError(
-                            "Found @AST on field of type " +
+                            "Found  on field of type " +
                                 obj.javaClass +
-                                " but can only used with node graph classes or collections of graph nodes"
+                                " but can only used with edge classes or edge collections"
                         )
                     }
                 }

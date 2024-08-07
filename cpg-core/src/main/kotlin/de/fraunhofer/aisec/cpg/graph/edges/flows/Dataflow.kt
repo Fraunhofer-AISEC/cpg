@@ -177,8 +177,8 @@ class Dataflows<T : Node>(
      * This connects our dataflow to our "mirror" property. Meaning that if we add a node to
      * nextDFG, we add our thisRef to the "prev" of "next" and vice-versa.
      */
-    override fun handlePostAdd(edge: Dataflow) {
-        super<MirroredEdgeCollection>.handlePostAdd(edge)
+    override fun handleOnAdd(edge: Dataflow) {
+        super<MirroredEdgeCollection>.handleOnAdd(edge)
         var start = edge.start
         var thisRef = this.thisRef
 

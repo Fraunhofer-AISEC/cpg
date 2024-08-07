@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -64,7 +65,6 @@ open class CallExpression :
 
     /** The list of arguments of this call expression, backed by a list of [Edge] objects. */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var argumentEdges = astEdgesOf<Expression>()
 
     /**
@@ -84,7 +84,10 @@ open class CallExpression :
      * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
-    @AST var callee: Expression = ProblemExpression("could not parse callee")
+    @Relationship(value = "CALLEE", direction = Relationship.Direction.OUTGOING)
+    private var calleeEdge = astEdgeOf<Expression>(ProblemExpression("could not parse callee"))
+
+    var callee by unwrapping(CallExpression::calleeEdge)
 
     /**
      * The [Name] of this call expression, based on its [callee].
@@ -148,7 +151,6 @@ open class CallExpression :
 
     /** If the CallExpression instantiates a template, the call can provide template arguments. */
     @Relationship(value = "TEMPLATE_ARGUMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var templateArgumentEdges: TemplateArguments<Node>? = null
         set(value) {
             field = value

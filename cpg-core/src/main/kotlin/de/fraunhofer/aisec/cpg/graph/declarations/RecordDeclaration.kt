@@ -44,33 +44,27 @@ open class RecordDeclaration :
     var kind: String? = null
 
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var fieldEdges = astEdgesOf<FieldDeclaration>()
     var fields by unwrapping(RecordDeclaration::fieldEdges)
 
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var methodEdges = astEdgesOf<MethodDeclaration>()
     var methods by unwrapping(RecordDeclaration::methodEdges)
 
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var constructorEdges = astEdgesOf<ConstructorDeclaration>()
     var constructors by unwrapping(RecordDeclaration::constructorEdges)
 
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var recordEdges = astEdgesOf<RecordDeclaration>()
     var records by unwrapping(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    @AST
     var templateEdges = astEdgesOf<TemplateDeclaration>()
     var templates by unwrapping(RecordDeclaration::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
     override var statementEdges = astEdgesOf<Statement>()
     override var statements by unwrapping(RecordDeclaration::statementEdges)
 

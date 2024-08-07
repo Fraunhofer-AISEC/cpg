@@ -127,8 +127,8 @@ fun MetadataProvider.newAssignExpression(
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
     node.operatorCode = operatorCode
-    node.lhs = lhs
-    node.rhs = rhs
+    node.lhs = lhs.toMutableList()
+    node.rhs = rhs.toMutableList()
 
     log(node)
 
@@ -207,8 +207,8 @@ fun MetadataProvider.newConditionalExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newKeyValueExpression(
-    key: Expression? = null,
-    value: Expression? = null,
+    key: Expression,
+    value: Expression,
     rawNode: Any? = null
 ): KeyValueExpression {
     val node = KeyValueExpression()

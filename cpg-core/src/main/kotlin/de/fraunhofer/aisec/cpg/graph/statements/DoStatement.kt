@@ -25,24 +25,29 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a conditional loop statement of the form: `do{...}while(...)`. */
 class DoStatement : Statement(), ArgumentHolder {
+    var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
-    @AST var condition: Expression? = null
+    var condition by unwrappingOptional(DoStatement::conditionEdge)
+
+    var statementEdge = astOptionalEdgeOf<Statement>()
 
     /**
      * The statement that is going to be executed and re-executed, until the condition evaluates to
      * false for the first time. Usually a [Block].
      */
-    @AST var statement: Statement? = null
+    var statement by unwrappingOptional(DoStatement::statementEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)

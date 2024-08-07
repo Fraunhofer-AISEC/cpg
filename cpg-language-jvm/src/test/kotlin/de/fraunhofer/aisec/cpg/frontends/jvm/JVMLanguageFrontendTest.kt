@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.astParent
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -97,7 +95,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -162,7 +159,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(result)
@@ -186,7 +182,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -205,7 +200,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -283,7 +277,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -320,7 +313,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -342,7 +334,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
@@ -413,7 +404,6 @@ class JVMLanguageFrontendTest {
                 topLevel,
                 true
             ) {
-                it.registerPass<EdgeCachePass>()
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)

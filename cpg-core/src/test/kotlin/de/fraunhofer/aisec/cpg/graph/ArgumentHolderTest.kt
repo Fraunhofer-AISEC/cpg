@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -46,7 +47,7 @@ class ArgumentHolderTest {
                     newConditionalExpression(newLiteral(true)),
                     newDoStatement(),
                     newInitializerListExpression(),
-                    newKeyValueExpression(),
+                    newKeyValueExpression(key = ProblemExpression(), value = ProblemExpression()),
                     newSubscriptExpression(),
                     newWhileStatement(),
                     newAssignExpression(),

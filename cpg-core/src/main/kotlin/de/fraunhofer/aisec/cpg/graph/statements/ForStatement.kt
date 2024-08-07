@@ -27,19 +27,26 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 
 class ForStatement : Statement(), BranchingNode {
-    @AST var statement: Statement? = null
+    var statementEdge = astOptionalEdgeOf<Statement>()
+    var statement by unwrappingOptional(ForStatement::statementEdge)
 
-    @AST var initializerStatement: Statement? = null
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatement by unwrappingOptional(ForStatement::initializerStatementEdge)
 
-    @AST var conditionDeclaration: Declaration? = null
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
+    var conditionDeclaration by unwrappingOptional(ForStatement::conditionDeclarationEdge)
 
-    @AST var condition: Expression? = null
+    var conditionEdge = astOptionalEdgeOf<Expression>()
+    var condition by unwrappingOptional(ForStatement::conditionEdge)
 
-    @AST var iterationStatement: Statement? = null
+    var iterationStatementEdge = astOptionalEdgeOf<Statement>()
+    var iterationStatement by unwrappingOptional(ForStatement::iterationStatementEdge)
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration

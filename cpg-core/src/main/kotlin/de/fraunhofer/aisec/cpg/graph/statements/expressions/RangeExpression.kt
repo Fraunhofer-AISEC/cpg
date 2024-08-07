@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import java.util.*
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents the specification of a range (e.g., of an array). Usually used in combination with an
@@ -53,19 +55,21 @@ import java.util.*
  * Individual meaning of the range indices might differ per language.
  */
 class RangeExpression : Expression() {
-
+    @Relationship("FLOOR") var floorEdge = astOptionalEdgeOf<Expression>()
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
-    @AST var floor: Expression? = null
+    var floor by unwrappingOptional(RangeExpression::floorEdge)
 
+    @Relationship("CEILING") var ceilingEdge = astOptionalEdgeOf<Expression>()
     /** The upper bound ("ceiling") of the range. This index is usually *exclusive*. */
-    @AST var ceiling: Expression? = null
+    var ceiling by unwrappingOptional(RangeExpression::ceilingEdge)
 
+    @Relationship("THIRD") var thirdEdge = astOptionalEdgeOf<Expression>()
     /**
      * Some languages offer a third value. The meaning depends completely on the language. For
      * example, Python allows specifying a step, while Go allows to control the underlying array's
      * capacity (not length).
      */
-    @AST var third: Expression? = null
+    var third by unwrappingOptional(RangeExpression::thirdEdge)
 
     /** The operator code that separates the range elements. Common cases are `:` or `...` */
     var operatorCode = ":"

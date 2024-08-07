@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -39,14 +41,13 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
+    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usually a [Block]. */
-    @AST var body: Statement? = null
+    var body by unwrappingOptional(FunctionDeclaration::bodyEdge)
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var parameterEdges = astEdgesOf<ParameterDeclaration>()
-
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var parameters by unwrapping(FunctionDeclaration::parameterEdges)
 

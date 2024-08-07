@@ -436,7 +436,7 @@ object Util {
      * @return
      */
     fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
-        val subnodes = SubgraphWalker.getAstChildren(n)
+        val subnodes = n?.astChildren ?: listOf()
         val adjacentNodes =
             if (incoming) {
                 subnodes.filter { it.nextDFG.contains(n) }.toMutableList()

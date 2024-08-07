@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
 
 /**
  * This interfaces is an extension of [MutableCollection] that holds specific functions for the
@@ -39,8 +40,8 @@ interface EdgeCollection<
     var thisRef: Node
     var init: (start: Node, end: NodeType) -> EdgeType
     var outgoing: Boolean
-    var postAdd: ((EdgeType) -> Unit)?
-    var postRemove: ((EdgeType) -> Unit)?
+    var onAdd: ((EdgeType) -> Unit)?
+    var onRemove: ((EdgeType) -> Unit)?
 
     /**
      * Removes all edges with the target node. The target is considered to be either the [Edge.end]
@@ -83,7 +84,6 @@ interface EdgeCollection<
      * If [outgoing] is true, the edge is created from [thisRef] -> [target], otherwise from
      * [target] to [thisRef].
      */
-    @Suppress("UNCHECKED_CAST")
     fun add(
         target: NodeType,
         init: ((Node, NodeType) -> EdgeType) = this.init,
@@ -101,6 +101,7 @@ interface EdgeCollection<
         outgoing: Boolean = true,
         builder: (PropertyEdgeType.() -> Unit)? = null,
     ): PropertyEdgeType {
+        @Suppress("UNCHECKED_CAST")
         val edge =
             if (outgoing) {
                 init(thisRef, target)
@@ -139,7 +140,7 @@ interface EdgeCollection<
      * Note, that is an immutable list and only a snapshot. If you want a magic container that is in
      * sync with this [EdgeCollection], please use [unwrap].
      */
-    fun toNodeCollection(outgoing: Boolean = true): Collection<NodeType>
+    fun toNodeCollection(predicate: ((EdgeType) -> Boolean)? = null): Collection<NodeType>
 
     /**
      * Returns an [UnwrappedEdgeCollection] magic container which holds a structure that provides
@@ -153,16 +154,16 @@ interface EdgeCollection<
      * propagate the edge to other properties or register additional handlers, e.g. a
      * [TypeObserver].
      */
-    fun handlePostAdd(edge: EdgeType) {
-        postAdd?.invoke(edge)
+    fun handleOnAdd(edge: EdgeType) {
+        onAdd?.invoke(edge)
     }
 
     /**
      * This function will be executed after an edge was removed from the container. This can be used
      * to unregister additional handlers, e.g. a [TypeObserver].
      */
-    fun handlePostRemove(edge: EdgeType) {
-        postRemove?.invoke(edge)
+    fun handleOnRemove(edge: EdgeType) {
+        onRemove?.invoke(edge)
     }
 }
 
@@ -170,14 +171,23 @@ interface EdgeCollection<
 @Suppress("UNCHECKED_CAST")
 internal fun <
     NodeType : Node,
+    EdgeType : Edge<NodeType>,
     CollectionType : MutableCollection<NodeType>
 > internalToNodeCollection(
-    edges: EdgeCollection<NodeType, out Edge<NodeType>>,
+    edges: EdgeCollection<NodeType, EdgeType>,
     outgoing: Boolean = true,
+    predicate: ((EdgeType) -> Boolean)? = null,
     createCollection: () -> CollectionType
 ): CollectionType {
     var unwrapped = createCollection()
-    edges.mapTo(unwrapped) { if (outgoing) it.end else it.start as NodeType }
+    for (edge in edges) {
+        if (predicate != null && !predicate(edge)) {
+            continue
+        }
+
+        unwrapped += if (outgoing) edge.end else edge.start as NodeType
+    }
+
     return unwrapped
 }
 

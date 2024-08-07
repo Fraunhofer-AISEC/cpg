@@ -34,8 +34,8 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var thisRef: Node,
     override var init: (start: Node, end: NodeType) -> EdgeType,
     override var outgoing: Boolean = true,
-    override var postAdd: ((EdgeType) -> Unit)? = null,
-    override var postRemove: ((EdgeType) -> Unit)? = null
+    override var onAdd: ((EdgeType) -> Unit)? = null,
+    override var onRemove: ((EdgeType) -> Unit)? = null
 ) : ArrayList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
 
     override fun add(e: EdgeType): Boolean {
@@ -46,7 +46,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
         val ok = super<ArrayList>.add(e)
         if (ok) {
-            handlePostAdd(e)
+            handleOnAdd(e)
         }
         return ok
     }
@@ -54,7 +54,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun remove(o: EdgeType): Boolean {
         val ok = super<ArrayList>.remove(o)
         if (ok) {
-            handlePostRemove(o)
+            handleOnRemove(o)
         }
         return ok
     }
@@ -62,7 +62,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun removeAll(c: Collection<EdgeType>): Boolean {
         val ok = super.removeAll(c)
         if (ok) {
-            c.forEach { handlePostRemove(it) }
+            c.forEach { handleOnRemove(it) }
         }
         return ok
     }
@@ -73,7 +73,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     override fun removeAt(index: Int): EdgeType {
         var edge = super.removeAt(index)
-        handlePostRemove(edge)
+        handleOnRemove(edge)
         return edge
     }
 
@@ -81,7 +81,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         var edges = filter { predicate.test(it) }
         val ok = super<ArrayList>.removeIf(predicate)
         if (ok) {
-            edges.forEach { handlePostRemove(it) }
+            edges.forEach { handleOnRemove(it) }
         }
         return ok
     }
@@ -89,7 +89,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun clear() {
         var edges = this.toList()
         super.clear()
-        edges.forEach { handlePostRemove(it) }
+        edges.forEach { handleOnRemove(it) }
     }
 
     override fun add(index: Int, element: EdgeType) {
@@ -98,7 +98,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
         super<ArrayList>.add(index, element)
 
-        handlePostAdd(element)
+        handleOnAdd(element)
 
         // We need to re-compute all edges with an index > inserted index
         for (i in index until this.size) {
@@ -106,8 +106,8 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
-    override fun toNodeCollection(outgoing: Boolean): List<NodeType> {
-        return internalToNodeCollection(this, outgoing, ::ArrayList)
+    override fun toNodeCollection(predicate: ((EdgeType) -> Boolean)?): List<NodeType> {
+        return internalToNodeCollection(this, outgoing, predicate, ::ArrayList)
     }
 
     /**

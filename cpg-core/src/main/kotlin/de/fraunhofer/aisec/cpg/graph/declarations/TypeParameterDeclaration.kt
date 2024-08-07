@@ -25,18 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.HasDefault
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a type template parameter */
 class TypeParameterDeclaration : ValueDeclaration(), HasDefault<Type?> {
-    /** TemplateParameters can define a default for the type parameter. */
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    @AST
-    override var default: Type? = null
+    var defaultEdge = astOptionalEdgeOf<Type>()
+    /** TemplateParameters can define a default for the type parameter. */
+    override var default by unwrappingOptional(TypeParameterDeclaration::defaultEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

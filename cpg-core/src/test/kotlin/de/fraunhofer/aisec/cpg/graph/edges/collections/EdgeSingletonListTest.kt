@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,29 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.statements
+package de.fraunhofer.aisec.cpg.graph.edges.collections
 
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
+import kotlin.test.Test
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 
-/** Represents an assert statement */
-class AssertStatement : Statement() {
-    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
-    /** The condition to be evaluated. */
-    var condition by unwrappingOptional(AssertStatement::conditionEdge)
+class EdgeSingletonListTest {
+    @Test
+    fun testNullable() {
+        with(TestLanguageFrontend()) {
+            class MyNode : Node() {
+                var edge = astOptionalEdgeOf<Expression>()
+                var unwrapped by unwrappingOptional(MyNode::edge)
+            }
 
-    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
-    /** The *optional* message that is shown, if the assert is evaluated as true */
-    var message by unwrappingOptional(AssertStatement::messageEdge)
+            var node = MyNode()
+            assertNull(node.unwrapped)
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is AssertStatement) return false
-        return super.equals(other) && condition == other.condition && message == other.message
+            node.unwrapped = newLiteral(1)
+            assertSame(node.unwrapped, node.edge.element?.end)
+        }
     }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
 }

@@ -230,7 +230,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             // Here we can not use node as raw node as it spans all keys and values
             lst +=
                 newKeyValueExpression(
-                        key = node.keys[i]?.let { handle(it) },
+                        key =
+                            node.keys[i]?.let { handle(it) } ?: newProblemExpression("missing key"),
                         value = handle(node.values[i]),
                     )
                     .codeAndLocationFromChildren(node)
@@ -370,7 +371,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
 
         for (keyword in node.keywords) {
-            ret.addArgument(handle(keyword.value), keyword.arg)
+            ret.argumentEdges.add(handle(keyword.value)) { name = keyword.arg }
         }
 
         return ret

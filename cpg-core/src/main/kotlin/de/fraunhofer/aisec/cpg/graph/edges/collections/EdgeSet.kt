@@ -37,13 +37,13 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var thisRef: Node,
     override var init: (start: Node, end: NodeType) -> EdgeType,
     override var outgoing: Boolean = true,
-    override var postAdd: ((EdgeType) -> Unit)? = null,
-    override var postRemove: ((EdgeType) -> Unit)? = null
+    override var onAdd: ((EdgeType) -> Unit)? = null,
+    override var onRemove: ((EdgeType) -> Unit)? = null
 ) : HashSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
     override fun add(e: EdgeType): Boolean {
         val ok = super<HashSet>.add(e)
         if (ok) {
-            handlePostAdd(e)
+            handleOnAdd(e)
         }
         return ok
     }
@@ -52,7 +52,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         var edges = filter { predicate.test(it) }
         val ok = super<HashSet>.removeIf(predicate)
         if (ok) {
-            edges.forEach { handlePostRemove(it) }
+            edges.forEach { handleOnRemove(it) }
         }
         return ok
     }
@@ -61,7 +61,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         val edges = this.toSet()
         val ok = super.removeAll(c)
         if (ok) {
-            edges.forEach { handlePostRemove(it) }
+            edges.forEach { handleOnRemove(it) }
         }
         return ok
     }
@@ -69,7 +69,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun remove(o: EdgeType): Boolean {
         val ok = super<HashSet>.remove(o)
         if (ok) {
-            handlePostRemove(o)
+            handleOnRemove(o)
         }
         return ok
     }
@@ -77,11 +77,11 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun clear() {
         var edges = this.toList()
         super.clear()
-        edges.forEach { handlePostRemove(it) }
+        edges.forEach { handleOnRemove(it) }
     }
 
-    override fun toNodeCollection(outgoing: Boolean): MutableSet<NodeType> {
-        return internalToNodeCollection(this, outgoing, ::HashSet)
+    override fun toNodeCollection(predicate: ((EdgeType) -> Boolean)?): MutableSet<NodeType> {
+        return internalToNodeCollection(this, outgoing, predicate, ::HashSet)
     }
 
     /**
