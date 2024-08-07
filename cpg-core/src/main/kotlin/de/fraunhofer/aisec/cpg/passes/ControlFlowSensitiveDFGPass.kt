@@ -695,6 +695,7 @@ fun Node.objectIdentifier(): Int? {
     return when (this) {
         is MemberExpression -> this.objectIdentifier()
         is Reference -> this.objectIdentifier()
+        is UnaryOperator -> this.objectIdentifier()
         is Declaration -> this.hashCode()
         else -> null
     }
@@ -718,4 +719,19 @@ fun MemberExpression.objectIdentifier(): Int? {
 /** Implements [Node.objectIdentifier] for a [Reference]. */
 fun Reference.objectIdentifier(): Int? {
     return this.refersTo?.hashCode()
+}
+
+/** Implements [Node.objectIdentifier] for a [UnaryOperator]. */
+fun UnaryOperator.objectIdentifier(): Int? {
+    val op = this.operatorCode
+    return if (op == null) {
+        null
+    } else {
+        val inputIdentifier = input.objectIdentifier()
+        if (inputIdentifier != null) {
+            op.hashCode() + inputIdentifier
+        } else {
+            null
+        }
+    }
 }
