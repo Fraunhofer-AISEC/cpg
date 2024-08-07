@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.astParent
+import de.fraunhofer.aisec.cpg.passes.astParentLegacy
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -139,7 +139,7 @@ class JVMLanguageFrontendTest {
         // All references (which are not part of a call) and not to the stdlib should be resolved
         val refs = tu.refs
         refs
-            .filter { it.astParent !is CallExpression }
+            .filter { it.astParentLegacy !is CallExpression }
             .filter { !it.name.startsWith("java.") }
             .forEach {
                 val refersTo = it.refersTo

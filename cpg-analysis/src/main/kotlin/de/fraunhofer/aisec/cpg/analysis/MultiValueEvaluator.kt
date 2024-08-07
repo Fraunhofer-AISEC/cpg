@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.astParent
+import de.fraunhofer.aisec.cpg.passes.astParentLegacy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -186,7 +186,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "--" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParentLegacy is ForStatement) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -196,7 +196,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "++" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParentLegacy is ForStatement) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -256,8 +256,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun isSimpleForLoop(node: Node): Boolean {
         // Are we in the for statement somehow?
-        var forStatement = node.astParent as? ForStatement
-        if (forStatement == null) forStatement = node.astParent?.astParent as? ForStatement
+        var forStatement = node.astParentLegacy as? ForStatement
+        if (forStatement == null) forStatement = node.astParentLegacy?.astParentLegacy as? ForStatement
 
         if (forStatement == null) return false // ...no, we're not.
 
@@ -268,20 +268,20 @@ class MultiValueEvaluator : ValueEvaluator() {
             forStatement.initializerStatement == node || // The node is the initialization
             (initializerDecl != null &&
                 initializerDecl ==
-                    node.astParent) || // The parent of the node is the initializer of the loop
+                    node.astParentLegacy) || // The parent of the node is the initializer of the loop
             // variable
             forStatement.iterationStatement ==
                 node || // The node or its parent are the iteration statement of the loop
-            forStatement.iterationStatement == node.astParent
+            forStatement.iterationStatement == node.astParentLegacy
     }
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
+            expr.prevDFG.firstOrNull { it.astParentLegacy is ForStatement }?.astParentLegacy as? ForStatement
                 ?: expr.prevDFG
-                    .firstOrNull { it.astParent?.astParent is ForStatement }
-                    ?.astParent
-                    ?.astParent as? ForStatement
+                    .firstOrNull { it.astParentLegacy?.astParentLegacy is ForStatement }
+                    ?.astParentLegacy
+                    ?.astParentLegacy as? ForStatement
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =

@@ -84,7 +84,12 @@ open class CallExpression :
      * but will be in the future. In most cases, this is a [Reference] and its [Reference.refersTo]
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
-    @AST var callee: Expression = ProblemExpression("could not parse callee")
+    @AST
+    var callee: Expression = ProblemExpression("could not parse callee")
+        set(value) {
+            value.astParent = this
+            field = value
+        }
 
     /**
      * The [Name] of this call expression, based on its [callee].

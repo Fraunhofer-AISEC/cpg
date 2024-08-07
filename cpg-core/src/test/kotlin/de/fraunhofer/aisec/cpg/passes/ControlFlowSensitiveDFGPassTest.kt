@@ -87,13 +87,13 @@ class ControlFlowSensitiveDFGPassTest {
             val baseOfMemberRead11 = assertNotNull(next.firstOrNull()?.end)
             assertEquals(11, baseOfMemberRead11.location?.region?.startLine)
             assertIs<Reference>(baseOfMemberRead11)
-            assertIs<MemberExpression>(baseOfMemberRead11.astParent)
+            assertIs<MemberExpression>(baseOfMemberRead11.astParentLegacy)
             assertEquals(AccessValues.READ, baseOfMemberRead11.access)
 
             val baseOfMemberWrite13 = assertNotNull(next.getOrNull(1)?.end)
             assertEquals(13, baseOfMemberWrite13.location?.region?.startLine)
             assertIs<Reference>(baseOfMemberWrite13)
-            assertIs<MemberExpression>(baseOfMemberWrite13.astParent)
+            assertIs<MemberExpression>(baseOfMemberWrite13.astParentLegacy)
             assertEquals(
                 AccessValues.READ,
                 baseOfMemberWrite13.access
@@ -180,7 +180,7 @@ class ControlFlowSensitiveDFGPassTest {
             val single = assertNotNull(next.singleOrNull()?.end)
             assertEquals(14, single.location?.region?.startLine)
             assertIs<Reference>(single)
-            val me = assertIs<MemberExpression>(single.astParent)
+            val me = assertIs<MemberExpression>(single.astParentLegacy)
             assertEquals(AccessValues.WRITE, me.access)
 
             // The rest should be the same as s1, so we can probably skip the rest of the asserts
