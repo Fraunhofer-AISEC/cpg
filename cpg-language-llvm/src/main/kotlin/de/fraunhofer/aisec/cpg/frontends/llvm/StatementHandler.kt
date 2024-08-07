@@ -277,7 +277,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         dummyCall.addArgument(parent, "parent")
 
         val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
-        compoundStatement.addStatement(tokenGeneration)
+        compoundStatement.statements += tokenGeneration
 
         val ifStatement = newIfStatement(rawNode = instr)
         var currentIfStatement: IfStatement? = null
@@ -342,7 +342,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             currentIfStatement?.elseStatement = throwOperation
         }
 
-        compoundStatement.addStatement(ifStatement)
+        compoundStatement.statements += ifStatement
         return compoundStatement
     }
 
@@ -705,8 +705,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val compoundStatement = newBlock(rawNode = instr)
         val assignment = newAssignExpression("=", listOf(base), listOf(valueToSet), rawNode = instr)
-        compoundStatement.addStatement(copy)
-        compoundStatement.addStatement(assignment)
+        compoundStatement.statements += copy
+        compoundStatement.statements += assignment
 
         return compoundStatement
     }
@@ -835,7 +835,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             construct.addArgument(cmpExprConstruct)
 
             val decl = declarationOrNot(construct, instr)
-            compoundStatement.addStatement(decl)
+            compoundStatement.statements += decl
         }
 
         val ptrDerefAssign = newUnaryOperator("*", false, true, rawNode = instr)
@@ -848,7 +848,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         ifStatement.condition = cmpExpr
         ifStatement.thenStatement = assignment
 
-        compoundStatement.addStatement(ifStatement)
+        compoundStatement.statements += ifStatement
 
         return compoundStatement
     }
@@ -1017,11 +1017,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val caseStatement = newCaseStatement(rawNode = instr)
             caseStatement.caseExpression =
                 newLiteral(caseBBAddress, primitiveType("i64"), rawNode = instr)
-            caseStatements.addStatement(caseStatement)
+            caseStatements.statements += caseStatement
 
             // Get the label of the goto statement.
             val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
-            caseStatements.addStatement(gotoStatement)
+            caseStatements.statements += gotoStatement
             idx++
         }
 
@@ -1078,18 +1078,18 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Get the comparison value and add it to the CaseStatement
             val caseStatement = newCaseStatement(rawNode = instr)
             caseStatement.caseExpression = frontend.getOperandValueAtIndex(instr, idx)
-            caseStatements.addStatement(caseStatement)
+            caseStatements.statements += caseStatement
             idx++
             // Get the "case" statements and add it to the CaseStatement
             val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
-            caseStatements.addStatement(gotoStatement)
+            caseStatements.statements += gotoStatement
             idx++
         }
 
         // Get the label of the "default" branch
-        caseStatements.addStatement(newDefaultStatement(rawNode = instr))
+        caseStatements.statements += newDefaultStatement(rawNode = instr)
         val defaultGoto = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
-        caseStatements.addStatement(defaultGoto)
+        caseStatements.statements += defaultGoto
 
         switchStatement.statement = caseStatements
 
@@ -1148,8 +1148,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val tryStatement = newTryStatement(rawNode = instr)
             frontend.scopeManager.enterScope(tryStatement)
             val tryBlock = newBlock(rawNode = instr)
-            tryBlock.addStatement(declarationOrNot(callExpr, instr))
-            tryBlock.addStatement(tryContinue)
+            tryBlock.statements += declarationOrNot(callExpr, instr)
+            tryBlock.statements += tryContinue
             tryStatement.tryBlock = tryBlock
             frontend.scopeManager.leaveScope(tryStatement)
 
@@ -1164,7 +1164,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
             val catchBlockStatement = newBlock(rawNode = instr)
-            catchBlockStatement.addStatement(gotoCatch)
+            catchBlockStatement.statements += gotoCatch
             catchClause.body = catchBlockStatement
             tryStatement.catchClauses = mutableListOf(catchClause)
 
@@ -1230,7 +1230,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // TODO: Probably we should make a proper copy of the array
         val newArrayDecl = declarationOrNot(frontend.getOperandValueAtIndex(instr, 0), instr)
-        compoundStatement.addStatement(newArrayDecl)
+        compoundStatement.statements += newArrayDecl
 
         val decl = newArrayDecl.declarations[0] as? VariableDeclaration
         val arrayExpr = newSubscriptExpression(rawNode = instr)
@@ -1249,7 +1249,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 listOf(frontend.getOperandValueAtIndex(instr, 1)),
                 rawNode = instr
             )
-        compoundStatement.addStatement(assignExpr)
+        compoundStatement.statements += assignExpr
 
         return compoundStatement
     }
@@ -1489,7 +1489,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             val stmt = frontend.statementHandler.handle(instr)
             if (stmt != null) {
-                compound.addStatement(stmt)
+                compound.statements += stmt
             }
 
             instr = LLVMGetNextInstruction(instr)

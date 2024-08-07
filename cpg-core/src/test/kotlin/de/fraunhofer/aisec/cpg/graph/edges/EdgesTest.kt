@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class PropertyEdgesTest {
+class EdgesTest {
     @Test
     fun testUnwrap() {
         with(TestLanguageFrontend()) {
