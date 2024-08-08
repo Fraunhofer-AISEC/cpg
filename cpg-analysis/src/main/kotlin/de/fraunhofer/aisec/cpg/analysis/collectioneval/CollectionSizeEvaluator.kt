@@ -111,56 +111,58 @@ class CollectionSizeEvaluator {
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
         val afterLoop = node.nextEOG[1]
-        var body: kotlin.Array<Statement>
+        val body = mutableListOf<Node>()
         var newRange = range
-        // TODO: body could be wrong if we have nested loops / branches in loops!
-        when (node) {
-            is ForStatement -> {
-                body =
+        val firstBodyStatement: Node? =
+            when (node) {
+                is ForStatement -> {
                     when (node.statement) {
-                        is Block -> node.statement.statements.toTypedArray()
-                        null -> arrayOf()
-                        else -> arrayOf(node.statement!!)
+                        // This cast is important! Otherwise, the wrong statements are returned
+                        is Block -> (node.statement as Block).statements.firstOrNull()
+                        null -> null
+                        else -> node.statement
                     }
-            }
-            is WhileStatement -> {
-                body =
+                }
+                is WhileStatement -> {
                     when (node.statement) {
-                        is Block -> node.statement.statements.toTypedArray()
-                        null -> arrayOf()
-                        else -> arrayOf(node.statement!!)
+                        is Block -> (node.statement as Block).statements.firstOrNull()
+                        null -> null
+                        else -> node.statement
                     }
-            }
-            is ForEachStatement -> {
-                body =
+                }
+                is ForEachStatement -> {
                     when (node.statement) {
-                        is Block -> node.statement.statements.toTypedArray()
-                        null -> arrayOf()
-                        else -> arrayOf(node.statement!!)
+                        is Block -> (node.statement as Block).statements.firstOrNull()
+                        null -> null
+                        else -> node.statement
                     }
-            }
-            is DoStatement -> {
-                body =
+                }
+                is DoStatement -> {
                     when (node.statement) {
-                        is Block -> node.statement.statements.toTypedArray()
-                        null -> arrayOf()
-                        else -> arrayOf(node.statement!!)
+                        is Block -> (node.statement as Block).statements.firstOrNull()
+                        null -> null
+                        else -> node.statement
                     }
+                }
+                else -> throw NotImplementedException()
             }
-            else -> throw NotImplementedException()
+        var current: Node? = firstBodyStatement
+        while (current != null && current != afterLoop && current != node) {
+            // Only add the Statement if it affects the range
+            if (range.applyEffect(current, name, type).second) {
+                body.add(current)
+            }
+            // get the next node, skipping nested structures
+            // we assume that the last nextEOG always points to the node after the branch!
+            current = current.nextEOG.last()
         }
-
-        // Preprocessing: remove all nodes without effect from the loop
-        body = body.filter { range.applyEffect(it, name, type).second }.toTypedArray()
         // Initialize the intervals for the previous loop iteration
         val prevBodyIntervals = Array<LatticeInterval>(body.size) { range }
         // WIDENING
-        // TODO: get max amount of iterations for the loop!
         outer@ while (true) {
             for (index in body.indices) {
-                // First apply the effect
-                // TODO: change applyEffect to handle to recursively handle loops/branches
-                val (lRange, _) = newRange.applyEffect(body[index], name, type)
+                // First apply the effect of the next node
+                val (lRange, _) = handleNext(newRange, body[index], name, type, goalNode)
                 newRange = lRange
                 // Then widen using the previous iteration
                 // Only widen for the first effective node in the loop (loop separator)
@@ -178,8 +180,8 @@ class CollectionSizeEvaluator {
         // NARROWING
         outer@ while (true) {
             for (index in body.indices) {
-                // First apply the effect
-                val (lRange, _) = newRange.applyEffect(body[index], name, type)
+                // First apply the effect of the next node
+                val (lRange, _) = handleNext(newRange, body[index], name, type, goalNode)
                 newRange = lRange
                 // Then narrow using the previous iteration
                 newRange = prevBodyIntervals[index].narrow(newRange)
@@ -225,6 +227,7 @@ class CollectionSizeEvaluator {
                 current = nextNode
             }
         }
+        // Take the join of all branches since we do not know which was taken
         val finalMergedRange = finalBranchRanges.reduce { acc, r -> acc.join(r) }
         return finalMergedRange to mergeNode
     }
