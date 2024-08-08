@@ -111,8 +111,9 @@ class CollectionSizeEvaluator {
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
         val afterLoop = node.nextEOG[1]
-        val body: kotlin.Array<Statement>
+        var body: kotlin.Array<Statement>
         var newRange = range
+        // TODO: body could be wrong if we have nested loops / branches in loops!
         when (node) {
             is ForStatement -> {
                 body =
@@ -149,44 +150,44 @@ class CollectionSizeEvaluator {
             else -> throw NotImplementedException()
         }
 
+        // Preprocessing: remove all nodes without effect from the loop
+        body = body.filter { range.applyEffect(it, name, type).second }.toTypedArray()
         // Initialize the intervals for the previous loop iteration
-        val prevBodyIntervals = Array<LatticeInterval>(body.size) { LatticeInterval.BOTTOM }
+        val prevBodyIntervals = Array<LatticeInterval>(body.size) { range }
         // WIDENING
         // TODO: get max amount of iterations for the loop!
-        // TODO: maybe only widen at one point (loop separator) for better results
         outer@ while (true) {
             for (index in body.indices) {
                 // First apply the effect
-                val (lRange, effect) = newRange.applyEffect(body[index], name, type)
-                if (effect) {
-                    newRange = lRange
-                    // Then widen using the previous iteration
+                // TODO: change applyEffect to handle to recursively handle loops/branches
+                val (lRange, _) = newRange.applyEffect(body[index], name, type)
+                newRange = lRange
+                // Then widen using the previous iteration
+                // Only widen for the first effective node in the loop (loop separator)
+                if (index == 0) {
                     newRange = prevBodyIntervals[index].widen(newRange)
-                    // If nothing changed we can abort
-                    if (newRange == prevBodyIntervals[index]) {
-                        break@outer
-                    } else {
-                        prevBodyIntervals[index] = newRange
-                    }
+                }
+                // If nothing changed we can abort
+                if (newRange == prevBodyIntervals[index]) {
+                    break@outer
+                } else {
+                    prevBodyIntervals[index] = newRange
                 }
             }
         }
         // NARROWING
-        // TODO: what is the right termination condition?
         outer@ while (true) {
             for (index in body.indices) {
                 // First apply the effect
-                val (lRange, effect) = newRange.applyEffect(body[index], name, type)
-                if (effect) {
-                    newRange = lRange
-                    // Then widen using the previous iteration
-                    newRange = prevBodyIntervals[index].narrow(newRange)
-                    // If nothing changed we can abort
-                    if (newRange == prevBodyIntervals[index]) {
-                        break@outer
-                    } else {
-                        prevBodyIntervals[index] = newRange
-                    }
+                val (lRange, _) = newRange.applyEffect(body[index], name, type)
+                newRange = lRange
+                // Then narrow using the previous iteration
+                newRange = prevBodyIntervals[index].narrow(newRange)
+                // If ALL loop ranges are stable we can abort
+                if (index == body.size - 1 && newRange == prevBodyIntervals[index]) {
+                    break@outer
+                } else {
+                    prevBodyIntervals[index] = newRange
                 }
             }
         }
