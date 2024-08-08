@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.collectioneval.collection
 
 import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -42,7 +43,11 @@ class MutableList : Collection {
         name: String
     ): Pair<LatticeInterval, Boolean> {
         // TODO: state can also be estimated by conditions! (if (l.size < 3) ...)
-        // State can only be changed via MemberCalls (add, clear, ...)
+        // Branching nodes have to be assumed to have an effect
+        if (node is BranchingNode) {
+            return current to true
+        }
+        // State can only be directly changed via MemberCalls (add, clear, ...)
         if (node !is MemberCallExpression) {
             return current to false
         }
