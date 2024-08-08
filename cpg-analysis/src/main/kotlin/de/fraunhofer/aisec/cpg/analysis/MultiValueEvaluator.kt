@@ -257,7 +257,8 @@ class MultiValueEvaluator : ValueEvaluator() {
     private fun isSimpleForLoop(node: Node): Boolean {
         // Are we in the for statement somehow?
         var forStatement = node.astParentLegacy as? ForStatement
-        if (forStatement == null) forStatement = node.astParentLegacy?.astParentLegacy as? ForStatement
+        if (forStatement == null)
+            forStatement = node.astParentLegacy?.astParentLegacy as? ForStatement
 
         if (forStatement == null) return false // ...no, we're not.
 
@@ -268,7 +269,8 @@ class MultiValueEvaluator : ValueEvaluator() {
             forStatement.initializerStatement == node || // The node is the initialization
             (initializerDecl != null &&
                 initializerDecl ==
-                    node.astParentLegacy) || // The parent of the node is the initializer of the loop
+                    node.astParentLegacy) || // The parent of the node is the initializer of the
+            // loop
             // variable
             forStatement.iterationStatement ==
                 node || // The node or its parent are the iteration statement of the loop
@@ -277,7 +279,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { it.astParentLegacy is ForStatement }?.astParentLegacy as? ForStatement
+            expr.prevDFG.firstOrNull { it.astParentLegacy is ForStatement }?.astParentLegacy
+                as? ForStatement
                 ?: expr.prevDFG
                     .firstOrNull { it.astParentLegacy?.astParentLegacy is ForStatement }
                     ?.astParentLegacy
