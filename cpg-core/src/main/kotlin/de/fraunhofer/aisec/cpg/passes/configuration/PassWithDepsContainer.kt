@@ -145,10 +145,13 @@ class PassWithDepsContainer {
      * Finds the first pass that has all its dependencies satisfied. This pass is then removed from
      * the other passes dependencies and returned.
      *
+     * This functions also honors the [LatePass] annotation and only returns these, if there are no
+     * more non-[LatePass] available.
+     *
      * @return The first pass that has no active dependencies on success. null otherwise.
      */
     fun getAndRemoveFirstPassWithoutDependencies(): List<KClass<out Pass<*>>> {
-        val results = mutableListOf<KClass<out Pass<*>>>()
+        val results = mutableListOf<PassWithDependencies>()
         val it = workingList.listIterator()
 
         while (it.hasNext()) {
@@ -162,20 +165,25 @@ class PassWithDepsContainer {
             // parallel in results
             if (currentElement.dependenciesMet(workingList)) {
                 // no unsatisfied dependencies
-                val result = currentElement.pass
-                results.add(result)
-
-                // remove pass from the work-list
-                it.remove()
+                results.add(currentElement)
             } else {
                 continue
             }
         }
 
-        // remove the selected passes from the other pass's dependencies
-        results.forEach { removeDependencyByClass(it) }
+        val nonLatePassesAvailable =
+            workingList.filter { !it.isLatePass && !it.isLastPass }.isNotEmpty()
+        if (nonLatePassesAvailable) {
+            results.removeAll { it.isLatePass }
+        }
 
-        return results
+        // clean up the workingList
+        results.forEach { workingList.remove(it) }
+
+        // remove the selected passes from the other pass's dependencies
+        results.forEach { removeDependencyByClass(it.pass) }
+
+        return results.map { it.pass }
     }
 
     /**

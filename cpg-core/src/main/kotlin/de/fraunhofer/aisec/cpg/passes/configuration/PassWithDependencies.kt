@@ -52,6 +52,11 @@ data class PassWithDependencies(
             return pass.hasAnnotation<ExecuteLast>()
         }
 
+    val isLatePass: Boolean
+        get() {
+            return pass.hasAnnotation<ExecuteLate>()
+        }
+
     override fun toString(): String {
         val builder = ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", pass.simpleName)
 
@@ -61,6 +66,15 @@ data class PassWithDependencies(
 
         if (hardDependencies.isNotEmpty()) {
             builder.append("hardDependencies", hardDependencies.map { it.simpleName })
+        }
+        if (isFirstPass) {
+            builder.append("firstPass")
+        }
+        if (isLastPass) {
+            builder.append("lastPass")
+        }
+        if (isLatePass) {
+            builder.append("latePass")
         }
         return builder.toString()
     }
