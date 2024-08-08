@@ -162,16 +162,18 @@ sealed class LatticeInterval {
 
     private fun addBounds(a: Bound, b: Bound): Bound {
         return when {
-            a is Bound.Value && b is Bound.Value -> Bound.Value(a.value + b.value)
             a is Bound.TOP || b is Bound.TOP -> Bound.TOP
+            a is Bound.Value && b is Bound.Value -> Bound.Value(a.value + b.value)
             else -> throw IllegalArgumentException("Unsupported bound type")
         }
     }
 
     private fun subtractBounds(a: Bound, b: Bound): Bound {
         return when {
+            a is Bound.TOP -> Bound.TOP
+            b is Bound.TOP -> Bound.Value(0)
+            a == Bound.Value(0) -> Bound.Value(0)
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value - b.value)
-            a is Bound.TOP || b is Bound.TOP -> Bound.TOP
             else -> throw IllegalArgumentException("Unsupported bound type")
         }
     }
