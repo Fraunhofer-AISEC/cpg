@@ -60,4 +60,11 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
             this@UnwrappedEdgeSet.resetTo(value)
         }
     }
+
+    operator fun <ThisType : Node> provideDelegate(
+        thisRef: ThisType,
+        prop: KProperty<*>
+    ): Delegate<ThisType> {
+        return Delegate()
+    }
 }

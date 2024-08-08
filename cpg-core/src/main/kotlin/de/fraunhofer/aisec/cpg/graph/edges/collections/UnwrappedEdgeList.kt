@@ -194,4 +194,11 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
             this@UnwrappedEdgeList.resetTo(value)
         }
     }
+
+    operator fun <ThisType : Node> provideDelegate(
+        thisRef: ThisType,
+        prop: KProperty<*>
+    ): Delegate<ThisType> {
+        return Delegate()
+    }
 }

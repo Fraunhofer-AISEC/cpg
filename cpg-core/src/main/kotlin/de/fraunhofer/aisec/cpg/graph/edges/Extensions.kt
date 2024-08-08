@@ -50,25 +50,19 @@ fun <EdgeType : Edge<Node>> MutableList<Node>.add(
 /** See [UnwrappedEdgeList.Delegate]. */
 fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeType.unwrapping(
     edgeProperty: KProperty1<NodeType, EdgeList<PropertyType, EdgeType>>,
-): UnwrappedEdgeList<PropertyType, EdgeType>.Delegate<NodeType> {
+): UnwrappedEdgeList<PropertyType, EdgeType> {
     // Create an unwrapped container out of the edge property...
     edgeProperty.isAccessible = true
     val edge = edgeProperty.call(this)
-    val unwrapped = edge.unwrap()
-
-    // ... and create a delegate for the property
-    return unwrapped.delegate<NodeType>()
+    return edge.unwrap()
 }
 
 /** See [UnwrappedEdgeSet.Delegate]. */
 fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeType.unwrapping(
     edgeProperty: KProperty1<NodeType, EdgeSet<PropertyType, EdgeType>>,
-): UnwrappedEdgeSet<PropertyType, EdgeType>.Delegate<NodeType> {
+): UnwrappedEdgeSet<PropertyType, EdgeType> {
     // Create an unwrapped container out of the edge property...
     edgeProperty.isAccessible = true
     val edge = edgeProperty.call(this)
-    val unwrapped = edge.unwrap()
-
-    // ... and create a delegate for the property
-    return unwrapped.delegate<NodeType>()
+    return edge.unwrap()
 }
