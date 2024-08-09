@@ -23,7 +23,7 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 
-apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.15.0"}
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.16.0"}
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 
