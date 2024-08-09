@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory
 /**
  * Creates an Evaluation Order Graph (EOG) based on AST.
  *
- * An EOG is an intraprocedural directed graph whose vertices are executable AST nodes and edges
+ * An EOG is an intra-procedural directed graph whose vertices are executable AST nodes and edges
  * connect them in the order they would be executed when running the program.
  *
  * An EOG always starts at the header of a method/function and ends in one (virtual) or multiple
