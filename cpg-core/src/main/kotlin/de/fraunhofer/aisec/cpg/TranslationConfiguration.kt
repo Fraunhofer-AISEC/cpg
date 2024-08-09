@@ -508,6 +508,7 @@ private constructor(
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
             registerPass<ReplaceCallCastPass>()
+            registerPass<EdgeCachePass>()
             useDefaultPasses = true
             return this
         }
