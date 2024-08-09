@@ -30,6 +30,7 @@ package de.fraunhofer.aisec.cpg.graph.edges
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeSet
 import kotlin.reflect.KProperty1
@@ -65,4 +66,13 @@ fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeTy
     edgeProperty.isAccessible = true
     val edge = edgeProperty.call(this)
     return edge.unwrap()
+}
+
+/** See [EdgeSingletonList.Delegate]. */
+fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeType.unwrapping(
+    edgeProperty: KProperty1<NodeType, EdgeSingletonList<PropertyType, EdgeType>>,
+): EdgeSingletonList<PropertyType, EdgeType>.Delegate<NodeType> {
+    edgeProperty.isAccessible = true
+    val edge = edgeProperty.call(this)
+    return edge.delegate<NodeType>()
 }

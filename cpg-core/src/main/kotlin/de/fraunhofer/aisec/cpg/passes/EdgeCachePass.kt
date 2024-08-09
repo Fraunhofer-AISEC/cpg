@@ -144,7 +144,7 @@ class EdgeCachePass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 }
 
-val Node.astParent: Node?
+val Node.astParentLegacy: Node?
     get() {
         return Edges.to(this, EdgeType.AST).firstOrNull()?.source
     }

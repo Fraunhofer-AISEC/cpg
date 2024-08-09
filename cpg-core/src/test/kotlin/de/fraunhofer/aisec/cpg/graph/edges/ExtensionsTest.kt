@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.graph.edges
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import kotlin.test.Test
+import kotlin.test.assertNull
 
 class ExtensionsTest {
     @Test
@@ -40,6 +42,14 @@ class ExtensionsTest {
 
             node1.nextEOGEdges.add(node2) { unreachable = true }
             node1.nextEOG.add<EvaluationOrder>(node3) { unreachable = true }
+        }
+    }
+
+    @Test
+    fun testAstEdgeOf() {
+        with(TestLanguageFrontend()) {
+            var call = newCallExpression()
+            assertNull(call)
         }
     }
 }

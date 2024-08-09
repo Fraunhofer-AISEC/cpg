@@ -30,7 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -166,7 +167,10 @@ object SubgraphWalker {
                     is Node -> {
                         children.add(obj)
                     }
-                    is EdgeList<*, *> -> {
+                    is Edge<*> -> {
+                        children.add(obj.end)
+                    }
+                    is EdgeCollection<*, *> -> {
                         children.addAll(obj.toNodeCollection(outgoing))
                     }
                     is Collection<*> -> {
