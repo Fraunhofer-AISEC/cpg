@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -90,7 +91,7 @@ object Util {
         en: Edge,
         n: Node?,
         cr: Connect = Connect.SUBTREE,
-        branch: Boolean? = null,
+        predicate: ((EvaluationOrder) -> Boolean)? = null,
         refs: List<Node?>
     ): Boolean {
         if (n == null) {
@@ -105,16 +106,17 @@ object Util {
                 val border = SubgraphWalker.getEOGPathEdges(n)
                 if (en == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
-                    if (Quantifier.ALL == q && pe.any { false && it.branch != branch }) return false
-                    pe.filter { true || it.branch == branch }.map { it.start }
+                    if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        return false
+                    pe.filter { predicate?.invoke(it) != false }.map { it.start }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
                     if (en == Edge.ENTRIES) {
                         val pe = it.prevEOGEdges
-                        if (Quantifier.ALL == q && pe.any { false && it.branch != branch })
+                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { true || it.branch == branch }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
             }
@@ -125,18 +127,18 @@ object Util {
                 borders.flatMap { border ->
                     if (Edge.ENTRIES == er) {
                         val pe = border.entries.flatMap { it.prevEOGEdges }
-                        if (Quantifier.ALL == q && pe.any { false && it.branch != branch })
+                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { true || it.branch == branch }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else border.exits
                 }
             } else {
                 refSide.flatMap { node ->
                     if (er == Edge.ENTRIES) {
                         val pe = node?.prevEOGEdges ?: listOf()
-                        if (Quantifier.ALL == q && pe.any { false && it.branch != branch })
+                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { true || it.branch == branch }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(node)
                 }
             }

@@ -110,7 +110,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifSimple.thenStatement,
                 cr = Connect.NODE,
-                branch = true,
+                predicate = { it.branch == true },
                 refs = listOf(ifSimple)
             )
         )
@@ -129,7 +129,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifSimple,
-                branch = true,
+                predicate = { it.branch == true },
                 refs = listOf(ifSimple.thenStatement)
             )
         )
@@ -161,7 +161,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifBranched,
-                branch = true,
+                predicate = { it.branch == true },
                 refs = listOf(ifBranched.thenStatement)
             )
         )
@@ -170,7 +170,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = ifBranched,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(ifBranched.elseStatement)
             )
         )
@@ -183,7 +183,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched.thenStatement,
                 cr = Connect.NODE,
-                branch = true,
+                predicate = { it.branch == true },
                 refs = listOf(ifBranched)
             )
         )
@@ -194,7 +194,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = ifBranched.elseStatement,
                 cr = Connect.NODE,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(ifBranched)
             )
         )
@@ -283,7 +283,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(prints[1])
             )
         )
@@ -344,7 +344,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(prints[2])
             )
         )
@@ -405,7 +405,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.EXITS,
                 n = fs,
                 cr = Connect.SUBTREE,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(prints[4])
             )
         )
@@ -510,7 +510,7 @@ internal class EOGTest : BaseTest() {
                 en = Util.Edge.ENTRIES,
                 n = wstat.statement,
                 cr = Connect.NODE,
-                branch = true,
+                predicate = { it.branch == true },
                 refs = listOf(wstat)
             )
         )
@@ -522,7 +522,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
                 n = wstat,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(prints[1])
             )
         )
@@ -555,7 +555,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.NODE,
                 en = Util.Edge.EXITS,
                 n = dostat,
-                branch = true,
+                predicate = { it.branch == true },
                 refs = listOf(dostat.statement)
             )
         )
@@ -576,7 +576,7 @@ internal class EOGTest : BaseTest() {
                 cn = Connect.SUBTREE,
                 en = Util.Edge.EXITS,
                 n = dostat,
-                branch = false,
+                predicate = { it.branch == false },
                 refs = listOf(prints[2])
             )
         )
