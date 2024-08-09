@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
@@ -67,7 +66,7 @@ class StatementHandlerTest {
                     PythonLanguage.MODIFIER_POSITIONAL_ONLY_ARGUMENT
                 )
             }
-            assertEquals(idx, param.getProperty(Properties.INDEX))
+            assertEquals(idx, param.index)
         }
     }
 }

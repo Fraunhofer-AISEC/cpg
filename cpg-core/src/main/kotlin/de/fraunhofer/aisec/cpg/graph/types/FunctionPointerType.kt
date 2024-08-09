@@ -26,10 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -46,19 +42,16 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class FunctionPointerType : Type {
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var parametersPropertyEdge: MutableList<PropertyEdge<Type>> = mutableListOf()
-        private set
+    var parameters: List<Type>
 
     var returnType: Type
-
-    var parameters by PropertyEdgeDelegate(FunctionPointerType::parametersPropertyEdge)
 
     constructor(
         parameters: List<Type> = listOf(),
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
     ) : super(EMPTY_NAME, language) {
-        parametersPropertyEdge = wrap(parameters, this)
+        this.parameters = parameters
         this.returnType = returnType
     }
 
@@ -68,7 +61,7 @@ class FunctionPointerType : Type {
         language: Language<*>? = null,
         returnType: Type = UnknownType.getUnknownType(language)
     ) : super(type) {
-        parametersPropertyEdge = wrap(parameters, this)
+        this.parameters = parameters
         this.returnType = returnType
         this.language = language
     }
@@ -86,11 +79,10 @@ class FunctionPointerType : Type {
         if (other !is FunctionPointerType) return false
         return super.equals(other) &&
             parameters == other.parameters &&
-            propertyEqualsList(parametersPropertyEdge, other.parametersPropertyEdge) &&
             returnType == other.returnType
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), parametersPropertyEdge, returnType)
+    override fun hashCode() = Objects.hash(super.hashCode(), parameters, returnType)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

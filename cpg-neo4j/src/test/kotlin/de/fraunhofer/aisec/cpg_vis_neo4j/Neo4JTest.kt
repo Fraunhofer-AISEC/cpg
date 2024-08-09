@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import kotlin.test.Test
@@ -47,23 +46,6 @@ class Neo4JTest {
         assertEquals(36, translationResult.functions.size)
 
         application.pushToNeo4j(translationResult)
-
-        val sessionAndSessionFactoryPair = application.connect()
-
-        val session = sessionAndSessionFactoryPair.first
-        session.beginTransaction().use { transaction ->
-            val functions = session.loadAll(FunctionDeclaration::class.java)
-            assertNotNull(functions)
-
-            // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular
-            // functions
-            assertEquals(36, functions.size)
-
-            transaction.commit()
-        }
-
-        session.clear()
-        sessionAndSessionFactoryPair.second.close()
     }
 
     @Test

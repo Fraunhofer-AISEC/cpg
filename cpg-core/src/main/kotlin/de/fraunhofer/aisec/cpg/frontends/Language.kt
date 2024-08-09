@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -322,7 +322,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         // matches
         val source = result.source
         if (this is HasTemplates && source is CallExpression) {
-            source.templateParameterEdges = mutableListOf()
+            source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
                     null,
@@ -336,7 +336,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
             }
 
-            source.templateParameterEdges = null
+            source.templateArgumentEdges = null
         }
 
         // If the list of viable functions is still empty at this point, the call is unresolved

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 
@@ -45,4 +45,4 @@ class Assignment(
 
     /** The holder of this assignment */
     @JsonIgnore val holder: AssignmentHolder
-) : PropertyEdge<Node>(value, target as Node)
+) : Edge<Node>(value, target as Node)

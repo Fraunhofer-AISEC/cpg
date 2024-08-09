@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.edges.flows
 
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.ANNOTATION_CLASS)
-annotation class EdgeProperty(val key: String)
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.newLiteral
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertSame
+
+class ControlDependenceTest {
+    @Test
+    fun testPostAdd() {
+        with(TestLanguageFrontend()) {
+            // <node1> -- CDG --> <node2>
+            // this should be 1 nextDFG for node1 and 1 prevDFG for node2
+            var node1 = newLiteral(value = 1)
+            var node2 = newLiteral(value = 1)
+
+            node1.nextCDGEdges.add(node2) { branches = setOf(false) }
+
+            // should contain 1 prevCDG edge now
+            assertEquals(1, node2.prevCDGEdges.size)
+            // and it should be the same as the nextDFG of node1
+            assertSame(node1.nextCDGEdges.firstOrNull(), node2.prevCDGEdges.firstOrNull())
+        }
+    }
+}

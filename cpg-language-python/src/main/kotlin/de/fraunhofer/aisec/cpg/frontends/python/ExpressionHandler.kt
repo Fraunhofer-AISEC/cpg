@@ -211,7 +211,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = frontend.objectType("tuple")
-        ile.initializers = lst.toList()
+        ile.initializers = lst
         return ile
     }
 
@@ -237,7 +237,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = frontend.objectType("dict")
-        ile.initializers = lst.toList()
+        ile.initializers = lst
         return ile
     }
 

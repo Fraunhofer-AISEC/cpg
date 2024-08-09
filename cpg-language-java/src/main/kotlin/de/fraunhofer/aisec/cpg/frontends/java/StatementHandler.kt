@@ -180,7 +180,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val initExprList = this.newExpressionList()
             for (initExpr in forStmt.initialization) {
                 val s = frontend.expressionHandler.handle(initExpr)
-                s?.let { initExprList.addExpression(it) }
+                s?.let { initExprList.expressions += it }
 
                 // can not update location
                 if (s?.location == null) {
@@ -213,7 +213,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 val s = frontend.expressionHandler.handle(updateExpr)
                 s?.let {
                     // make sure location is set
-                    iterationExprList.addExpression(it)
+                    iterationExprList.expressions += it
                 }
 
                 // can not update location
@@ -291,7 +291,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         frontend.scopeManager.enterScope(compoundStatement)
         for (child in blockStmt.statements) {
             val statement = handle(child)
-            statement?.let { compoundStatement.addStatement(it) }
+            statement?.let { compoundStatement.statements += it }
         }
         frontend.scopeManager.leaveScope(compoundStatement)
         return compoundStatement
@@ -431,15 +431,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
         for (sentry in switchStmt.entries) {
             if (sentry.labels.isEmpty()) {
-                compoundStatement.addStatement(handleCaseDefaultStatement(null, sentry))
+                compoundStatement.statements += handleCaseDefaultStatement(null, sentry)
             }
             for (caseExp in sentry.labels) {
-                compoundStatement.addStatement(handleCaseDefaultStatement(caseExp, sentry))
+                compoundStatement.statements += handleCaseDefaultStatement(caseExp, sentry)
             }
             for (subStmt in sentry.statements) {
-                compoundStatement.addStatement(
+                compoundStatement.statements +=
                     handle(subStmt) ?: ProblemExpression("Could not parse statement")
-                )
             }
         }
         switchStatement.statement = compoundStatement
@@ -479,6 +478,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             explicitConstructorInvocationStmt.arguments
                 .map(frontend.expressionHandler::handle)
                 .filterIsInstance<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression>()
+                .toMutableList()
         node.arguments = arguments
 
         return node
@@ -489,9 +489,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val tryStatement = newTryStatement(rawNode = stmt)
         frontend.scopeManager.enterScope(tryStatement)
         val resources =
-            tryStmt.resources.mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
+            tryStmt.resources
+                .mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
+                .toMutableList()
         val tryBlock = handleBlockStatement(tryStmt.tryBlock)
-        val catchClauses = tryStmt.catchClauses.map(::handleCatchClause)
+        val catchClauses = tryStmt.catchClauses.map(::handleCatchClause).toMutableList()
         val finallyBlock = tryStmt.finallyBlock.map(::handleBlockStatement).orElse(null)
         frontend.scopeManager.leaveScope(tryStatement)
         tryStatement.resources = resources

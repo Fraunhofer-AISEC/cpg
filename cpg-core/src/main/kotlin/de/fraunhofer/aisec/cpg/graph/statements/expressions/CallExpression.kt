@@ -29,11 +29,12 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
-import de.fraunhofer.aisec.cpg.graph.edge.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
+import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
@@ -52,40 +53,25 @@ open class CallExpression :
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges = mutableListOf<PropertyEdge<FunctionDeclaration>>()
+    var invokeEdges = Invokes<FunctionDeclaration>(this)
         protected set
 
     /**
      * A virtual property to quickly access the list of declarations that this call invokes without
      * property edges.
      */
-    @PopulatedByPass(SymbolResolver::class)
-    var invokes: List<FunctionDeclaration>
-        get(): List<FunctionDeclaration> {
-            val targets: MutableList<FunctionDeclaration> = ArrayList()
-            for (propertyEdge in invokeEdges) {
-                targets.add(propertyEdge.end)
-            }
-            return Collections.unmodifiableList(targets)
-        }
-        set(value) {
-            unwrap(invokeEdges).forEach { it.unregisterTypeObserver(this) }
-            invokeEdges = wrap(value, this)
-            value.forEach { it.registerTypeObserver(this) }
-        }
+    @PopulatedByPass(SymbolResolver::class) var invokes by unwrapping(CallExpression::invokeEdges)
 
-    /**
-     * The list of arguments of this call expression, backed by a list of [PropertyEdge] objects.
-     */
+    /** The list of arguments of this call expression, backed by a list of [Edge] objects. */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var argumentEdges = mutableListOf<PropertyEdge<Expression>>()
+    var argumentEdges = astEdgesOf<Expression>()
 
     /**
      * The list of arguments as a simple list. This is a delegated property delegated to
      * [argumentEdges].
      */
-    var arguments by PropertyEdgeDelegate(CallExpression::argumentEdges)
+    var arguments by unwrapping(CallExpression::argumentEdges)
 
     /** The list of argument types (aka the signature). */
     val signature: List<Type>
@@ -131,12 +117,8 @@ open class CallExpression :
 
     /** Adds the specified [expression] with an optional [name] to this call. */
     fun addArgument(expression: Expression, name: String? = null) {
-        val edge = PropertyEdge(this, expression)
-        edge.addProperty(Properties.INDEX, argumentEdges.size)
-
-        if (name != null) {
-            edge.addProperty(Properties.NAME, name)
-        }
+        val edge = AstEdge(this, expression)
+        edge.name = name
 
         argumentEdges.add(edge)
     }
@@ -164,18 +146,18 @@ open class CallExpression :
     /** Specifies, whether this call has any template arguments. */
     var template = false
 
-    /** If the CallExpression instantiates a template, the call can provide template parameters. */
-    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
+    /** If the CallExpression instantiates a template, the call can provide template arguments. */
+    @Relationship(value = "TEMPLATE_ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var templateParameterEdges: MutableList<PropertyEdge<Node>>? = null
+    var templateArgumentEdges: TemplateArguments<Node>? = null
         set(value) {
             field = value
             template = value != null
         }
 
-    val templateParameters: List<Node>
+    val templateArguments: List<Node>
         get(): List<Node> {
-            return unwrap(templateParameterEdges ?: listOf())
+            return templateArgumentEdges?.toNodeCollection() ?: listOf()
         }
 
     /**
@@ -200,14 +182,11 @@ open class CallExpression :
         templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT
     ) {
         if (templateParam is Expression || templateParam is Type) {
-            if (templateParameterEdges == null) {
-                templateParameterEdges = mutableListOf()
+            if (templateArgumentEdges == null) {
+                templateArgumentEdges = TemplateArguments(this)
             }
 
-            val propertyEdge = PropertyEdge(this, templateParam)
-            propertyEdge.addProperty(Properties.INDEX, templateParameters.size)
-            propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization)
-            templateParameterEdges?.add(propertyEdge)
+            templateArgumentEdges?.add(templateParam) { instantiation = templateInitialization }
             template = true
         }
     }
@@ -216,37 +195,33 @@ open class CallExpression :
         initializationType: Map<Node?, TemplateInitialization?>,
         orderedInitializationSignature: List<Node>
     ) {
-        if (templateParameterEdges == null) {
-            templateParameterEdges = mutableListOf()
+        if (templateArgumentEdges == null) {
+            templateArgumentEdges = TemplateArguments(this)
         }
 
-        for (edge in templateParameterEdges ?: listOf()) {
+        for (edge in templateArgumentEdges ?: listOf()) {
             if (
-                edge.getProperty(Properties.INSTANTIATION) != null &&
-                    (edge.getProperty(Properties.INSTANTIATION) ==
-                        TemplateInitialization.UNKNOWN) &&
+                edge.instantiation != null &&
+                    (edge.instantiation == TemplateInitialization.UNKNOWN) &&
                     initializationType.containsKey(edge.end)
             ) {
-                edge.addProperty(Properties.INSTANTIATION, initializationType[edge.end])
+                edge.instantiation = initializationType[edge.end]
             }
         }
 
-        for (i in (templateParameterEdges?.size ?: 0) until orderedInitializationSignature.size) {
-            val propertyEdge = PropertyEdge(this, orderedInitializationSignature[i])
-            propertyEdge.addProperty(Properties.INDEX, templateParameterEdges?.size)
-            propertyEdge.addProperty(
-                Properties.INSTANTIATION,
-                initializationType.getOrDefault(
-                    orderedInitializationSignature[i],
-                    TemplateInitialization.UNKNOWN
-                )
-            )
-            templateParameterEdges?.add(propertyEdge)
+        for (i in (templateArgumentEdges?.size ?: 0) until orderedInitializationSignature.size) {
+            templateArgumentEdges?.add(orderedInitializationSignature[i]) {
+                instantiation =
+                    initializationType.getOrDefault(
+                        orderedInitializationSignature[i],
+                        TemplateInitialization.UNKNOWN
+                    )
+            }
         }
     }
 
     fun instantiatesTemplate(): Boolean {
-        return templateInstantiation != null || templateParameterEdges != null || template
+        return templateInstantiation != null || templateArgumentEdges != null || template
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
@@ -295,8 +270,8 @@ open class CallExpression :
         return super.equals(other) &&
             arguments == other.arguments &&
             propertyEqualsList(argumentEdges, other.argumentEdges) &&
-            templateParameters == other.templateParameters &&
-            propertyEqualsList(templateParameterEdges, other.templateParameterEdges) &&
+            templateArguments == other.templateArguments &&
+            propertyEqualsList(templateArgumentEdges, other.templateArgumentEdges) &&
             templateInstantiation == other.templateInstantiation &&
             template == other.template
     }

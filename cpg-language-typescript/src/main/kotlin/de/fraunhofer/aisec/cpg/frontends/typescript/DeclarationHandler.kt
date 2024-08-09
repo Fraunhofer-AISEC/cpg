@@ -116,7 +116,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             if (childNode.type.endsWith("Statement")) {
                 val statement = this.frontend.statementHandler.handle(childNode)
 
-                statement?.let { tu.addStatement(it) }
+                statement?.let { tu.statements += it }
             } else {
                 val decl = this.handle(childNode)
 

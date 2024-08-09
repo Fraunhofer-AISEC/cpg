@@ -34,8 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -206,7 +205,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         call.invokes = invocationCandidates
-        call.invokeEdges.forEach { it.addProperty(Properties.DYNAMIC_INVOKE, true) }
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
