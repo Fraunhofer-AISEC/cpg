@@ -124,15 +124,17 @@ private fun handleIfStatement(
     val evalResult = ValueEvaluator().evaluate(n.condition)
 
     val (unreachableEdge, remainingEdges) =
-        if (evalResult is Boolean && evalResult == true) {
+        if (evalResult == true) {
+            // If the condition is always true, the "false" branch is always unreachable
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.index == 1 },
-                n.nextEOGEdges.filter { e -> e.index != 1 }
+                n.nextEOGEdges.firstOrNull { e -> e.branch == false },
+                n.nextEOGEdges.filter { e -> e.branch != false }
             )
-        } else if (evalResult is Boolean && evalResult == false) {
+        } else if (evalResult == false) {
+            // If the condition is always false, the "true" branch is always unreachable
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.index == 0 },
-                n.nextEOGEdges.filter { e -> e.index != 0 }
+                n.nextEOGEdges.firstOrNull { e -> e.branch == true },
+                n.nextEOGEdges.filter { e -> e.branch != true }
             )
         } else {
             Pair(null, n.nextEOGEdges)
