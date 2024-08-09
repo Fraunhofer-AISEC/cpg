@@ -98,9 +98,12 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
         super<ArrayList>.add(index, element)
 
-        // TODO: actually we need to re-compute all other index properties
-
         handlePostAdd(element)
+
+        // We need to re-compute all edges with an index > inserted index
+        for (i in index until this.size) {
+            this[i].index = i
+        }
     }
 
     override fun toNodeCollection(outgoing: Boolean): List<NodeType> {
