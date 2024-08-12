@@ -63,7 +63,7 @@ class Array<T> : Collection {
 
     private fun getSize(node: Node): Int {
         return when (node) {
-            // TODO: could be more performant if you detect that all initializers are Literals and
+            // TODO: could be more performant if you detect that all initializers are Literals
             is Literal<*> -> {
                 if (node.type !is IntegerType) {
                     throw NotImplementedException()

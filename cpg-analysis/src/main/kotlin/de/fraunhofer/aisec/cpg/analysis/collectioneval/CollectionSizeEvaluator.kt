@@ -38,7 +38,6 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
 
-// We assume that we only work with lists in this operator
 class CollectionSizeEvaluator {
     fun evaluate(node: Node): LatticeInterval {
         val name = node.name.toString()
@@ -47,7 +46,6 @@ class CollectionSizeEvaluator {
         var range = getInitialRange(initializer, type)
         // evaluate effect of each operation on the list until we reach "node"
         var current = initializer
-        // TODO: do preprocessing: remove all node types that we do not need
         do {
             val (newRange, newCurrent) = handleNext(range, current, name, type, node)
             range = newRange
@@ -73,6 +71,13 @@ class CollectionSizeEvaluator {
         return type.createInstance().applyEffect(this, node, name)
     }
 
+    /**
+     * Tries to determine the Collection type of the target Node by parsing the type name.
+     *
+     * @param node The target node
+     * @return A Kotlin class representing the collection that contains the necessary analysis
+     *   functions
+     */
     private fun getType(node: Node): KClass<out Collection> {
         if (node !is Reference) {
             throw NotImplementedException()
@@ -86,6 +91,17 @@ class CollectionSizeEvaluator {
         }
     }
 
+    /**
+     * This function delegates to the right handler depending on the next node. Use this instead of
+     * directly calling _applyEffect_ to correctly handle complex statements.
+     *
+     * @param range The previous size range
+     * @param node The current node
+     * @param name The name of the collection variable
+     * @param type The type of the collection
+     * @param goalNode The target node for the analysis
+     * @return A Pair containing the new size range and the next node for the analysis
+     */
     private fun handleNext(
         range: LatticeInterval,
         node: Node,
@@ -103,6 +119,18 @@ class CollectionSizeEvaluator {
         }
     }
 
+    /**
+     * Handles the analysis of a Looping statement. It does so by filtering out uninteresting
+     * statements before applying widening and narrowing in each iteration. If the target node is
+     * included in the body, the returned node will be the target node.
+     *
+     * @param range The previous size range
+     * @param node The BranchingNode as head of the loop
+     * @param name The name of the collection variable
+     * @param type The type of the collection
+     * @param goalNode The target node for the analysis
+     * @return A Pair containing the new size range and the next node for the analysis
+     */
     private fun handleLoop(
         range: LatticeInterval,
         node: Node,
@@ -147,6 +175,7 @@ class CollectionSizeEvaluator {
                 else -> throw NotImplementedException()
             }
         var current: Node? = firstBodyStatement
+        // Preprocessing: filter for valid nodes
         while (current != null && current != afterLoop && current != node) {
             // Only add the Statement if it affects the range
             if (range.applyEffect(current, name, type).second) {
@@ -202,6 +231,18 @@ class CollectionSizeEvaluator {
         return newRange to afterLoop
     }
 
+    /**
+     * Handles the analysis of a Branching statement. It does so by evaluating the final ranges of
+     * each branch and taking the join over all of them. If the target node is included in any
+     * branch, the evaluation only uses this branch.
+     *
+     * @param range The previous size range
+     * @param node The BranchingNode as head of the branch
+     * @param name The name of the collection variable
+     * @param type The type of the collection
+     * @param goalNode The target node for the analysis
+     * @return A Pair containing the new size range and the next node for the analysis
+     */
     private fun handleBranch(
         range: LatticeInterval,
         node: Node,
@@ -232,6 +273,12 @@ class CollectionSizeEvaluator {
         return finalMergedRange to mergeNode
     }
 
+    /**
+     * Finds the "MergeNode" as the first common node of all branches.
+     *
+     * @param node The BranchingNode that is the head of the branching statement
+     * @return The Node that is the end of the branching statement
+     */
     private fun findMergeNode(node: Node): Node {
         if (node !is BranchingNode) {
             return node.nextEOG.first()

@@ -43,6 +43,7 @@ class MutableList : Collection {
         name: String
     ): Pair<LatticeInterval, Boolean> {
         // TODO: state can also be estimated by conditions! (if (l.size < 3) ...)
+        // TODO: assignment -> new size
         // Branching nodes have to be assumed to have an effect
         if (node is BranchingNode) {
             return current to true
