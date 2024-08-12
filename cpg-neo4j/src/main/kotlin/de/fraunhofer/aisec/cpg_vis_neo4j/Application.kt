@@ -27,7 +27,10 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.analysis.collectioneval.CollectionSizeEvaluator
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
+import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
@@ -613,6 +616,21 @@ class Application : Callable<Int> {
         log.info(
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
+
+        // For Testing, remove later!
+        val nodes = translationResult.nodes
+        val targetNodes = nodes.filter { it.name.localName == "a" }
+        val focusNode =
+            targetNodes.first {
+                it.location?.region?.startLine == 53 &&
+                    it is Reference &&
+                    it.type.name.toString() ==
+                        "java.util.LinkedList<java.lang.Integer>" // "int[]" //
+                // "java.util.LinkedList<java.lang.Integer>"
+            }
+        val size = CollectionSizeEvaluator().evaluate(focusNode)
+        println(size)
+        return EXIT_SUCCESS
 
         exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
