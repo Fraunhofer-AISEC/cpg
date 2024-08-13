@@ -31,15 +31,19 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-/** A simple helper class to match a pass with dependencies. */
+/**
+ * A simple helper class to match a pass with dependencies. [softDependenciesRemaining] and
+ * [hardDependenciesRemaining] show the currently remaining / unsatisfied dependencies. These values
+ * are updated during the ordering procedure.
+ */
 data class PassWithDependencies(
     val pass: KClass<out Pass<*>>,
-    val softDependencies: MutableSet<KClass<out Pass<*>>>,
-    val hardDependencies: MutableSet<KClass<out Pass<*>>>
+    val softDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
+    val hardDependenciesRemaining: MutableSet<KClass<out Pass<*>>>
 ) {
-    val dependencies: Set<KClass<out Pass<*>>>
+    val dependenciesRemaining: Set<KClass<out Pass<*>>>
         get() {
-            return softDependencies + hardDependencies
+            return softDependenciesRemaining + hardDependenciesRemaining
         }
 
     val isFirstPass: Boolean
@@ -60,12 +64,12 @@ data class PassWithDependencies(
     override fun toString(): String {
         val builder = ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", pass.simpleName)
 
-        if (softDependencies.isNotEmpty()) {
-            builder.append("softDependencies", softDependencies.map { it.simpleName })
+        if (softDependenciesRemaining.isNotEmpty()) {
+            builder.append("softDependencies", softDependenciesRemaining.map { it.simpleName })
         }
 
-        if (hardDependencies.isNotEmpty()) {
-            builder.append("hardDependencies", hardDependencies.map { it.simpleName })
+        if (hardDependenciesRemaining.isNotEmpty()) {
+            builder.append("hardDependencies", hardDependenciesRemaining.map { it.simpleName })
         }
         if (isFirstPass) {
             builder.append("firstPass")
@@ -80,14 +84,14 @@ data class PassWithDependencies(
     }
 
     /**
-     * Checks whether the [dependencies] of this pass are met. The list of [softDependencies] and
-     * [hardDependencies] is removed step-by-step in
-     * [PassWithDepsContainer.getAndRemoveFirstPassWithoutDependencies].
+     * Checks whether the [dependenciesRemaining] of this pass are met. The list of
+     * [softDependenciesRemaining] and [hardDependenciesRemaining] is removed step-by-step in
+     * [PassOrderingHelper.getAndRemoveFirstPassWithoutUnsatisfiedDependencies].
      */
     fun dependenciesMet(workingList: MutableList<PassWithDependencies>): Boolean {
         // In the simplest case all our dependencies are empty since they were already removed by
         // the selecting algorithm.
-        if (this.dependencies.isEmpty() && !this.isLastPass) {
+        if (this.dependenciesRemaining.isEmpty() && (!this.isLastPass || workingList.size == 1)) {
             return true
         }
 
@@ -96,8 +100,8 @@ data class PassWithDependencies(
         // as well
         val remainingClasses = workingList.map { it.pass }
         if (
-            this.hardDependencies.isEmpty() &&
-                this.softDependencies.all { !remainingClasses.contains(it) } &&
+            this.hardDependenciesRemaining.isEmpty() &&
+                this.softDependenciesRemaining.all { !remainingClasses.contains(it) } &&
                 !this.isLastPass
         ) {
             return true

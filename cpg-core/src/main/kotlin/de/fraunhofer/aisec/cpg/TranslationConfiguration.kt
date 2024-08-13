@@ -653,71 +653,23 @@ private constructor(
 
         /**
          * Collects the requested passes stored in [registeredPasses] and generates a
-         * [PassWithDepsContainer] consisting of pairs of passes and their dependencies.
+         * [PassOrderingHelper] consisting of pairs of passes and their dependencies.
          *
-         * @return A populated [PassWithDepsContainer] derived from [registeredPasses].
+         * @return A populated [PassOrderingHelper] derived from [registeredPasses].
          */
-        private fun collectInitialPasses(): PassWithDepsContainer {
-            val workingList = PassWithDepsContainer()
+        private fun collectInitiallyConfiguredPasses(): PassOrderingHelper {
+            val workingList = PassOrderingHelper()
 
-            val softDependencies =
-                mutableMapOf<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>()
-            val hardDependencies =
-                mutableMapOf<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>()
-
-            // Add the "execute before" dependencies.
             for (p in passes) {
-                val executeBefore = mutableListOf<KClass<out Pass<*>>>()
-
+                workingList.addToWorkingList(p)
                 val depAnn = p.findAnnotations<DependsOn>()
-                // collect all dependencies added by [DependsOn] annotations.
-                for (d in depAnn) {
-                    val deps =
-                        if (d.softDependency) {
-                            softDependencies.computeIfAbsent(p) { mutableSetOf() }
-                        } else {
-                            hardDependencies.computeIfAbsent(p) { mutableSetOf() }
-                        }
-                    deps += d.value
-                }
-
-                val execBeforeAnn = p.findAnnotations<ExecuteBefore>()
-                for (d in execBeforeAnn) {
-                    executeBefore.add(d.other)
-                }
-
-                for (eb in executeBefore) {
-                    passes
-                        .filter { eb == it }
-                        .forEach {
-                            val deps = softDependencies.computeIfAbsent(it) { mutableSetOf() }
-                            deps += p
-                        }
-                }
-            }
-
-            log.info(
-                "The following mermaid graph represents the pass dependencies: \n ${buildMermaid(softDependencies, hardDependencies)}"
-            )
-
-            for (p in passes) {
-                var passFound = false
-                for ((pass) in workingList.getWorkingList()) {
-                    if (pass == p) {
-                        passFound = true
-                        break
+                for (dep in depAnn) {
+                    if (!dep.softDependency) { // only hard dependencies
+                        workingList.addToWorkingList(dep.value)
                     }
                 }
-                if (!passFound) {
-                    workingList.addToWorkingList(
-                        PassWithDependencies(
-                            p,
-                            softDependencies[p] ?: mutableSetOf(),
-                            hardDependencies[p] ?: mutableSetOf()
-                        )
-                    )
-                }
             }
+
             return workingList
         }
 
@@ -755,6 +707,8 @@ private constructor(
          * * first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
          *   beginning
          * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
+         * * late pass [ExecuteLate]: a pass that is executed as late as possible without violating
+         *   any of the other constraints
          *
          * This function uses a very simple (and inefficient) logic to meet the requirements above:
          * 1. A list of all registered passes and their dependencies is build
@@ -776,33 +730,17 @@ private constructor(
             val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
             // Create a local copy of all passes and their "current" dependencies without possible
-            // duplicates
-            val workingList = collectInitialPasses()
+            // duplicates. Also add all `hardDependencies`
+            val workingList = collectInitiallyConfiguredPasses()
+
             log.debug("Working list after initial scan: {}", workingList)
-            workingList.addMissingDependencies()
-            log.debug("Working list after adding missing dependencies: {}", workingList)
-            if (workingList.getFirstPasses().size > 1) {
-                log.error(
-                    "Too many passes require to be executed as first pass: {}",
-                    workingList.getWorkingList()
-                )
-                throw ConfigurationException(
-                    "Too many passes require to be executed as first pass."
-                )
-            }
-            if (workingList.getLastPasses().size > 1) {
-                log.error(
-                    "Too many passes require to be executed as last pass: {}",
-                    workingList.getLastPasses()
-                )
-                throw ConfigurationException("Too many passes require to be executed as last pass.")
-            }
+
             val firstPass = workingList.getAndRemoveFirstPass()
             if (firstPass != null) {
-                result.add(listOf(firstPass))
+                result.add(firstPass)
             }
             while (!workingList.isEmpty) {
-                val p = workingList.getAndRemoveFirstPassWithoutDependencies()
+                val p = workingList.getAndRemoveFirstPassWithoutUnsatisfiedDependencies()
                 if (p.isNotEmpty()) {
                     result.add(p)
                 } else {
