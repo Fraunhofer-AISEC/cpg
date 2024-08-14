@@ -43,6 +43,7 @@ llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
 jline = { module = "org.jline:jline", version = "3.26.0" }
 antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
+sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version = "0.6.0"}
 
 sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version = "0.6.0"}
 

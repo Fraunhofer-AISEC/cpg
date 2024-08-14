@@ -50,10 +50,13 @@ dependencies {
 
     api(projects.cpgLanguageCxx)
     api(projects.cpgLanguageJava)
-
-    api(libs.picocli)
+    // api(projects.cpgLanguageGo)
 
     implementation(libs.sarif4k)
+
+    // Command line interface support
+    api(libs.picocli)
+    annotationProcessor(libs.picocli.codegen)
 
     testImplementation(testFixtures(projects.cpgCore))
 }

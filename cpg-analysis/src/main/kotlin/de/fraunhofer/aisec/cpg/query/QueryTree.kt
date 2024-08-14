@@ -157,6 +157,50 @@ open class QueryTree<T>(
         }
         throw QueryException("Cannot compare objects of type ${this.value} and $other")
     }
+
+    operator fun plus(increment: Int): QueryTree<Number> {
+        if (this.value is Number) {
+            return QueryTree(
+                (value as Number).toInt() + increment,
+                mutableListOf(this),
+                "$value + $increment"
+            )
+        }
+        throw QueryException("Cannot add $increment to $value")
+    }
+
+    operator fun minus(decrement: Int): QueryTree<Number> {
+        if (this.value is Number) {
+            return QueryTree(
+                (value as Number).toInt() - decrement,
+                mutableListOf(this),
+                "$value - $decrement"
+            )
+        }
+        throw QueryException("Cannot subtract $decrement from $value")
+    }
+
+    operator fun times(multiplier: Int): QueryTree<Number> {
+        if (this.value is Number) {
+            return QueryTree(
+                (value as Number).toInt() * multiplier,
+                mutableListOf(this),
+                "$value * $multiplier"
+            )
+        }
+        throw QueryException("Cannot multiply $value by $multiplier")
+    }
+
+    operator fun div(divisor: Int): QueryTree<Number> {
+        if (this.value is Number) {
+            return QueryTree(
+                (value as Number).toInt() / divisor,
+                mutableListOf(this),
+                "$value / $divisor"
+            )
+        }
+        throw QueryException("Cannot divide $value by $divisor")
+    }
 }
 
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */

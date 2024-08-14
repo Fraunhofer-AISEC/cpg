@@ -92,8 +92,7 @@ class SarifReporter : Reporter {
                                         )
                                 ),
                             // TODO: automationDetails, invocation
-                            //  automationDetails is definitely possible if used with the
-                            //  [RuleRunner]
+                            //  automationDetails is definitely possible if used with the [RuleRunner]
                             results = createResults(rules)
                         )
                     )

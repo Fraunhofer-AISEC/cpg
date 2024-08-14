@@ -120,7 +120,7 @@ inline fun <reified T> Node.exists(
  */
 fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
     // The cast could potentially go wrong, but if it's not an int, it's not really a size
-    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
+    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(QueryTree(n)), "sizeof($n)")
 }
 
 /**
@@ -134,7 +134,7 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
         return QueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)")
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
+    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(n), "min($n)")
 }
 
 /**
@@ -155,7 +155,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(), "min($n)")
+    return QueryTree(result, mutableListOf(n), "min($n)")
 }
 
 /**
@@ -176,7 +176,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(), "max($n)")
+    return QueryTree(result, mutableListOf(n), "max($n)")
 }
 
 /**
@@ -190,7 +190,7 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
         return QueryTree(evalRes, mutableListOf(QueryTree(n)))
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)")
+    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(QueryTree(n)), "max($n)")
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
