@@ -1262,7 +1262,7 @@ class PythonFrontendTest : BaseTest() {
         val result =
             analyze(
                 listOf(
-                    topLevel.resolve("pyi/io.pyi").toFile(),
+                    topLevel.resolve("complex_class.pyi").toFile(),
                 ),
                 topLevel,
                 true
@@ -1270,6 +1270,17 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
+        with(result) {
+            val foo = records["Foo"]
+            assertNotNull(foo)
+
+            val bar = foo.methods["bar"]
+            assertNotNull(bar)
+
+            assertEquals(assertResolvedType("int"), bar.returnTypes.singleOrNull())
+            assertEquals(assertResolvedType("int"), bar.parameters.firstOrNull()?.type)
+            assertEquals(assertResolvedType("complex_class.Foo"), bar.receiver?.type)
+        }
     }
 
     class PythonValueEvaluator : ValueEvaluator() {
