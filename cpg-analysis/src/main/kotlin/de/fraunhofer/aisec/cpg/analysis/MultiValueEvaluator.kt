@@ -52,8 +52,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     override fun evaluate(node: Any?): Any? {
         val result = evaluateInternal(node as? Node, 0)
-        return if (result is Collection<*> && result.all { r -> r is Number })
-            ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
+        return if (result is Collection<*> && result.filterNotNull().all { r -> r is Number })
+            ConcreteNumberSet(result.mapNotNull { r -> (r as? Number)?.toLong() }.toMutableSet())
         else result
     }
 

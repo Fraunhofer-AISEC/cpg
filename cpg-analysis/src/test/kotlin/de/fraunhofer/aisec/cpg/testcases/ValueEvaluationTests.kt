@@ -162,6 +162,7 @@ class ValueEvaluationTests {
                                 ref("a") assign literal(2, t("int"))
                                 call("println") { ref("a") }
 
+                                // c = 5 - 2
                                 declare {
                                     variable("c", t("int")) {
                                         literal(5, t("int")) - literal(2, t("int"))
@@ -186,6 +187,8 @@ class ValueEvaluationTests {
                                     }
                                 }
 
+                                // g = -c
+                                // g = -3
                                 declare { variable("g", t("int")) { -ref("c") } }
 
                                 call("println") {
