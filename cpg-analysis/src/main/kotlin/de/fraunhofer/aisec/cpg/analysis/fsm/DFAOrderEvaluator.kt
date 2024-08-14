@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -435,14 +433,12 @@ open class DFAOrderEvaluator(
         val outNodes = mutableListOf<Node>()
         outNodes +=
             if (eliminateUnreachableCode) {
-                PropertyEdge.unwrap(
-                    node.nextEOGEdges.filter { e -> e.getProperty(Properties.UNREACHABLE) != true }
-                )
+                node.nextEOGEdges.filter { e -> e.unreachable != true }.map { it.end }
             } else {
                 node.nextEOG
             }
 
-        if (outNodes.size == 1 && node.nextEOG.size == 1) {
+        if (outNodes.size == 1 && node.nextEOGEdges.size == 1) {
             // We only have one node following this node, so we
             // simply propagate the current eogPath to the next node.
             outNodes[0].addEogPath(eogPath)

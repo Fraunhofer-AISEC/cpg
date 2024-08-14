@@ -34,12 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
@@ -112,7 +112,19 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // rid of FunctionPointerType and only deal with FunctionTypes.
         val pointerType: FunctionPointerType =
             when (val type = expr.type) {
-                is FunctionType -> type.pointer() as FunctionPointerType
+                is FunctionType -> {
+                    when (val pointerType = type.pointer()) {
+                        is FunctionPointerType -> pointerType
+                        is ProblemType -> {
+                            log.warn("Function has unexpected type: ProblemType; ignore call")
+                            return
+                        }
+                        else -> {
+                            log.warn("Unexpected function type: ${pointerType}; ignore call")
+                            return
+                        }
+                    }
+                }
                 is FunctionPointerType -> type
                 else -> {
                     // some languages allow other types to derive from a function type, in this case
@@ -193,7 +205,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         call.invokes = invocationCandidates
-        call.invokeEdges.forEach { it.addProperty(Properties.DYNAMIC_INVOKE, true) }
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).

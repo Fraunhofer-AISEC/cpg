@@ -60,7 +60,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
             val param =
                 newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
-            anonymousFunction.addParameter(param)
+            anonymousFunction.parameterEdges += param
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
         }
@@ -149,6 +149,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         .java
                         .cast(it)
                 }
+                .toMutableList()
         initList.initializers = initializers
         return initList
     }
@@ -232,7 +233,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
-            declarationStatement.addToPropertyEdgeDeclaration(declaration)
+            declarationStatement.declarationEdges += declaration
             frontend.processAnnotations(declaration, variableDeclarationExpr)
             frontend.scopeManager.addDeclaration(declaration)
         }
@@ -837,9 +838,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
-                    constructorDeclaration.addParameter(
+                    constructorDeclaration.parameterEdges +=
                         newParameterDeclaration("arg${i}", arg.type)
-                    )
                 }
                 anonymousRecord.addConstructor(constructorDeclaration)
                 ctor.anonymousClass = anonymousRecord

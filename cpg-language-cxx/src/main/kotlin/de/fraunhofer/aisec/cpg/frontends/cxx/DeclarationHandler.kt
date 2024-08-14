@@ -218,7 +218,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (lastStatement !is ReturnStatement) {
                     val returnStatement = newReturnStatement()
                     returnStatement.isImplicit = true
-                    bodyStatement.addStatement(returnStatement)
+                    bodyStatement.statements += returnStatement
                 }
                 declaration.body = bodyStatement
             }
@@ -329,8 +329,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             )
                         nonTypeTemplateParamDeclaration.default = defaultExpression
                         defaultExpression?.let {
-                            nonTypeTemplateParamDeclaration.addPrevDFG(it)
-                            it.addNextDFG(nonTypeTemplateParamDeclaration)
+                            nonTypeTemplateParamDeclaration.prevDFGEdges += it
+                            it.nextDFGEdges += nonTypeTemplateParamDeclaration
                         }
                     }
                     templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
@@ -541,10 +541,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         // typedef'd name is called S. However, to make things a little bit easier
                         // we also transfer the name to the record declaration.
                         ctx.declarators.firstOrNull()?.name?.toString()?.let {
-                            primaryDeclaration?.name = parseName(it)
-                            // We need to inform the later steps that we want to take the name
-                            // of this declaration as the basis for the result type of the typedef
-                            useNameOfDeclarator = true
+                            primaryDeclaration.name = parseName(it)
+                            useNameOfDeclarator = false
                         }
                     }
                     frontend.processAttributes(primaryDeclaration, ctx)
@@ -647,21 +645,25 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {
+            // Enums are a bit complicated. Their fully qualified name (in C++) includes the enum
+            // class, so e.g. `MyEnum::THIS'. In order to do that, we need to be in the `MyEnum`
+            // scope when we create it. But, the symbol of the enum can both be resolved using just
+            // the enum constant `THIS` as well as `MyEnum::THIS` (at least in C++11). So we need to
+            // put the symbol both in the outer scope as well as the enum's scope.
+            frontend.scopeManager.enterScope(enum)
             val enumConst =
                 newEnumConstantDeclaration(
                     enumerator.name.toString(),
                     rawNode = enumerator,
                 )
+            frontend.scopeManager.addDeclaration(enumConst)
+            frontend.scopeManager.leaveScope(enum)
 
             // In C/C++, default enums are of type int
             enumConst.type = primitiveType("int")
 
-            // We need to make them visible to the enclosing scope. However, we do NOT
-            // want to add it to the AST of the enclosing scope, but to the AST of the
-            // EnumDeclaration
+            // Also put the symbol in the outer scope (but do not add AST nodes)
             frontend.scopeManager.addDeclaration(enumConst, false)
-
-            entries += enumConst
         }
 
         enum.entries = entries
@@ -784,9 +786,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 val problems = problematicIncludes[includeString]
                 val includeDeclaration = newIncludeDeclaration(includeString ?: "")
-                if (problems != null) {
-                    includeDeclaration.addProblems(problems)
-                }
+                problems?.forEach { includeDeclaration.problems += it }
                 includeMap[includeString] = includeDeclaration
             }
         }
@@ -799,8 +799,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // attach to remaining nodes
         for ((key, value) in allIncludes) {
             val includeDeclaration = includeMap[key]
+            if (includeDeclaration == null) {
+                continue
+            }
             for (s in value) {
-                includeDeclaration?.addInclude(includeMap[s])
+                includeMap[s]?.let { includeDeclaration.includes += it }
             }
         }
     }

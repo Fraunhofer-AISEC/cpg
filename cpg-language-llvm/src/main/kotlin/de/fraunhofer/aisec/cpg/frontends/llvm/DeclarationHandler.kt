@@ -152,13 +152,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
                 functionDeclaration.body = newBlock()
                 if (stmt != null) {
-                    (functionDeclaration.body as Block).addStatement(stmt)
+                    (functionDeclaration.body as Block).statements += stmt
                 }
             } else {
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
                 if (stmt != null) {
-                    (functionDeclaration.body as? Block)?.addStatement(stmt)
+                    (functionDeclaration.body as? Block)?.statements += stmt
                 }
             }
 
@@ -194,12 +194,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             }
 
         // try to see, if the struct already exists as a record declaration
-        var record =
-            frontend.scopeManager
-                .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                    it.name.toString() == name
-                }
-                .firstOrNull()
+        var record = frontend.scopeManager.getRecordForName(Name(name))
 
         // if yes, return it
         if (record != null) {

@@ -33,8 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -42,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -50,7 +48,7 @@ import org.slf4j.LoggerFactory
 /**
  * Creates an Evaluation Order Graph (EOG) based on AST.
  *
- * An EOG is an intraprocedural directed graph whose vertices are executable AST nodes and edges
+ * An EOG is an intra-procedural directed graph whose vertices are executable AST nodes and edges
  * connect them in the order they would be executed when running the program.
  *
  * An EOG always starts at the header of a method/function and ends in one (virtual) or multiple
@@ -73,9 +71,10 @@ import org.slf4j.LoggerFactory
  */
 @Suppress("MemberVisibilityCanBePrivate")
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     protected var currentPredecessors = mutableListOf<Node>()
-    protected val nextEdgeProperties = EnumMap<Properties, Any?>(Properties::class.java)
+    protected var nextEdgeBranch: Boolean? = null
 
     /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
@@ -183,7 +182,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val eogNodes = IdentitySet<Node>()
         eogNodes.addAll(
             SubgraphWalker.flattenAST(tu).filter {
-                it.prevEOG.isNotEmpty() || it.nextEOG.isNotEmpty()
+                it.prevEOGEdges.isNotEmpty() || it.nextEOGEdges.isNotEmpty()
             }
         )
         // only eog entry points
@@ -193,17 +192,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val alreadySeen = IdentitySet<Node>()
         while (validStarts.isNotEmpty()) {
             eogNodes.removeAll(validStarts)
-            validStarts = validStarts.flatMap { it.nextEOG }.filter { it !in alreadySeen }.toSet()
+            validStarts =
+                validStarts
+                    .flatMap { it.nextEOGEdges }
+                    .filter { it.end !in alreadySeen }
+                    .map { it.end }
+                    .toSet()
             alreadySeen.addAll(validStarts)
         }
         // The remaining nodes are unreachable from the entry points. We delete their outgoing EOG
         // edges.
         for (unvisitedNode in eogNodes) {
-            unvisitedNode.nextEOGEdges.forEach { next ->
-                next.end.removePrevEOGEntry(unvisitedNode)
-            }
-
-            unvisitedNode.clearNextEOG()
+            unvisitedNode.nextEOGEdges.clear()
         }
     }
 
@@ -282,20 +282,20 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     protected fun handleLambdaExpression(node: LambdaExpression) {
         val tmpCurrentEOG = currentPredecessors.toMutableList()
-        val tmpCurrentProperties = nextEdgeProperties.toMutableMap()
+        val tmpCurrentProperties = nextEdgeBranch
         val tmpIntermediateNodes = intermediateNodes.toMutableList()
 
-        nextEdgeProperties.clear()
+        nextEdgeBranch = null
         currentPredecessors.clear()
         intermediateNodes.clear()
 
         createEOG(node.function)
 
-        nextEdgeProperties.clear()
+        nextEdgeBranch = null
         currentPredecessors.clear()
         intermediateNodes.clear()
 
-        nextEdgeProperties.putAll(tmpCurrentProperties)
+        nextEdgeBranch = tmpCurrentProperties
         currentPredecessors.addAll(tmpCurrentEOG)
         intermediateNodes.addAll(tmpIntermediateNodes)
 
@@ -493,14 +493,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // present.
             // If it is not a conjunctive operator, the check above implies it is a disjunctive
             // operator.
-            nextEdgeProperties[Properties.BRANCH] =
-                lang.conjunctiveOperators.contains(node.operatorCode)
+            nextEdgeBranch = lang.conjunctiveOperators.contains(node.operatorCode)
             createEOG(node.rhs)
             pushToEOG(node)
             setCurrentEOGs(shortCircuitNodes)
             // Inverted property to assigne false when true was assigned above.
-            nextEdgeProperties[Properties.BRANCH] =
-                !lang.conjunctiveOperators.contains(node.operatorCode)
+            nextEdgeBranch = !lang.conjunctiveOperators.contains(node.operatorCode)
         } else {
             createEOG(node.rhs)
         }
@@ -690,9 +688,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleGotoStatement(node: GotoStatement) {
         pushToEOG(node)
         node.targetLabel?.let {
-            processedListener.registerObjectListener(it) { _: Any?, to: Any? ->
-                addEOGEdge(node, to as Node)
-            }
+            processedListener.registerObjectListener(it) { _, to -> addEOGEdge(node, to) }
         }
         currentPredecessors.clear()
     }
@@ -744,20 +740,20 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // Generate the EOG inside the anonymous class. It's not linked to the EOG of the outer
             // part.
             val tmpCurrentEOG = currentPredecessors.toMutableList()
-            val tmpCurrentProperties = nextEdgeProperties.toMutableMap()
+            val tmpCurrentProperties = nextEdgeBranch
             val tmpIntermediateNodes = intermediateNodes.toMutableList()
 
-            nextEdgeProperties.clear()
+            nextEdgeBranch = null
             currentPredecessors.clear()
             intermediateNodes.clear()
 
             createEOG(node.anonymousClass)
 
-            nextEdgeProperties.clear()
+            nextEdgeBranch = null
             currentPredecessors.clear()
             intermediateNodes.clear()
 
-            nextEdgeProperties.putAll(tmpCurrentProperties)
+            nextEdgeBranch = tmpCurrentProperties
             currentPredecessors.addAll(tmpCurrentEOG)
             intermediateNodes.addAll(tmpIntermediateNodes)
         }
@@ -776,7 +772,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         addMultipleIncomingEOGEdges(currentPredecessors, node)
         intermediateNodes.clear()
         currentPredecessors.clear()
-        nextEdgeProperties.clear()
+        nextEdgeBranch = null
         currentPredecessors.add(node)
     }
 
@@ -826,12 +822,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * @param next the next node
      */
     protected fun addEOGEdge(prev: Node, next: Node) {
-        val propertyEdge = PropertyEdge(prev, next)
-        propertyEdge.addProperties(nextEdgeProperties)
-        propertyEdge.addProperty(Properties.INDEX, prev.nextEOG.size)
-        propertyEdge.addProperty(Properties.UNREACHABLE, false)
-        prev.addNextEOG(propertyEdge)
-        next.addPrevEOG(propertyEdge)
+        val propertyEdge = EvaluationOrder(prev, next, unreachable = false)
+        propertyEdge.branch = nextEdgeBranch
+
+        prev.nextEOGEdges += propertyEdge
     }
 
     protected fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
@@ -850,11 +844,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // To have semantic information after the condition evaluation
         pushToEOG(node)
         val openConditionEOGs = ArrayList(currentPredecessors)
-        nextEdgeProperties[Properties.BRANCH] = true
+        nextEdgeBranch = true
         createEOG(node.thenExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openConditionEOGs)
-        nextEdgeProperties[Properties.BRANCH] = false
+        nextEdgeBranch = false
         createEOG(node.elseExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openBranchNodes)
@@ -864,11 +858,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
-        node.condition?.let { node.addPrevDFG(it) }
+        // TODO(oxisto): Do we really want to set DFG edges here?
+        node.condition?.let { node.prevDFGEdges += it }
         pushToEOG(node) // To have semantic information after the condition evaluation
-        nextEdgeProperties[Properties.BRANCH] = true
+        nextEdgeBranch = true
         connectCurrentToLoopStart()
-        nextEdgeProperties[Properties.BRANCH] = false
+        nextEdgeBranch = false
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
@@ -881,9 +876,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
-        node.variable?.let { node.addPrevDFG(it) }
+        // TODO(oxisto): Do we really want to set DFG edges here?
+        node.variable?.let { node.prevDFGEdges += it }
         pushToEOG(node) // To have semantic information after the variable declaration
-        nextEdgeProperties[Properties.BRANCH] = true
+        nextEdgeBranch = true
         val tmpEOGNodes = ArrayList(currentPredecessors)
         createEOG(node.statement)
         connectCurrentToLoopStart()
@@ -895,7 +891,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
         currentPredecessors.addAll(tmpEOGNodes)
-        nextEdgeProperties[Properties.BRANCH] = false
+        nextEdgeBranch = false
     }
 
     protected fun handleForStatement(node: ForStatement) {
@@ -905,7 +901,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.condition)
 
         pushToEOG(node) // To have semantic information after the condition evaluation
-        nextEdgeProperties[Properties.BRANCH] = true
+        nextEdgeBranch = true
         val tmpEOGNodes = ArrayList(currentPredecessors)
 
         createEOG(node.statement)
@@ -921,7 +917,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
         currentPredecessors.addAll(tmpEOGNodes)
-        nextEdgeProperties[Properties.BRANCH] = false
+        nextEdgeBranch = false
     }
 
     protected fun handleIfStatement(node: IfStatement) {
@@ -932,12 +928,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
         val openConditionEOGs = ArrayList(currentPredecessors)
-        nextEdgeProperties[Properties.BRANCH] = true
+        nextEdgeBranch = true
         createEOG(node.thenStatement)
         openBranchNodes.addAll(currentPredecessors)
         if (node.elseStatement != null) {
             setCurrentEOGs(openConditionEOGs)
-            nextEdgeProperties[Properties.BRANCH] = false
+            nextEdgeBranch = false
             createEOG(node.elseStatement)
             openBranchNodes.addAll(currentPredecessors)
         } else {
@@ -990,7 +986,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
-        nextEdgeProperties[Properties.BRANCH] = true
+        nextEdgeBranch = true
         val tmpEOGNodes = ArrayList(currentPredecessors)
         createEOG(node.statement)
         connectCurrentToLoopStart()
@@ -1004,7 +1000,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }
         currentPredecessors.addAll(tmpEOGNodes)
-        nextEdgeProperties[Properties.BRANCH] = false
+        nextEdgeBranch = false
     }
 
     companion object {

@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -34,9 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, Python.ASTBASEstmt>(::ProblemExpression, frontend) {
+
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
@@ -76,14 +80,57 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleImport(node: Python.ASTImport): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
-            val v =
-                if (imp.asname != null) {
-                    newVariableDeclaration(imp.asname, rawNode = imp) // TODO refers to original????
+            val alias = imp.asname
+            val decl =
+                if (alias != null) {
+                    newImportDeclaration(
+                        parseName(imp.name),
+                        false,
+                        parseName(alias),
+                        rawNode = imp
+                    )
                 } else {
-                    newVariableDeclaration(imp.name, rawNode = imp)
+                    newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                 }
-            frontend.scopeManager.addDeclaration(v)
-            declStmt.addDeclaration(v)
+            frontend.scopeManager.addDeclaration(decl)
+            declStmt.declarationEdges += decl
+        }
+        return declStmt
+    }
+
+    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
+        val declStmt = newDeclarationStatement(rawNode = node)
+        val level = node.level
+        if (level == null || level > 0) {
+            return newProblemExpression(
+                "not supporting relative paths in from (...) import syntax yet"
+            )
+        }
+
+        val module = parseName(node.module ?: "")
+        for (imp in node.names) {
+            // We need to differentiate between a wildcard import and an individual symbol.
+            // Wildcards luckily do not have aliases
+            val decl =
+                if (imp.name == "*") {
+                    // In the wildcard case, our "import" is the module name and we set "wildcard"
+                    // to true
+                    newImportDeclaration(module, true, rawNode = imp)
+                } else {
+                    // If we import an individual symbol, we need to FQN the symbol with our module
+                    // name and import that. We also need to take care of any alias
+                    val name = module.fqn(imp.name)
+                    val alias = imp.asname
+                    if (alias != null) {
+                        newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                    } else {
+                        newImportDeclaration(name, false, rawNode = imp)
+                    }
+                }
+
+            // Finally, add our declaration to the scope and the declaration statement
+            frontend.scopeManager.addDeclaration(decl)
+            declStmt.declarationEdges += decl
         }
         return declStmt
     }
@@ -187,34 +234,22 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
-    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
-        val declStmt = newDeclarationStatement(rawNode = node)
-        for (stmt in node.names) {
-            val name =
-                if (stmt.asname != null) {
-                    stmt.asname
-                } else {
-                    stmt.name
-                }
-            val decl = newVariableDeclaration(name = name, rawNode = node)
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.addDeclaration(decl)
-        }
-        return declStmt
-    }
-
     private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
         val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
         frontend.scopeManager.enterScope(cls)
 
-        stmt.keywords.map { TODO() }
+        stmt.keywords.forEach {
+            frontend.currentTU?.addDeclaration(
+                newProblemDeclaration("could not parse keyword $it in class")
+            )
+        }
 
         for (s in stmt.body) {
             when (s) {
                 is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.addStatement(handleNode(s))
+                else -> cls.statements += handleNode(s)
             }
         }
 
@@ -263,7 +298,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -325,7 +360,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -354,20 +389,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         result: FunctionDeclaration,
         recordDeclaration: RecordDeclaration?
     ) {
-        // Handle arguments
-        if (args.posonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`posonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
+        // We can merge posonlyargs and args because both are positional arguments. We do not
+        // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
+        // both in positional as well as keyword style.
+        var positionalArguments = args.posonlyargs + args.args
 
+        // Handle arguments
         if (recordDeclaration != null) {
             // first argument is the `receiver`
-            if (args.args.isEmpty()) {
+            val recvPythonNode = positionalArguments.firstOrNull()
+            if (recvPythonNode == null) {
                 val problem =
                     newProblemDeclaration(
                         "Expected a receiver",
@@ -376,7 +407,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 frontend.scopeManager.addDeclaration(problem)
             } else {
-                val recvPythonNode = args.args.first()
                 val tpe = recordDeclaration.toType()
                 val recvNode =
                     newVariableDeclaration(
@@ -396,12 +426,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         if (recordDeclaration != null) {
             // first argument is the receiver
-            for (arg in args.args.subList(1, args.args.size)) {
-                handleArgument(arg)
+            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
+                handleArgument(arg, arg in args.posonlyargs)
             }
         } else {
-            for (arg in args.args) {
-                handleArgument(arg)
+            for (arg in positionalArguments) {
+                handleArgument(arg, arg in args.posonlyargs)
             }
         }
 
@@ -456,64 +486,33 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(
-        node: Python.ASTAsyncFunctionDef
-    ): Collection<de.fraunhofer.aisec.cpg.graph.Annotation> {
-        val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-        for (decorator in node.decorator_list) {
-            if (decorator !is Python.ASTCall) {
-                TODO()
-            }
-
-            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
-            if (decFuncParsed !is MemberExpression) {
-                TODO()
-            }
-
-            val annotation =
-                newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
-                    )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
-
-            annotations += annotation
-        }
-        return annotations
+    private fun handleAnnotations(node: Python.ASTAsyncFunctionDef): Collection<Annotation> {
+        return handleDeclaratorList(node, node.decorator_list)
     }
 
-    private fun handleAnnotations(
-        node: Python.ASTFunctionDef
-    ): Collection<de.fraunhofer.aisec.cpg.graph.Annotation> {
-        val annotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-        for (decorator in node.decorator_list) {
+    private fun handleAnnotations(node: Python.ASTFunctionDef): Collection<Annotation> {
+        return handleDeclaratorList(node, node.decorator_list)
+    }
+
+    fun handleDeclaratorList(
+        node: Python.AST,
+        decoratorList: List<Python.ASTBASEexpr>
+    ): List<Annotation> {
+        val annotations = mutableListOf<Annotation>()
+        for (decorator in decoratorList) {
             if (decorator !is Python.ASTCall) {
-                TODO()
+                log.warn(
+                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
+                )
+                continue
             }
 
             val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
             if (decFuncParsed !is MemberExpression) {
-                TODO()
+                log.warn(
+                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
+                )
+                continue
             }
 
             val annotation =
@@ -545,20 +544,24 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             annotations += annotation
         }
+
         return annotations
     }
 
     private fun makeBlock(stmts: List<Python.ASTBASEstmt>, rawNode: Python.AST? = null): Block {
         val result = newBlock(rawNode = rawNode)
         for (stmt in stmts) {
-            result.addStatement(handle(stmt))
+            result.statements += handle(stmt)
         }
         return result
     }
 
-    internal fun handleArgument(node: Python.ASTarg) {
+    internal fun handleArgument(node: Python.ASTarg, isPosOnly: Boolean = false) {
         val type = frontend.typeOf(node.annotation)
         val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
+        if (isPosOnly) {
+            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        }
 
         frontend.scopeManager.addDeclaration(arg)
     }

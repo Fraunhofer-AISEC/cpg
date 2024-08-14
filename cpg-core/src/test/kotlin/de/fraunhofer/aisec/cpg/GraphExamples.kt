@@ -56,7 +56,7 @@ class GraphExamples {
                                 declare {
                                     variable("i", t("int")) {
                                         val initList = newInitializerListExpression()
-                                        initList.initializers = listOf(call("foo"))
+                                        initList.initializers = mutableListOf(call("foo"))
                                         initializer = initList
                                     }
                                 }

@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+typedef int size_t;
+
 int main() {
 	// this cast could be mistaken for a call expression
 	size_t count = (size_t)(42);

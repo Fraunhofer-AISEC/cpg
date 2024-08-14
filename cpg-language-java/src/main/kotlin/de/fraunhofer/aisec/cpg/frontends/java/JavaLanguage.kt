@@ -45,7 +45,8 @@ open class JavaLanguage :
     HasGenerics,
     HasQualifier,
     HasUnknownType,
-    HasShortCircuitOperators {
+    HasShortCircuitOperators,
+    HasFunctionOverloading {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
     @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
@@ -71,6 +72,7 @@ open class JavaLanguage :
     @JsonIgnore
     override val builtInTypes =
         mapOf(
+            "void" to IncompleteType(language = this),
             // Boolean Types:
             // https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html#jls-4.2.5
             "boolean" to BooleanType("boolean", language = this),
@@ -107,11 +109,11 @@ open class JavaLanguage :
         } else super.propagateTypeOfBinaryOperation(operation)
     }
 
-    override fun handleSuperCall(
-        callee: MemberExpression,
+    override fun handleSuperExpression(
+        memberExpression: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
-    ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager)
+    ) = JavaCallResolverHelper.handleSuperExpression(memberExpression, curClass, scopeManager)
 
     override val startCharacter = '<'
     override val endCharacter = '>'

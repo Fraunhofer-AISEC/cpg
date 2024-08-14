@@ -29,14 +29,17 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependences
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrders
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences
+import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
@@ -52,7 +55,14 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, ContextProvider {
+abstract class Node :
+    IVisitable<Node>,
+    Persistable,
+    LanguageProvider,
+    ScopeProvider,
+    ContextProvider,
+    HasNameAndLocation,
+    HasScope {
     /**
      * Because we are updating type information in the properties of the node, we need a reference
      * to managers such as the [TypeManager] instance which is responsible for this particular node.
@@ -61,11 +71,8 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
 
-    /**
-     * This property holds the full name using our new [Name] class. It is currently not persisted
-     * in the graph database.
-     */
-    @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)
+    /** This property holds the full name using our new [Name] class. */
+    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -97,8 +104,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Optional comment of this node. */
     var comment: String? = null
 
-    /** Location of the finding in source code. */
-    @Convert(LocationConverter::class) var location: PhysicalLocation? = null
+    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just
@@ -109,13 +115,15 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var prevEOGEdges: EvaluationOrders<Node> =
+        EvaluationOrders<Node>(this, mirrorProperty = Node::nextEOGEdges, outgoing = false)
         protected set
 
     /** Outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var nextEOGEdges: EvaluationOrders<Node> =
+        EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
 
     /**
@@ -124,10 +132,11 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var nextCDGEdges: ControlDependences<Node> =
+        ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
         protected set
 
-    var nextCDG by PropertyEdgeDelegate(Node::nextCDGEdges, true)
+    var nextCDG by unwrapping(Node::nextCDGEdges)
 
     /**
      * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
@@ -135,10 +144,11 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var prevCDGEdges: ControlDependences<Node> =
+        ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
         protected set
 
-    var prevCDG by PropertyEdgeDelegate(Node::prevCDGEdges, false)
+    var prevCDG by unwrapping(Node::prevCDGEdges)
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
@@ -151,28 +161,31 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * persistence. Therefore, this property is a `var` and not a `val`.
      */
     @Relationship("AST")
+    @JsonIgnore
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOG: List<Node> by PropertyEdgeDelegate(Node::prevEOGEdges, false)
+    @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOG: List<Node> by PropertyEdgeDelegate(Node::nextEOGEdges)
+    @PopulatedByPass(EvaluationOrderGraphPass::class) var nextEOG by unwrapping(Node::nextEOGEdges)
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFGEdges: MutableList<Dataflow> = mutableListOf()
+    var prevDFGEdges: Dataflows<Node> =
+        Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevDFGEdges, false)
+    var prevDFG by unwrapping(Node::prevDFGEdges)
 
-    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
+    /**
+     * Virtual property for accessing [nextDFGEdges] that have a
+     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
+     */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
         get() {
@@ -184,14 +197,18 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
-    var nextDFGEdges: MutableList<Dataflow> = mutableListOf()
+    var nextDFGEdges: Dataflows<Node> =
+        Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var nextDFG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::nextDFGEdges, true)
+    var nextDFG by unwrapping(Node::nextDFGEdges)
 
-    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
+    /**
+     * Virtual property for accessing [nextDFGEdges] that have a
+     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
+     */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
         get() {
@@ -201,20 +218,16 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Outgoing Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: MutableSet<PropertyEdge<Node>> = mutableSetOf()
+    var nextPDGEdges: ProgramDependences<Node> =
+        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
         protected set
-
-    /** Virtual property for accessing the children of the Program Dependence Graph (PDG). */
-    var nextPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::nextPDGEdges, true)
 
     /** Incoming Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: MutableSet<PropertyEdge<Node>> = mutableSetOf()
+    var prevPDGEdges: ProgramDependences<Node> =
+        ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
         protected set
-
-    /** Virtual property for accessing the parents of the Program Dependence Graph (PDG). */
-    var prevPDG: MutableSet<Node> by PropertyEdgeSetDelegate(Node::prevPDGEdges, false)
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -240,140 +253,6 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** List of annotations associated with that node. */
     @AST var annotations: MutableList<Annotation> = ArrayList()
 
-    fun removePrevEOGEntry(eog: Node) {
-        removePrevEOGEntries(listOf(eog))
-    }
-
-    private fun removePrevEOGEntries(prevEOGs: List<Node>) {
-        for (n in prevEOGs) {
-            val remove = PropertyEdge.findPropertyEdgesByPredicate(prevEOGEdges) { it.start === n }
-            prevEOGEdges.removeAll(remove)
-        }
-    }
-
-    fun addPrevEOG(propertyEdge: PropertyEdge<Node>) {
-        prevEOGEdges.add(propertyEdge)
-    }
-
-    fun addNextEOG(propertyEdge: PropertyEdge<Node>) {
-        nextEOGEdges.add(propertyEdge)
-    }
-
-    fun clearNextEOG() {
-        nextEOGEdges.clear()
-    }
-
-    /** Adds a [Dataflow] edge from this node to [next], with the given [Granularity]. */
-    fun addNextDFG(
-        next: Node,
-        granularity: Granularity = default(),
-        callingContext: CallingContext? = null,
-    ) {
-        val edge =
-            if (callingContext != null) {
-                ContextSensitiveDataflow(this, next, callingContext, granularity)
-            } else {
-                Dataflow(this, next, granularity)
-            }
-        nextDFGEdges.add(edge)
-        next.prevDFGEdges.add(edge)
-    }
-
-    fun removeNextDFG(next: Node?) {
-        if (next != null) {
-            val thisRemove =
-                PropertyEdge.findPropertyEdgesByPredicate(nextDFGEdges) { it.end === next }
-            nextDFGEdges.removeAll(thisRemove)
-
-            val nextRemove =
-                PropertyEdge.findPropertyEdgesByPredicate(next.prevDFGEdges) { it.start == this }
-            next.prevDFGEdges.removeAll(nextRemove)
-        }
-    }
-
-    /**
-     * Adds a [Dataflow] edge from [prev] node to this node, with the given [Granularity] and
-     * [CallingContext].
-     */
-    open fun addPrevDFG(
-        prev: Node,
-        granularity: Granularity = default(),
-        callingContext: CallingContext? = null,
-    ) {
-        val edge =
-            if (callingContext != null) {
-                ContextSensitiveDataflow(prev, this, callingContext, granularity)
-            } else {
-                Dataflow(prev, this, granularity)
-            }
-        if (edge !in prevDFGEdges) {
-            prevDFGEdges.add(edge)
-            prev.nextDFGEdges.add(edge)
-        }
-    }
-
-    fun addPrevCDG(
-        prev: Node,
-        properties: MutableMap<Properties, Any?> = EnumMap(Properties::class.java)
-    ) {
-        val edge = PropertyEdge(prev, this, properties)
-        prevCDGEdges.add(edge)
-        prev.nextCDGEdges.add(edge)
-    }
-
-    /**
-     * Adds a [Dataflow] edge from all [prev] nodes to this node, with the given [Granularity] and
-     * [CallingContext] if applicable.
-     */
-    fun addAllPrevDFG(
-        prev: Collection<Node>,
-        granularity: Granularity = full(),
-        callingContext: CallingContext? = null,
-    ) {
-        prev.forEach { addPrevDFG(it, granularity, callingContext) }
-    }
-
-    fun addAllPrevPDG(prev: Collection<Node>, dependenceType: DependenceType) {
-        addAllPrevPDGEdges(prev.map { PropertyEdge(it, this) }, dependenceType)
-    }
-
-    fun addAllPrevPDGEdges(prev: Collection<PropertyEdge<Node>>, dependenceType: DependenceType) {
-        prev.forEach {
-            val edge = PropertyEdge(it).apply { addProperty(Properties.DEPENDENCE, dependenceType) }
-            this.prevPDGEdges.add(edge)
-            val other = if (it.start != this) it.start else it.end
-            other.nextPDGEdges.add(edge)
-        }
-    }
-
-    fun removePrevDFG(prev: Node?) {
-        if (prev != null) {
-            val thisRemove =
-                PropertyEdge.findPropertyEdgesByPredicate(prevDFGEdges) { it.start === prev }
-            prevDFGEdges.removeAll(thisRemove)
-
-            val prevRemove =
-                PropertyEdge.findPropertyEdgesByPredicate(prev.nextDFGEdges) { it.end === this }
-            prev.nextDFGEdges.removeAll(prevRemove)
-        }
-    }
-
-    fun clearPrevDFG() {
-        for (prev in ArrayList(prevDFG)) {
-            removePrevDFG(prev)
-        }
-    }
-
-    fun clearNextDFG() {
-        for (prev in ArrayList(nextDFG)) {
-            removeNextDFG(prev)
-        }
-    }
-
-    fun addAnnotations(annotations: Collection<Annotation>) {
-        this.annotations.addAll(annotations)
-    }
-
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
@@ -384,32 +263,13 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
-        for (n in nextDFGEdges) {
-            val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(n.end.prevDFGEdges) { it.start == this }
-            n.end.prevDFGEdges.removeAll(remove)
-        }
         nextDFGEdges.clear()
-
-        for (n in prevDFGEdges) {
-            val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(n.start.nextDFGEdges) { it.end == this }
-            n.start.nextDFGEdges.removeAll(remove)
-        }
         prevDFGEdges.clear()
-
-        for (n in nextEOGEdges) {
-            val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(n.end.prevEOGEdges) { it.start == this }
-            n.end.prevEOGEdges.removeAll(remove)
-        }
+        prevCDGEdges.clear()
+        nextCDGEdges.clear()
+        prevPDGEdges.clear()
+        nextPDGEdges.clear()
         nextEOGEdges.clear()
-
-        for (n in prevEOGEdges) {
-            val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(n.start.nextEOGEdges) { it.end == this }
-            n.start.nextEOGEdges.removeAll(remove)
-        }
         prevEOGEdges.clear()
     }
 

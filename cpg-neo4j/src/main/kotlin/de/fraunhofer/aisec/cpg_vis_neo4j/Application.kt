@@ -263,7 +263,6 @@ class Application : Callable<Int> {
     private var passClassList =
         listOf(
             TypeHierarchyResolver::class,
-            JavaImportResolver::class,
             SymbolResolver::class,
             DFGPass::class,
             EvaluationOrderGraphPass::class,
@@ -520,6 +519,8 @@ class Application : Callable<Int> {
 
         if (!noDefaultPasses) {
             translationConfiguration.defaultPasses()
+            translationConfiguration.registerPass<ControlDependenceGraphPass>()
+            translationConfiguration.registerPass<ProgramDependenceGraphPass>()
         }
         if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")

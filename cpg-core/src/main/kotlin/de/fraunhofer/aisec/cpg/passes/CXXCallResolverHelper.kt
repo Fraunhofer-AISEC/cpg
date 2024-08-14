@@ -121,7 +121,7 @@ fun applyTemplateInstantiation(
     // Template.
     for ((declaration) in initializationSignature) {
         if (declaration is ParameterDeclaration) {
-            initializationSignature[declaration]?.let { declaration.addPrevDFG(it) }
+            initializationSignature[declaration]?.let { declaration.prevDFGEdges += it }
         }
     }
 
@@ -281,8 +281,8 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
 ): MutableMap<Declaration?, Node?>? {
     val instantiationSignature: MutableMap<Declaration?, Node?> = HashMap()
     for (i in functionTemplateDeclaration.parameters.indices) {
-        if (i < templateCall.templateParameters.size) {
-            val callParameter = templateCall.templateParameters[i]
+        if (i < templateCall.templateArguments.size) {
+            val callParameter = templateCall.templateArguments[i]
             val templateParameter = functionTemplateDeclaration.parameters[i]
             if (isInstantiated(callParameter, templateParameter)) {
                 instantiationSignature[templateParameter] = callParameter

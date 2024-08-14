@@ -93,8 +93,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
-            node.firstChild("JsxAttributes")?.children?.mapNotNull { this.handle(it) }
-                ?: emptyList()
+            node
+                .firstChild("JsxAttributes")
+                ?.children
+                ?.mapNotNull { this.handle(it) }
+                ?.toMutableList() ?: mutableListOf()
 
         return tag
     }
@@ -102,7 +105,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
         val jsx = newExpressionList(rawNode = node)
 
-        jsx.expressions = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
+        jsx.expressions =
+            node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
 
         return jsx
     }
@@ -145,7 +149,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile = newInitializerListExpression(unknownType(), rawNode = node)
 
-        ile.initializers = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
+        ile.initializers =
+            node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
 
         return ile
     }

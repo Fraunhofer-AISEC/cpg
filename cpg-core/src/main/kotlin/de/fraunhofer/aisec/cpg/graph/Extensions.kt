@@ -27,8 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -341,20 +340,14 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         val currentPath = worklist.removeFirst()
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (
-            currentPath.last().nextEOGEdges.none { it.getProperty(Properties.UNREACHABLE) != true }
-        ) {
+        if (currentPath.last().nextEOGEdges.none { it.unreachable != true }) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
             continue // Don't add this path anymore. The requirement is satisfied.
         }
 
         for (next in
-            currentPath
-                .last()
-                .nextEOGEdges
-                .filter { it.getProperty(Properties.UNREACHABLE) != true }
-                .map { it.end }) {
+            currentPath.last().nextEOGEdges.filter { it.unreachable != true }.map { it.end }) {
             // Copy the path for each outgoing DFG edge and add the next node
             val nextPath = mutableListOf<Node>()
             nextPath.addAll(currentPath)
@@ -399,20 +392,14 @@ fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         val currentPath = worklist.removeFirst()
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (
-            currentPath.last().prevEOGEdges.none { it.getProperty(Properties.UNREACHABLE) != true }
-        ) {
+        if (currentPath.last().prevEOGEdges.none { it.unreachable != true }) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
             continue // Don't add this path anymore. The requirement is satisfied.
         }
 
         for (next in
-            currentPath
-                .last()
-                .prevEOGEdges
-                .filter { it.getProperty(Properties.UNREACHABLE) != true }
-                .map { it.start }) {
+            currentPath.last().prevEOGEdges.filter { it.unreachable != true }.map { it.start }) {
             // Copy the path for each outgoing DFG edge and add the next node
             val nextPath = mutableListOf<Node>()
             nextPath.addAll(currentPath)
@@ -440,10 +427,10 @@ fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
-    val path = mutableListOf<PropertyEdge<*>>()
+fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
+    val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.nextEOGEdges.filter { it.getProperty(Properties.UNREACHABLE) != true }) {
+    for (edge in this.nextEOGEdges.filter { it.unreachable != true }) {
         val target = edge.end
 
         path.add(edge)
@@ -470,10 +457,10 @@ fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEd
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
-    val path = mutableListOf<PropertyEdge<*>>()
+fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
+    val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.prevEOGEdges.filter { it.getProperty(Properties.UNREACHABLE) != true }) {
+    for (edge in this.prevEOGEdges.filter { it.unreachable != true }) {
         val source = edge.start
 
         path.add(edge)
@@ -539,6 +526,10 @@ val Node?.casts: List<CastExpression>
 
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
 val Node?.methods: List<MethodDeclaration>
+    get() = this.allChildren()
+
+/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
+val Node?.operators: List<OperatorDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
@@ -623,6 +614,10 @@ val Node?.returns: List<ReturnStatement>
 
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
 val Node?.assigns: List<AssignExpression>
+    get() = this.allChildren()
+
+/** Returns all [ProblemNode] children in this graph, starting with this [Node]. */
+val Node?.problems: List<ProblemNode>
     get() = this.allChildren()
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */

@@ -1,5 +1,12 @@
 namespace std {
-    class string {};
+    class string {
+public:
+        int size() {
+            return 1;
+        }
+
+        class iterator {};
+    };
 }
 
 // this is completely equivalent to a typedef
@@ -20,4 +27,12 @@ int main() {
 
     manipulateString(s1);
     manipulateString(s2);
+
+    s1.size();
+    s2.size();
+
+    mystring1::iterator it1;
+    mystring2::iterator it2;
+    std::string it3;
+    estd::string it4;
 }

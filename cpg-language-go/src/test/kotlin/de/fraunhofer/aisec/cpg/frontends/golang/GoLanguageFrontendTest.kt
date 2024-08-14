@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -125,7 +124,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(decl)
 
         val new = assertIs<NewExpression>(decl.firstAssignment)
-        with(tu) { assertEquals(objectType("p.MyStruct").pointer(), new.type) }
+        with(tu) { assertEquals(assertResolvedType("p.MyStruct").pointer(), new.type) }
 
         val construct = new.initializer as? ConstructExpression
         assertNotNull(construct)
@@ -727,7 +726,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(c)
         with(tu) {
             // type will be inferred from the function declaration
-            assertEquals(objectType("p.MyStruct").pointer(), c.type)
+            assertEquals(assertResolvedType("p.MyStruct").pointer(), c.type)
         }
 
         val newMyStructCall = assertIs<CallExpression>(c.firstAssignment)
@@ -1173,7 +1172,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val funcy = result.calls["funcy"]
         assertNotNull(funcy)
-        funcy.invokeEdges.all { it.getProperty(Properties.DYNAMIC_INVOKE) == true }
+        funcy.invokeEdges.all { it.dynamicInvoke == true }
 
         // We should be able to resolve the call from our stored "do" function to funcy
         assertInvokes(funcy, result.functions["do"])

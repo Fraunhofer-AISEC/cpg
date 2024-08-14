@@ -102,8 +102,27 @@ abstract class Scope(
         }
     }
 
-    /** Looks up a list of [Declaration] nodes for the specified [symbol]. */
-    fun lookupSymbol(symbol: Symbol): List<Declaration> {
+    /**
+     * Looks up a list of [Declaration] nodes for the specified [symbol]. Optionally, [predicate]
+     * can be used for additional filtering.
+     *
+     * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
+     * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
+     * qualified lookups, where we want to stay in our lookup-scope.
+     *
+     * @param symbol the symbol to lookup
+     * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
+     *   its parents if no match was found.
+     * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
+     *   wildcards should be replaced with their actual nodes
+     * @param predicate An optional predicate which should be used in the lookup.
+     */
+    fun lookupSymbol(
+        symbol: Symbol,
+        thisScopeOnly: Boolean = false,
+        replaceImports: Boolean = true,
+        predicate: ((Declaration) -> Boolean)? = null
+    ): List<Declaration> {
         // First, try to look for the symbol in the current scope
         var scope: Scope? = this
         var list: MutableList<Declaration>? = null
@@ -120,15 +139,26 @@ abstract class Scope(
             }
 
             // We need to resolve any imported symbols
-            list.replaceImports(symbol)
+            if (replaceImports) {
+                list.replaceImports(symbol)
+            }
+
+            // Filter the list according to the predicate, if we have any
+            if (predicate != null) {
+                list = list.filter(predicate).toMutableList()
+            }
 
             // If we have a hit, we can break the loop
             if (list.isNotEmpty()) {
                 break
             }
 
-            // If we do not have a hit, we can go up one scope
-            scope = scope.parent
+            // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
+            if (!thisScopeOnly) {
+                scope = scope.parent
+            } else {
+                break
+            }
         }
 
         return list ?: listOf()
@@ -206,8 +236,9 @@ private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
         val set = import.importedSymbols[symbol]
         if (set != null) {
             this.addAll(set)
-            this.remove(import)
         }
+
+        this.remove(import)
     }
 }
 

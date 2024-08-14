@@ -190,7 +190,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
             // Add the variable to the declaration statement as well as to the current scope (aka
             // our block wrapper)
-            stmt.addToPropertyEdgeDeclaration(decl)
+            stmt.declarationEdges += decl
             frontend.scopeManager.addDeclaration(decl)
 
             if (block != null) {
@@ -226,7 +226,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             for (declaration in sequence.declarations) {
                 frontend.scopeManager.addDeclaration(declaration)
             }
-            stmt.declarations = sequence.asList()
+            stmt.declarations = sequence.asMutableList()
         } else {
             frontend.scopeManager.addDeclaration(sequence)
             stmt.singleDeclaration = sequence
@@ -329,7 +329,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 if (ref is Reference) {
                     val key = newVariableDeclaration(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
-                    stmt.addToPropertyEdgeDeclaration(key)
+                    stmt.declarationEdges += key
                 }
             }
 
@@ -339,7 +339,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 if (ref is Reference) {
                     val key = newVariableDeclaration(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
-                    stmt.addToPropertyEdgeDeclaration(key)
+                    stmt.declarationEdges += key
                 }
             }
 

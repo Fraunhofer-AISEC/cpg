@@ -100,7 +100,7 @@ class AssignExpressionTest {
                 assertNotNull(refErr)
 
                 // This should now set the correct type of the call expression
-                call.invokes = listOf(func)
+                call.invokes = mutableListOf(func)
                 assertIs<TupleType>(call.type)
 
                 // We should at least know the "assigned" type of the references. Their declared

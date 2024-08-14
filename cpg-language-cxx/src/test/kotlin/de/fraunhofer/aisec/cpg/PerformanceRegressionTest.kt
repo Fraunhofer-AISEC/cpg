@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
-import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.*
@@ -89,16 +88,7 @@ class PerformanceRegressionTest {
             val list = InitializerListExpression()
 
             for (i in 0 until 50000) {
-                list.initializerEdges.add(
-                    PropertyEdge(
-                        list,
-                        newLiteral(
-                            i,
-                            IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.UNSIGNED),
-                            null
-                        )
-                    )
-                )
+                list.initializerEdges.add(AstEdge(list, newLiteral(i, primitiveType("int"), null)))
             }
 
             decl.initializer = list

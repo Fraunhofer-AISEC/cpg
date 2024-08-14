@@ -68,7 +68,13 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         get() = condition
 
     override fun addArgument(expression: Expression) {
-        // Do nothing
+        if (condition is ProblemExpression) {
+            condition = expression
+        } else if (thenExpression == null) {
+            thenExpression = expression
+        } else {
+            elseExpression = expression
+        }
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
@@ -85,6 +91,10 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
                 false
             }
         }
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.thenExpression == expression || elseExpression == expression
     }
 
     override fun typeChanged(newType: Type, src: HasType) {

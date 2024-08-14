@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -211,6 +210,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
                     record.toType()
                 }
+                LLVMFunctionTypeKind -> {
+                    // we are not really interested in function types in this frontend
+                    unknownType()
+                }
                 else -> {
                     objectType(typeStr)
                 }
@@ -242,11 +245,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
-        return this.scopeManager
-            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
-                it.name.toString() == name
-            }
-            .isNotEmpty()
+        return this.scopeManager.getRecordForName(Name(name)) != null
     }
 
     fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {

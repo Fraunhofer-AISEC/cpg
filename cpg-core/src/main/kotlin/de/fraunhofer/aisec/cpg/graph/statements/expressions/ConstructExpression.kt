@@ -58,7 +58,7 @@ class ConstructExpression : CallExpression() {
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
-                invokes = listOf(value as FunctionDeclaration)
+                invokes = mutableListOf(value as FunctionDeclaration)
             }
         }
 

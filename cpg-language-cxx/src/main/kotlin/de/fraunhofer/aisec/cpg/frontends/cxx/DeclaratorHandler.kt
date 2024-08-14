@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
+import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -33,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.*
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
@@ -158,7 +158,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * checks if the scope is a namespace or a record and if the name matches to the record (in case
      * of a constructor).
      */
-    private fun createFunctionOrMethodOrConstructor(
+    private fun createAppropriateFunction(
         name: Name,
         scope: Scope?,
         ctx: IASTNode,
@@ -168,9 +168,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val func =
             when {
+                // Check if it's an operator
+                name.isKnownOperatorName -> {
+                    // retrieve the operator code
+                    var operatorCode = name.localName.drop("operator".length)
+                    newOperatorDeclaration(name, operatorCode, rawNode = ctx)
+                }
                 // Check, if it's a constructor. This is the case if the local names of the function
-                // and the
-                // record declaration match
+                // and the record declaration match
                 holder is RecordDeclaration && name.localName == holder.name.localName -> {
                     newConstructorDeclaration(name, holder, rawNode = ctx)
                 }
@@ -219,9 +224,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         /*
          * As always, there are some special cases to consider and one of those are C++ operators.
-         * They are regarded as functions and eclipse CDT for some reason introduces a whitespace in the function name, which will complicate things later on
+         * They are regarded as functions and eclipse CDT for some reason introduces a whitespace
+         * in the function name, which will complicate things later on. But we only want to replace
+         * the whitespace for "standard" operators.
          */
-        if (name.startsWith("operator")) {
+        if (nameDecl.name is CPPASTOperatorName && name.replace(" ", "").isKnownOperatorName) {
             name = name.replace(" ", "")
         }
         val declaration: FunctionDeclaration
@@ -242,15 +249,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     frontend.scopeManager.currentNamespace.fqn(parent.toString()).toString()
                 )
 
-            declaration = createFunctionOrMethodOrConstructor(name, parentScope, ctx.parent)
+            declaration = createAppropriateFunction(name, parentScope, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
             // If the current scope is already a record, it's a method
             declaration =
-                createFunctionOrMethodOrConstructor(
-                    name,
-                    frontend.scopeManager.currentScope,
-                    ctx.parent
-                )
+                createAppropriateFunction(name, frontend.scopeManager.currentScope, ctx.parent)
         } else {
             // a plain old function, outside any named scope
             declaration = newFunctionDeclaration(name, rawNode = ctx.parent)
@@ -451,7 +454,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Handle C++ classes
         if (ctx is CPPASTCompositeTypeSpecifier) {
             recordDeclaration.superClasses =
-                ctx.baseSpecifiers.map { objectType(it.nameSpecifier.toString()) }.toMutableList()
+                ctx.baseSpecifiers
+                    .map { objectType(it.nameSpecifier.toString(), rawNode = it) }
+                    .toMutableList()
         }
 
         frontend.scopeManager.addDeclaration(recordDeclaration)
@@ -504,6 +509,17 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             frontend.declarationHandler.handle(member)
         }
     }
+
+    /** Checks whether the [Name] for a function is a known operator name. */
+    val Name.isKnownOperatorName: Boolean
+        get() {
+            var language = language
+            if (language !is HasOperatorOverloading) {
+                return false
+            }
+
+            return language.overloadedOperatorNames.containsValue(this.localName)
+        }
 }
 
 /**

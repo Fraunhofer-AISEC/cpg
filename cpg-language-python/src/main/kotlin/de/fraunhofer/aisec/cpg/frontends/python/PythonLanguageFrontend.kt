@@ -181,15 +181,20 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
      * 3) Remove trailing whitespaces / tabs
      */
     override fun codeOf(astNode: Python.AST): String? {
-        val location = locationOf(astNode)
-        if (location != null) {
-            var lines = getRelevantLines(location)
-            lines = removeExtraAtEnd(location, lines)
-            lines = fixStartColumn(location, lines)
+        return if (astNode is Python.ASTModule) {
+            fileContent
+        } else {
+            val location = locationOf(astNode)
+            if (location != null) {
+                var lines = getRelevantLines(location)
+                lines = removeExtraAtEnd(location, lines)
+                lines = fixStartColumn(location, lines)
 
-            return lines.joinToString(separator = lineSeparator.toString())
+                lines.joinToString(separator = lineSeparator.toString())
+            } else {
+                null
+            }
         }
-        return null
     }
 
     private fun getRelevantLines(location: PhysicalLocation): MutableList<String> {
@@ -387,7 +392,7 @@ fun fromPython(pyObject: Any?): Python.AST {
             "ast.Is" -> Python.ASTIs(pyObject)
             "ast.IsNot" -> Python.ASTIsNot(pyObject)
             "ast.In" -> Python.ASTIn(pyObject)
-            "ast.NotInt" -> Python.ASTNotIn(pyObject)
+            "ast.NotIn" -> Python.ASTNotIn(pyObject)
 
             // `"ast.expr_context`
             "ast.Load" -> Python.ASTLoad(pyObject)

@@ -117,6 +117,11 @@ internal class TypeTests : BaseTest() {
         val level1b = assertNotNull(result.records["multistep.Level1B"]).toType()
         val level2 = assertNotNull(result.records["multistep.Level2"]).toType()
         val unrelated = assertNotNull(result.records["multistep.Unrelated"]).toType()
+        println(
+            result.finalCtx.typeManager.firstOrderTypes
+                .filter { it.typeName == "multistep.Root" }
+                .map { it.superTypes }
+        )
         getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
     }
 
@@ -164,7 +169,7 @@ internal class TypeTests : BaseTest() {
 
         // Check unrelated type behavior: No common root class
         for (t in listOf(root, level0, level1, level1b, level2)) {
-            assertEquals(null, setOf(unrelated, t).commonType)
+            assertFullName("java.lang.Object", setOf(unrelated, t).commonType)
         }
     }
 }

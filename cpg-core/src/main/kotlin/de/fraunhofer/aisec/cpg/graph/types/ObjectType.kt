@@ -28,10 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
@@ -46,14 +42,18 @@ open class ObjectType : Type {
     /**
      * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
      * available. This is set by the [TypeResolver].
+     *
+     * This also sets this type's [scope] to the [RecordDeclaration.scope].
      */
-    @PopulatedByPass(TypeResolver::class) var recordDeclaration: RecordDeclaration? = null
+    @PopulatedByPass(TypeResolver::class)
+    var recordDeclaration: RecordDeclaration? = null
+        set(value) {
+            field = value
+            this.scope = value?.scope
+        }
 
     @Relationship(value = "GENERICS", direction = Relationship.Direction.OUTGOING)
-    var genericsPropertyEdges: MutableList<PropertyEdge<Type>> = mutableListOf()
-        private set
-
-    var generics by PropertyEdgeDelegate(ObjectType::genericsPropertyEdges)
+    var generics: List<Type>
         private set
 
     constructor(
@@ -62,7 +62,7 @@ open class ObjectType : Type {
         primitive: Boolean,
         language: Language<*>?
     ) : super(typeName, language) {
-        this.genericsPropertyEdges = wrap(generics, this)
+        this.generics = generics
         isPrimitive = primitive
         this.language = language
     }
@@ -74,14 +74,14 @@ open class ObjectType : Type {
         language: Language<*>?
     ) : super(type) {
         this.language = language
-        this.genericsPropertyEdges = wrap(generics, this)
+        this.generics = generics
         isPrimitive = primitive
     }
 
     /** Empty default constructor for use in Neo4J persistence. */
     constructor() : super() {
-        genericsPropertyEdges = ArrayList()
         isPrimitive = false
+        this.generics = mutableListOf<Type>()
     }
 
     /** @return PointerType to a ObjectType, e.g. int* */
@@ -105,9 +105,7 @@ open class ObjectType : Type {
         if (this === other) return true
         if (other !is ObjectType) return false
         if (!super.equals(other)) return false
-        return generics == other.generics &&
-            propertyEqualsList(genericsPropertyEdges, other.genericsPropertyEdges) &&
-            isPrimitive == other.isPrimitive
+        return generics == other.generics && isPrimitive == other.isPrimitive
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), generics, isPrimitive)

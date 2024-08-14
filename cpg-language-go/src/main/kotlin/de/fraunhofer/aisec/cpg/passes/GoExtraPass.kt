@@ -183,7 +183,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         return with(builtin) {
             val len = newFunctionDeclaration("len", localNameOnly = true)
-            len.parameters = listOf(newParameterDeclaration("v", autoType()))
+            len.parameters = mutableListOf(newParameterDeclaration("v", autoType()))
             len.returnTypes = listOf(primitiveType("int"))
             addBuiltInFunction(len)
 
@@ -194,7 +194,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              */
             val append = newFunctionDeclaration("append", localNameOnly = true)
             append.parameters =
-                listOf(
+                mutableListOf(
                     newParameterDeclaration("slice", autoType().array()),
                     newParameterDeclaration("elems", autoType(), variadic = true),
                 )
@@ -207,7 +207,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * ```
              */
             val panic = newFunctionDeclaration("panic", localNameOnly = true)
-            panic.parameters = listOf(newParameterDeclaration("v", primitiveType("any")))
+            panic.parameters = mutableListOf(newParameterDeclaration("v", primitiveType("any")))
             addBuiltInFunction(panic)
 
             /**
@@ -406,10 +406,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             scopeManager.findSymbols(import.name, null).filter {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
-
-        scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
-            it.name == import.name && it.path == import.importURL
-        }
 
         // If not, we can infer a namespace declaration, so we can bundle all inferred function
         // declarations in there

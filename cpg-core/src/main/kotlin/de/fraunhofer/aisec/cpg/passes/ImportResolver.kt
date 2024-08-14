@@ -32,12 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
  * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope]
  */
-@DependsOn(TypeHierarchyResolver::class)
 class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker

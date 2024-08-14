@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
@@ -568,7 +569,7 @@ class ScopeManager : ScopeProvider {
     }
 
     private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
-        val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+        val typedefs = mutableMapOf<Name, TypedefDeclaration>()
 
         val path = mutableListOf<ValueDeclarationScope>()
         var current = searchScope
@@ -596,8 +597,6 @@ class ScopeManager : ScopeProvider {
      *
      * @param ref
      * @return
-     *
-     * TODO: We should merge this function with [.resolveFunction]
      */
     fun resolveReference(ref: Reference): ValueDeclaration? {
         val startScope = ref.scope
@@ -614,7 +613,10 @@ class ScopeManager : ScopeProvider {
             return pair.second
         }
 
-        val (scope, name) = extractScope(ref, startScope)
+        var (scope, name) = extractScope(ref, startScope)
+        if (scope == null) {
+            scope = startScope
+        }
 
         // Try to resolve value declarations according to our criteria
         val decl =
@@ -657,111 +659,8 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Tries to resolve a function in a call expression.
-     *
-     * @param call the call expression
-     * @return a list of possible functions
-     */
-    @JvmOverloads
-    fun resolveFunctionLegacy(
-        call: CallExpression,
-        startScope: Scope? = currentScope
-    ): List<FunctionDeclaration> {
-        val (scope, name) = extractScope(call, startScope)
-
-        val func =
-            resolve<FunctionDeclaration>(scope) {
-                it.name.lastPartsMatch(name) &&
-                    it.matchesSignature(call.signature) != IncompatibleSignature
-            }
-
-        return func
-    }
-
-    /**
-     * This function tries to resolve a [CallExpression] into its matching [FunctionDeclaration] (or
-     * multiple functions, if applicable). The result is returned in the form of a
-     * [CallResolutionResult] which holds detail information about intermediate results as well as
-     * the kind of success the resolution had.
-     *
-     * Note: The [CallExpression.callee] needs to be resolved first, otherwise the call resolution
-     * fails.
-     */
-    fun resolveCall(call: CallExpression, startScope: Scope? = currentScope): CallResolutionResult {
-        val result =
-            CallResolutionResult(
-                call,
-                setOf(),
-                setOf(),
-                mapOf(),
-                setOf(),
-                CallResolutionResult.SuccessKind.UNRESOLVED,
-                startScope,
-            )
-        val language = call.language
-
-        if (language == null) {
-            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
-            return result
-        }
-
-        // We can only resolve non-dynamic function calls here that have a reference node to our
-        // function
-        val callee = call.callee as? Reference ?: return result
-
-        val (scope, _) = extractScope(callee, startScope)
-        result.actualStartScope = scope
-
-        // Retrieve a list of possible functions with a matching name
-        result.candidateFunctions =
-            callee.candidates.filterIsInstance<FunctionDeclaration>().toSet()
-
-        if (call.language !is HasFunctionOverloading) {
-            // If the function does not allow function overloading, and we have multiple candidate
-            // symbols, the
-            // result is "problematic"
-            if (result.candidateFunctions.size > 1) {
-                result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
-            }
-        }
-
-        // Filter functions that match the signature of our call, either directly or with casts;
-        // those functions are "viable". Take default arguments into account if the language has
-        // them.
-        result.signatureResults =
-            result.candidateFunctions
-                .map {
-                    Pair(
-                        it,
-                        it.matchesSignature(
-                            call.signature,
-                            call.language is HasDefaultArguments,
-                            call
-                        )
-                    )
-                }
-                .filter { it.second is SignatureMatches }
-                .associate { it }
-        result.viableFunctions = result.signatureResults.keys
-
-        // If we have a "problematic" result, we can stop here. In this case we cannot really
-        // determine anything more.
-        if (result.success == CallResolutionResult.SuccessKind.PROBLEMATIC) {
-            result.bestViable = result.viableFunctions
-            return result
-        }
-
-        // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
-        // the success kind.
-        val pair = language.bestViableResolution(result)
-        result.bestViable = pair.first
-        result.success = pair.second
-
-        return result
-    }
-
-    /**
-     * This function extracts a scope for the [Name] in node, e.g. if the name is fully qualified.
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
+     * returned, if no scope can be extracted.
      *
      * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
      * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
@@ -776,12 +675,13 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: Node, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
         return extractScope(node.name, node.location, scope)
     }
 
     /**
-     * This function extracts a scope for the [Name], e.g. if the name is fully qualified.
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
+     * returned, if no scope can be extracted.
      *
      * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
      * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
@@ -802,7 +702,7 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope,
     ): Pair<Scope?, Name> {
         var n = name
-        var s = scope
+        var s: Scope? = null
 
         // First, we need to check, whether we have some kind of scoping.
         if (n.isQualified()) {
@@ -822,7 +722,7 @@ class ScopeManager : ScopeProvider {
                         LOGGER,
                         "Could not find the scope $scopeName needed to resolve $n"
                     )
-                    scope
+                    null
                 } else {
                     scopes[0]
                 }
@@ -833,13 +733,19 @@ class ScopeManager : ScopeProvider {
 
     /**
      * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
-     * the given [Name].
+     * the given [Name]. It also does this recursively.
      */
     fun resolveParentAlias(name: Name, scope: Scope?): Name {
-        val parentName = name.parent ?: return name
+        var parentName = name.parent ?: return name
+        parentName = resolveParentAlias(parentName, scope)
 
-        // This is not 100 % ideal, but at least somewhat compatible to the previous approach
-        var newName = name
+        // Build a new name based on the eventual resolved parent alias
+        var newName =
+            if (parentName != name.parent) {
+                Name(name.localName, parentName, delimiter = name.delimiter)
+            } else {
+                name
+            }
         var decl =
             scope?.lookupSymbol(parentName.localName)?.singleOrNull {
                 it is NamespaceDeclaration || it is RecordDeclaration
@@ -847,6 +753,16 @@ class ScopeManager : ScopeProvider {
         if (decl != null && parentName != decl.name) {
             // This is probably an already resolved alias so, we take this one
             return Name(newName.localName, decl.name, delimiter = newName.delimiter)
+        }
+
+        // Some special handling of typedefs; this should somehow be merged with the above but not
+        // exactly sure how. The issue is that we cannot take the "name" of the typedef declaration,
+        // but we rather want its original type name.
+        // TODO: This really needs to be handled better somehow, maybe a common interface for
+        //  typedefs, namespaces and records that return the correct name?
+        decl = scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
+        if ((decl as? TypedefDeclaration) != null) {
+            return Name(newName.localName, decl.type.name, delimiter = newName.delimiter)
         }
 
         // If we do not have a match yet, it could be that we are trying to resolve an FQN type
@@ -893,12 +809,6 @@ class ScopeManager : ScopeProvider {
         return ret
     }
 
-    fun resolveFunctionStopScopeTraversalOnDefinition(
-        call: CallExpression
-    ): List<FunctionDeclaration> {
-        return resolve(currentScope, true) { f -> f.name.lastPartsMatch(call.name) }
-    }
-
     /**
      * Traverses the scope upwards and looks for declarations of type [T] which matches the
      * condition [predicate].
@@ -911,7 +821,7 @@ class ScopeManager : ScopeProvider {
      * @param predicate predicate the element must match to
      * @param <T>
      */
-    inline fun <reified T : Declaration> resolve(
+    internal inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
         noinline predicate: (T) -> Boolean
@@ -919,7 +829,7 @@ class ScopeManager : ScopeProvider {
         return resolve(T::class.java, searchScope, stopIfFound, predicate)
     }
 
-    fun <T : Declaration> resolve(
+    internal fun <T : Declaration> resolve(
         klass: Class<T>,
         searchScope: Scope?,
         stopIfFound: Boolean = false,
@@ -993,8 +903,8 @@ class ScopeManager : ScopeProvider {
         return findSymbols(name).filterIsInstance<RecordDeclaration>().singleOrNull()
     }
 
-    fun typedefFor(alias: Type): Type? {
-        var current = currentScope
+    fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
+        var current = scope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
         // a local definition overwrites / shadows one that was there on a higher scope.
@@ -1010,7 +920,7 @@ class ScopeManager : ScopeProvider {
                 // This process has several steps:
                 // First, do a quick local lookup, to see if we have a typedef our current scope
                 // (only do this if the name is not qualified)
-                if (!alias.name.isQualified() && current == currentScope) {
+                if (!alias.isQualified() && current == currentScope) {
                     val decl = current.typedefs[alias]
                     if (decl != null) {
                         return decl.type
@@ -1021,7 +931,7 @@ class ScopeManager : ScopeProvider {
                 // qualified based on the current namespace
                 val key =
                     current.typedefs.keys.firstOrNull {
-                        var lookupName = alias.name
+                        var lookupName = alias
 
                         // If the lookup name is already a FQN, we can use the name directly
                         lookupName =
@@ -1033,7 +943,7 @@ class ScopeManager : ScopeProvider {
                                 currentNamespace?.fqn(lookupName.localName) ?: lookupName
                             }
 
-                        it.name.lastPartsMatch(lookupName)
+                        it.lastPartsMatch(lookupName)
                     }
                 if (key != null) {
                     return current.typedefs[key]?.type
@@ -1064,9 +974,21 @@ class ScopeManager : ScopeProvider {
         name: Name,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val (scope, n) = extractScope(name, location, startScope)
-        val list = scope?.lookupSymbol(n.localName)?.toMutableList() ?: mutableListOf()
+
+        // We need to differentiate between a qualified and unqualified lookup. We have a qualified
+        // lookup, if the scope is not null. In this case we need to stay within the specified scope
+        val list =
+            if (scope != null) {
+                    scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
+                } else {
+                    // Otherwise, we can look up the symbol alone (without any FQN) starting from
+                    // the startScope
+                    startScope?.lookupSymbol(n.localName, predicate = predicate)
+                }
+                ?.toMutableList() ?: return listOf()
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
@@ -1112,8 +1034,8 @@ data class SignatureMatches(override val casts: List<CastResult>) : SignatureRes
 
 fun FunctionDeclaration.matchesSignature(
     signature: List<Type>,
+    arguments: List<Expression>? = null,
     useDefaultArguments: Boolean = false,
-    call: CallExpression? = null,
 ): SignatureResult {
     val casts = mutableListOf<CastResult>()
 
@@ -1135,7 +1057,7 @@ fun FunctionDeclaration.matchesSignature(
             // Check, if we can cast the arg into our target type; and if, yes, what is
             // the "distance" to the base type. We need this to narrow down the type during
             // resolving
-            val match = type.tryCast(param.type, call?.arguments?.getOrNull(i), param)
+            val match = type.tryCast(param.type, arguments?.getOrNull(i), param)
             if (match == CastNotPossible) {
                 return IncompatibleSignature
             }
@@ -1178,13 +1100,16 @@ fun FunctionDeclaration.matchesSignature(
 }
 
 /**
- * This is the result of [ScopeManager.resolveCall]. It holds all necessary intermediate results
- * (such as [candidateFunctions], [viableFunctions]) as well as the final result (see [bestViable])
- * of the call resolution.
+ * This is the result of [SymbolResolver.resolveWithArguments]. It holds all necessary intermediate
+ * results (such as [candidateFunctions], [viableFunctions]) as well as the final result (see
+ * [bestViable]) of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original call expression. */
-    val call: CallExpression,
+    /** The original expression that triggered the resolution. Most likely a [CallExpression]. */
+    val source: Expression,
+
+    /** The arguments that were supplied to the expression. */
+    val arguments: List<Expression>,
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
@@ -1215,7 +1140,7 @@ data class CallResolutionResult(
     /**
      * The actual start scope of the resolution, after [ScopeManager.extractScope] is called on the
      * callee. This can differ from the original start scope parameter handed to
-     * [ScopeManager.resolveCall] if the callee contains an FQN.
+     * [SymbolResolver.resolveWithArguments] if the callee contains an FQN.
      */
     var actualStartScope: Scope?
 ) {
