@@ -30,7 +30,8 @@ import kotlin.reflect.KClass
 
 /**
  * Register a dependency for the annotated pass. This ensures that the annotated pass is executed
- * before [other] pass.
+ * before [other] pass. This is treated as a hard dependency. Thus, the other pass will be
+ * registered if it's missing in the configured passes list.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)

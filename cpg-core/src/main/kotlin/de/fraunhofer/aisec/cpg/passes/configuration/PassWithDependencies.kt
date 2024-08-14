@@ -39,7 +39,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 data class PassWithDependencies(
     val pass: KClass<out Pass<*>>,
     val softDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
-    val hardDependenciesRemaining: MutableSet<KClass<out Pass<*>>>
+    val hardDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
+    val executeBeforeRemaining: MutableSet<KClass<out Pass<*>>>
 ) {
     val dependenciesRemaining: Set<KClass<out Pass<*>>>
         get() {

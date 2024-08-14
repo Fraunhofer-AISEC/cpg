@@ -83,6 +83,7 @@ class PassOrderingHelper {
     private fun createNewPassWithDependency(cls: KClass<out Pass<*>>): PassWithDependencies {
         val softDependencies = mutableSetOf<KClass<out Pass<*>>>()
         val hardDependencies = mutableSetOf<KClass<out Pass<*>>>()
+        val executeBefore = mutableSetOf<KClass<out Pass<*>>>()
 
         val dependencies = cls.findAnnotations<DependsOn>()
         for (d in dependencies) {
@@ -93,7 +94,12 @@ class PassOrderingHelper {
             }
         }
 
-        return PassWithDependencies(cls, softDependencies, hardDependencies)
+        val executeBeforeAnnotation = cls.findAnnotations<ExecuteBefore>()
+        for (eb in executeBeforeAnnotation) {
+            executeBefore += eb.other
+        }
+
+        return PassWithDependencies(cls, softDependencies, hardDependencies, executeBefore)
     }
 
     /**
@@ -150,11 +156,16 @@ class PassOrderingHelper {
      *
      * @return The first pass if present. Otherwise, null.
      */
-    fun getAndRemoveFirstPass(): List<KClass<out Pass<*>>>? {
+    fun getAndRemoveFirstPasses(): List<KClass<out Pass<*>>>? {
         val firstPasses = workingList.filter { it.isFirstPass }
 
-        return if (firstPasses.isNotEmpty()) {
+        return if (
+            firstPasses.isNotEmpty()
+        ) { // no need to worry about [ExecuteBefore] as there can only be one [ExecuteFirst] pass
             firstPasses.map { removeDependencyByClass(it.pass) }
+            firstPasses.map { firstPass ->
+                workingList.remove { removePass -> firstPass == removePass }
+            }
             firstPasses.map { it.pass }
         } else {
             getAndRemoveFirstPassWithoutUnsatisfiedDependencies()

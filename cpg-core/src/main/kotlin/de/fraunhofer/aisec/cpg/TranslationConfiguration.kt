@@ -662,11 +662,16 @@ private constructor(
 
             for (p in passes) {
                 workingList.addToWorkingList(p)
-                val depAnn = p.findAnnotations<DependsOn>()
-                for (dep in depAnn) {
+                val dependsOnPasses = p.findAnnotations<DependsOn>()
+                for (dep in dependsOnPasses) {
                     if (!dep.softDependency) { // only hard dependencies
                         workingList.addToWorkingList(dep.value)
                     }
+                }
+                val executeBeforePasses =
+                    p.findAnnotations<ExecuteBefore>() // treated as hard dependencies
+                for (dep in executeBeforePasses) {
+                    workingList.addToWorkingList(dep.other)
                 }
             }
 
@@ -735,7 +740,7 @@ private constructor(
 
             log.debug("Working list after initial scan: {}", workingList)
 
-            val firstPass = workingList.getAndRemoveFirstPass()
+            val firstPass = workingList.getAndRemoveFirstPasses()
             if (firstPass != null) {
                 result.add(firstPass)
             }
