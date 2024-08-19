@@ -23,14 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.collectioneval
+package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Array
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.Collection
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.collection.MutableList
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Array
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Integer
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.MutableList
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -38,7 +38,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
 
-class CollectionSizeEvaluator {
+class AbstractEvaluator {
     fun evaluate(node: Node): LatticeInterval {
         val name = node.name.toString()
         val type = getType(node)
@@ -55,18 +55,18 @@ class CollectionSizeEvaluator {
         return range
     }
 
-    private fun getInitializerOf(node: Node, type: KClass<out Collection>): Node? {
+    private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
         return type.createInstance().getInitializer(node)
     }
 
-    private fun getInitialRange(initializer: Node, type: KClass<out Collection>): LatticeInterval {
+    private fun getInitialRange(initializer: Node, type: KClass<out Value>): LatticeInterval {
         return type.createInstance().getInitialRange(initializer)
     }
 
     private fun LatticeInterval.applyEffect(
         node: Node,
         name: String,
-        type: KClass<out Collection>
+        type: KClass<out Value>
     ): Pair<LatticeInterval, Boolean> {
         return type.createInstance().applyEffect(this, node, name)
     }
@@ -78,7 +78,7 @@ class CollectionSizeEvaluator {
      * @return A Kotlin class representing the collection that contains the necessary analysis
      *   functions
      */
-    private fun getType(node: Node): KClass<out Collection> {
+    private fun getType(node: Node): KClass<out Value> {
         if (node !is Reference) {
             throw NotImplementedException()
         }
@@ -87,6 +87,7 @@ class CollectionSizeEvaluator {
             // TODO: could be linkedList, arrayList, ...
             name.startsWith("java.util.List") -> MutableList::class
             name.endsWith("[]") -> Array::class
+            name == "int" -> Integer::class
             else -> MutableList::class // throw NotImplementedException()
         }
     }
@@ -106,7 +107,7 @@ class CollectionSizeEvaluator {
         range: LatticeInterval,
         node: Node,
         name: String,
-        type: KClass<out Collection>,
+        type: KClass<out Value>,
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
         return when (node) {
@@ -135,7 +136,7 @@ class CollectionSizeEvaluator {
         range: LatticeInterval,
         node: Node,
         name: String,
-        type: KClass<out Collection>,
+        type: KClass<out Value>,
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
         val afterLoop = node.nextEOG[1]
@@ -184,6 +185,10 @@ class CollectionSizeEvaluator {
             // get the next node, skipping nested structures
             // we assume that the last nextEOG always points to the node after the branch!
             current = current.nextEOG.last()
+        }
+        // Stop if the body contains no valid nodes
+        if (body.isEmpty()) {
+            return range to afterLoop
         }
         // Initialize the intervals for the previous loop iteration
         val prevBodyIntervals = Array<LatticeInterval>(body.size) { range }
@@ -247,7 +252,7 @@ class CollectionSizeEvaluator {
         range: LatticeInterval,
         node: Node,
         name: String,
-        type: KClass<out Collection>,
+        type: KClass<out Value>,
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
         val mergeNode = findMergeNode(node)

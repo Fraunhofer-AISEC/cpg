@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
-sealed class LatticeInterval {
+import de.fraunhofer.aisec.cpg.helpers.LatticeElement
+
+sealed class LatticeInterval : Comparable<LatticeInterval> {
     object BOTTOM : LatticeInterval()
 
     data class Bounded(val lower: Bound, val upper: Bound) : LatticeInterval() {
@@ -36,12 +38,39 @@ sealed class LatticeInterval {
         constructor(lower: Bound, upper: Int) : this(lower, Bound.Value(upper))
     }
 
-    sealed class Bound {
+    sealed class Bound : Comparable<Bound> {
         data class Value(val value: Int) : Bound()
 
         // necessary values for widening and narrowing
         data object NEGATIVE_INFINITE: Bound()
         data object INFINITE: Bound()
+
+        override fun compareTo(other: Bound): Int {
+            return when {
+                this is NEGATIVE_INFINITE && other !is NEGATIVE_INFINITE -> -1
+                this is INFINITE && other !is INFINITE -> 1
+                other is NEGATIVE_INFINITE && this !is NEGATIVE_INFINITE -> 1
+                other is INFINITE && this !is INFINITE -> -1
+                this is Value && other is Value -> this.value.compareTo(other.value)
+                else -> 0
+            }
+        }
+    }
+
+    // Comparing two Intervals. They are treated as equal if they overlap
+    override fun compareTo(other: LatticeInterval): Int {
+        return when {
+            this is BOTTOM && other !is BOTTOM -> -1
+            other is BOTTOM && this !is BOTTOM -> 1
+            this is Bounded && other is Bounded -> {
+                when {
+                    this.lower > other.upper -> 1
+                    this.upper < other.lower -> -1
+                    else -> 0
+                }
+            }
+            else -> 0
+        }
     }
 
     // Addition operator
@@ -191,6 +220,26 @@ sealed class LatticeInterval {
         return when (this) {
             is BOTTOM -> "BOTTOM"
             is Bounded -> "[$lower, $upper]"
+        }
+    }
+}
+
+class IntervalLattice(override val elements: LatticeInterval) : LatticeElement<LatticeInterval>(elements) {
+    override fun compareTo(other: LatticeElement<LatticeInterval>): Int {
+        return this.compareTo(other)
+    }
+
+    // TODO: What is the LUB and why does a single Element need to implement this operation?
+    //  is seems to just be the operation performed by the worklist... in our case widening (and then narrowing)
+    override fun lub(other: LatticeElement<LatticeInterval>): LatticeElement<LatticeInterval> {
+        TODO("Not yet implemented")
+    }
+
+    override fun duplicate(): LatticeElement<LatticeInterval> {
+        return when {
+            elements is LatticeInterval.Bounded ->
+                IntervalLattice(LatticeInterval.Bounded(elements.lower, elements.upper))
+            else -> IntervalLattice(LatticeInterval.BOTTOM)
         }
     }
 }
