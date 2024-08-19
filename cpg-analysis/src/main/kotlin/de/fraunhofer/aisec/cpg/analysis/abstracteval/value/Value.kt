@@ -23,12 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.collectioneval.collection
+package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
-interface Collection {
+interface Value {
     /**
      * Applies the effect of a Node to the Interval describing possible values of a collection. Also
      * returns true if the node was "valid" node that could have an influence on the Interval.
@@ -44,7 +46,14 @@ interface Collection {
         name: String
     ): Pair<LatticeInterval, Boolean>
 
-    fun getInitializer(node: Node?): Node?
+    fun getInitializer(node: Node?): Node? {
+        return when (node) {
+            null -> null!!
+            is Reference -> getInitializer(node.refersTo)
+            is VariableDeclaration -> node.initializer!!
+            else -> getInitializer(node.prevDFG.firstOrNull())
+        }
+    }
 
     fun getInitialRange(initializer: Node): LatticeInterval
 }

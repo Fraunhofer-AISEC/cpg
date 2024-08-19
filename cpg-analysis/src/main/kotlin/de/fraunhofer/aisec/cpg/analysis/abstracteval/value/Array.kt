@@ -23,20 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.collectioneval.collection
+package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
-class Array<T> : Collection {
+class Array<T> : Value {
     override fun applyEffect(
         current: LatticeInterval,
         node: Node,
@@ -44,15 +42,6 @@ class Array<T> : Collection {
     ): Pair<LatticeInterval, Boolean> {
         // There are no functions that change the size of a Java array without destroying it
         return current to false
-    }
-
-    override fun getInitializer(node: Node?): Node? {
-        return when (node) {
-            null -> null!!
-            is Reference -> getInitializer(node.refersTo)
-            is VariableDeclaration -> node.initializer!!
-            else -> getInitializer(node.prevDFG.firstOrNull())
-        }
     }
 
     override fun getInitialRange(initializer: Node): LatticeInterval {

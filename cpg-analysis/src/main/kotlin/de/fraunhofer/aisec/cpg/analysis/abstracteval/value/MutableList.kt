@@ -23,20 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.collectioneval.collection
+package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import org.apache.commons.lang3.NotImplementedException
 
-class MutableList : Collection {
+class MutableList : Value {
     override fun applyEffect(
         current: LatticeInterval,
         node: Node,
@@ -64,7 +62,7 @@ class MutableList : Collection {
             // TODO: this should trigger another List size evaluation for the argument!
             //  also check and prevent -1 result
             "addAll" -> {
-                val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.TOP)
+                val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.INFINITE)
                 current + openUpper to true
             }
             "clear" -> {
@@ -90,15 +88,6 @@ class MutableList : Collection {
                 current.join(zeroInterval) to true
             }
             else -> current to false
-        }
-    }
-
-    override fun getInitializer(node: Node?): Node? {
-        return when (node) {
-            null -> null!!
-            is Reference -> getInitializer(node.refersTo)
-            is VariableDeclaration -> node.initializer!!
-            else -> getInitializer(node.prevDFG.firstOrNull())
         }
     }
 
