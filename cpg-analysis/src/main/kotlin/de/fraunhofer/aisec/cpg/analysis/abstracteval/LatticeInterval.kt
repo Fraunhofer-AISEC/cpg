@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.collectioneval
+package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 sealed class LatticeInterval {
     object BOTTOM : LatticeInterval()
@@ -39,7 +39,9 @@ sealed class LatticeInterval {
     sealed class Bound {
         data class Value(val value: Int) : Bound()
 
-        data object TOP : Bound()
+        // necessary values for widening and narrowing
+        data object NEGATIVE_INFINITE: Bound()
+        data object INFINITE: Bound()
     }
 
     // Addition operator
@@ -107,14 +109,14 @@ sealed class LatticeInterval {
                 max(this.lower, other.lower) == other.lower -> {
                     this.lower
                 }
-                else -> Bound.Value(0)
+                else -> Bound.NEGATIVE_INFINITE
             }
         val upper: Bound =
             when {
                 max(this.upper, other.upper) == this.upper -> {
                     this.upper
                 }
-                else -> Bound.TOP
+                else -> Bound.INFINITE
             }
         return Bounded(lower, upper)
     }
@@ -126,14 +128,14 @@ sealed class LatticeInterval {
         }
         val lower: Bound =
             when {
-                this.lower == Bound.Value(0) -> {
+                this.lower == Bound.NEGATIVE_INFINITE -> {
                     other.lower
                 }
                 else -> this.lower
             }
         val upper: Bound =
             when {
-                this.upper == Bound.TOP -> {
+                this.upper == Bound.INFINITE -> {
                     other.upper
                 }
                 else -> this.upper
@@ -143,8 +145,8 @@ sealed class LatticeInterval {
 
     private fun min(one: Bound, other: Bound): Bound {
         return when {
-            one is Bound.TOP -> other
-            other is Bound.TOP -> one
+            one is Bound.INFINITE || other is Bound.NEGATIVE_INFINITE -> other
+            other is Bound.INFINITE || one is Bound.NEGATIVE_INFINITE -> one
             one is Bound.Value && other is Bound.Value ->
                 Bound.Value(kotlin.math.min(one.value, other.value))
             else -> throw IllegalArgumentException("Unsupported interval type")
@@ -153,7 +155,8 @@ sealed class LatticeInterval {
 
     private fun max(one: Bound, other: Bound): Bound {
         return when {
-            one is Bound.TOP || other is Bound.TOP -> Bound.TOP
+            one is Bound.INFINITE || other is Bound.NEGATIVE_INFINITE -> one
+            other is Bound.INFINITE || one is Bound.NEGATIVE_INFINITE -> other
             one is Bound.Value && other is Bound.Value ->
                 Bound.Value(kotlin.math.max(one.value, other.value))
             else -> throw IllegalArgumentException("Unsupported interval type")
@@ -162,7 +165,11 @@ sealed class LatticeInterval {
 
     private fun addBounds(a: Bound, b: Bound): Bound {
         return when {
-            a is Bound.TOP || b is Bound.TOP -> Bound.TOP
+            // -∞ + ∞ is not an allowed operation
+            a is Bound.INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
+            a is Bound.NEGATIVE_INFINITE && b !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
+            b is Bound.INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
+            b is Bound.NEGATIVE_INFINITE && a !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value + b.value)
             else -> throw IllegalArgumentException("Unsupported bound type")
         }
@@ -170,9 +177,11 @@ sealed class LatticeInterval {
 
     private fun subtractBounds(a: Bound, b: Bound): Bound {
         return when {
-            a is Bound.TOP -> Bound.TOP
-            b is Bound.TOP -> Bound.Value(0)
-            a == Bound.Value(0) -> Bound.Value(0)
+            // ∞ - ∞ is not an allowed operation
+            a is Bound.INFINITE && b !is Bound.INFINITE -> Bound.INFINITE
+            a is Bound.NEGATIVE_INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.NEGATIVE_INFINITE
+            b is Bound.INFINITE && a !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
+            b is Bound.NEGATIVE_INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value - b.value)
             else -> throw IllegalArgumentException("Unsupported bound type")
         }
