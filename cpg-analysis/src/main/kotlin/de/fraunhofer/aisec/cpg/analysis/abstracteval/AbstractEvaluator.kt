@@ -34,9 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.helpers.State
+import de.fraunhofer.aisec.cpg.helpers.Worklist
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
+import java.util.IdentityHashMap
 
 class AbstractEvaluator {
     fun evaluate(node: Node): LatticeInterval {
@@ -190,6 +193,17 @@ class AbstractEvaluator {
         if (body.isEmpty()) {
             return range to afterLoop
         }
+
+        // Initializes the states at the beginning of the widening and the respective worklist
+        val loopState = IdentityHashMap<Node, State<Node, LatticeInterval>>()
+        for (n in body) {
+            // Initialize as empty state with intention to be widened
+            loopState[n] = IntervalState(IntervalState.Mode.WIDEN)
+        }
+        val worklist = Worklist(loopState)
+
+        // TODO: use the worklist for the looping
+
         // Initialize the intervals for the previous loop iteration
         val prevBodyIntervals = Array<LatticeInterval>(body.size) { range }
         // WIDENING

@@ -149,8 +149,7 @@ open class State<K, V> : HashMap<K, LatticeElement<V>>() {
  */
 class Worklist<K : Any, N : Any, V>() {
     /** A mapping of nodes to the state which is currently available there. */
-    var globalState = IdentityHashMap<K, State<N, V>>()
-        private set
+    private var globalState = IdentityHashMap<K, State<N, V>>()
 
     /** A list of all nodes which have already been visited. */
     private val alreadySeen = IdentitySet<K>()
