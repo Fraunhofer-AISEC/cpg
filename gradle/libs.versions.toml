@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.0.0"
-kotlin19 = "1.9.10"
+kotlin19 = "2.0.20"
 neo4j = "4.0.10"
 log4j = "2.23.0"
 sonarqube = "5.1.0.4882"
