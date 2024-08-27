@@ -139,7 +139,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        node.orelse.firstOrNull()?.let {
+            frontend.currentTU?.addDeclaration(
+                newProblemDeclaration("Cannot handle \"orelse\" in while loops.")
+            )
+        }
         return ret
     }
 
@@ -148,7 +152,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        node.orelse.firstOrNull()?.let {
+            frontend.currentTU?.addDeclaration(
+                newProblemDeclaration("Cannot handle \"orelse\" in for loops.")
+            )
+        }
         return ret
     }
 
@@ -157,7 +165,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        node.orelse.firstOrNull()?.let {
+            frontend.currentTU?.addDeclaration(
+                newProblemDeclaration("Cannot handle \"orelse\" in async for loops.")
+            )
+        }
         return ret
     }
 
@@ -391,7 +403,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
-        // both in positional as well as keyword style.
+        // both in positional and keyword style.
         var positionalArguments = args.posonlyargs + args.args
 
         // Handle arguments
@@ -419,12 +431,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 when (result) {
                     is ConstructorDeclaration -> result.receiver = recvNode
                     is MethodDeclaration -> result.receiver = recvNode
-                    else -> TODO()
+                    else ->
+                        frontend.currentTU?.addDeclaration(
+                            newProblemDeclaration(
+                                "Expected a constructor or method declaration. Got something else."
+                            )
+                        )
                 }
             }
         }
 
-        if (recordDeclaration != null) {
+        if (
+            recordDeclaration != null && positionalArguments.size > 1
+        ) { // TODO the second check fixes a bug but is this correct...???
             // first argument is the receiver
             for (arg in positionalArguments.subList(1, positionalArguments.size)) {
                 handleArgument(arg, arg in args.posonlyargs)
