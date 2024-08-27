@@ -26,10 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -41,34 +40,26 @@ class TranslationUnitDeclaration :
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     @AST
-    val declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
+    val declarationEdges = astEdgesOf<Declaration>()
+    override val declarations by unwrapping(TranslationUnitDeclaration::declarationEdges)
 
     /** A list of includes within this unit. */
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
     @AST
-    val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
+    val includeEdges = astEdgesOf<IncludeDeclaration>()
+    val includes by unwrapping(TranslationUnitDeclaration::includeEdges)
 
     /** A list of namespaces within this unit. */
     @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
     @AST
-    val namespaceEdges: MutableList<PropertyEdge<NamespaceDeclaration>> = ArrayList()
+    val namespaceEdges = astEdgesOf<NamespaceDeclaration>()
+    val namespaces by unwrapping(TranslationUnitDeclaration::namespaceEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
-
-    override val declarations: List<Declaration>
-        get() = unwrap(declarationEdges)
-
-    override var statements: List<Statement> by
-        PropertyEdgeDelegate(TranslationUnitDeclaration::statementEdges)
-
-    val includes: List<IncludeDeclaration>
-        get() = unwrap(includeEdges)
-
-    val namespaces: List<NamespaceDeclaration>
-        get() = unwrap(namespaceEdges)
+    override var statementEdges = astEdgesOf<Statement>()
+    override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is IncludeDeclaration) {

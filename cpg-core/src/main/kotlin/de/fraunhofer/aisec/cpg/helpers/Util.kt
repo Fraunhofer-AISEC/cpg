@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -74,21 +74,24 @@ object Util {
      * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
      *   interest
      *
-     * @param props
-     * - All edges must have these properties set to the provided value
+     * @param branch
+     * - All edges must have the specified branch property
      *
      * @param refs
      * - Multiple reference nodes that can be passed as varargs
      *
      * @return true if all/any of the connections from node connect to n.
      */
+    // TODO: this function needs a major overhaul because it was
+    //  running on the false assumption of the old containsProperty
+    //  return values
     fun eogConnect(
         q: Quantifier = Quantifier.ALL,
         cn: Connect = Connect.SUBTREE,
         en: Edge,
         n: Node?,
         cr: Connect = Connect.SUBTREE,
-        props: Map<Properties, Any?> = mutableMapOf(),
+        predicate: ((EvaluationOrder) -> Boolean)? = null,
         refs: List<Node?>
     ): Boolean {
         if (n == null) {
@@ -103,17 +106,17 @@ object Util {
                 val border = SubgraphWalker.getEOGPathEdges(n)
                 if (en == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
-                    if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                    if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                         return false
-                    pe.filter { it.containsProperties(props) }.map { it.start }
+                    pe.filter { predicate?.invoke(it) != false }.map { it.start }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
                     if (en == Edge.ENTRIES) {
                         val pe = it.prevEOGEdges
-                        if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { it.containsProperties(props) }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
             }
@@ -124,18 +127,18 @@ object Util {
                 borders.flatMap { border ->
                     if (Edge.ENTRIES == er) {
                         val pe = border.entries.flatMap { it.prevEOGEdges }
-                        if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { it.containsProperties(props) }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else border.exits
                 }
             } else {
                 refSide.flatMap { node ->
                     if (er == Edge.ENTRIES) {
                         val pe = node?.prevEOGEdges ?: listOf()
-                        if (Quantifier.ALL == q && pe.any { !it.containsProperties(props) })
+                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { it.containsProperties(props) }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(node)
                 }
             }
@@ -374,7 +377,9 @@ object Util {
         // Add an incoming DFG edge from a member call's base to the method's receiver
         if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
             target.receiver?.let { receiver ->
-                call.base?.addNextDFG(receiver, callingContext = CallingContextIn(call))
+                call.base
+                    ?.nextDFGEdges
+                    ?.addContextSensitive(receiver, callingContext = CallingContextIn(call))
             }
         }
 
@@ -390,12 +395,18 @@ object Util {
                 if (param.isVariadic) {
                     while (j < arguments.size) {
                         // map all the following arguments to this variadic param
-                        param.addPrevDFG(arguments[j], callingContext = CallingContextIn(call))
+                        param.prevDFGEdges.addContextSensitive(
+                            arguments[j],
+                            callingContext = CallingContextIn(call)
+                        )
                         j++
                     }
                     break
                 } else {
-                    param.addPrevDFG(arguments[j], callingContext = CallingContextIn(call))
+                    param.prevDFGEdges.addContextSensitive(
+                        arguments[j],
+                        callingContext = CallingContextIn(call)
+                    )
                 }
             }
             j++
@@ -408,10 +419,12 @@ object Util {
      * @param target
      * @param arguments
      */
-    fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression?>) {
+    fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression>) {
         for (param in target.parameters) {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
-            param.prevDFG.filter { o: Node? -> o in arguments }.forEach { param.removeNextDFG(it) }
+            param.prevDFGEdges
+                .filter { it.start in arguments }
+                .forEach { param.nextDFGEdges.remove(it) }
         }
     }
 
@@ -454,7 +467,7 @@ object Util {
         } else if (branchingDeclaration != null) {
             conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
         }
-        conditionNodes.forEach { n.addPrevDFG(it) }
+        conditionNodes.forEach { n.prevDFGEdges += it }
     }
 
     enum class Connect {

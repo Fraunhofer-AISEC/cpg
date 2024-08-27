@@ -218,7 +218,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (lastStatement !is ReturnStatement) {
                     val returnStatement = newReturnStatement()
                     returnStatement.isImplicit = true
-                    bodyStatement.addStatement(returnStatement)
+                    bodyStatement.statements += returnStatement
                 }
                 declaration.body = bodyStatement
             }
@@ -329,8 +329,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             )
                         nonTypeTemplateParamDeclaration.default = defaultExpression
                         defaultExpression?.let {
-                            nonTypeTemplateParamDeclaration.addPrevDFG(it)
-                            it.addNextDFG(nonTypeTemplateParamDeclaration)
+                            nonTypeTemplateParamDeclaration.prevDFGEdges += it
+                            it.nextDFGEdges += nonTypeTemplateParamDeclaration
                         }
                     }
                     templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
@@ -786,9 +786,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 val problems = problematicIncludes[includeString]
                 val includeDeclaration = newIncludeDeclaration(includeString ?: "")
-                if (problems != null) {
-                    includeDeclaration.addProblems(problems)
-                }
+                problems?.forEach { includeDeclaration.problems += it }
                 includeMap[includeString] = includeDeclaration
             }
         }
@@ -801,8 +799,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // attach to remaining nodes
         for ((key, value) in allIncludes) {
             val includeDeclaration = includeMap[key]
+            if (includeDeclaration == null) {
+                continue
+            }
             for (s in value) {
-                includeDeclaration?.addInclude(includeMap[s])
+                includeMap[s]?.let { includeDeclaration.includes += it }
             }
         }
     }

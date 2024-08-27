@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -35,9 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, Python.ASTBASEstmt>(::ProblemExpression, frontend) {
+
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
@@ -90,7 +93,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                 }
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.addToPropertyEdgeDeclaration(decl)
+            declStmt.declarationEdges += decl
         }
         return declStmt
     }
@@ -127,7 +130,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             // Finally, add our declaration to the scope and the declaration statement
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.addToPropertyEdgeDeclaration(decl)
+            declStmt.declarationEdges += decl
         }
         return declStmt
     }
@@ -237,12 +240,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         frontend.scopeManager.enterScope(cls)
 
-        stmt.keywords.map { TODO() }
+        stmt.keywords.forEach {
+            frontend.currentTU?.addDeclaration(
+                newProblemDeclaration("could not parse keyword $it in class")
+            )
+        }
 
         for (s in stmt.body) {
             when (s) {
                 is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.addStatement(handleNode(s))
+                else -> cls.statements += handleNode(s)
             }
         }
 
@@ -291,7 +298,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -353,7 +360,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.addAnnotations(handleAnnotations(s))
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -382,20 +389,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         result: FunctionDeclaration,
         recordDeclaration: RecordDeclaration?
     ) {
-        // Handle arguments
-        if (args.posonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`posonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
+        // We can merge posonlyargs and args because both are positional arguments. We do not
+        // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
+        // both in positional as well as keyword style.
+        var positionalArguments = args.posonlyargs + args.args
 
+        // Handle arguments
         if (recordDeclaration != null) {
             // first argument is the `receiver`
-            if (args.args.isEmpty()) {
+            val recvPythonNode = positionalArguments.firstOrNull()
+            if (recvPythonNode == null) {
                 val problem =
                     newProblemDeclaration(
                         "Expected a receiver",
@@ -404,7 +407,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 frontend.scopeManager.addDeclaration(problem)
             } else {
-                val recvPythonNode = args.args.first()
                 val tpe = recordDeclaration.toType()
                 val recvNode =
                     newVariableDeclaration(
@@ -424,12 +426,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         if (recordDeclaration != null) {
             // first argument is the receiver
-            for (arg in args.args.subList(1, args.args.size)) {
-                handleArgument(arg)
+            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
+                handleArgument(arg, arg in args.posonlyargs)
             }
         } else {
-            for (arg in args.args) {
-                handleArgument(arg)
+            for (arg in positionalArguments) {
+                handleArgument(arg, arg in args.posonlyargs)
             }
         }
 
@@ -549,14 +551,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun makeBlock(stmts: List<Python.ASTBASEstmt>, rawNode: Python.AST? = null): Block {
         val result = newBlock(rawNode = rawNode)
         for (stmt in stmts) {
-            result.addStatement(handle(stmt))
+            result.statements += handle(stmt)
         }
         return result
     }
 
-    internal fun handleArgument(node: Python.ASTarg) {
+    internal fun handleArgument(node: Python.ASTarg, isPosOnly: Boolean = false) {
         val type = frontend.typeOf(node.annotation)
         val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
+        if (isPosOnly) {
+            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        }
 
         frontend.scopeManager.addDeclaration(arg)
     }

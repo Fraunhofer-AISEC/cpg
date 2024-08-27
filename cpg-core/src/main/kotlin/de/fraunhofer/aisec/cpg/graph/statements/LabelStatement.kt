@@ -27,7 +27,10 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -50,11 +53,17 @@ class LabelStatement : Statement(), StatementHolder {
             .toString()
     }
 
-    override var statementEdges: MutableList<PropertyEdge<Statement>>
-        get() = subStatement?.let { PropertyEdge.wrap(listOf(it), this) } ?: mutableListOf()
-        set(value) {
-            subStatement = PropertyEdge.unwrap(value).firstOrNull()
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+        get() {
+            var list = astEdgesOf<Statement>()
+            subStatement?.let { list.resetTo(listOf(it)) }
+            return list
         }
+        set(value) {
+            subStatement = value.toNodeCollection().firstOrNull()
+        }
+
+    override var statements by unwrapping(LabelStatement::statementEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

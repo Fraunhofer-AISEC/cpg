@@ -120,7 +120,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val initializer = frontend.initializerHandler.handle(node.initializer)
             if (initializer is InitializerListExpression) {
                 val construct = newConstructExpression(rawNode = node)
-                construct.arguments = initializer.initializers.toList()
+                construct.arguments = initializer.initializers
                 construct
             } else initializer ?: newProblemExpression("could not parse initializer")
         }
@@ -530,7 +530,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
         val expressionList = newExpressionList(rawNode = exprList)
         for (expr in exprList.expressions) {
-            handle(expr)?.let { expressionList.addExpression(it) }
+            handle(expr)?.let { expressionList.expressions += it }
         }
         return expressionList
     }
@@ -868,7 +868,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // The only supported initializer is an initializer list
         (ctx.initializer as? IASTInitializerList)?.let {
             construct.arguments =
-                it.clauses.map { handle(it) ?: newProblemExpression("could not parse argument") }
+                it.clauses
+                    .map { handle(it) ?: newProblemExpression("could not parse argument") }
+                    .toMutableList()
         }
 
         return construct

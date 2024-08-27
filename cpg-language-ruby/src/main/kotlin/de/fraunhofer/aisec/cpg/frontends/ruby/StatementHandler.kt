@@ -52,7 +52,7 @@ class StatementHandler(lang: RubyLanguageFrontend) :
         val compoundStatement = newBlock()
 
         for (node in blockNode.filterNotNull()) {
-            compoundStatement.addStatement(handle(node))
+            compoundStatement.statements += handle(node)
         }
 
         return compoundStatement

@@ -142,7 +142,7 @@ class TupleDeclarationTest {
                                             ),
                                             newCallExpression(newReference("func"))
                                         )
-                                    this.addToPropertyEdgeDeclaration(tuple)
+                                    this.declarationEdges += tuple
                                     scopeManager.addDeclaration(tuple)
                                     tuple.elements.forEach { scopeManager.addDeclaration(it) }
                                 }

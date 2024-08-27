@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -37,9 +37,8 @@ import org.neo4j.ogm.annotation.Relationship
 class TryStatement : Statement() {
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
     @AST
-    var resourceEdges = mutableListOf<PropertyEdge<Statement>>()
-
-    var resources by PropertyEdgeDelegate(TryStatement::resourceEdges)
+    var resourceEdges = astEdgesOf<Statement>()
+    var resources by unwrapping(TryStatement::resourceEdges)
 
     @AST var tryBlock: Block? = null
 
@@ -47,9 +46,8 @@ class TryStatement : Statement() {
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
     @AST
-    var catchClauseEdges = mutableListOf<PropertyEdge<CatchClause>>()
-
-    var catchClauses by PropertyEdgeDelegate(TryStatement::catchClauseEdges)
+    var catchClauseEdges = astEdgesOf<CatchClause>()
+    var catchClauses by unwrapping(TryStatement::catchClauseEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

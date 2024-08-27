@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -47,15 +47,14 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
     @AST
-    var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
-        set(value) {
-            field.forEach { it.end.unregisterTypeObserver(this) }
-            field = value
-            value.forEach { it.end.registerTypeObserver(this) }
-        }
+    var initializerEdges =
+        astEdgesOf<Expression>(
+            postAdd = { it.end.registerTypeObserver(this) },
+            postRemove = { it.end.unregisterTypeObserver(this) },
+        )
 
     /** Virtual property to access [initializerEdges] without property edges. */
-    var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
+    var initializers by unwrapping(InitializerListExpression::initializerEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

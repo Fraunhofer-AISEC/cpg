@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -142,6 +143,7 @@ abstract class Type : Node {
 
     open fun refreshNames() {}
 
+    @get:JsonIgnore
     var root: Type
         /**
          * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
