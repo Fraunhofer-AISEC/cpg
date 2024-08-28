@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.Pass
 import java.util.*
 import kotlin.reflect.KClass
@@ -44,8 +43,47 @@ class PassOrderingHelper {
         private val log = LoggerFactory.getLogger(PassOrderingHelper::class.java)
     }
 
-    constructor(passes: List<KClass<out Pass<out Node>>>) {
-        collectInitiallyConfiguredPasses(passes)
+    /**
+     * Collects the requested passes provided as [passes] and populates the internal [workingList]
+     * consisting of pairs of passes and their dependencies. Also, this function adds all
+     * `hardDependencies`
+     */
+    constructor(passes: List<KClass<out Pass<*>>>) {
+        for (pass in passes) {
+            addToWorkingList(pass)
+        }
+    }
+
+    /**
+     * Add a pass to the internal [workingList], iff it does not exist.
+     *
+     * Also, add
+     * * hard dependencies
+     * * "execute before" dependencies
+     *
+     * Performs a [sanityCheck] after completion.
+     */
+    private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
+        if (workingList.filter { it.pass == newElement }.isNotEmpty()) {
+            return
+        }
+        workingList.add(PassWithDependencies(newElement))
+
+        // Take care of dependencies
+        val dependsOnPasses = newElement.findAnnotations<DependsOn>()
+        for (dep in dependsOnPasses) {
+            if (!dep.softDependency) { // only hard dependencies
+                addToWorkingList(dep.value)
+            }
+        }
+        val executeBeforePasses =
+            newElement.findAnnotations<ExecuteBefore>() // treated as hard dependencies
+        for (dep in executeBeforePasses) {
+            addToWorkingList(dep.other)
+        }
+
+        // finally, run a sanity check
+        sanityCheck()
     }
 
     /**
@@ -70,15 +108,16 @@ class PassOrderingHelper {
      *    dependencies
      * 1. A list of passes in the workingList without dependencies are added to the result, and
      *    removed from the other passes dependencies
-     * 1. The above step is repeated until all passes are added to the result
+     * 1. The above step is repeated until all passes have been added to the result
      *
      * @return a sorted list of passes, with passes that can be run in parallel together in a nested
      *   list.
      */
     fun order(): List<List<KClass<out Pass<*>>>> {
-        val result = mutableListOf<List<KClass<out Pass<*>>>>()
+        // translate "A `executeBefore` B" to "B `dependsOn` A"
+        populateExecuteBeforeDependencies()
 
-        log.debug("Working list after initial scan: {}", workingList)
+        val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
         val firstPass = getAndRemoveFirstPasses()
         if (firstPass != null) {
@@ -101,40 +140,21 @@ class PassOrderingHelper {
     }
 
     /**
-     * Collects the requested passes provided as [passes] and populates the internal [workingList]
-     * consisting of pairs of passes and their dependencies. Also, this function adds all
-     * `hardDependencies`
+     * A pass annotated with [executeBefore] implies that the other pass depends on it. We populate
+     * the [executeBeforeDependciesRemaining] field in the other pass to make the anaylsis simpler.
      */
-    private fun collectInitiallyConfiguredPasses(passes: List<KClass<out Pass<out Node>>>) {
-        for (p in passes) {
-            addToWorkingList(p)
-            val dependsOnPasses = p.findAnnotations<DependsOn>()
-            for (dep in dependsOnPasses) {
-                if (!dep.softDependency) { // only hard dependencies
-                    addToWorkingList(dep.value)
-                }
-            }
-            val executeBeforePasses =
-                p.findAnnotations<ExecuteBefore>() // treated as hard dependencies
-            for (dep in executeBeforePasses) {
-                addToWorkingList(dep.other)
+    private fun populateExecuteBeforeDependencies() {
+        for (pass in workingList) { // iterate over entire workingList
+            for (executeBeforePass in
+                pass.executeBeforeRemaining) { // iterate over all executeBefore passes
+                workingList
+                    .map { it }
+                    .filter { it.pass == executeBeforePass } // find the executeBeforePass
+                    .forEach {
+                        it.executeBeforeDependenciesRemaining += pass.pass
+                    } // add the original pass to the dependency list
             }
         }
-    }
-
-    private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if (workingList.filter { it.pass == newElement }.isNotEmpty()) {
-            return
-        }
-        workingList.add(createNewPassWithDependency(newElement))
-        sanityCheck()
-    }
-
-    private val isEmpty: Boolean
-        get() = workingList.isEmpty()
-
-    private fun size(): Int {
-        return workingList.size
     }
 
     /**
@@ -145,45 +165,12 @@ class PassOrderingHelper {
         for (pass in workingList) {
             pass.softDependenciesRemaining.remove(cls)
             pass.hardDependenciesRemaining.remove(cls)
+            pass.executeBeforeDependenciesRemaining.remove(cls)
         }
     }
 
     override fun toString(): String {
         return workingList.toString()
-    }
-
-    private fun dependencyPresent(dep: KClass<out Pass<*>>): Boolean {
-        var result = false
-        for (currentElement in workingList) {
-            if (dep == currentElement.pass) {
-                result = true
-                break
-            }
-        }
-
-        return result
-    }
-
-    private fun createNewPassWithDependency(cls: KClass<out Pass<*>>): PassWithDependencies {
-        val softDependencies = mutableSetOf<KClass<out Pass<*>>>()
-        val hardDependencies = mutableSetOf<KClass<out Pass<*>>>()
-        val executeBefore = mutableSetOf<KClass<out Pass<*>>>()
-
-        val dependencies = cls.findAnnotations<DependsOn>()
-        for (d in dependencies) {
-            if (d.softDependency) {
-                softDependencies += d.value
-            } else {
-                hardDependencies += d.value
-            }
-        }
-
-        val executeBeforeAnnotation = cls.findAnnotations<ExecuteBefore>()
-        for (eb in executeBeforeAnnotation) {
-            executeBefore += eb.other
-        }
-
-        return PassWithDependencies(cls, softDependencies, hardDependencies, executeBefore)
     }
 
     /**

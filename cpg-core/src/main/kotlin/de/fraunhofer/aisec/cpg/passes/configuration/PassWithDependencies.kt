@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.configuration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.Pass
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.hasAnnotation
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -40,11 +41,36 @@ data class PassWithDependencies(
     val pass: KClass<out Pass<*>>,
     val softDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
     val hardDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
-    val executeBeforeRemaining: MutableSet<KClass<out Pass<*>>>
+    val executeBeforeRemaining: MutableSet<KClass<out Pass<*>>>,
+    val executeBeforeDependenciesRemaining: MutableSet<KClass<out Pass<*>>>
 ) {
+    constructor(
+        pass: KClass<out Pass<*>>
+    ) : this(
+        pass,
+        mutableSetOf<KClass<out Pass<*>>>(),
+        mutableSetOf<KClass<out Pass<*>>>(),
+        mutableSetOf<KClass<out Pass<*>>>(),
+        mutableSetOf<KClass<out Pass<*>>>()
+    ) {
+        for (d in pass.findAnnotations<DependsOn>()) {
+            if (d.softDependency) {
+                softDependenciesRemaining += d.value
+            } else {
+                hardDependenciesRemaining += d.value
+            }
+        }
+
+        for (eb in pass.findAnnotations<ExecuteBefore>()) {
+            executeBeforeRemaining += eb.other
+        }
+    }
+
     val dependenciesRemaining: Set<KClass<out Pass<*>>>
         get() {
-            return softDependenciesRemaining + hardDependenciesRemaining
+            return softDependenciesRemaining +
+                hardDependenciesRemaining +
+                executeBeforeDependenciesRemaining
         }
 
     val isFirstPass: Boolean
@@ -102,6 +128,7 @@ data class PassWithDependencies(
         val remainingClasses = workingList.map { it.pass }
         if (
             this.hardDependenciesRemaining.isEmpty() &&
+                this.executeBeforeDependenciesRemaining.isEmpty() &&
                 this.softDependenciesRemaining.all { !remainingClasses.contains(it) } &&
                 !this.isLastPass
         ) {
