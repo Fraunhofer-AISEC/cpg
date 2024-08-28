@@ -651,30 +651,6 @@ private constructor(
             )
         }
 
-        /**
-         * Builds a markdown representation of a pass dependency graph, based on
-         * [Mermaid](https://mermaid.js.org) syntax.
-         */
-        private fun buildMermaid(
-            softDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>,
-            hardDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>
-        ): String {
-            var s = "```mermaid\n"
-            s += "flowchart TD;\n"
-            for ((pass, deps) in softDependencies.entries) {
-                for (dep in deps) {
-                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
-                }
-            }
-            for ((pass, deps) in hardDependencies.entries) {
-                for (dep in deps) {
-                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
-                }
-            }
-            s += "```"
-            return s
-        }
-
         /** This function reorders passes in order to meet their dependency requirements. */
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<List<KClass<out Pass<*>>>> {

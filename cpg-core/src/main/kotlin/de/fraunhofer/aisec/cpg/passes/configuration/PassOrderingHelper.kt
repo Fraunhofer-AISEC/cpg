@@ -105,11 +105,9 @@ class PassOrderingHelper {
      */
     private fun cleanupSoftDependencies() {
         for (pass in workingList) {
-            log.info(pass.pass.simpleName)
             pass.dependenciesRemaining.removeAll { dependency ->
                 workingList.find { pass -> dependency == pass.pass } == null
             }
-            log.info(pass.pass.simpleName)
         }
     }
 
