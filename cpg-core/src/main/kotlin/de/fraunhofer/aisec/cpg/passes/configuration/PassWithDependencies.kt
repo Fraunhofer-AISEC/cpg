@@ -38,40 +38,16 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * are updated during the ordering procedure.
  */
 data class PassWithDependencies(
+    /** the pass itself */
     val pass: KClass<out Pass<*>>,
-    val softDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
-    val hardDependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
-    val executeBeforeRemaining: MutableSet<KClass<out Pass<*>>>,
-    val executeBeforeDependenciesRemaining: MutableSet<KClass<out Pass<*>>>
+    /** currently unsatisfied dependencies (soft / hard / ExecuteBefore from other passes) */
+    val dependenciesRemaining: MutableSet<KClass<out Pass<*>>>
 ) {
-    constructor(
-        pass: KClass<out Pass<*>>
-    ) : this(
-        pass,
-        mutableSetOf<KClass<out Pass<*>>>(),
-        mutableSetOf<KClass<out Pass<*>>>(),
-        mutableSetOf<KClass<out Pass<*>>>(),
-        mutableSetOf<KClass<out Pass<*>>>()
-    ) {
+    constructor(pass: KClass<out Pass<*>>) : this(pass, mutableSetOf<KClass<out Pass<*>>>()) {
         for (d in pass.findAnnotations<DependsOn>()) {
-            if (d.softDependency) {
-                softDependenciesRemaining += d.value
-            } else {
-                hardDependenciesRemaining += d.value
-            }
-        }
-
-        for (eb in pass.findAnnotations<ExecuteBefore>()) {
-            executeBeforeRemaining += eb.other
+            dependenciesRemaining += d.value
         }
     }
-
-    val dependenciesRemaining: Set<KClass<out Pass<*>>>
-        get() {
-            return softDependenciesRemaining +
-                hardDependenciesRemaining +
-                executeBeforeDependenciesRemaining
-        }
 
     val isFirstPass: Boolean
         get() {
@@ -88,29 +64,73 @@ data class PassWithDependencies(
             return pass.hasAnnotation<ExecuteLate>()
         }
 
+    val softDependencies: Set<KClass<out Pass<*>>>
+        get() {
+            return pass
+                .findAnnotations<DependsOn>()
+                .filter { it.softDependency == true }
+                .map { it.value }
+                .toSet()
+        }
+
+    val hardDependencies: Set<KClass<out Pass<*>>>
+        get() {
+            return pass
+                .findAnnotations<DependsOn>()
+                .filter { it.softDependency == false }
+                .map { it.value }
+                .toSet()
+        }
+
+    val softExecuteBefore: Set<KClass<out Pass<*>>>
+        get() {
+            return pass
+                .findAnnotations<ExecuteBefore>()
+                .filter { it.soft == true }
+                .map { it.other }
+                .toSet()
+        }
+
+    val hardExecuteBefore: Set<KClass<out Pass<*>>>
+        get() {
+            return pass
+                .findAnnotations<ExecuteBefore>()
+                .filter { it.soft == false }
+                .map { it.other }
+                .toSet()
+        }
+
     override fun toString(): String {
         val builder = ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", pass.simpleName)
 
-        if (softDependenciesRemaining.isNotEmpty()) {
-            builder.append("soft dependencies:", softDependenciesRemaining.map { it.simpleName })
+        if (softDependencies.isNotEmpty()) {
+            builder.append("soft dependencies:", softDependencies.map { it.simpleName })
         }
 
-        if (hardDependenciesRemaining.isNotEmpty()) {
-            builder.append("hard dependencies:", hardDependenciesRemaining.map { it.simpleName })
+        if (hardDependencies.isNotEmpty()) {
+            builder.append("hard dependencies:", hardDependencies.map { it.simpleName })
         }
 
-        if (executeBeforeRemaining.isNotEmpty()) {
-            builder.append("execute before: ", executeBeforeRemaining.map { it.simpleName })
+        if (softExecuteBefore.isNotEmpty()) {
+            builder.append("execute before (soft): ", softExecuteBefore.map { it.simpleName })
         }
+
+        if (hardExecuteBefore.isNotEmpty()) {
+            builder.append("execute before (hard): ", hardExecuteBefore.map { it.simpleName })
+        }
+
         if (isFirstPass) {
             builder.append("firstPass")
         }
+
         if (isLastPass) {
             builder.append("lastPass")
         }
+
         if (isLatePass) {
             builder.append("latePass")
         }
+
         return builder.toString()
     }
 }

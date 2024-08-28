@@ -66,7 +66,14 @@ import org.slf4j.LoggerFactory
  * all dependencies are then met.
  */
 class PassOrderingHelper {
+    /** This list stores all non-{first,last} passes which have not yet been ordered. */
     private val workingList: MutableList<PassWithDependencies> = ArrayList()
+
+    /** This list stores all first passes. Stored separately to keep the sorting logic simpler. */
+    private val firstPassesList: MutableList<PassWithDependencies> = ArrayList()
+
+    /** This list stores all last passes. Stored separately to keep the sorting logic simpler. */
+    private val lastPassesList: MutableList<PassWithDependencies> = ArrayList()
 
     companion object {
         private val log = LoggerFactory.getLogger(PassOrderingHelper::class.java)
@@ -85,8 +92,25 @@ class PassOrderingHelper {
         // translate "A `executeBefore` B" to "B `dependsOn` A"
         populateExecuteBeforeDependencies()
 
+        // clean up soft dependencies which are not registered in the workingList
+        cleanupSoftDependencies()
+
         // finally, run a sanity check
         sanityCheck()
+    }
+
+    /**
+     * Remove all soft dependencies which are not part of the workingList (not registered soft
+     * dependencies).
+     */
+    private fun cleanupSoftDependencies() {
+        for (pass in workingList) {
+            log.info(pass.pass.simpleName)
+            pass.dependenciesRemaining.removeAll { dependency ->
+                workingList.find { pass -> dependency == pass.pass } == null
+            }
+            log.info(pass.pass.simpleName)
+        }
     }
 
     /**
@@ -97,10 +121,23 @@ class PassOrderingHelper {
      * * [ExecuteBefore] dependencies
      */
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if (workingList.filter { it.pass == newElement }.isNotEmpty()) {
+        if (
+            (workingList + firstPassesList + lastPassesList)
+                .filter { it.pass == newElement }
+                .isNotEmpty()
+        ) {
+            // we already know about this pass
             return
         }
-        workingList.add(PassWithDependencies(newElement))
+
+        // TODO: do we want to check for execute first AND execute last?
+        if (newElement.findAnnotations<ExecuteFirst>().isNotEmpty()) {
+            firstPassesList.add(PassWithDependencies(newElement))
+        } else if (newElement.findAnnotations<ExecuteLast>().isNotEmpty()) {
+            lastPassesList.add(PassWithDependencies(newElement))
+        } else {
+            workingList.add(PassWithDependencies(newElement))
+        }
 
         // Take care of dependencies
         for (dep in newElement.findAnnotations<DependsOn>()) {
@@ -109,9 +146,11 @@ class PassOrderingHelper {
             }
         }
 
-        // take care of [ExecuteBefore] dependencies (treated similar to hard dependencies)
+        // take care of [ExecuteBefore] dependencies
         for (dep in newElement.findAnnotations<ExecuteBefore>()) {
-            addToWorkingList(dep.other)
+            if (!dep.soft) {
+                addToWorkingList(dep.other)
+            }
         }
     }
 
@@ -124,22 +163,18 @@ class PassOrderingHelper {
     fun order(): List<List<KClass<out Pass<*>>>> {
         val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
-        val firstPass = getAndRemoveFirstPasses()
-        if (firstPass.isNotEmpty()) {
-            result.add(firstPass)
-        }
-        while (
-            workingList.size >= 2 || (workingList.size == 1 && !workingList.first().isLastPass)
-        ) {
-            val noLatePassesAllowed =
-                getAndRemoveFirstPassWithoutUnsatisfiedDependencies(allowLatePasses = false)
+        // [ExecuteFirst]
+        getAndRemoveFirstPasses()?.let { result.add(listOf(it)) }
+
+        // "normal / middle" passes
+        while (workingList.isNotEmpty()) {
+            val noLatePassesAllowed = getAndRemoveNextPasses(allowLatePasses = false)
             if (noLatePassesAllowed.isNotEmpty()) {
-                result.add(noLatePassesAllowed.map { selectPass(it) })
+                result.add(noLatePassesAllowed)
             } else {
-                val latePassesAllowed =
-                    getAndRemoveFirstPassWithoutUnsatisfiedDependencies(allowLatePasses = true)
+                val latePassesAllowed = getAndRemoveNextPasses(allowLatePasses = true)
                 if (latePassesAllowed.isNotEmpty()) {
-                    result.add(latePassesAllowed.map { selectPass(it) })
+                    result.add(latePassesAllowed)
                 } else {
                     throw ConfigurationException("Failed to satisfy ordering requirements.")
                 }
@@ -147,13 +182,7 @@ class PassOrderingHelper {
         }
 
         // [ExecuteLast]
-        if (workingList.size == 1) {
-            if (workingList.first().isLastPass) {
-                result.add(workingList.toList().map { selectPass(it) })
-            } else {
-                throw ConfigurationException("Failed to satisfy ordering requirements.")
-            }
-        }
+        lastPassesList.firstOrNull()?.let { result.add(listOf(selectPass(it))) }
 
         log.info(
             "Passes after enforcing order: {}",
@@ -169,14 +198,16 @@ class PassOrderingHelper {
      * field in the other pass to make the analysis simpler.
      */
     private fun populateExecuteBeforeDependencies() {
-        for (pass in workingList) { // iterate over entire workingList
+        for (pass in
+            (workingList + firstPassesList + lastPassesList)) { // iterate over entire workingList
             for (executeBeforePass in
-                pass.executeBeforeRemaining) { // iterate over all executeBefore passes
-                workingList
+                (pass.softExecuteBefore +
+                    pass.hardExecuteBefore)) { // iterate over all executeBefore passes
+                (workingList + firstPassesList + lastPassesList)
                     .map { it }
                     .filter { it.pass == executeBeforePass } // find the executeBeforePass
                     .forEach {
-                        it.executeBeforeDependenciesRemaining += pass.pass
+                        it.dependenciesRemaining += pass.pass
                     } // add the original pass to the dependency list
             }
         }
@@ -188,31 +219,27 @@ class PassOrderingHelper {
      */
     private fun removeDependencyByClass(cls: KClass<out Pass<*>>) {
         for (pass in workingList) {
-            pass.softDependenciesRemaining.remove(cls)
-            pass.hardDependenciesRemaining.remove(cls)
-            pass.executeBeforeDependenciesRemaining.remove(cls)
+            pass.dependenciesRemaining.remove(cls)
         }
-    }
-
-    override fun toString(): String {
-        return workingList.toString()
+        for (pass in firstPassesList) {
+            pass.dependenciesRemaining.remove(cls)
+        }
+        for (pass in lastPassesList) {
+            pass.dependenciesRemaining.remove(cls)
+        }
     }
 
     /**
-     * Finds the first pass that has all its dependencies satisfied. This pass is then removed from
-     * the other passes dependencies and returned.
+     * Finds the first passes which have all their dependencies satisfied. These passes are then
+     * returned.
      *
-     * This functions also honors the [ExecuteLate] annotation and only returns these, if there are
-     * no more non-[ExecuteLate] available.
-     *
-     * @return The first pass that has no active dependencies on success. null otherwise.
+     * @return The first passes which have no active dependencies on success. An empty list
+     *   otherwise.
      */
-    private fun getAndRemoveFirstPassWithoutUnsatisfiedDependencies(
-        allowLatePasses: Boolean
-    ): List<PassWithDependencies> {
-        return workingList.filter {
-            it.dependenciesRemaining.isEmpty() && !it.isLastPass && it.isLatePass == allowLatePasses
-        }
+    private fun getAndRemoveNextPasses(allowLatePasses: Boolean): List<KClass<out Pass<*>>> {
+        return workingList
+            .filter { it.dependenciesRemaining.isEmpty() && it.isLatePass == allowLatePasses }
+            .map { selectPass(it) }
     }
 
     /**
@@ -222,18 +249,28 @@ class PassOrderingHelper {
      *
      * @return The first pass if present. Otherwise, null.
      */
-    private fun getAndRemoveFirstPasses(): List<KClass<out Pass<*>>> {
-        return workingList.filter { it.isFirstPass }.map { selectPass(it) }
+    private fun getAndRemoveFirstPasses(): KClass<out Pass<*>>? {
+        return when (firstPassesList.isEmpty()) {
+            true -> null
+            false -> selectPass(firstPassesList.first())
+        }
     }
 
+    /**
+     * Removes a pass from the other passes dependencies and the workingList.
+     *
+     * @return the (unpacked) pass
+     */
     private fun selectPass(pass: PassWithDependencies): KClass<out Pass<*>> {
         // remove it from the other passes dependencies
         removeDependencyByClass(pass.pass)
 
         // remove it from the workingList
         workingList.remove(pass)
+        firstPassesList.remove(pass)
+        lastPassesList.remove(pass)
 
-        // return the pass (not the [PassWithDependencies] container
+        // return the pass (not the [PassWithDependencies] container)
         return pass.pass
     }
 
@@ -247,35 +284,36 @@ class PassOrderingHelper {
      * This does not check, whether the requested ordering can be satisfied.
      */
     private fun sanityCheck() {
-        if (workingList.count { it.isFirstPass } > 1) {
+        if (firstPassesList.size > 1) {
             throw ConfigurationException(
-                "More than one pass registered as first pass: \"${workingList.filter { it.isFirstPass }.map { it.pass }}\"."
+                "More than one pass registered as first pass: \"${firstPassesList.map { it.pass }}\"."
             )
         }
-        if (workingList.count { it.isLastPass } > 1) {
+        if (lastPassesList.size > 1) {
             throw ConfigurationException(
-                "More than one pass registered as last pass: \"${workingList.filter { it.isLastPass }.map { it.pass }}\"."
+                "More than one pass registered as last pass: \"${lastPassesList.map { it.pass }}\"."
             )
         }
-        workingList
-            .filter { it.isFirstPass }
-            .firstOrNull()
-            ?.let { firstPass ->
-                if (firstPass.hardDependenciesRemaining.isNotEmpty()) {
-                    throw ConfigurationException(
-                        "The first pass \"${firstPass.pass}\" has a hard dependency: \"${firstPass.hardDependenciesRemaining}\"."
-                    )
-                }
+
+        firstPassesList.map { firstPass ->
+            if (firstPass.hardDependencies.isNotEmpty()) {
+                throw ConfigurationException(
+                    "The first pass \"${firstPass.pass}\" has a hard dependency: \"${firstPass.hardDependencies}\"."
+                )
             }
-        workingList
-            .filter { it.isLastPass }
-            .firstOrNull()
-            ?.let { lastPass ->
-                if (lastPass.executeBeforeRemaining.isNotEmpty()) {
-                    throw ConfigurationException(
-                        "The last pass \"${lastPass.pass}\" is supposed to be executed before another pass: \"${lastPass.executeBeforeRemaining}\"."
-                    )
-                }
+        }
+
+        lastPassesList.map { lastPass ->
+            if (lastPass.softExecuteBefore.isNotEmpty()) {
+                throw ConfigurationException(
+                    "The last pass \"${lastPass.pass}\" is supposed to be executed before another pass: \"${lastPass.softExecuteBefore}\"."
+                )
             }
+            if (lastPass.hardExecuteBefore.isNotEmpty()) {
+                throw ConfigurationException(
+                    "The last pass \"${lastPass.pass}\" is supposed to be executed before another pass: \"${lastPass.hardExecuteBefore}\"."
+                )
+            }
+        }
     }
 }
