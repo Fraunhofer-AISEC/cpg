@@ -141,10 +141,10 @@ fun MetadataProvider.newConstructorDeclaration(
 }
 
 /**
- * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [ParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newParameterDeclaration(
@@ -158,6 +158,7 @@ fun MetadataProvider.newParameterDeclaration(
 
     node.type = type
     node.isVariadic = variadic
+    // Möglicherweise ist vararg oder nicht.
 
     log(node)
     return node
