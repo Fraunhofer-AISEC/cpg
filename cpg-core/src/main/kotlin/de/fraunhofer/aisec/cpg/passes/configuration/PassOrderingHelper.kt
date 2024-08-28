@@ -254,26 +254,32 @@ class PassOrderingHelper {
      */
     private fun sanityCheck() {
         if (workingList.count { it.isFirstPass } > 1) {
-            throw ConfigurationException("More than one pass registered as first pass.")
+            throw ConfigurationException(
+                "More than one pass registered as first pass: \"${workingList.filter { it.isFirstPass }.map { it.pass }}\"."
+            )
         }
         if (workingList.count { it.isLastPass } > 1) {
-            throw ConfigurationException("More than one pass registered as last pass.")
+            throw ConfigurationException(
+                "More than one pass registered as last pass: \"${workingList.filter { it.isLastPass }.map { it.pass }}\"."
+            )
         }
         workingList
             .filter { it.isFirstPass }
             .firstOrNull()
             ?.let { firstPass ->
                 if (firstPass.hardDependenciesRemaining.isNotEmpty()) {
-                    throw ConfigurationException("The first pass has a hard dependency.")
+                    throw ConfigurationException(
+                        "The first pass \"${firstPass.pass}\" has a hard dependency: \"${firstPass.hardDependenciesRemaining}\"."
+                    )
                 }
             }
         workingList
             .filter { it.isLastPass }
             .firstOrNull()
-            ?.let { firstPass ->
-                if (firstPass.executeBeforeRemaining.isNotEmpty()) {
+            ?.let { lastPass ->
+                if (lastPass.executeBeforeRemaining.isNotEmpty()) {
                     throw ConfigurationException(
-                        "The last pass is supposed to be executed before another pass."
+                        "The last pass \"${lastPass.pass}\" is supposed to be executed before another pass: \"${lastPass.executeBeforeRemaining}\"."
                     )
                 }
             }
