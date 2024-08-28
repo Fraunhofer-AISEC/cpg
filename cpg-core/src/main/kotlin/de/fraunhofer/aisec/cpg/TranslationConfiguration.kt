@@ -652,33 +652,6 @@ private constructor(
         }
 
         /**
-         * Collects the requested passes stored in [registeredPasses] and generates a
-         * [PassOrderingHelper] consisting of pairs of passes and their dependencies.
-         *
-         * @return A populated [PassOrderingHelper] derived from [registeredPasses].
-         */
-        private fun collectInitiallyConfiguredPasses(): PassOrderingHelper {
-            val workingList = PassOrderingHelper()
-
-            for (p in passes) {
-                workingList.addToWorkingList(p)
-                val dependsOnPasses = p.findAnnotations<DependsOn>()
-                for (dep in dependsOnPasses) {
-                    if (!dep.softDependency) { // only hard dependencies
-                        workingList.addToWorkingList(dep.value)
-                    }
-                }
-                val executeBeforePasses =
-                    p.findAnnotations<ExecuteBefore>() // treated as hard dependencies
-                for (dep in executeBeforePasses) {
-                    workingList.addToWorkingList(dep.other)
-                }
-            }
-
-            return workingList
-        }
-
-        /**
          * Builds a markdown representation of a pass dependency graph, based on
          * [Mermaid](https://mermaid.js.org) syntax.
          */
@@ -702,63 +675,13 @@ private constructor(
             return s
         }
 
-        /**
-         * This function reorders passes in order to meet their dependency requirements.
-         * * soft dependencies [DependsOn] with `softDependency == true`: all passes registered as
-         *   soft dependency will be executed before the current pass if they are registered
-         * * hard dependencies [DependsOn] with `softDependency == false (default)`: all passes
-         *   registered as hard dependency will be executed before the current pass (hard
-         *   dependencies will be registered even if the user did not register them)
-         * * first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
-         *   beginning
-         * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
-         * * late pass [ExecuteLate]: a pass that is executed as late as possible without violating
-         *   any of the other constraints
-         *
-         * This function uses a very simple (and inefficient) logic to meet the requirements above:
-         * 1. A list of all registered passes and their dependencies is build
-         *    [PassWithDepsContainer.workingList]
-         * 1. All missing hard dependencies [DependsOn] are added to the
-         *    [PassWithDepsContainer.workingList]
-         * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
-         *    dependencies
-         * 1. A list of passes in the workingList without dependencies are added to the result, and
-         *    removed from the other passes dependencies
-         * 1. The above step is repeated until all passes are added to the result
-         *
-         * @return a sorted list of passes, with passes that can be run in parallel together in a
-         *   nested list.
-         */
+        /** This function reorders passes in order to meet their dependency requirements. */
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
-            val result = mutableListOf<List<KClass<out Pass<*>>>>()
+            val orderingHelper = PassOrderingHelper(passes)
 
-            // Create a local copy of all passes and their "current" dependencies without possible
-            // duplicates. Also add all `hardDependencies`
-            val workingList = collectInitiallyConfiguredPasses()
-
-            log.debug("Working list after initial scan: {}", workingList)
-
-            val firstPass = workingList.getAndRemoveFirstPasses()
-            if (firstPass != null) {
-                result.add(firstPass)
-            }
-            while (!workingList.isEmpty) {
-                val p = workingList.getAndRemoveFirstPassWithoutUnsatisfiedDependencies()
-                if (p.isNotEmpty()) {
-                    result.add(p)
-                } else {
-                    // failed to find a pass that can be added to the result -> deadlock :(
-                    throw ConfigurationException("Failed to satisfy ordering requirements.")
-                }
-            }
-            log.info(
-                "Passes after enforcing order: {}",
-                result.map { list -> list.map { it.simpleName } }
-            )
-
-            return result
+            return orderingHelper.order()
         }
     }
 
