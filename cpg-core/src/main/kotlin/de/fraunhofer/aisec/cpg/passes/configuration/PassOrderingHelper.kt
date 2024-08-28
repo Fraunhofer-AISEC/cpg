@@ -33,8 +33,37 @@ import kotlin.reflect.full.findAnnotations
 import org.slf4j.LoggerFactory
 
 /**
- * A simple helper class for keeping track of passes and their (currently not satisfied)
- * dependencies during ordering.
+ * A simple helper class for keeping track of passes and their (initially not satisfied)
+ * dependencies during the ordering process. The goal of this class is to provide ordered passes
+ * when invoking the [order] function.
+ * * soft dependencies ([DependsOn] with `softDependency == true`): all passes registered as soft
+ *   dependency will be executed before the current pass, if they are registered
+ * * hard dependencies ([DependsOn] with `softDependency == false (default)`): all passes registered
+ *   as hard dependency will be executed before the current pass (hard dependencies will be
+ *   registered even if the user did not specifically register them)
+ * * first pass [ExecuteFirst]: a pass registered as first pass will be executed in the beginning
+ * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
+ * * late pass [ExecuteLate]: a pass that is executed as late as possible without violating any of
+ *   the other constraints
+ *
+ * This class works by computing an initial [workingList] consisting of yet to schedule [Pass]es in
+ * form of [PassWithDependencies] elements (they keep track of unsatisfied dependencies).
+ * 1. All passes or collected in the [workingList]
+ *     1. Hard dependencies and [ExecuteBefore] dependencies are automatically added to the
+ *        [workingList], too.
+ *     2. A [sanityCheck] is performed.
+ * 2. If there is a [ExecuteFirst] pass, then it is selected for the result.
+ * 3. While the [workingList] contains more than one element ([ExecuteLast]):
+ *     1. All passes with no unsatisfied dependencies AND no [ExecuteLast] AND no [ExecuteLate] are
+ *        selected.
+ *     2. If the above fails: All passes with no unsatisfied dependencies AND no [ExecuteLast] are
+ *        selected.
+ *     3. If the above also fails: -> exception.
+ * 4. The [ExecuteLast] pass is chosen.
+ *
+ * Whenever a pass is selected: all other passes in the [workingList] are updated (this pass is
+ * removed from their dependencies). This allows the passes to be chosen in the next round because
+ * all dependencies are then met.
  */
 class PassOrderingHelper {
     private val workingList: MutableList<PassWithDependencies> = ArrayList()
@@ -52,6 +81,12 @@ class PassOrderingHelper {
         for (pass in passes) {
             addToWorkingList(pass)
         }
+
+        // translate "A `executeBefore` B" to "B `dependsOn` A"
+        populateExecuteBeforeDependencies()
+
+        // finally, run a sanity check
+        sanityCheck()
     }
 
     /**
@@ -59,9 +94,7 @@ class PassOrderingHelper {
      *
      * Also, add
      * * hard dependencies
-     * * "execute before" dependencies
-     *
-     * Performs a [sanityCheck] after completion.
+     * * [ExecuteBefore] dependencies
      */
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
         if (workingList.filter { it.pass == newElement }.isNotEmpty()) {
@@ -70,68 +103,58 @@ class PassOrderingHelper {
         workingList.add(PassWithDependencies(newElement))
 
         // Take care of dependencies
-        val dependsOnPasses = newElement.findAnnotations<DependsOn>()
-        for (dep in dependsOnPasses) {
+        for (dep in newElement.findAnnotations<DependsOn>()) {
             if (!dep.softDependency) { // only hard dependencies
                 addToWorkingList(dep.value)
             }
         }
-        val executeBeforePasses =
-            newElement.findAnnotations<ExecuteBefore>() // treated as hard dependencies
-        for (dep in executeBeforePasses) {
+
+        // take care of [ExecuteBefore] dependencies (treated similar to hard dependencies)
+        for (dep in newElement.findAnnotations<ExecuteBefore>()) {
             addToWorkingList(dep.other)
         }
-
-        // finally, run a sanity check
-        sanityCheck()
     }
 
     /**
-     * This function reorders passes in order to meet their dependency requirements. soft
-     * dependencies [DependsOn] with `softDependency == true`: all passes registered as soft
-     * dependency will be executed before the current pass if they are registered
-     * * hard dependencies [DependsOn] with `softDependency == false (default)`: all passes
-     *   registered as hard dependency will be executed before the current pass (hard dependencies
-     *   will be registered even if the user did not register them)
-     * * first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
-     *   beginning
-     * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
-     * * late pass [ExecuteLate]: a pass that is executed as late as possible without violating any
-     *   of the other constraints
-     *
-     * This function uses a very simple (and inefficient) logic to meet the requirements above:
-     * 1. A list of all registered passes and their dependencies is build
-     *    [PassWithDepsContainer.workingList]
-     * 1. All missing hard dependencies [DependsOn] are added to the
-     *    [PassWithDepsContainer.workingList]
-     * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
-     *    dependencies
-     * 1. A list of passes in the workingList without dependencies are added to the result, and
-     *    removed from the other passes dependencies
-     * 1. The above step is repeated until all passes have been added to the result
+     * Order the passes.
      *
      * @return a sorted list of passes, with passes that can be run in parallel together in a nested
      *   list.
      */
     fun order(): List<List<KClass<out Pass<*>>>> {
-        // translate "A `executeBefore` B" to "B `dependsOn` A"
-        populateExecuteBeforeDependencies()
-
         val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
         val firstPass = getAndRemoveFirstPasses()
-        if (firstPass != null) {
+        if (firstPass.isNotEmpty()) {
             result.add(firstPass)
         }
-        while (!workingList.isEmpty()) {
-            val p = getAndRemoveFirstPassWithoutUnsatisfiedDependencies()
-            if (p.isNotEmpty()) {
-                result.add(p)
+        while (
+            workingList.size >= 2 || (workingList.size == 1 && !workingList.first().isLastPass)
+        ) {
+            val noLatePassesAllowed =
+                getAndRemoveFirstPassWithoutUnsatisfiedDependencies(allowLatePasses = false)
+            if (noLatePassesAllowed.isNotEmpty()) {
+                result.add(noLatePassesAllowed.map { selectPass(it) })
             } else {
-                // failed to find a pass that can be added to the result -> deadlock :(
+                val latePassesAllowed =
+                    getAndRemoveFirstPassWithoutUnsatisfiedDependencies(allowLatePasses = true)
+                if (latePassesAllowed.isNotEmpty()) {
+                    result.add(latePassesAllowed.map { selectPass(it) })
+                } else {
+                    throw ConfigurationException("Failed to satisfy ordering requirements.")
+                }
+            }
+        }
+
+        // [ExecuteLast]
+        if (workingList.size == 1) {
+            if (workingList.first().isLastPass) {
+                result.add(workingList.toList().map { selectPass(it) })
+            } else {
                 throw ConfigurationException("Failed to satisfy ordering requirements.")
             }
         }
+
         log.info(
             "Passes after enforcing order: {}",
             result.map { list -> list.map { it.simpleName } }
@@ -140,8 +163,10 @@ class PassOrderingHelper {
     }
 
     /**
-     * A pass annotated with [executeBefore] implies that the other pass depends on it. We populate
-     * the [executeBeforeDependciesRemaining] field in the other pass to make the anaylsis simpler.
+     * A pass annotated with [ExecuteBefore] implies that the other pass depends on it. We populate
+     * the
+     * [de.fraunhofer.aisec.cpg.passes.configuration.PassWithDependencies.executeBeforeDependenciesRemaining]
+     * field in the other pass to make the analysis simpler.
      */
     private fun populateExecuteBeforeDependencies() {
         for (pass in workingList) { // iterate over entire workingList
@@ -182,42 +207,12 @@ class PassOrderingHelper {
      *
      * @return The first pass that has no active dependencies on success. null otherwise.
      */
-    private fun getAndRemoveFirstPassWithoutUnsatisfiedDependencies(): List<KClass<out Pass<*>>> {
-        val results = mutableListOf<PassWithDependencies>()
-        val it = workingList.listIterator()
-
-        while (it.hasNext()) {
-            val currentElement = it.next()
-            if (results.isEmpty() && currentElement.isLastPass && workingList.size == 1) {
-                it.remove()
-                return listOf(currentElement.pass)
-            }
-
-            // Keep going until our dependencies are met, this will collect passes that can run in
-            // parallel in results
-            if (currentElement.dependenciesMet(workingList)) {
-                // no unsatisfied dependencies
-                results.add(currentElement)
-            } else {
-                continue
-            }
+    private fun getAndRemoveFirstPassWithoutUnsatisfiedDependencies(
+        allowLatePasses: Boolean
+    ): List<PassWithDependencies> {
+        return workingList.filter {
+            it.dependenciesRemaining.isEmpty() && !it.isLastPass && it.isLatePass == allowLatePasses
         }
-
-        val nonLatePassesAvailable =
-            workingList
-                .filter { !it.isLatePass && !it.isLastPass && !it.dependenciesMet(workingList) }
-                .isNotEmpty()
-        if (nonLatePassesAvailable) {
-            results.removeAll { it.isLatePass }
-        }
-
-        // clean up the workingList
-        results.forEach { workingList.remove(it) }
-
-        // remove the selected passes from the other pass's dependencies
-        results.forEach { removeDependencyByClass(it.pass) }
-
-        return results.map { it.pass }
     }
 
     /**
@@ -227,28 +222,27 @@ class PassOrderingHelper {
      *
      * @return The first pass if present. Otherwise, null.
      */
-    private fun getAndRemoveFirstPasses(): List<KClass<out Pass<*>>>? {
-        val firstPasses = workingList.filter { it.isFirstPass }
+    private fun getAndRemoveFirstPasses(): List<KClass<out Pass<*>>> {
+        return workingList.filter { it.isFirstPass }.map { selectPass(it) }
+    }
 
-        return if (
-            firstPasses.isNotEmpty()
-        ) { // no need to worry about [ExecuteBefore] as there can only be one [ExecuteFirst] pass
-            firstPasses.map { removeDependencyByClass(it.pass) }
-            firstPasses.map { firstPass ->
-                workingList.removeAll { removePass -> firstPass == removePass }
-            }
-            firstPasses.map { it.pass }
-        } else {
-            getAndRemoveFirstPassWithoutUnsatisfiedDependencies()
-        }
+    private fun selectPass(pass: PassWithDependencies): KClass<out Pass<*>> {
+        // remove it from the other passes dependencies
+        removeDependencyByClass(pass.pass)
+
+        // remove it from the workingList
+        workingList.remove(pass)
+
+        // return the pass (not the [PassWithDependencies] container
+        return pass.pass
     }
 
     /**
      * Perform a sanity check on the configured [workingList]. Currently, this only checks that
      * * there is at most one [ExecuteFirst] and
      * * at most one [ExecuteLast] pass configured and
-     * * the first pass does not have a hard dependency and the last pass is not to be executed
-     *   before other passes.
+     * * the first pass does not have a hard dependency and
+     * * the last pass is not to be executed before other passes.
      *
      * This does not check, whether the requested ordering can be satisfied.
      */

@@ -92,11 +92,15 @@ data class PassWithDependencies(
         val builder = ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", pass.simpleName)
 
         if (softDependenciesRemaining.isNotEmpty()) {
-            builder.append("softDependencies", softDependenciesRemaining.map { it.simpleName })
+            builder.append("soft dependencies:", softDependenciesRemaining.map { it.simpleName })
         }
 
         if (hardDependenciesRemaining.isNotEmpty()) {
-            builder.append("hardDependencies", hardDependenciesRemaining.map { it.simpleName })
+            builder.append("hard dependencies:", hardDependenciesRemaining.map { it.simpleName })
+        }
+
+        if (executeBeforeRemaining.isNotEmpty()) {
+            builder.append("execute before: ", executeBeforeRemaining.map { it.simpleName })
         }
         if (isFirstPass) {
             builder.append("firstPass")
@@ -108,34 +112,5 @@ data class PassWithDependencies(
             builder.append("latePass")
         }
         return builder.toString()
-    }
-
-    /**
-     * Checks whether the [dependenciesRemaining] of this pass are met. The list of
-     * [softDependenciesRemaining] and [hardDependenciesRemaining] is removed step-by-step in
-     * [PassOrderingHelper.getAndRemoveFirstPassWithoutUnsatisfiedDependencies].
-     */
-    fun dependenciesMet(workingList: MutableList<PassWithDependencies>): Boolean {
-        // In the simplest case all our dependencies are empty since they were already removed by
-        // the selecting algorithm.
-        if (this.dependenciesRemaining.isEmpty() && (!this.isLastPass || workingList.size == 1)) {
-            return true
-        }
-
-        // We also need to check, whether we still "soft" depend on passes that are just not
-        // there (after all hard dependencies are met), in this case we can select the pass
-        // as well
-        val remainingClasses = workingList.map { it.pass }
-        if (
-            this.hardDependenciesRemaining.isEmpty() &&
-                this.executeBeforeDependenciesRemaining.isEmpty() &&
-                this.softDependenciesRemaining.all { !remainingClasses.contains(it) } &&
-                !this.isLastPass
-        ) {
-            return true
-        }
-
-        // Otherwise, we still depend on an unselected pass
-        return false
     }
 }
