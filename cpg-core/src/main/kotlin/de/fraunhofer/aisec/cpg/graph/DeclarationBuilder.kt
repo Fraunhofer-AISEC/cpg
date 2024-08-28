@@ -158,7 +158,6 @@ fun MetadataProvider.newParameterDeclaration(
 
     node.type = type
     node.isVariadic = variadic
-    // Möglicherweise ist vararg oder nicht.
 
     log(node)
     return node
