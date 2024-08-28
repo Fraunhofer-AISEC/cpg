@@ -247,7 +247,8 @@ class PassOrderingHelper {
      * Perform a sanity check on the configured [workingList]. Currently, this only checks that
      * * there is at most one [ExecuteFirst] and
      * * at most one [ExecuteLast] pass configured and
-     * * the first pass does not have a hard dependency.
+     * * the first pass does not have a hard dependency and the last pass is not to be executed
+     *   before other passes.
      *
      * This does not check, whether the requested ordering can be satisfied.
      */
@@ -262,8 +263,18 @@ class PassOrderingHelper {
             .filter { it.isFirstPass }
             .firstOrNull()
             ?.let { firstPass ->
-                firstPass.hardDependenciesRemaining.isNotEmpty().let {
+                if (firstPass.hardDependenciesRemaining.isNotEmpty()) {
                     throw ConfigurationException("The first pass has a hard dependency.")
+                }
+            }
+        workingList
+            .filter { it.isLastPass }
+            .firstOrNull()
+            ?.let { firstPass ->
+                if (firstPass.executeBeforeRemaining.isNotEmpty()) {
+                    throw ConfigurationException(
+                        "The last pass is supposed to be executed before another pass."
+                    )
                 }
             }
     }
