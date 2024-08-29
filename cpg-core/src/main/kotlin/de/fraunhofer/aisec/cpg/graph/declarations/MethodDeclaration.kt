@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import org.neo4j.ogm.annotation.Relationship
@@ -73,5 +73,5 @@ open class MethodDeclaration : FunctionDeclaration() {
      * share the same name. The [SymbolResolver] will recognize this and treat the scoping aspect of
      * the super-call accordingly.
      */
-    var receiver by unwrappingOptional(MethodDeclaration::receiverEdge)
+    var receiver by unwrapping(MethodDeclaration::receiverEdge)
 }

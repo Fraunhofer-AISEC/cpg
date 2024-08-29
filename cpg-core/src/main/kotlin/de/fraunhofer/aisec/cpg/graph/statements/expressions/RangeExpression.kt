@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -57,11 +57,11 @@ import org.neo4j.ogm.annotation.Relationship
 class RangeExpression : Expression() {
     @Relationship("FLOOR") var floorEdge = astOptionalEdgeOf<Expression>()
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
-    var floor by unwrappingOptional(RangeExpression::floorEdge)
+    var floor by unwrapping(RangeExpression::floorEdge)
 
     @Relationship("CEILING") var ceilingEdge = astOptionalEdgeOf<Expression>()
     /** The upper bound ("ceiling") of the range. This index is usually *exclusive*. */
-    var ceiling by unwrappingOptional(RangeExpression::ceilingEdge)
+    var ceiling by unwrapping(RangeExpression::ceilingEdge)
 
     @Relationship("THIRD") var thirdEdge = astOptionalEdgeOf<Expression>()
     /**
@@ -69,7 +69,7 @@ class RangeExpression : Expression() {
      * example, Python allows specifying a step, while Go allows to control the underlying array's
      * capacity (not length).
      */
-    var third by unwrappingOptional(RangeExpression::thirdEdge)
+    var third by unwrapping(RangeExpression::thirdEdge)
 
     /** The operator code that separates the range elements. Common cases are `:` or `...` */
     var operatorCode = ":"

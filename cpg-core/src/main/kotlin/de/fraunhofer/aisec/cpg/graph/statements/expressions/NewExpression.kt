@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -40,7 +39,7 @@ class NewExpression : Expression(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
 
     /** The initializer expression. */
-    override var initializer by unwrappingOptional(NewExpression::initializerEdge)
+    override var initializer by unwrapping(NewExpression::initializerEdge)
 
     /**
      * We need a way to store the templateParameters that a NewExpression might have before the

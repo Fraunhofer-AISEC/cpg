@@ -28,28 +28,28 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 class ForStatement : Statement(), BranchingNode {
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    var statement by unwrappingOptional(ForStatement::statementEdge)
+    var statement by unwrapping(ForStatement::statementEdge)
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
-    var initializerStatement by unwrappingOptional(ForStatement::initializerStatementEdge)
+    var initializerStatement by unwrapping(ForStatement::initializerStatementEdge)
 
     @Relationship("CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
-    var conditionDeclaration by unwrappingOptional(ForStatement::conditionDeclarationEdge)
+    var conditionDeclaration by unwrapping(ForStatement::conditionDeclarationEdge)
 
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
-    var condition by unwrappingOptional(ForStatement::conditionEdge)
+    var condition by unwrapping(ForStatement::conditionEdge)
 
     @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
-    var iterationStatement by unwrappingOptional(ForStatement::iterationStatementEdge)
+    var iterationStatement by unwrapping(ForStatement::iterationStatementEdge)
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration

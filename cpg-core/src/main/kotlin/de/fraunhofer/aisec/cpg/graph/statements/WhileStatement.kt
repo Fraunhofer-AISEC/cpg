@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
@@ -42,18 +42,18 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
     @Relationship(value = "CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    var conditionDeclaration by unwrappingOptional(WhileStatement::conditionDeclarationEdge)
+    var conditionDeclaration by unwrapping(WhileStatement::conditionDeclarationEdge)
 
     @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition that decides if the block is executed. */
-    var condition by unwrappingOptional(WhileStatement::conditionEdge)
+    var condition by unwrapping(WhileStatement::conditionEdge)
 
     @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The statement that is going to be executed, until the condition evaluates to false for the
      * first time. Usually a [Block].
      */
-    var statement by unwrappingOptional(WhileStatement::statementEdge)
+    var statement by unwrapping(WhileStatement::statementEdge)
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration

@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -43,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usually a [Block]. */
-    var body by unwrappingOptional(FunctionDeclaration::bodyEdge)
+    var body by unwrapping(FunctionDeclaration::bodyEdge)
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
@@ -40,7 +40,7 @@ class DoStatement : Statement(), ArgumentHolder {
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
-    var condition by unwrappingOptional(DoStatement::conditionEdge)
+    var condition by unwrapping(DoStatement::conditionEdge)
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
 
@@ -48,7 +48,7 @@ class DoStatement : Statement(), ArgumentHolder {
      * The statement that is going to be executed and re-executed, until the condition evaluates to
      * false for the first time. Usually a [Block].
      */
-    var statement by unwrappingOptional(DoStatement::statementEdge)
+    var statement by unwrapping(DoStatement::statementEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)

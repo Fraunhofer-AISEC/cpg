@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
@@ -42,24 +42,24 @@ import org.neo4j.ogm.annotation.Relationship
 class SwitchStatement : Statement(), BranchingNode {
     @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
-    var selector by unwrappingOptional(SwitchStatement::selectorEdge)
+    var selector by unwrapping(SwitchStatement::selectorEdge)
 
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ can have an initializer statement in a switch */
-    var initializerStatement by unwrappingOptional(SwitchStatement::initializerStatementEdge)
+    var initializerStatement by unwrapping(SwitchStatement::initializerStatementEdge)
 
     @Relationship(value = "SELECTOR_DECLARATION")
     var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows to use a declaration instead of a expression as selector */
-    var selectorDeclaration by unwrappingOptional(SwitchStatement::selectorDeclarationEdge)
+    var selectorDeclaration by unwrapping(SwitchStatement::selectorDeclarationEdge)
 
     @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy
      */
-    var statement by unwrappingOptional(SwitchStatement::statementEdge)
+    var statement by unwrapping(SwitchStatement::statementEdge)
 
     override val branchedBy: Node?
         get() = selector

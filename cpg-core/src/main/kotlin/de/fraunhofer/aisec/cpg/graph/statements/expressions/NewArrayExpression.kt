@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
@@ -46,7 +45,7 @@ class NewArrayExpression : Expression() {
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
      */
-    var initializer by unwrappingOptional(NewArrayExpression::initializerEdge)
+    var initializer by unwrapping(NewArrayExpression::initializerEdge)
 
     /**
      * Specifies the dimensions of the array that is to be created. Many languages, such as Java,

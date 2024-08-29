@@ -38,47 +38,43 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var onRemove: ((EdgeType) -> Unit)? = null
 ) : ArrayList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
 
-    override fun add(e: EdgeType): Boolean {
+    override fun add(element: EdgeType): Boolean {
         // Make sure, the index is always set
-        if (e.index == null) {
-            e.index = this.size
+        if (element.index == null) {
+            element.index = this.size
         }
 
-        val ok = super<ArrayList>.add(e)
+        val ok = super<ArrayList>.add(element)
         if (ok) {
-            handleOnAdd(e)
+            handleOnAdd(element)
         }
         return ok
     }
 
-    override fun remove(o: EdgeType): Boolean {
-        val ok = super<ArrayList>.remove(o)
+    override fun remove(element: EdgeType): Boolean {
+        val ok = super<ArrayList>.remove(element)
         if (ok) {
-            handleOnRemove(o)
+            handleOnRemove(element)
         }
         return ok
     }
 
-    override fun removeAll(c: Collection<EdgeType>): Boolean {
-        val ok = super.removeAll(c)
+    override fun removeAll(elements: Collection<EdgeType>): Boolean {
+        val ok = super.removeAll(elements.toSet())
         if (ok) {
-            c.forEach { handleOnRemove(it) }
+            elements.forEach { handleOnRemove(it) }
         }
         return ok
-    }
-
-    override fun removeRange(fromIndex: Int, toIndex: Int) {
-        super.removeRange(fromIndex, toIndex)
     }
 
     override fun removeAt(index: Int): EdgeType {
-        var edge = super.removeAt(index)
+        val edge = super.removeAt(index)
         handleOnRemove(edge)
         return edge
     }
 
     override fun removeIf(predicate: Predicate<in EdgeType>): Boolean {
-        var edges = filter { predicate.test(it) }
+        val edges = filter { predicate.test(it) }
         val ok = super<ArrayList>.removeIf(predicate)
         if (ok) {
             edges.forEach { handleOnRemove(it) }
@@ -87,7 +83,8 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun clear() {
-        var edges = this.toList()
+        // Make a copy of our edges so we can pass a copy to our on-remove handler
+        val edges = this.toList()
         super.clear()
         edges.forEach { handleOnRemove(it) }
     }
@@ -118,13 +115,13 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return UnwrappedEdgeList(this)
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (o !is EdgeList<*, *>) return false
+    override fun equals(other: Any?): Boolean {
+        if (other !is EdgeList<*, *>) return false
 
         // Otherwise, try to compare the contents of the lists with the propertyEquals method
-        if (this.size == o.size) {
+        if (this.size == other.size) {
             for (i in this.indices) {
-                if (this[i] != o[i]) {
+                if (this[i] != other[i]) {
                     return false
                 }
             }

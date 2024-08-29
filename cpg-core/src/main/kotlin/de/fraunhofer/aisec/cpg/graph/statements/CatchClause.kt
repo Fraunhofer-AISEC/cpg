@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
@@ -38,10 +38,10 @@ import org.neo4j.ogm.annotation.Relationship
 class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
     @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<VariableDeclaration>()
 
-    var parameter by unwrappingOptional(CatchClause::parameterEdge)
+    var parameter by unwrapping(CatchClause::parameterEdge)
 
     @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>()
-    var body by unwrappingOptional(CatchClause::bodyEdge)
+    var body by unwrapping(CatchClause::bodyEdge)
 
     override val branchedBy: Node?
         get() = parameter

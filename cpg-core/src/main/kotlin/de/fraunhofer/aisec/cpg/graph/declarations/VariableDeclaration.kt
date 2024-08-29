@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -79,7 +78,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             }
         )
     /** The (optional) initializer of the declaration. */
-    override var initializer by unwrappingOptional(VariableDeclaration::initializerEdge)
+    override var initializer by unwrapping(VariableDeclaration::initializerEdge)
 
     fun <T> getInitializerAs(clazz: Class<T>): T? {
         return clazz.cast(initializer)

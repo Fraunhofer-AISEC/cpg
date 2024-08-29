@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -41,10 +40,10 @@ class TryStatement : Statement() {
     var resources by unwrapping(TryStatement::resourceEdges)
 
     @Relationship(value = "TRY_BLOCK") var tryBlockEdge = astOptionalEdgeOf<Block>()
-    var tryBlock by unwrappingOptional(TryStatement::tryBlockEdge)
+    var tryBlock by unwrapping(TryStatement::tryBlockEdge)
 
     @Relationship(value = "FINALLY_BLOCK") var finallyBlockEdge = astOptionalEdgeOf<Block>()
-    var finallyBlock by unwrappingOptional(TryStatement::finallyBlockEdge)
+    var finallyBlock by unwrapping(TryStatement::finallyBlockEdge)
 
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
     var catchClauseEdges = astEdgesOf<CatchClause>()

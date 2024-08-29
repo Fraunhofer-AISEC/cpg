@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -52,7 +52,7 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
 
     @Relationship("FUNCTION")
     var functionEdge = astOptionalEdgeOf<FunctionDeclaration>(onChanged = ::exchangeTypeObserver)
-    var function by unwrappingOptional(LambdaExpression::functionEdge)
+    var function by unwrapping(LambdaExpression::functionEdge)
 
     override fun typeChanged(newType: Type, src: HasType) {
         // Make sure our src is the function

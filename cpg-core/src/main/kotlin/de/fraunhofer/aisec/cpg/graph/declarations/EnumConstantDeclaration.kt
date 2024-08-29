@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import org.neo4j.ogm.annotation.Relationship
 
@@ -37,5 +37,5 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
-    override var initializer by unwrappingOptional(EnumConstantDeclaration::initializerEdge)
+    override var initializer: Expression? by unwrapping(EnumConstantDeclaration::initializerEdge)
 }

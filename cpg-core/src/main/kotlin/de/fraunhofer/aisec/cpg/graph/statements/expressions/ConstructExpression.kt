@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
@@ -67,7 +67,7 @@ class ConstructExpression : CallExpression() {
 
     @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<RecordDeclaration>()
 
-    var anonymousClass by unwrappingOptional(ConstructExpression::anonymousClassEdge)
+    var anonymousClass by unwrapping(ConstructExpression::anonymousClassEdge)
 
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(SymbolResolver::class)

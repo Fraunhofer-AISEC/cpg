@@ -56,10 +56,9 @@ interface EdgeCollection<
                     it.start == target
                 }
             }
-        return this.removeAll(toRemove)
+        return this.removeAll(toRemove.toSet())
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun addAll(targets: Collection<NodeType>, builder: (EdgeType.() -> Unit)? = null): Boolean {
         val edges =
             targets.map {
@@ -67,7 +66,7 @@ interface EdgeCollection<
                     if (outgoing) {
                         init(thisRef, it)
                     } else {
-                        init(it, thisRef as NodeType)
+                        @Suppress("UNCHECKED_CAST") init(it, thisRef as NodeType)
                     }
                 // Apply builder
                 if (builder != null) {
@@ -101,12 +100,11 @@ interface EdgeCollection<
         outgoing: Boolean = true,
         builder: (PropertyEdgeType.() -> Unit)? = null,
     ): PropertyEdgeType {
-        @Suppress("UNCHECKED_CAST")
         val edge =
             if (outgoing) {
                 init(thisRef, target)
             } else {
-                init(target, thisRef as NodeType)
+                @Suppress("UNCHECKED_CAST") init(target, thisRef as NodeType)
             }
 
         // Apply builder
@@ -168,7 +166,6 @@ interface EdgeCollection<
 }
 
 /** A helper function for [EdgeCollection.toNodeCollection]. */
-@Suppress("UNCHECKED_CAST")
 internal fun <
     NodeType : Node,
     EdgeType : Edge<NodeType>,
@@ -179,12 +176,13 @@ internal fun <
     predicate: ((EdgeType) -> Boolean)? = null,
     createCollection: () -> CollectionType
 ): CollectionType {
-    var unwrapped = createCollection()
+    val unwrapped = createCollection()
     for (edge in edges) {
         if (predicate != null && !predicate(edge)) {
             continue
         }
 
+        @Suppress("UNCHECKED_CAST")
         unwrapped += if (outgoing) edge.end else edge.start as NodeType
     }
 

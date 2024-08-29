@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
@@ -53,15 +52,15 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    var variable by unwrappingOptional(ForEachStatement::variableEdge)
+    var variable by unwrapping(ForEachStatement::variableEdge)
 
     @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the iteration subject of the loop. */
-    var iterable by unwrappingOptional(ForEachStatement::iterableEdge)
+    var iterable by unwrapping(ForEachStatement::iterableEdge)
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the body of the loop. */
-    var statement by unwrappingOptional(ForEachStatement::statementEdge)
+    var statement by unwrapping(ForEachStatement::statementEdge)
 
     override val branchedBy: Node?
         get() = iterable

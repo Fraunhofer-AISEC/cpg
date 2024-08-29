@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -38,7 +38,7 @@ class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
     var defaultValueEdge = astOptionalEdgeOf<Expression>()
-    private var defaultValue by unwrappingOptional(ParameterDeclaration::defaultValueEdge)
+    private var defaultValue by unwrapping(ParameterDeclaration::defaultValueEdge)
 
     var modifiers: List<String> = mutableListOf()
 

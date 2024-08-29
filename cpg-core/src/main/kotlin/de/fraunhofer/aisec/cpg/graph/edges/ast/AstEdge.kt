@@ -33,8 +33,8 @@ import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
 @RelationshipEntity
-open class AstEdge<T : Node> : Edge<T> {
-    constructor(start: Node, end: T) : super(start, end) {
+open class AstEdge<T : Node>(start: Node, end: T) : Edge<T>(start, end) {
+    init {
         end.astParent = start
     }
 }
@@ -44,10 +44,13 @@ fun <NodeType : Node> Node.astEdgesOf(
     onAdd: ((AstEdge<NodeType>) -> Unit)? = null,
     onRemove: ((AstEdge<NodeType>) -> Unit)? = null,
 ): AstEdges<NodeType, AstEdge<NodeType>> {
-    return AstEdges(this, onAdd, onRemove)
+    return AstEdges(thisRef = this, onAdd = onAdd, onRemove = onRemove)
 }
 
-/** Creates an [AstEdges] container starting from this node. */
+/**
+ * Creates an single optional [AstEdge] starting from this node (wrapped in a [EdgeSingletonList]
+ * container).
+ */
 fun <NodeType : Node> Node.astOptionalEdgeOf(
     onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null,
 ): EdgeSingletonList<NodeType, NodeType?, AstEdge<NodeType>> {
@@ -60,7 +63,9 @@ fun <NodeType : Node> Node.astOptionalEdgeOf(
     )
 }
 
-/** Creates an [AstEdges] container starting from this node. */
+/**
+ * Creates an single [AstEdge] starting from this node (wrapped in a [EdgeSingletonList] container).
+ */
 fun <NodeType : Node> Node.astEdgeOf(
     of: NodeType,
     onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null,
@@ -81,7 +86,7 @@ open class AstEdges<NodeType : Node, PropertyEdgeType : AstEdge<NodeType>>(
     onRemove: ((PropertyEdgeType) -> Unit)? = null,
     @Suppress("UNCHECKED_CAST")
     init: (start: Node, end: NodeType) -> PropertyEdgeType = { start, end ->
-        AstEdge<NodeType>(start, end) as PropertyEdgeType
+        AstEdge(start, end) as PropertyEdgeType
     }
 ) :
     EdgeList<NodeType, PropertyEdgeType>(

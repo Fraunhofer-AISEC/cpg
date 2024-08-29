@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -44,7 +43,7 @@ class LabelStatement : Statement(), StatementHolder {
     @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Statement>()
 
     /** Statement that the label is attached to. Can be a simple or compound statement. */
-    var subStatement by unwrappingOptional(LabelStatement::subStatementEdge)
+    var subStatement by unwrapping(LabelStatement::subStatementEdge)
 
     /** Label in the form of a String */
     var label: String? = null

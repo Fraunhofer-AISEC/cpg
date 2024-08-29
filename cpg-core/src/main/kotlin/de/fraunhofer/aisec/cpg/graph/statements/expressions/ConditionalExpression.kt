@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
@@ -55,7 +54,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
                 new?.end?.registerTypeObserver(this)
             }
         )
-    var thenExpression by unwrappingOptional(ConditionalExpression::thenExpressionEdge)
+    var thenExpression by unwrapping(ConditionalExpression::thenExpressionEdge)
 
     @Relationship("ELSE_EXPRESSION")
     var elseExpressionEdge =
@@ -65,7 +64,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
                 new?.end?.registerTypeObserver(this)
             }
         )
-    var elseExpression by unwrappingOptional(ConditionalExpression::elseExpressionEdge)
+    var elseExpression by unwrapping(ConditionalExpression::elseExpressionEdge)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

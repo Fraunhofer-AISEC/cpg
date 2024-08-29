@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
@@ -35,11 +35,11 @@ import org.neo4j.ogm.annotation.Relationship
 class AssertStatement : Statement() {
     @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
-    var condition by unwrappingOptional(AssertStatement::conditionEdge)
+    var condition by unwrapping(AssertStatement::conditionEdge)
 
     @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
     /** The *optional* message that is shown, if the assert is evaluated as true */
-    var message by unwrappingOptional(AssertStatement::messageEdge)
+    var message by unwrapping(AssertStatement::messageEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

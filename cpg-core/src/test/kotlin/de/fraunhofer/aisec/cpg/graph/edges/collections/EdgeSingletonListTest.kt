@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import kotlin.test.Test
@@ -41,7 +41,7 @@ class EdgeSingletonListTest {
         with(TestLanguageFrontend()) {
             class MyNode : Node() {
                 var edge = astOptionalEdgeOf<Expression>()
-                var unwrapped by unwrappingOptional(MyNode::edge)
+                var unwrapped by unwrapping(MyNode::edge)
             }
 
             var node = MyNode()
