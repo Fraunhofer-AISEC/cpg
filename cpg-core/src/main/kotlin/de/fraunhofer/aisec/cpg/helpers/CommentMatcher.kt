@@ -49,7 +49,7 @@ class CommentMatcher {
     ): Node {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
         val children =
-            SubgraphWalker.getAstChildren(node)
+            node.astChildren
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
@@ -58,7 +58,7 @@ class CommentMatcher {
         // instead.
         children.addAll(
             children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                SubgraphWalker.getAstChildren(namespace).filter { it !in children }
+                namespace.astChildren.filter { it !in children }
             }
         )
         val enclosing =
@@ -95,7 +95,7 @@ class CommentMatcher {
         }
 
         val children =
-            SubgraphWalker.getAstChildren(smallestEnclosingNode)
+            smallestEnclosingNode.astChildren
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
@@ -105,7 +105,7 @@ class CommentMatcher {
         // children with a location
         children.addAll(
             children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                SubgraphWalker.getAstChildren(namespace).filter { it !in children }
+                namespace.astChildren.filter { it !in children }
             }
         )
 
@@ -117,9 +117,7 @@ class CommentMatcher {
         children.addAll(
             children
                 .filter { node -> node.location == null || node.location?.region == Region() }
-                .flatMap { locationLess ->
-                    SubgraphWalker.getAstChildren(locationLess).filter { it !in children }
-                }
+                .flatMap { locationLess -> locationLess.astChildren.filter { it !in children } }
         )
 
         // Searching for the closest successor to our comment amongst the children of the smallest

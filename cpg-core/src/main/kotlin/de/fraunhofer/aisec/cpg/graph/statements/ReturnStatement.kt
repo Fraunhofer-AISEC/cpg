@@ -25,16 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement(), ArgumentHolder {
+    @Relationship(value = "RETURN_VALUES") var returnValueEdges = astEdgesOf<Expression>()
+
     /** The expression whose value will be returned. */
-    @AST var returnValues: MutableList<Expression> = mutableListOf()
+    var returnValues by unwrapping(ReturnStatement::returnValueEdges)
 
     /**
      * A utility property to handle single-valued return statements. In case [returnValues] contains

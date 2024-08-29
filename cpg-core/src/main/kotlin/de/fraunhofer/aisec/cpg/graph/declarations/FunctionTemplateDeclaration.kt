@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -40,7 +39,6 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    @AST
     val realizationEdges = astEdgesOf<FunctionDeclaration>()
     val realization by unwrapping(FunctionTemplateDeclaration::realizationEdges)
 

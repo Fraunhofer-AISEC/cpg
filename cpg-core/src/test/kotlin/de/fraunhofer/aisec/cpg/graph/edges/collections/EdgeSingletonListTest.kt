@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,28 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations
+package de.fraunhofer.aisec.cpg.graph.edges.collections
 
-import de.fraunhofer.aisec.cpg.graph.HasDefault
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.*
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import kotlin.test.Test
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 
-/** A declaration of a type template parameter */
-class TypeParameterDeclaration : ValueDeclaration(), HasDefault<Type?> {
-    @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    var defaultEdge = astOptionalEdgeOf<Type>()
-    /** TemplateParameters can define a default for the type parameter. */
-    override var default by unwrapping(TypeParameterDeclaration::defaultEdge)
+class EdgeSingletonListTest {
+    @Test
+    fun testNullable() {
+        with(TestLanguageFrontend()) {
+            class MyNode : Node() {
+                var edge = astOptionalEdgeOf<Expression>()
+                var unwrapped by unwrapping(MyNode::edge)
+            }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other == null || javaClass != other.javaClass) return false
-        val that = other as TypeParameterDeclaration
-        return super.equals(that) && default == that.default
+            var node = MyNode()
+            assertNull(node.unwrapped)
+
+            node.unwrapped = newLiteral(1)
+            assertSame(node.unwrapped, node.edge.element?.end)
+        }
     }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), default)
 }

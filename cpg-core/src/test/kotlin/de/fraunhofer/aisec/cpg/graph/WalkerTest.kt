@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -107,6 +108,17 @@ class WalkerTest : BaseTest() {
 
             log.info("Flat AST has {} nodes", flat.size)
         }
+
+        // Alternative approach using new edge extensions
+        val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
+        val flat = tu.astEdges.map { it.end }
+        bench.stop()
+
+        assertNotNull(flat)
+
+        assertEquals(82618, flat.size)
+
+        log.info("Flat AST has {} nodes", flat.size)
     }
 
     // 741ms with branch

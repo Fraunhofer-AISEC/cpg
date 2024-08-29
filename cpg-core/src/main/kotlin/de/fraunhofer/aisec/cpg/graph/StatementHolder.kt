@@ -50,22 +50,6 @@ interface StatementHolder : Holder<Statement> {
      */
     var statements: MutableList<Statement>
 
-    /**
-     * Adds the specified statement to this statement holder. The statements have to be stored as a
-     * list of statements as we try to avoid adding new AST-nodes that do not exist, e.g. a code
-     * body to hold statements
-     *
-     * This only exists because of
-     * [de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement.addStatement] which is needed
-     * until we re-design the Fluent DSL.
-     *
-     * @param s the statement
-     */
-    @Deprecated(message = "This should be replaced by a direct call to statementEdges.add.")
-    fun addStatement(s: Statement) {
-        statementEdges.add(s)
-    }
-
     override operator fun plusAssign(node: Statement) {
         statementEdges += node
     }

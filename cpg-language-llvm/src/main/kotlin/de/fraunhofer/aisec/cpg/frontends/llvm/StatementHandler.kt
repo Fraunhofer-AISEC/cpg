@@ -871,31 +871,31 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val ptrDerefExch = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
         ptrDerefExch.input = frontend.getOperandValueAtIndex(instr, 0)
-        exchOp.lhs = listOf(ptrDerefExch)
+        exchOp.lhs = mutableListOf(ptrDerefExch)
 
         when (operation) {
             LLVMAtomicRMWBinOpXchg -> {
-                exchOp.rhs = listOf(value)
+                exchOp.rhs = mutableListOf(value)
             }
             LLVMAtomicRMWBinOpFAdd,
             LLVMAtomicRMWBinOpAdd -> {
                 val binaryOperator = newBinaryOperator("+", rawNode = instr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = listOf(binaryOperator)
+                exchOp.rhs = mutableListOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpFSub,
             LLVMAtomicRMWBinOpSub -> {
                 val binaryOperator = newBinaryOperator("-", rawNode = instr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = listOf(binaryOperator)
+                exchOp.rhs = mutableListOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpAnd -> {
                 val binaryOperator = newBinaryOperator("&", rawNode = instr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = listOf(binaryOperator)
+                exchOp.rhs = mutableListOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpNand -> {
                 val binaryOperator = newBinaryOperator("|", rawNode = instr)
@@ -903,19 +903,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binaryOperator.rhs = value
                 val unaryOperator = newUnaryOperator("~", false, true, rawNode = instr)
                 unaryOperator.input = binaryOperator
-                exchOp.rhs = listOf(unaryOperator)
+                exchOp.rhs = mutableListOf(unaryOperator)
             }
             LLVMAtomicRMWBinOpOr -> {
                 val binaryOperator = newBinaryOperator("|", rawNode = instr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = listOf(binaryOperator)
+                exchOp.rhs = mutableListOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpXor -> {
                 val binaryOperator = newBinaryOperator("^", rawNode = instr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                exchOp.rhs = listOf(binaryOperator)
+                exchOp.rhs = mutableListOf(binaryOperator)
             }
             LLVMAtomicRMWBinOpMax,
             LLVMAtomicRMWBinOpMin -> {
@@ -938,7 +938,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         value,
                         ty,
                     )
-                exchOp.rhs = listOf(conditional)
+                exchOp.rhs = mutableListOf(conditional)
             }
             LLVMAtomicRMWBinOpUMax,
             LLVMAtomicRMWBinOpUMin -> {
@@ -968,7 +968,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         value,
                         ty,
                     )
-                exchOp.rhs = listOf(conditional)
+                exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
                 throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")

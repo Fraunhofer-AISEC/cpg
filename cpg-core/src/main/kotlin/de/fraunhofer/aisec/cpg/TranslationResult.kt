@@ -26,16 +26,18 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.Pass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
@@ -52,11 +54,12 @@ class TranslationResult(
     var finalCtx: TranslationContext,
 ) : Node(), StatisticsHolder {
 
+    @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"
      * of software.
      */
-    @AST val components = mutableListOf<Component>()
+    val components by unwrapping(TranslationResult::componentEdges)
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.

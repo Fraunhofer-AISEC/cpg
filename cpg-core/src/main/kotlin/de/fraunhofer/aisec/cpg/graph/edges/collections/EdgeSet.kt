@@ -37,51 +37,51 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var thisRef: Node,
     override var init: (start: Node, end: NodeType) -> EdgeType,
     override var outgoing: Boolean = true,
-    override var postAdd: ((EdgeType) -> Unit)? = null,
-    override var postRemove: ((EdgeType) -> Unit)? = null
+    override var onAdd: ((EdgeType) -> Unit)? = null,
+    override var onRemove: ((EdgeType) -> Unit)? = null
 ) : HashSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
-    override fun add(e: EdgeType): Boolean {
-        val ok = super<HashSet>.add(e)
+    override fun add(element: EdgeType): Boolean {
+        val ok = super<HashSet>.add(element)
         if (ok) {
-            handlePostAdd(e)
+            handleOnAdd(element)
         }
         return ok
     }
 
     override fun removeIf(predicate: Predicate<in EdgeType>): Boolean {
-        var edges = filter { predicate.test(it) }
+        val edges = filter { predicate.test(it) }
         val ok = super<HashSet>.removeIf(predicate)
         if (ok) {
-            edges.forEach { handlePostRemove(it) }
+            edges.forEach { handleOnRemove(it) }
         }
         return ok
     }
 
-    override fun removeAll(c: Collection<EdgeType>): Boolean {
-        val edges = this.toSet()
-        val ok = super.removeAll(c)
+    override fun removeAll(elements: Collection<EdgeType>): Boolean {
+        val ok = super.removeAll(elements.toSet())
         if (ok) {
-            edges.forEach { handlePostRemove(it) }
+            elements.forEach { handleOnRemove(it) }
         }
         return ok
     }
 
-    override fun remove(o: EdgeType): Boolean {
-        val ok = super<HashSet>.remove(o)
+    override fun remove(element: EdgeType): Boolean {
+        val ok = super<HashSet>.remove(element)
         if (ok) {
-            handlePostRemove(o)
+            handleOnRemove(element)
         }
         return ok
     }
 
     override fun clear() {
-        var edges = this.toList()
+        // Make a copy of our edges so we can pass a copy to our on-remove handler
+        val edges = this.toSet()
         super.clear()
-        edges.forEach { handlePostRemove(it) }
+        edges.forEach { handleOnRemove(it) }
     }
 
-    override fun toNodeCollection(outgoing: Boolean): MutableSet<NodeType> {
-        return internalToNodeCollection(this, outgoing, ::HashSet)
+    override fun toNodeCollection(predicate: ((EdgeType) -> Boolean)?): MutableSet<NodeType> {
+        return internalToNodeCollection(this, outgoing, predicate, ::HashSet)
     }
 
     /**
@@ -92,12 +92,12 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         return UnwrappedEdgeSet(this)
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o !is EdgeSet<*, *>) return false
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is EdgeSet<*, *>) return false
 
         // Otherwise, try to compare the contents of the lists with the propertyEquals method
-        return this.containsAll(o)
+        return this.containsAll(other)
     }
 
     override fun hashCode(): Int {
