@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
@@ -80,22 +79,6 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         }
 
     override var statements by unwrapping(ForEachStatement::statementEdges)
-
-    override fun addStatement(s: Statement) {
-        when {
-            variable == null -> variable = s
-            iterable == null -> iterable = s
-            statement == null -> statement = s
-            statement !is Block -> {
-                val block = Block()
-                block.language = this.language
-                statement?.let { block.statements += it }
-                block.statements += s
-                statement = block
-            }
-            else -> (statement as? Block)?.statements?.plusAssign(s)
-        }
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
