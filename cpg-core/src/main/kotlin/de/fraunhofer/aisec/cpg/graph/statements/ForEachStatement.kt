@@ -35,13 +35,15 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 class ForEachStatement : Statement(), BranchingNode, StatementHolder {
 
+    @Relationship("VARIABLE")
     var variableEdge =
         astOptionalEdgeOf<Statement>(
             onChanged = { _, new ->
-                var end = new?.end
+                val end = new?.end
                 if (end is Reference) {
                     end.access = AccessValues.WRITE
                 }
@@ -54,11 +56,11 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
      */
     var variable by unwrappingOptional(ForEachStatement::variableEdge)
 
-    var iterableEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrappingOptional(ForEachStatement::iterableEdge)
 
-    var statementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the body of the loop. */
     var statement by unwrappingOptional(ForEachStatement::statementEdge)
 
@@ -91,7 +93,7 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
                 block.statements += s
                 statement = block
             }
-            else -> (statement as? Block)?.statements += s
+            else -> (statement as? Block)?.statements?.plusAssign(s)
         }
     }
 

@@ -31,21 +31,24 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingOptional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
+import org.neo4j.ogm.annotation.Relationship
 
 class ForStatement : Statement(), BranchingNode {
-    var statementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     var statement by unwrappingOptional(ForStatement::statementEdge)
 
+    @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     var initializerStatement by unwrappingOptional(ForStatement::initializerStatementEdge)
 
+    @Relationship("CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     var conditionDeclaration by unwrappingOptional(ForStatement::conditionDeclarationEdge)
 
-    var conditionEdge = astOptionalEdgeOf<Expression>()
+    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     var condition by unwrappingOptional(ForStatement::conditionEdge)
 
-    var iterationStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
     var iterationStatement by unwrappingOptional(ForStatement::iterationStatementEdge)
 
     override val branchedBy: Node?

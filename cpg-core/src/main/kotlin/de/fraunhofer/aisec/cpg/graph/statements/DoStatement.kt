@@ -32,16 +32,17 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a conditional loop statement of the form: `do{...}while(...)`. */
 class DoStatement : Statement(), ArgumentHolder {
-    var conditionEdge = astOptionalEdgeOf<Expression>()
+    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
     var condition by unwrappingOptional(DoStatement::conditionEdge)
 
-    var statementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
 
     /**
      * The statement that is going to be executed and re-executed, until the condition evaluates to
