@@ -206,7 +206,7 @@ fun LanguageProvider.newTupleDeclaration(
 
     // Also all our elements need to have an auto-type
     elements.forEach { it.type = autoType() }
-    node.elements = elements
+    node.elements = elements.toMutableList()
 
     node.initializer = initializer
 

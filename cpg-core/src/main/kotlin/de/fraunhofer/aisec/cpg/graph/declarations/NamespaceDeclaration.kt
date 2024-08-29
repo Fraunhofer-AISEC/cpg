@@ -48,11 +48,11 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
      */
-    @AST override val declarations: MutableList<Declaration> = ArrayList()
+    val declarationEdges = astEdgesOf<Declaration>()
+    override val declarations by unwrapping(NamespaceDeclaration::declarationEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
     override var statementEdges = astEdgesOf<Statement>()
 
     /**

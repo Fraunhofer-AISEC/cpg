@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import java.util.*
+import kotlin.reflect.KProperty
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.*
 
@@ -50,7 +51,7 @@ import org.neo4j.ogm.annotation.*
  * ```
  */
 @RelationshipEntity
-abstract class Edge<T : Node> : Persistable, Cloneable {
+abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue private val id: Long? = null
 
@@ -58,14 +59,14 @@ abstract class Edge<T : Node> : Persistable, Cloneable {
     @JsonIgnore @field:StartNode var start: Node
 
     // Node where the edge is ingoing
-    @JsonBackReference @field:EndNode var end: T
+    @JsonBackReference @field:EndNode var end: NodeType
 
-    constructor(start: Node, end: T) {
+    constructor(start: Node, end: NodeType) {
         this.start = start
         this.end = end
     }
 
-    constructor(edge: Edge<T>) {
+    constructor(edge: Edge<NodeType>) {
         start = edge.start
         end = edge.end
     }
@@ -116,9 +117,9 @@ abstract class Edge<T : Node> : Persistable, Cloneable {
             .toString()
     }
 
-    public override fun clone(): Edge<T> {
+    public override fun clone(): Edge<NodeType> {
         // needs to be implemented by sub-classes
-        return super.clone() as Edge<T>
+        return super.clone() as Edge<NodeType>
     }
 
     companion object {
@@ -141,6 +142,26 @@ abstract class Edge<T : Node> : Persistable, Cloneable {
                 return true
             }
             return false
+        }
+    }
+
+    fun <ThisType : Node> delegate(): Delegate<ThisType> {
+        return Delegate()
+    }
+
+    @Transient
+    inner class Delegate<
+        ThisType : Node,
+    >() {
+        operator fun getValue(thisRef: ThisType, property: KProperty<*>): NodeType {
+            var edge = this@Edge
+            // We only support outgoing edges this way
+            return edge.end
+        }
+
+        operator fun setValue(thisRef: ThisType, property: KProperty<*>, value: NodeType) {
+            this@Edge.end = value
+            // TODO: trigger some update hook
         }
     }
 }

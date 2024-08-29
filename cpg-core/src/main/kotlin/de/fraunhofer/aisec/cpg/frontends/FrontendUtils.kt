@@ -137,13 +137,13 @@ class FrontendUtils {
             val smallestEnclosingNode =
                 enclosingNodes.sortedWith(compareBy { it.code?.length ?: 10000 }).first()
 
-            val children = SubgraphWalker.getAstChildren(smallestEnclosingNode).toMutableList()
+            val children = smallestEnclosingNode.astChildren.toMutableList()
 
             // Because in GO we wrap all elements into a NamespaceDeclaration we have to extract the
             // natural children
             children.addAll(
                 children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                    SubgraphWalker.getAstChildren(namespace).filter { it !in children }
+                    namespace.astChildren.filter { it !in children }
                 }
             )
 

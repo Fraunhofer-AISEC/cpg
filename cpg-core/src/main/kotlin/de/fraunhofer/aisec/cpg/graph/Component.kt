@@ -26,6 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -35,8 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  * entry points or interactions with other software.
  */
 open class Component : Node() {
+    @Relationship("TRANSLATION_UNITS")
+    val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
     /** All translation units belonging to this application. */
-    @AST val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
+    val translationUnits by unwrapping(Component::translationUnitEdges)
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {

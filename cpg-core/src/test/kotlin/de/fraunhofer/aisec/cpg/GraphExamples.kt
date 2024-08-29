@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -1062,7 +1061,6 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
@@ -1134,7 +1132,6 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =

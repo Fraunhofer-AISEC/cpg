@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -36,12 +35,10 @@ import org.neo4j.ogm.annotation.Relationship
 /** This declaration represents either an include or an import, depending on the language. */
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    @AST
     val includeEdges = astEdgesOf<IncludeDeclaration>()
     val includes by unwrapping(IncludeDeclaration::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
-    @AST
     val problemEdges = astEdgesOf<ProblemDeclaration>()
     val problems by unwrapping(IncludeDeclaration::problemEdges)
 

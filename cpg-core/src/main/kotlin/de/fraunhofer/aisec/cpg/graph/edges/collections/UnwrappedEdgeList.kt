@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.Transient
 
@@ -54,12 +55,12 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return ListIterator(list.listIterator(index))
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun removeAt(index: Int): NodeType {
         var edge = list.removeAt(index)
         return if (list.outgoing) {
             edge.end
         } else {
+            @Suppress("UNCHECKED_CAST")
             edge.start as NodeType
         }
     }
@@ -77,6 +78,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return if (list.outgoing) {
             edge.end
         } else {
+            @Suppress("UNCHECKED_CAST")
             edge.start as NodeType
         }
     }
@@ -121,6 +123,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
             return if (list.outgoing) {
                 next.end
             } else {
+                @Suppress("UNCHECKED_CAST")
                 next.start as NodeType
             }
         }
@@ -142,6 +145,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
             return if (list.outgoing) {
                 next.end
             } else {
+                @Suppress("UNCHECKED_CAST")
                 next.start as NodeType
             }
         }
@@ -172,7 +176,6 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * ```kotlin
      * class MyNode {
      *   @Relationship(value = "EXPRESSIONS", direction = "OUTGOING")
-     *   @AST
      *   var expressionsEdges = astChildrenOf<Expression>()
      *   var expressions by unwrapping(MyNode::expressionsEdges)
      * }

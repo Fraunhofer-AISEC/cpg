@@ -27,10 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -40,23 +43,24 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  */
 open class BinaryOperator :
     Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+
     /** The left-hand expression. */
-    @AST
-    var lhs: Expression = ProblemExpression("could not parse lhs")
-        set(value) {
-            disconnectOldLhs()
-            field = value
-            connectNewLhs(value)
-        }
+    @Relationship("LHS")
+    var lhsEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse lhs"),
+            onChanged = ::exchangeTypeObserver
+        )
+    var lhs by unwrapping(BinaryOperator::lhsEdge)
 
     /** The right-hand expression. */
-    @AST
-    var rhs: Expression = ProblemExpression("could not parse rhs")
-        set(value) {
-            disconnectOldRhs()
-            field = value
-            connectNewRhs(value)
-        }
+    @Relationship("RHS")
+    var rhsEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse rhs"),
+            onChanged = ::exchangeTypeObserver
+        )
+    var rhs by unwrapping(BinaryOperator::rhsEdge)
 
     /** The operator code. */
     override var operatorCode: String? = null
@@ -71,31 +75,6 @@ open class BinaryOperator :
                 )
             }
         }
-
-    private fun connectNewLhs(lhs: Expression) {
-        lhs.registerTypeObserver(this)
-        if (lhs is Reference && "=" == operatorCode) {
-            // declared reference expr is the left-hand side of an assignment -> writing to the var
-            lhs.access = AccessValues.WRITE
-        } else if (
-            lhs is Reference && operatorCode in (language?.compoundAssignmentOperators ?: setOf())
-        ) {
-            // declared reference expr is the left-hand side of an assignment -> writing to the var
-            lhs.access = AccessValues.READWRITE
-        }
-    }
-
-    private fun disconnectOldLhs() {
-        lhs.unregisterTypeObserver(this)
-    }
-
-    private fun connectNewRhs(rhs: Expression) {
-        rhs.registerTypeObserver(this)
-    }
-
-    private fun disconnectOldRhs() {
-        rhs.unregisterTypeObserver(this)
-    }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
