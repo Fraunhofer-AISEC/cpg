@@ -100,19 +100,19 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
 
     override var onAdd: ((EdgeType) -> Unit)?
         get() = null
-        set(value) {}
+        set(_) {}
 
     override var onRemove: ((EdgeType) -> Unit)?
         get() = null
-        set(value) {}
+        set(_) {}
 
-    @Suppress("UNCHECKED_CAST")
     override fun toNodeCollection(predicate: ((EdgeType) -> Boolean)?): Collection<NodeType> {
-        var elements = predicate?.let { toList().filter(it) } ?: toList()
+        val elements = predicate?.let { toList().filter(it) } ?: toList()
         return elements.map {
             if (outgoing) {
                 it.end
             } else {
+                @Suppress("UNCHECKED_CAST")
                 it.start as NodeType
             }
         }
@@ -143,7 +143,7 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     fun resetTo(node: NodeType) {
-        var old = this.element
+        val old = this.element
         this.element =
             if (outgoing) {
                 init(thisRef, node)
@@ -153,12 +153,12 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
         onChanged?.invoke(old, this.element)
     }
 
-    fun <ThisType : Node> delegate(): Delegate<ThisType> {
-        return Delegate()
+    fun <ThisType : Node> delegate(): UnwrapDelegate<ThisType> {
+        return UnwrapDelegate()
     }
 
     @Transient
-    inner class Delegate<
+    inner class UnwrapDelegate<
         ThisType : Node,
     >() {
         @Suppress("UNCHECKED_CAST")

@@ -66,7 +66,7 @@ fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeTy
     return edge.unwrap()
 }
 
-/** See [EdgeSingletonList.Delegate]. */
+/** See [EdgeSingletonList.UnwrapDelegate]. */
 fun <
     PropertyType : Node,
     NullablePropertyType : PropertyType?,
@@ -75,7 +75,7 @@ fun <
 > NodeType.unwrapping(
     edgeProperty:
         KProperty1<NodeType, EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>>,
-): EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>.Delegate<NodeType> {
+): EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>.UnwrapDelegate<NodeType> {
     edgeProperty.isAccessible = true
     val edge = edgeProperty.call(this)
     return edge.delegate()

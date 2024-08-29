@@ -37,5 +37,5 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
-    override var initializer: Expression? by unwrapping(EnumConstantDeclaration::initializerEdge)
+    override var initializer by unwrapping(EnumConstantDeclaration::initializerEdge)
 }
