@@ -416,27 +416,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Creates a new [OperatorCallExpression] to a [OperatorDeclaration] and also sets the
-     * appropriate fields such as [CallExpression.invokes] and [Reference.refersTo].
-     */
-    private fun operatorCallFromDeclaration(
-        decl: OperatorDeclaration,
-        op: HasOverloadedOperation
-    ): OperatorCallExpression {
-        return with(decl) {
-            val ref =
-                newMemberExpression(decl.name, op.operatorBase, operatorCode = ".")
-                    .implicit(decl.name.localName, location = op.location)
-            ref.refersTo = decl
-            val call =
-                newOperatorCallExpression(operatorCode = op.operatorCode ?: "", ref)
-                    .codeAndLocationFrom(ref)
-            call.invokes = mutableListOf(decl)
-            call
-        }
-    }
-
     // TODO(oxisto): Move to inference class
     protected fun handleUnknownField(base: Type, ref: Reference): FieldDeclaration? {
         val name = ref.name

@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.HasBase
-import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
-import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
 
 /**
@@ -54,4 +52,25 @@ class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
         get() {
             return (callee as? HasBase)?.base
         }
+}
+
+/**
+ * Creates a new [OperatorCallExpression] to a [OperatorDeclaration] and also sets the
+ * appropriate fields such as [CallExpression.invokes] and [Reference.refersTo].
+ */
+fun operatorCallFromDeclaration(
+    decl: OperatorDeclaration,
+    op: HasOverloadedOperation
+): OperatorCallExpression {
+    return with(decl) {
+        val ref =
+            newMemberExpression(decl.name, op.operatorBase, operatorCode = ".")
+                .implicit(decl.name.localName, location = op.location)
+        ref.refersTo = decl
+        val call =
+            newOperatorCallExpression(operatorCode = op.operatorCode ?: "", ref)
+                .codeAndLocationFrom(ref)
+        call.invokes = mutableListOf(decl)
+        call
+    }
 }

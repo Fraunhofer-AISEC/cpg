@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -246,3 +248,16 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 ): Pair<KClass<T>, String> {
     return Pair(T::class, operatorCode)
 }
+
+
+/** Checks whether the [Name] for a function is a known operator name. */
+context(LanguageProvider)
+val Name.isKnownOperatorName: Boolean
+    get() {
+        val language = language
+        if (language !is HasOperatorOverloading) {
+            return false
+        }
+
+        return language.overloadedOperatorNames.containsValue(this.localName)
+    }
