@@ -249,15 +249,21 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
     return Pair(T::class, operatorCode)
 }
 
-
 /** Checks whether the [Name] for a function is a known operator name. */
 context(LanguageProvider)
 val Name.isKnownOperatorName: Boolean
+    get() {
+        return this.localName.isKnownOperatorName
+    }
+
+/** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
+context(LanguageProvider)
+val CharSequence.isKnownOperatorName: Boolean
     get() {
         val language = language
         if (language !is HasOperatorOverloading) {
             return false
         }
 
-        return language.overloadedOperatorNames.containsValue(this.localName)
+        return language.overloadedOperatorNames.containsValue(this)
     }

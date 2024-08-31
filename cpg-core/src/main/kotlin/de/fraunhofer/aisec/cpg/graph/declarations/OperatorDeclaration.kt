@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
-import de.fraunhofer.aisec.cpg.graph.LanguageProvider
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 
 /**

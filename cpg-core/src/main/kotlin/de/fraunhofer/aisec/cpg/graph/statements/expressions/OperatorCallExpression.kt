@@ -55,8 +55,8 @@ class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
 }
 
 /**
- * Creates a new [OperatorCallExpression] to a [OperatorDeclaration] and also sets the
- * appropriate fields such as [CallExpression.invokes] and [Reference.refersTo].
+ * Creates a new [OperatorCallExpression] to a [OperatorDeclaration] and also sets the appropriate
+ * fields such as [CallExpression.invokes] and [Reference.refersTo].
  */
 fun operatorCallFromDeclaration(
     decl: OperatorDeclaration,

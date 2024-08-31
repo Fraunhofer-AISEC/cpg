@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -77,7 +78,6 @@ class StatementHandlerTest {
         val file = topLevel.resolve("varargs.py").toFile()
 
         val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
-
         assertNotNull(result)
 
         val func = result.functions["test_varargs"]
@@ -104,5 +104,27 @@ class StatementHandlerTest {
         val myOtherFunc = tu.functions["my_other_func"]
         assertNotNull(myOtherFunc)
         assertEquals(1, myOtherFunc.parameters.size)
+    }
+
+    @Test
+    fun testOperatorOverload() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val file = topLevel.resolve("operator.py").toFile()
+
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        with(result) {
+            val numberType = assertResolvedType("operator.Number")
+
+            // we should have an operator call to __add__ (+) now
+            val opCall = result.operatorCalls["+"]
+            assertNotNull(opCall)
+            assertEquals(numberType, opCall.type)
+
+            val add = result.operators["__add__"]
+            assertNotNull(add)
+            assertEquals(add, opCall.invokes.singleOrNull())
+        }
     }
 }

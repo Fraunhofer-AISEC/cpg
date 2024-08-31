@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
+import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
@@ -294,6 +296,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newConstructorDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
+                        rawNode = s
+                    )
+                } else if (s.name.isKnownOperatorName) {
+                    newOperatorDeclaration(
+                        name = s.name,
+                        recordDeclaration = recordDeclaration,
+                        operatorCode =
+                            (language as HasOperatorOverloading)
+                                .overloadedOperatorNames
+                                .filterValues { it == s.name }
+                                .keys
+                                .firstOrNull()
+                                ?.second ?: "",
                         rawNode = s
                     )
                 } else {
