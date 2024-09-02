@@ -237,6 +237,21 @@ interface HasOperatorOverloading : LanguageTrait {
      * the name of the function.
      */
     val overloadedOperatorNames: Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol>
+
+    /**
+     * Returns the matching operator code for [name] in [overloadedOperatorNames]. While
+     * [overloadedOperatorNames] can have multiple entries for a single operator code (e.g. to
+     * differentiate between unary and binary ops), we only ever allow one distinct operator code
+     * for a specific symbol. If non such distinct operator code is found, null is returned.
+     */
+    fun operatorCodeFor(name: Symbol): String? {
+        return overloadedOperatorNames
+            .filterValues { it == name }
+            .keys
+            .map { it.second }
+            .distinct()
+            .singleOrNull()
+    }
 }
 
 /**

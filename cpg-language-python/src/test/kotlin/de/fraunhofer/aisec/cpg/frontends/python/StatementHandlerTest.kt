@@ -116,15 +116,25 @@ class StatementHandlerTest {
 
         with(result) {
             val numberType = assertResolvedType("operator.Number")
+            val strType = assertResolvedType("str")
 
             // we should have an operator call to __add__ (+) now
-            val opCall = result.operatorCalls["+"]
+            var opCall = result.operatorCalls("+").getOrNull(0)
             assertNotNull(opCall)
             assertEquals(numberType, opCall.type)
 
             val add = result.operators["__add__"]
             assertNotNull(add)
             assertEquals(add, opCall.invokes.singleOrNull())
+
+            // ... and one to __pos__ (+)
+            opCall = result.operatorCalls("+").getOrNull(1)
+            assertNotNull(opCall)
+            assertEquals(strType, opCall.type)
+
+            val pos = result.operators["__pos__"]
+            assertNotNull(pos)
+            assertEquals(pos, opCall.invokes.singleOrNull())
         }
     }
 }

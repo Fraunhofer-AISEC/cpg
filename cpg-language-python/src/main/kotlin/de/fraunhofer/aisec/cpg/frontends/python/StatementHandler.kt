@@ -290,6 +290,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         s: Python.AST.NormalOrAsyncFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
+        val language = language
         val result =
             if (recordDeclaration != null) {
                 if (s.name == "__init__") {
@@ -298,17 +299,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         recordDeclaration = recordDeclaration,
                         rawNode = s
                     )
-                } else if (s.name.isKnownOperatorName) {
+                } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
                     newOperatorDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
-                        operatorCode =
-                            (language as HasOperatorOverloading)
-                                .overloadedOperatorNames
-                                .filterValues { it == s.name }
-                                .keys
-                                .firstOrNull()
-                                ?.second ?: "",
+                        operatorCode = language.operatorCodeFor(s.name) ?: "",
                         rawNode = s
                     )
                 } else {
