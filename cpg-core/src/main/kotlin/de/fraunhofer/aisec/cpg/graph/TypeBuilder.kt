@@ -41,6 +41,10 @@ fun MetadataProvider?.unknownType(): Type {
     }
 }
 
+fun LanguageProvider.dynamicType(): Type {
+    return DynamicType(this.language)
+}
+
 fun LanguageProvider.autoType(): Type {
     return AutoType(this.language)
 }

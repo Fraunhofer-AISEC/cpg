@@ -179,7 +179,7 @@ interface HasType : ContextProvider, LanguageProvider {
 
         // If we would only propagate the unknown type, we can also skip it
         val newType = this.type
-        if (newType !is UnknownType) {
+        if (newType !is UnknownType && newType !is DynamicType) {
             // Immediately inform about changes
             typeObserver.typeChanged(newType, this)
         }
@@ -207,6 +207,12 @@ interface HasType : ContextProvider, LanguageProvider {
 class InitializerTypePropagation(private var decl: HasType, private var tupleIdx: Int = -1) :
     HasType.TypeObserver {
     override fun typeChanged(newType: Type, src: HasType) {
+        // We do not want to change the type of a "dynamic type" declaration, since the "type" will
+        // always be dynamic.
+        if (decl.type is DynamicType) {
+            return
+        }
+
         if (newType is TupleType && tupleIdx != -1) {
             decl.type = newType.types.getOrElse(tupleIdx) { decl.unknownType() }
         } else {

@@ -217,6 +217,10 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
         val nodeType = hasType.type
 
+        if (srcType is DynamicType) {
+            return false
+        }
+
         // We only want to add certain types, in case we have a numeric type
         if (nodeType is NumericType) {
             // We do not allow to propagate non-numeric types into numeric types

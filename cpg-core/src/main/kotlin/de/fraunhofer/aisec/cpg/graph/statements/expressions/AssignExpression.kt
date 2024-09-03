@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -208,10 +209,19 @@ class AssignExpression :
             val targets = findTargets(src)
             if (targets.size == newType.types.size) {
                 // Set the corresponding type on the left-side
-                newType.types.forEachIndexed { idx, t -> lhs.getOrNull(idx)?.addAssignedType(t) }
+                newType.types.forEachIndexed { idx, t ->
+                    var lhs = lhs.getOrNull(idx) ?: return
+                    lhs.addAssignedType(t)
+                }
             }
         } else {
-            findTargets(src).forEach { it.addAssignedType(newType) }
+            findTargets(src).forEach {
+                // If the type is unknown, we can also set it
+                if (it.type is UnknownType) {
+                    it.type = newType
+                }
+                it.addAssignedType(newType)
+            }
         }
 
         // If this is used as an expression, we also set the type accordingly
