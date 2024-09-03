@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -425,55 +426,39 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         if (recordDeclaration != null) {
             // first argument is the receiver
-            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
-                handleArgument(arg, arg in args.posonlyargs)
+            for ((idx, arg) in positionalArguments.drop(1).withIndex()) {
+                val defaultValue =
+                    args.defaults.getOrNull(idx)?.let { frontend.expressionHandler.handle(it) }
+                handleArgument(
+                    arg,
+                    isPosOnly = arg in args.posonlyargs,
+                    defaultValue = defaultValue
+                )
             }
         } else {
-            for (arg in positionalArguments) {
-                handleArgument(arg, arg in args.posonlyargs)
+            for ((idx, arg) in positionalArguments.withIndex()) {
+                val defaultValue =
+                    args.defaults.getOrNull(idx)?.let { frontend.expressionHandler.handle(it) }
+                handleArgument(
+                    arg,
+                    isPosOnly = arg in args.posonlyargs,
+                    defaultValue = defaultValue
+                )
             }
         }
 
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
+        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
 
-        if (args.kwonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`kwonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (args.kw_defaults.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`kw_defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        args.kwarg?.let {
-            val problem =
-                newProblemDeclaration(
-                    "`kwarg` is not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = it
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (args.defaults.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
+        for (idx in args.kwonlyargs.indices) {
+            val arg = args.kwonlyargs[idx]
+            val default = args.kw_defaults.getOrNull(idx)
+            handleArgument(
+                arg,
+                isPosOnly = false,
+                isKwoOnly = true,
+                defaultValue = default?.let { frontend.expressionHandler.handle(it) }
+            )
         }
     }
 
@@ -550,7 +535,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     internal fun handleArgument(
         node: Python.ASTarg,
         isPosOnly: Boolean = false,
-        isVariadic: Boolean = false
+        isVariadic: Boolean = false,
+        isKwoOnly: Boolean = false,
+        defaultValue: Expression? = null
     ) {
         val type = frontend.typeOf(node.annotation)
         val arg =
@@ -560,8 +547,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 variadic = isVariadic,
                 rawNode = node
             )
+        defaultValue?.let { arg.default = it }
         if (isPosOnly) {
             arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        }
+
+        if (isKwoOnly) {
+            arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
         }
 
         frontend.scopeManager.addDeclaration(arg)

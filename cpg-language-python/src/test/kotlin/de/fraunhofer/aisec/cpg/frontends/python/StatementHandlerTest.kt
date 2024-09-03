@@ -83,7 +83,65 @@ class StatementHandlerTest {
         assertNotNull(func, "Function 'test_varargs' should be found")
 
         val variadicArg = func.parameters["args"]
-        assertNotNull(variadicArg, "Failed to find variadic argc")
+        assertNotNull(variadicArg, "Failed to find variadic args")
         assertEquals(true, variadicArg.isVariadic)
+    }
+
+    @Test
+    fun testKwOnlyArguments() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val file = topLevel.resolve("arguments.py").toFile()
+
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+
+        assertNotNull(result)
+
+        val func = result.functions["kwd_only_arg"]
+        assertNotNull(func, "Function 'kwd_only_arg' should be found")
+
+        val kwOnlyArg = func.parameters["arg"]
+        assertNotNull(kwOnlyArg, "Failed to find keyword only args")
+        assertContains(kwOnlyArg.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
+    }
+
+    @Test
+    fun testKwDefaultArguments() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val file = topLevel.resolve("arguments.py").toFile()
+
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+
+        assertNotNull(result)
+
+        val func = result.functions["kw_defaults"]
+        assertNotNull(func, "Function 'kw_defaults' should be found")
+
+        //        val kwOnlyArg = func.parameters["arg"]
+        //        assertNotNull(kwOnlyArg, "Failed to find keyword only args")
+        //        assertContains(kwOnlyArg.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
+
+        val kwOnlyParams = listOf("c", "d", "e")
+        for (paramName in kwOnlyParams) {
+            val param = func.parameters[paramName]
+            assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
+            assertContains(param.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
+        }
+    }
+
+    @Test
+    fun testKwArguments() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val file = topLevel.resolve("arguments.py").toFile()
+
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+
+        assertNotNull(result)
+
+        val func = result.functions["kw_args"]
+        assertNotNull(func, "Function 'kw_args' should be found")
+
+        val kwArgs = func.parameters["kwargs"]
+        assertNotNull(kwArgs, "Failed to find kw args")
+        assertEquals(true, kwArgs.isVariadic)
     }
 }
