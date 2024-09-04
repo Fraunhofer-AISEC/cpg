@@ -106,8 +106,6 @@ class PassOrderingHelper {
         sanityCheck()
     }
 
-    private constructor() {}
-
     /** Register all (soft and hard) dependencies. */
     private fun populateNormalDependencies() {
         for (pass in workingList) {
@@ -212,8 +210,7 @@ class PassOrderingHelper {
 
     /**
      * A pass annotated with [ExecuteBefore] implies that the other pass depends on it. We populate
-     * the
-     * [de.fraunhofer.aisec.cpg.passes.configuration.PassWithDependencies.executeBeforeDependenciesRemaining]
+     * the [de.fraunhofer.aisec.cpg.passes.configuration.PassWithDependencies.dependenciesRemaining]
      * field in the other pass to make the analysis simpler.
      */
     private fun populateExecuteBeforeDependencies() {
