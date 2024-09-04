@@ -329,7 +329,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         node.operatorCode == "*" &&
                             (it.type is PointerType || (it.type as? NumericType)?.bitWidth == 64)
                     ) {
-                        PointerDataflowGranularity(true)
+                        PointerDataflowGranularity()
                     } else {
                         default()
                     }
@@ -339,12 +339,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.input.let {
                 val granularity: Granularity =
                     if (
-                        node.operatorCode == "*" &&
-                            (it.type is PointerType || (it.type as? NumericType)?.bitWidth == 64)
+                        (node.operatorCode == "*" &&
+                            (it.type is PointerType ||
+                                (it.type as? NumericType)?.bitWidth == 64)) ||
+                            (node.operatorCode == "&")
                     ) {
-                        PointerDataflowGranularity(true)
-                    } else if (node.operatorCode == "&") {
-                        PointerDataflowGranularity(false)
+                        PointerDataflowGranularity()
                     } else {
                         default()
                     }
