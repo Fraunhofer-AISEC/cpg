@@ -123,6 +123,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
+                    var granularity = default()
+                    if (
+                        (it is Reference &&
+                            it.refersTo is VariableDeclaration &&
+                            (it.refersTo as VariableDeclaration).initializer is UnaryOperator &&
+                            ((it.refersTo as VariableDeclaration).initializer as UnaryOperator)
+                                .operatorCode == "&") ||
+                            (it is VariableDeclaration &&
+                                it.initializer is UnaryOperator &&
+                                (it.initializer as UnaryOperator).operatorCode == "&")
+                    ) {
+                        granularity = PointerDataflowGranularity()
+                    }
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
                     } else if (
@@ -131,11 +144,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     ) {
                         key.addPrevDFG(
                             it,
+                            granularity,
                             callingContext =
                                 (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
-                        key.addPrevDFG(it)
+                        key.addPrevDFG(it, granularity)
                     }
                 }
             }
