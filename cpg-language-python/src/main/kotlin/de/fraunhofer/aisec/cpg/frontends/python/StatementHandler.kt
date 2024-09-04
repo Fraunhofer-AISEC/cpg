@@ -432,6 +432,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 handleArgument(
                     arg,
                     isPosOnly = arg in args.posonlyargs,
+                    isKwoOnly = defaultValue != null,
                     defaultValue = defaultValue
                 )
             }
@@ -442,6 +443,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 handleArgument(
                     arg,
                     isPosOnly = arg in args.posonlyargs,
+                    isKwoOnly = defaultValue != null,
                     defaultValue = defaultValue
                 )
             }
