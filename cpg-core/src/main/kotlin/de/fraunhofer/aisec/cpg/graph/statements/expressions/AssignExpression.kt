@@ -28,9 +28,12 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -56,31 +59,36 @@ class AssignExpression :
 
     override var operatorCode: String = "="
 
-    @AST
-    var lhs: List<Expression> = listOf()
-        set(value) {
-            field = value
-            field.forEach {
-                var base = (it as? MemberExpression)?.base as? MemberExpression
+    /** The expressions on the left-hand side. */
+    @Relationship("LHS")
+    var lhsEdges =
+        astEdgesOf<Expression>(
+            onAdd = {
+                var end = it.end
+                var base = (end as? MemberExpression)?.base as? MemberExpression
                 while (base != null) {
                     base.access = AccessValues.READWRITE
-                    base = (base as? MemberExpression)?.base as? MemberExpression
+                    base = base.base as? MemberExpression
+                }
+
+                if (isSimpleAssignment) {
+                    (end as? Reference)?.access = AccessValues.WRITE
+                } else {
+                    (end as? Reference)?.access = AccessValues.READWRITE
                 }
             }
-            if (isSimpleAssignment) {
-                field.forEach { (it as? Reference)?.access = AccessValues.WRITE }
-            } else {
-                field.forEach { (it as? Reference)?.access = AccessValues.READWRITE }
-            }
-        }
+        )
+    var lhs by unwrapping(AssignExpression::lhsEdges)
 
-    @AST
-    var rhs: List<Expression> = listOf()
-        set(value) {
-            field.forEach { it.unregisterTypeObserver(this) }
-            field = value
-            value.forEach { it.registerTypeObserver(this) }
-        }
+    @Relationship("RHS")
+
+    /** The expressions on the right-hand side. */
+    var rhsEdges =
+        astEdgesOf<Expression>(
+            onAdd = { it.end.registerTypeObserver(this) },
+            onRemove = { it.end.unregisterTypeObserver(this) },
+        )
+    var rhs by unwrapping(AssignExpression::rhsEdges)
 
     /**
      * This property specifies, that this is actually used as an expression. Not many languages
@@ -117,6 +125,7 @@ class AssignExpression :
             return operatorCode in (language?.simpleAssignmentOperators ?: setOf())
         }
 
+    @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<VariableDeclaration>()
     /**
      * Some languages, such as Go explicitly allow the definition / declaration of variables in the
      * assignment (known as a "short assignment"). Some languages, such as Python even implicitly
@@ -125,7 +134,7 @@ class AssignExpression :
      * we need to later resolve this in an additional pass. The declarations are then stored in
      * [declarations].
      */
-    @AST override var declarations = mutableListOf<VariableDeclaration>()
+    override var declarations by unwrapping(AssignExpression::declarationEdges)
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpression: HasType): Expression? {
@@ -223,18 +232,18 @@ class AssignExpression :
 
     override fun addArgument(expression: Expression) {
         if (lhs.isEmpty()) {
-            lhs = listOf(expression)
+            lhs = mutableListOf(expression)
         } else {
-            rhs = listOf(expression)
+            rhs = mutableListOf(expression)
         }
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return if (lhs == listOf(old)) {
-            lhs = listOf(new)
+        return if (lhs.singleOrNull() == old) {
+            lhs = mutableListOf(new)
             true
-        } else if (rhs == listOf(old)) {
-            rhs = listOf(new)
+        } else if (rhs.singleOrNull() == old) {
+            rhs = mutableListOf(new)
             true
         } else {
             false

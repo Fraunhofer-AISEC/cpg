@@ -141,10 +141,10 @@ fun MetadataProvider.newConstructorDeclaration(
 }
 
 /**
- * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [ParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newParameterDeclaration(
@@ -206,7 +206,7 @@ fun LanguageProvider.newTupleDeclaration(
 
     // Also all our elements need to have an auto-type
     elements.forEach { it.type = autoType() }
-    node.elements = elements
+    node.elements = elements.toMutableList()
 
     node.initializer = initializer
 

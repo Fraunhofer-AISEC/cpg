@@ -163,7 +163,7 @@ class Dataflows<T : Node>(
         granularity: Granularity = default(),
         callingContext: CallingContext
     ) {
-        var edge =
+        val edge =
             if (outgoing) {
                 ContextSensitiveDataflow(thisRef, node, granularity, callingContext)
             } else {
@@ -177,10 +177,10 @@ class Dataflows<T : Node>(
      * This connects our dataflow to our "mirror" property. Meaning that if we add a node to
      * nextDFG, we add our thisRef to the "prev" of "next" and vice-versa.
      */
-    override fun handlePostAdd(edge: Dataflow) {
-        super<MirroredEdgeCollection>.handlePostAdd(edge)
-        var start = edge.start
-        var thisRef = this.thisRef
+    override fun handleOnAdd(edge: Dataflow) {
+        super<MirroredEdgeCollection>.handleOnAdd(edge)
+        val start = edge.start
+        val thisRef = this.thisRef
 
         // For references, we want to propagate assigned types all through the previous DFG nodes.
         // Therefore, we add a type observer to the previous node (if it is not ourselves)

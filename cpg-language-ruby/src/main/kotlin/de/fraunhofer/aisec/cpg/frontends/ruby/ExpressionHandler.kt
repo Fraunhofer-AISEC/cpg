@@ -94,8 +94,8 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         val assign = newAssignExpression("=")
 
         // we need to build a reference out of the assignment node itself for our LHS
-        assign.lhs = listOf(handleINameNode(node))
-        assign.rhs = listOf(this.handle(node.valueNode))
+        assign.lhs = mutableListOf(handleINameNode(node))
+        assign.rhs = mutableListOf(this.handle(node.valueNode))
 
         return assign
     }
@@ -104,8 +104,8 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         val assign = newAssignExpression("=")
 
         // we need to build a reference out of the assignment node itself for our LHS
-        assign.lhs = listOf(handleINameNode(node))
-        assign.rhs = listOf(this.handle(node.valueNode))
+        assign.lhs = mutableListOf(handleINameNode(node))
+        assign.rhs = mutableListOf(this.handle(node.valueNode))
 
         return assign
     }

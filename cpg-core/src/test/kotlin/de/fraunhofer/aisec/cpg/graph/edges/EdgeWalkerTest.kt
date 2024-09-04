@@ -23,29 +23,39 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges.flows
-
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.allEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.astEdges
+import de.fraunhofer.aisec.cpg.graph.edges.edges
+import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newCallExpression
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertSame
 
-class ControlDependenceTest {
+class EdgeWalkerTest {
     @Test
-    fun testOnAdd() {
+    fun testExtract() {
         with(TestLanguageFrontend()) {
-            // <node1> -- CDG --> <node2>
-            // this should be 1 nextDFG for node1 and 1 prevDFG for node2
-            var node1 = newLiteral(value = 1)
-            var node2 = newLiteral(value = 1)
+            var node = newFunctionDeclaration("do")
+            node.body = newBlock()
 
-            node1.nextCDGEdges.add(node2) { branches = setOf(false) }
+            node.prevDFG += newCallExpression(newReference("do"))
 
-            // should contain 1 prevCDG edge now
-            assertEquals(1, node2.prevCDGEdges.size)
-            // and it should be the same as the nextDFG of node1
-            assertSame(node1.nextCDGEdges.firstOrNull(), node2.prevCDGEdges.firstOrNull())
+            var edges = node.edges<Edge<*>>()
+            assertEquals(2, edges.size)
+
+            edges = node.edges { it is AstEdge }
+            assertEquals(1, edges.size)
+
+            var all = node.allEdges<Edge<*>>()
+            assertEquals(3, all.size)
+
+            var allAst = node.astEdges
+            assertEquals(1, allAst.size)
         }
     }
 }

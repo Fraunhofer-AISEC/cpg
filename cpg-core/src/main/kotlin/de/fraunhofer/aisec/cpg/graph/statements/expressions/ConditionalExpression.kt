@@ -27,33 +27,44 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
 class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
-    @AST var condition: Expression = ProblemExpression("could not parse condition expression")
+    @Relationship("CONDITION")
+    var conditionEdge =
+        astEdgeOf<Expression>(ProblemExpression("could not parse condition expression"))
+    var condition by unwrapping(ConditionalExpression::conditionEdge)
 
-    @AST
-    var thenExpression: Expression? = null
-        set(value) {
-            field?.unregisterTypeObserver(this)
-            field = value
-            value?.registerTypeObserver(this)
-        }
+    @Relationship("THEN_EXPRESSION")
+    var thenExpressionEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                old?.end?.unregisterTypeObserver(this)
+                new?.end?.registerTypeObserver(this)
+            }
+        )
+    var thenExpression by unwrapping(ConditionalExpression::thenExpressionEdge)
 
-    @AST
-    var elseExpression: Expression? = null
-        set(value) {
-            field?.unregisterTypeObserver(this)
-            field = value
-            value?.registerTypeObserver(this)
-        }
+    @Relationship("ELSE_EXPRESSION")
+    var elseExpressionEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                old?.end?.unregisterTypeObserver(this)
+                new?.end?.registerTypeObserver(this)
+            }
+        )
+    var elseExpression by unwrapping(ConditionalExpression::elseExpressionEdge)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependences
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrders
@@ -165,6 +166,8 @@ abstract class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
+    @Transient var astParent: Node? = null
+
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
 
@@ -251,7 +254,8 @@ abstract class Node :
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @AST var annotations: MutableList<Annotation> = ArrayList()
+    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
+    var annotations by unwrapping(Node::annotationEdges)
 
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see

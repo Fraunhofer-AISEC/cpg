@@ -71,7 +71,7 @@ class ProgramDependences<NodeType : Node> :
 
     override fun add(e: Edge<NodeType>): Boolean {
         // Clone the edge before inserting. See comment above for a detailed explanation.
-        var clonedEdge = e.clone()
+        val clonedEdge = e.clone()
         return super<EdgeSet>.add(clonedEdge)
     }
 }

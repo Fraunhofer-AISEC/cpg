@@ -393,7 +393,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
         // both in positional as well as keyword style.
         var positionalArguments = args.posonlyargs + args.args
-
         // Handle arguments
         if (recordDeclaration != null) {
             // first argument is the `receiver`
@@ -435,15 +434,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         }
 
-        args.vararg?.let {
-            val problem =
-                newProblemDeclaration(
-                    "`vararg` is not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = it
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
+        args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
 
         if (args.kwonlyargs.isNotEmpty()) {
             val problem =
@@ -556,9 +547,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return result
     }
 
-    internal fun handleArgument(node: Python.ASTarg, isPosOnly: Boolean = false) {
+    internal fun handleArgument(
+        node: Python.ASTarg,
+        isPosOnly: Boolean = false,
+        isVariadic: Boolean = false
+    ) {
         val type = frontend.typeOf(node.annotation)
-        val arg = newParameterDeclaration(name = node.arg, type = type, rawNode = node)
+        val arg =
+            newParameterDeclaration(
+                name = node.arg,
+                type = type,
+                variadic = isVariadic,
+                rawNode = node
+            )
         if (isPosOnly) {
             arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
         }

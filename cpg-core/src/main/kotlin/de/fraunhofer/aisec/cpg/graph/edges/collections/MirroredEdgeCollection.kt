@@ -37,7 +37,7 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
     EdgeCollection<NodeType, PropertyEdgeType> {
     var mirrorProperty: KProperty<MutableCollection<PropertyEdgeType>>
 
-    override fun handlePostRemove(edge: PropertyEdgeType) {
+    override fun handleOnRemove(edge: PropertyEdgeType) {
         // Handle our mirror property.
         if (outgoing) {
             var prevOfNext = mirrorProperty.call(edge.end)
@@ -52,14 +52,14 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
         }
 
         // Execute any remaining pre actions
-        super.handlePostRemove(edge)
+        super.handleOnRemove(edge)
     }
 
     /**
      * Adds this particular edge to its [mirrorProperty]. We need the information if this is an
      * [outgoing] or incoming edge collection.
      */
-    override fun handlePostAdd(edge: PropertyEdgeType) {
+    override fun handleOnAdd(edge: PropertyEdgeType) {
         // Handle our mirror property. We add some extra "in" checks here, otherwise things will
         // loop.
         if (outgoing) {
@@ -75,6 +75,6 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
         }
 
         // Execute any remaining post actions
-        super.handlePostAdd(edge)
+        super.handleOnAdd(edge)
     }
 }

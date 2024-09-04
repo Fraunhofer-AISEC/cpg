@@ -59,7 +59,7 @@ class Invoke(
 /** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
 class Invokes<NodeType : FunctionDeclaration>(thisRef: CallExpression) :
     EdgeList<FunctionDeclaration, Invoke>(thisRef = thisRef, init = ::Invoke) {
-    override fun handlePostAdd(edge: Invoke) {
+    override fun handleOnAdd(edge: Invoke) {
         // TODO: Make thisRef generic :(
         edge.end.registerTypeObserver(thisRef as CallExpression)
     }

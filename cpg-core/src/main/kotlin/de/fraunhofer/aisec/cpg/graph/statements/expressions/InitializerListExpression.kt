@@ -46,11 +46,10 @@ import org.neo4j.ogm.annotation.Relationship
 class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var initializerEdges =
         astEdgesOf<Expression>(
-            postAdd = { it.end.registerTypeObserver(this) },
-            postRemove = { it.end.unregisterTypeObserver(this) },
+            onAdd = { it.end.registerTypeObserver(this) },
+            onRemove = { it.end.unregisterTypeObserver(this) },
         )
 
     /** Virtual property to access [initializerEdges] without property edges. */

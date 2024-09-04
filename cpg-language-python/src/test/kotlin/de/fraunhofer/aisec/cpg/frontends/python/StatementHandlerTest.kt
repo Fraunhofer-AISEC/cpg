@@ -69,4 +69,21 @@ class StatementHandlerTest {
             assertEquals(idx, param.index)
         }
     }
+
+    @Test
+    fun testVarargsArguments() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val file = topLevel.resolve("varargs.py").toFile()
+
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+
+        assertNotNull(result)
+
+        val func = result.functions["test_varargs"]
+        assertNotNull(func, "Function 'test_varargs' should be found")
+
+        val variadicArg = func.parameters["args"]
+        assertNotNull(variadicArg, "Failed to find variadic argc")
+        assertEquals(true, variadicArg.isVariadic)
+    }
 }
