@@ -33,11 +33,9 @@ import kotlin.reflect.full.findAnnotations
 import org.slf4j.LoggerFactory
 
 /**
- * A simple helper class for keeping track of passes and their (initially not satisfied)
- * dependencies during the ordering process. The goal of this class is to provide ordered passes
- * when invoking the [order] function.
+ * The goal of this class is to provide ordered passes when invoking the [order] function.
  * * soft dependencies ([DependsOn] with `softDependency == true`): all passes registered as soft
- *   dependency will be executed before the current pass, if they are registered
+ *   dependency will be executed before the current pass, if they are registered independently
  * * hard dependencies ([DependsOn] with `softDependency == false (default)`): all passes registered
  *   as hard dependency will be executed before the current pass (hard dependencies will be
  *   registered even if the user did not specifically register them)
@@ -45,25 +43,34 @@ import org.slf4j.LoggerFactory
  * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
  * * late pass [ExecuteLate]: a pass that is executed as late as possible without violating any of
  *   the other constraints
+ * * [ExecuteBefore] (with soft and hard dependencies): the pass is to be executed before the other
+ *   pass (soft: if the other pass is also configured)
  *
- * This class works by computing an initial [workingList] consisting of yet to schedule [Pass]es in
- * form of [PassWithDependencies] elements (they keep track of unsatisfied dependencies).
- * 1. All passes or collected in the [workingList]
- *     1. Hard dependencies and [ExecuteBefore] dependencies are automatically added to the
- *        [workingList], too.
- *     2. A [sanityCheck] is performed.
- * 2. If there is a [ExecuteFirst] pass, then it is selected for the result.
- * 3. While the [workingList] contains more than one element ([ExecuteLast]):
- *     1. All passes with no unsatisfied dependencies AND no [ExecuteLast] AND no [ExecuteLate] are
- *        selected.
- *     2. If the above fails: All passes with no unsatisfied dependencies AND no [ExecuteLast] are
- *        selected.
- *     3. If the above also fails: -> exception.
- * 4. The [ExecuteLast] pass is chosen.
+ * This class works by
+ * 1. Setup
+ *     1. Iterating through the configured passes and registering them (plus all `hard == true`
+ *        dependencies) as [PassWithDependencies] containers:
+ *         1. [ExecuteFirst] and [ExecuteLast] passes are stored in separate lists to keep the
+ *            ordering logic simple.
+ *         2. Normal passes are stored in the [workingList]
+ *     2. [ExecuteBefore] passes: "`A` execute before `B`" implies that "`B` depends on `A`" -> the
+ *        dependency is stored in the [PassWithDependencies.dependenciesRemaining] of "`B`". This
+ *        logic is implemented in [populateExecuteBeforeDependencies].
+ *     3. [DependsOn] passes: [PassWithDependencies.dependenciesRemaining] keeps track of these
+ *        dependencies. [populateNormalDependencies] implements this logic.
+ *     4. A [sanityCheck] is performed.
+ * 2. Ordering
+ *     1. [firstPassesList] passes are moved to the result.
+ *     2. While the [workingList] is not empty:
+ *         1. All passes ready to be scheduled are moved to the result excluding late passes. If
+ *            this found at least one pass, then the loop starts again.
+ *         2. Late passes are considered for scheduling as well. If this found at least one pass,
+ *            then the loop starts again. Otherwise, the dependencies cannot be satisfied.
+ *     3. [lastPassesList] passes are moved to the result.
  *
- * Whenever a pass is selected: all other passes in the [workingList] are updated (this pass is
- * removed from their dependencies). This allows the passes to be chosen in the next round because
- * all dependencies are then met.
+ * Note: whenever a pass is moved to the result:
+ * - it is removed from the [workingList] (and [firstPassesList] / [lastPassesList])
+ * - the other pass's [PassWithDependencies.dependenciesRemaining] are updated.
  */
 class PassOrderingHelper {
     /** This list stores all non-{first,last} passes which have not yet been ordered. */
@@ -99,6 +106,8 @@ class PassOrderingHelper {
         sanityCheck()
     }
 
+    private constructor() {}
+
     /** Register all (soft and hard) dependencies. */
     private fun populateNormalDependencies() {
         for (pass in workingList) {
@@ -126,16 +135,20 @@ class PassOrderingHelper {
             return
         }
 
-        // TODO: do we want to check for execute first AND execute last?
+        var firstOrLastPass = false
         if (newElement.findAnnotations<ExecuteFirst>().isNotEmpty()) {
+            firstOrLastPass = true
             firstPassesList.add(PassWithDependencies(newElement, mutableSetOf()))
-        } else if (newElement.findAnnotations<ExecuteLast>().isNotEmpty()) {
+        }
+        if (newElement.findAnnotations<ExecuteLast>().isNotEmpty()) {
+            firstOrLastPass = true
             lastPassesList.add(PassWithDependencies(newElement, mutableSetOf()))
-        } else {
+        }
+        if (!firstOrLastPass) {
             workingList.add(PassWithDependencies(newElement, mutableSetOf()))
         }
 
-        // Take care of dependencies
+        // take care of hard dependencies
         for (dep in newElement.findAnnotations<DependsOn>()) {
             if (!dep.softDependency) { // only hard dependencies
                 addToWorkingList(dep.value)
@@ -151,16 +164,24 @@ class PassOrderingHelper {
     }
 
     /**
-     * Order the passes.
+     * Order the passes. This function honors
+     * - [DependsOn] with soft and hard dependencies
+     * - [ExecuteFirst]
+     * - [ExecuteLast]
+     * - [ExecuteLate]
+     * - [ExecuteBefore] with soft and hard dependencies
      *
      * @return a sorted list of passes, with passes that can be run in parallel together in a nested
      *   list.
+     * @throws [ConfigurationException] if the passes cannot be ordered.
      */
     fun order(): List<List<KClass<out Pass<*>>>> {
         val result = mutableListOf<List<KClass<out Pass<*>>>>()
 
         // [ExecuteFirst]
-        getAndRemoveFirstPasses()?.let { result.add(listOf(it)) }
+        getAndRemoveFirstPasses()?.let {
+            result.add(listOf(it))
+        } // there can only be one because of [sanityCheck]
 
         // "normal / middle" passes
         while (workingList.isNotEmpty()) {
@@ -178,7 +199,9 @@ class PassOrderingHelper {
         }
 
         // [ExecuteLast]
-        lastPassesList.firstOrNull()?.let { result.add(listOf(selectPass(it))) }
+        lastPassesList.firstOrNull()?.let {
+            result.add(listOf(selectPass(it)))
+        } // there can only be one because of [sanityCheck]
 
         log.info(
             "Passes after enforcing order: {}",
@@ -211,7 +234,7 @@ class PassOrderingHelper {
 
     /**
      * Iterate through all elements and remove the provided dependency [cls] from all passes in the
-     * working list.
+     * working lists.
      */
     private fun removeDependencyByClass(cls: KClass<out Pass<*>>) {
         for (pass in workingList) {
