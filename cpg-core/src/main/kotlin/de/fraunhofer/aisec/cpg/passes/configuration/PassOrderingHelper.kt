@@ -93,21 +93,19 @@ class PassOrderingHelper {
         populateExecuteBeforeDependencies()
 
         // clean up soft dependencies which are not registered in the workingList
-        cleanupSoftDependencies()
+        populateNormalDependencies()
 
         // finally, run a sanity check
         sanityCheck()
     }
 
-    /**
-     * Remove all soft dependencies which are not part of the workingList (not registered soft
-     * dependencies).
-     */
-    private fun cleanupSoftDependencies() {
+    /** Register all (soft and hard) dependencies. */
+    private fun populateNormalDependencies() {
         for (pass in workingList) {
-            pass.dependenciesRemaining.removeAll { dependency ->
-                workingList.find { pass -> dependency == pass.pass } == null
-            }
+            pass.hardDependencies.forEach { pass.dependenciesRemaining += it }
+            pass.softDependencies
+                .filter { workingList.map { it.pass }.contains(it) }
+                .forEach { pass.dependenciesRemaining += it }
         }
     }
 
@@ -130,11 +128,11 @@ class PassOrderingHelper {
 
         // TODO: do we want to check for execute first AND execute last?
         if (newElement.findAnnotations<ExecuteFirst>().isNotEmpty()) {
-            firstPassesList.add(PassWithDependencies(newElement))
+            firstPassesList.add(PassWithDependencies(newElement, mutableSetOf()))
         } else if (newElement.findAnnotations<ExecuteLast>().isNotEmpty()) {
-            lastPassesList.add(PassWithDependencies(newElement))
+            lastPassesList.add(PassWithDependencies(newElement, mutableSetOf()))
         } else {
-            workingList.add(PassWithDependencies(newElement))
+            workingList.add(PassWithDependencies(newElement, mutableSetOf()))
         }
 
         // Take care of dependencies

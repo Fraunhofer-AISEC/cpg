@@ -33,22 +33,16 @@ import kotlin.reflect.full.hasAnnotation
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * A simple helper class to match a pass with dependencies. [softDependenciesRemaining] and
- * [hardDependenciesRemaining] show the currently remaining / unsatisfied dependencies. These values
- * are updated during the ordering procedure.
+ * A simple helper class to match a pass with its dependencies. [dependenciesRemaining] shows the
+ * currently remaining / unsatisfied dependencies. These values are updated during the ordering
+ * procedure.
  */
 data class PassWithDependencies(
     /** the pass itself */
     val pass: KClass<out Pass<*>>,
-    /** currently unsatisfied dependencies (soft / hard / ExecuteBefore from other passes) */
+    /** currently unsatisfied dependencies (soft / hard / [ExecuteBefore] from other passes) */
     val dependenciesRemaining: MutableSet<KClass<out Pass<*>>>
 ) {
-    constructor(pass: KClass<out Pass<*>>) : this(pass, mutableSetOf<KClass<out Pass<*>>>()) {
-        for (d in pass.findAnnotations<DependsOn>()) {
-            dependenciesRemaining += d.value
-        }
-    }
-
     val isFirstPass: Boolean
         get() {
             return pass.hasAnnotation<ExecuteFirst>()
