@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.Pass
 import java.util.*
 import kotlin.reflect.KClass
@@ -109,9 +110,9 @@ class PassOrderingHelper {
     /** Register all (soft and hard) dependencies. */
     private fun populateNormalDependencies() {
         for (pass in workingList) {
-            pass.hardDependencies.forEach { pass.dependenciesRemaining += it }
-            pass.softDependencies
-                .filter { workingList.map { it.pass }.contains(it) }
+            pass.passClass.hardDependencies.forEach { pass.dependenciesRemaining += it }
+            pass.passClass.softDependencies
+                .filter { workingList.map { it.passClass }.contains(it) }
                 .forEach { pass.dependenciesRemaining += it }
         }
     }
@@ -126,7 +127,7 @@ class PassOrderingHelper {
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
         if (
             (workingList + firstPassesList + lastPassesList)
-                .filter { it.pass == newElement }
+                .filter { it.passClass == newElement }
                 .isNotEmpty()
         ) {
             // we already know about this pass
@@ -217,13 +218,13 @@ class PassOrderingHelper {
         for (pass in
             (workingList + firstPassesList + lastPassesList)) { // iterate over entire workingList
             for (executeBeforePass in
-                (pass.softExecuteBefore +
-                    pass.hardExecuteBefore)) { // iterate over all executeBefore passes
+                (pass.passClass.softExecuteBefore +
+                    pass.passClass.hardExecuteBefore)) { // iterate over all executeBefore passes
                 (workingList + firstPassesList + lastPassesList)
                     .map { it }
-                    .filter { it.pass == executeBeforePass } // find the executeBeforePass
+                    .filter { it.passClass == executeBeforePass } // find the executeBeforePass
                     .forEach {
-                        it.dependenciesRemaining += pass.pass
+                        it.dependenciesRemaining += pass.passClass
                     } // add the original pass to the dependency list
             }
         }
@@ -254,7 +255,9 @@ class PassOrderingHelper {
      */
     private fun getAndRemoveNextPasses(allowLatePasses: Boolean): List<KClass<out Pass<*>>> {
         return workingList
-            .filter { it.dependenciesRemaining.isEmpty() && it.isLatePass == allowLatePasses }
+            .filter {
+                it.dependenciesRemaining.isEmpty() && it.passClass.isLatePass == allowLatePasses
+            }
             .map { selectPass(it) }
     }
 
@@ -279,7 +282,7 @@ class PassOrderingHelper {
      */
     private fun selectPass(pass: PassWithDependencies): KClass<out Pass<*>> {
         // remove it from the other passes dependencies
-        removeDependencyByClass(pass.pass)
+        removeDependencyByClass(pass.passClass)
 
         // remove it from the workingList
         workingList.remove(pass)
@@ -287,7 +290,7 @@ class PassOrderingHelper {
         lastPassesList.remove(pass)
 
         // return the pass (not the [PassWithDependencies] container)
-        return pass.pass
+        return pass.passClass
     }
 
     /**
@@ -302,32 +305,32 @@ class PassOrderingHelper {
     private fun sanityCheck() {
         if (firstPassesList.size > 1) {
             throw ConfigurationException(
-                "More than one pass registered as first pass: \"${firstPassesList.map { it.pass }}\"."
+                "More than one pass registered as first pass: \"${firstPassesList.map { it.passClass }}\"."
             )
         }
         if (lastPassesList.size > 1) {
             throw ConfigurationException(
-                "More than one pass registered as last pass: \"${lastPassesList.map { it.pass }}\"."
+                "More than one pass registered as last pass: \"${lastPassesList.map { it.passClass }}\"."
             )
         }
 
         firstPassesList.map { firstPass ->
-            if (firstPass.hardDependencies.isNotEmpty()) {
+            if (firstPass.passClass.hardDependencies.isNotEmpty()) {
                 throw ConfigurationException(
-                    "The first pass \"${firstPass.pass}\" has a hard dependency: \"${firstPass.hardDependencies}\"."
+                    "The first pass \"${firstPass.passClass}\" has a hard dependency: \"${firstPass.passClass.hardDependencies}\"."
                 )
             }
         }
 
         lastPassesList.map { lastPass ->
-            if (lastPass.softExecuteBefore.isNotEmpty()) {
+            if (lastPass.passClass.softExecuteBefore.isNotEmpty()) {
                 throw ConfigurationException(
-                    "The last pass \"${lastPass.pass}\" is supposed to be executed before another pass: \"${lastPass.softExecuteBefore}\"."
+                    "The last pass \"${lastPass.passClass}\" is supposed to be executed before another pass: \"${lastPass.passClass.softExecuteBefore}\"."
                 )
             }
-            if (lastPass.hardExecuteBefore.isNotEmpty()) {
+            if (lastPass.passClass.hardExecuteBefore.isNotEmpty()) {
                 throw ConfigurationException(
-                    "The last pass \"${lastPass.pass}\" is supposed to be executed before another pass: \"${lastPass.hardExecuteBefore}\"."
+                    "The last pass \"${lastPass.passClass}\" is supposed to be executed before another pass: \"${lastPass.passClass.hardExecuteBefore}\"."
                 )
             }
         }

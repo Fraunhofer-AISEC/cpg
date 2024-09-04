@@ -651,11 +651,71 @@ private constructor(
             )
         }
 
+        private fun mermaidPassName(pass: KClass<out Pass<*>>): String {
+            return when {
+                pass.isFirstPass -> "FirstPass"
+                pass.isLastPass -> "LastPass"
+                else -> pass.simpleName ?: "UnknownPass"
+            }
+        }
+        /**
+         * Builds a markdown representation of a pass dependency graph, based on
+         * [Mermaid](https://mermaid.js.org) syntax.
+         */
+        private fun buildMermaid(passes: List<KClass<out Pass<out Node>>>): String {
+            var s = "```mermaid\n"
+            s += "flowchart TD;\n"
+
+            s += "    subgraph FirstPassesSubgraph [\"First Passes\"];\n"
+            passes
+                .filter { it.isFirstPass }
+                .forEach { s += "    FirstPass[\"${it.simpleName}\"];\n" }
+            s += "    end;\n"
+            s += "    subgraph LastPassesSubgraph [\"Last Passes\"];\n"
+            passes
+                .filter { it.isLastPass }
+                .forEach { s += "        LastPass[\"${it.simpleName}\"];\n" }
+            s += "    end;\n"
+
+            s += "    FirstPassesSubgraph~~~NormalPassesSubgraph;\n"
+            s += "    subgraph NormalPassesSubgraph [\"Normal Passes\"];\n"
+            for ((pass, deps) in passes.associateWith { it.softDependencies }.entries) {
+                for (dep in deps) {
+                    s += "        ${mermaidPassName(dep)}-.->${mermaidPassName(pass)};\n"
+                }
+            }
+            for ((pass, deps) in passes.associateWith { it.hardDependencies }.entries) {
+                for (dep in deps) {
+                    s += "        ${mermaidPassName(dep)}-->${mermaidPassName(pass)};\n"
+                }
+            }
+            for ((pass, before) in passes.associateWith { it.softExecuteBefore }.entries) {
+                for (execBefore in before) {
+                    s += "        ${mermaidPassName(pass)}-.->${mermaidPassName(execBefore)};\n"
+                }
+            }
+            for ((pass, beforeList) in passes.associateWith { it.hardExecuteBefore }.entries) {
+                for (execBefore in beforeList) {
+                    s += "        ${mermaidPassName(pass)}-->${mermaidPassName(execBefore)};\n"
+                }
+            }
+            s += "    end;\n"
+            s += "    NormalPassesSubgraph~~~LastPassesSubgraph;\n"
+            s += "```"
+            return s
+        }
+
         /** This function reorders passes in order to meet their dependency requirements. */
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
             val orderingHelper = PassOrderingHelper(passes)
+            log.info(
+                "The following mermaid graph represents the pass dependencies: \n ${
+            buildMermaid(
+               passes
+            )}"
+            )
 
             return orderingHelper.order()
         }
