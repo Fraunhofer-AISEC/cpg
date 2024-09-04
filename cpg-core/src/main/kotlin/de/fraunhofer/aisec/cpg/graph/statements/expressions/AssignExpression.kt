@@ -70,22 +70,28 @@ class AssignExpression :
             }
             if (isSimpleAssignment) {
                 field.forEach {
-                    val unwrapped = it.unwrapReference()
+                    val unwrapped = it.unwrapReference(false)
                     if (unwrapped is Reference) {
                         unwrapped.let {
                             it.access = AccessValues.WRITE
                             it.dfgHandlerHint = true
                         }
+                    } else if (unwrapped is UnaryOperator) {
+                        unwrapped.access = AccessValues.WRITE
+                        unwrapped.dfgHandlerHint = true
                     }
                 }
             } else {
                 field.forEach {
-                    val unwrapped = it.unwrapReference()
+                    val unwrapped = it.unwrapReference(false)
                     if (unwrapped is Reference) {
                         unwrapped.let {
                             it.access = AccessValues.READWRITE
                             it.dfgHandlerHint = true
                         }
+                    } else if (unwrapped is UnaryOperator) {
+                        unwrapped.access = AccessValues.WRITE
+                        unwrapped.dfgHandlerHint = true
                     }
                 }
 
