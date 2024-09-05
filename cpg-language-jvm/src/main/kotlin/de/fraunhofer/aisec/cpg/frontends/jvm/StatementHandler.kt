@@ -105,8 +105,10 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): AssignExpression {
         val assign = newAssignExpression("=", rawNode = defStmt)
-        assign.lhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp))
-        assign.rhs = listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp))
+        assign.lhs =
+            listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
+        assign.rhs =
+            listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp)).toMutableList()
 
         return assign
     }

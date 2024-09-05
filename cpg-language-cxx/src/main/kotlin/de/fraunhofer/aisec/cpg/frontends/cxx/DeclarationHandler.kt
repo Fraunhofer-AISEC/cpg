@@ -314,7 +314,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
                     typeParamDecl.default = defaultType
                 }
-                templateDeclaration.addParameter(typeParamDecl)
+                templateDeclaration.parameters += typeParamDecl
             } else if (templateParameter is CPPASTParameterDeclaration) {
                 // Handle Value Parameters
                 val nonTypeTemplateParamDeclaration =
@@ -333,7 +333,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             it.nextDFGEdges += nonTypeTemplateParamDeclaration
                         }
                     }
-                    templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
+                    templateDeclaration.parameters += nonTypeTemplateParamDeclaration
                     frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
                 }
             }
@@ -422,7 +422,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             handleDeclarationSpecifier(declSpecifier, ctx, sequence)
 
         // Fill template params, if needed
-        val templateParams: List<Node>? = extractTemplateParams(ctx, declSpecifier)
+        val templateParams = extractTemplateParams(ctx, declSpecifier)
 
         // Loop through all declarators, as we can potentially have multiple declarations here
         for (declarator in ctx.declarators) {
@@ -484,7 +484,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 //   initializer.
                 if (declaration is VariableDeclaration) {
                     // Set template parameters of the variable (if any)
-                    declaration.templateParameters = templateParams
+                    if (templateParams != null) {
+                        declaration.templateParameters = templateParams
+                    }
 
                     // Parse the initializer, if we have one
                     declarator.initializer?.let {

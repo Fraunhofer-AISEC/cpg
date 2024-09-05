@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.*
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -105,7 +104,7 @@ class PerformanceRegressionTest {
     }
 
     fun doNothing(node: Node) {
-        for (child in SubgraphWalker.getAstChildren(node)) {
+        for (child in node.astChildren) {
             doNothing(child)
         }
     }

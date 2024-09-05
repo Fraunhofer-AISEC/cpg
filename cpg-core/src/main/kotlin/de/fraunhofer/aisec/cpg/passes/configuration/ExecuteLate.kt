@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
-
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+package de.fraunhofer.aisec.cpg.passes.configuration
 
 /**
- * Annotates single member variables of supertype [Node] or a collection of nodes to be part of the
- * AST of the current [Node]. This is used to iterate over all AST sub-nodes with
- * [SubgraphWalker.getAstChildren].
+ * Indicates whether this pass should be executed as late as possible (without breaking any other
+ * constraints like [ExecuteLast] or [DependsOn], ...)
  */
-@Target(AnnotationTarget.FIELD) @Retention(AnnotationRetention.RUNTIME) annotation class AST
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+annotation class ExecuteLate

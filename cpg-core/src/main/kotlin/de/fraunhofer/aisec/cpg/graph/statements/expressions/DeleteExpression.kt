@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 class DeleteExpression : Expression() {
-    @AST var operand: Expression? = null
+    @Relationship("OPERAND") var operandEdge = astOptionalEdgeOf<Expression>()
+    var operand by unwrapping(DeleteExpression::operandEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
