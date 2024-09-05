@@ -657,10 +657,7 @@ private constructor(
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
             val orderingHelper = PassOrderingHelper(passes)
             log.info(
-                "The following mermaid graph represents the pass dependencies: \n ${
-                    MermaidHelper.buildMermaid(
-               passes
-            )}"
+                "The following mermaid graph represents the pass dependencies: \n ${buildMermaid(passes)}"
             )
 
             return orderingHelper.order()

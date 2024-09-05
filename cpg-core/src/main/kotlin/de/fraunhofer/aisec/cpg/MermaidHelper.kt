@@ -35,67 +35,64 @@ import de.fraunhofer.aisec.cpg.passes.softDependencies
 import de.fraunhofer.aisec.cpg.passes.softExecuteBefore
 import kotlin.reflect.KClass
 
-/** Helper to create a mermaid graph given a list of passes. */
-object MermaidHelper {
-    /** Helper function to replace the first and last passes names by their identifier. */
-    private const val UNKNOWNPASS = "UnknownPass"
-    private const val FIRSTPASSESSUBGRAPHIDENTIFIER = "FirstPassesSubgraph"
-    private const val NORMALPASSESUBGRAPHIDENTIFIER = "NormalPassesSubgraph"
-    private const val LASTPASSESSUBGRAPHIDENTIFIER = "LastPassesSubgraph"
-    private const val FIRSTPASSIDENTIFIER = "FirstPass"
-    private const val LASTPASSIDEINTIFIER = "LastPass"
+private const val UNKNOWN_PASS = "UnknownPass"
+private const val FIRST_PASSES_SUBGRAPH_IDENTIFIER = "FirstPassesSubgraph"
+private const val NORMAL_PASSES_SUBGRAPH_IDENTIFIER = "NormalPassesSubgraph"
+private const val LAST_PASSES_SUBGRAPH_IDENTIFIER = "LastPassesSubgraph"
+private const val FIRST_PASS_IDENTIFIER = "FirstPass"
+private const val LAST_PASS_IDENTIFIER = "LastPass"
 
-    private fun mermaidPassName(pass: KClass<out Pass<*>>): String {
-        return when {
-            pass.isFirstPass -> FIRSTPASSIDENTIFIER
-            pass.isLastPass -> LASTPASSIDEINTIFIER
-            else -> pass.simpleName ?: UNKNOWNPASS
+/** Helper function to replace the first and last passes names by their identifier. */
+private fun mermaidPassName(pass: KClass<out Pass<*>>): String {
+    return when {
+        pass.isFirstPass -> FIRST_PASS_IDENTIFIER
+        pass.isLastPass -> LAST_PASS_IDENTIFIER
+        else -> pass.simpleName ?: UNKNOWN_PASS
+    }
+}
+/**
+ * Builds a markdown representation of a pass dependency graph, based on
+ * [Mermaid](https://mermaid.js.org) syntax.
+ */
+internal fun buildMermaid(passes: List<KClass<out Pass<out Node>>>): String {
+    var s = "```mermaid\n"
+    s += "flowchart TD;\n"
+
+    s += "    subgraph $FIRST_PASSES_SUBGRAPH_IDENTIFIER [\"First Passes\"];\n"
+    passes
+        .filter { it.isFirstPass }
+        .forEach { s += "    $FIRST_PASS_IDENTIFIER[\"${it.simpleName}\"];\n" }
+    s += "    end;\n"
+    s += "    subgraph $LAST_PASSES_SUBGRAPH_IDENTIFIER [\"Last Passes\"];\n"
+    passes
+        .filter { it.isLastPass }
+        .forEach { s += "        $LAST_PASS_IDENTIFIER[\"${it.simpleName}\"];\n" }
+    s += "    end;\n"
+
+    s += "    $FIRST_PASSES_SUBGRAPH_IDENTIFIER~~~$NORMAL_PASSES_SUBGRAPH_IDENTIFIER;\n"
+    s += "    subgraph $NORMAL_PASSES_SUBGRAPH_IDENTIFIER [\"Normal Passes\"];\n"
+    for ((pass, deps) in passes.associateWith { it.softDependencies }.entries) {
+        for (dep in deps) {
+            s += "        ${mermaidPassName(dep)}-.->${mermaidPassName(pass)};\n"
         }
     }
-    /**
-     * Builds a markdown representation of a pass dependency graph, based on
-     * [Mermaid](https://mermaid.js.org) syntax.
-     */
-    fun buildMermaid(passes: List<KClass<out Pass<out Node>>>): String {
-        var s = "```mermaid\n"
-        s += "flowchart TD;\n"
-
-        s += "    subgraph $FIRSTPASSESSUBGRAPHIDENTIFIER [\"First Passes\"];\n"
-        passes
-            .filter { it.isFirstPass }
-            .forEach { s += "    $FIRSTPASSIDENTIFIER[\"${it.simpleName}\"];\n" }
-        s += "    end;\n"
-        s += "    subgraph $LASTPASSESSUBGRAPHIDENTIFIER [\"Last Passes\"];\n"
-        passes
-            .filter { it.isLastPass }
-            .forEach { s += "        $LASTPASSIDEINTIFIER[\"${it.simpleName}\"];\n" }
-        s += "    end;\n"
-
-        s += "    $FIRSTPASSESSUBGRAPHIDENTIFIER~~~$NORMALPASSESUBGRAPHIDENTIFIER;\n"
-        s += "    subgraph $NORMALPASSESUBGRAPHIDENTIFIER [\"Normal Passes\"];\n"
-        for ((pass, deps) in passes.associateWith { it.softDependencies }.entries) {
-            for (dep in deps) {
-                s += "        ${mermaidPassName(dep)}-.->${mermaidPassName(pass)};\n"
-            }
+    for ((pass, deps) in passes.associateWith { it.hardDependencies }.entries) {
+        for (dep in deps) {
+            s += "        ${mermaidPassName(dep)}-->${mermaidPassName(pass)};\n"
         }
-        for ((pass, deps) in passes.associateWith { it.hardDependencies }.entries) {
-            for (dep in deps) {
-                s += "        ${mermaidPassName(dep)}-->${mermaidPassName(pass)};\n"
-            }
-        }
-        for ((pass, before) in passes.associateWith { it.softExecuteBefore }.entries) {
-            for (execBefore in before) {
-                s += "        ${mermaidPassName(pass)}-.->${mermaidPassName(execBefore)};\n"
-            }
-        }
-        for ((pass, beforeList) in passes.associateWith { it.hardExecuteBefore }.entries) {
-            for (execBefore in beforeList) {
-                s += "        ${mermaidPassName(pass)}-->${mermaidPassName(execBefore)};\n"
-            }
-        }
-        s += "    end;\n"
-        s += "    $NORMALPASSESUBGRAPHIDENTIFIER~~~$LASTPASSESSUBGRAPHIDENTIFIER;\n"
-        s += "```"
-        return s
     }
+    for ((pass, before) in passes.associateWith { it.softExecuteBefore }.entries) {
+        for (execBefore in before) {
+            s += "        ${mermaidPassName(pass)}-.->${mermaidPassName(execBefore)};\n"
+        }
+    }
+    for ((pass, beforeList) in passes.associateWith { it.hardExecuteBefore }.entries) {
+        for (execBefore in beforeList) {
+            s += "        ${mermaidPassName(pass)}-->${mermaidPassName(execBefore)};\n"
+        }
+    }
+    s += "    end;\n"
+    s += "    $NORMAL_PASSES_SUBGRAPH_IDENTIFIER~~~$LAST_PASSES_SUBGRAPH_IDENTIFIER;\n"
+    s += "```"
+    return s
 }
