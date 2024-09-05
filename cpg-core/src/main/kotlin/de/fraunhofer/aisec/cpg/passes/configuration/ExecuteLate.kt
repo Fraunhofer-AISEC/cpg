@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,17 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes.configuration
 
-import de.fraunhofer.aisec.cpg.passes.Pass
-import kotlin.reflect.KClass
-
 /**
- * A simple helper class to match a pass with its dependencies. [dependenciesRemaining] shows the
- * currently remaining / unsatisfied dependencies. These values are updated during the ordering
- * procedure.
+ * Indicates whether this pass should be executed as late as possible (without breaking any other
+ * constraints like [ExecuteLast] or [DependsOn], ...)
  */
-data class PassWithDependencies(
-    /** the pass itself */
-    val passClass: KClass<out Pass<*>>,
-    /** currently unsatisfied dependencies (soft / hard / [ExecuteBefore] from other passes) */
-    val dependenciesRemaining: MutableSet<KClass<out Pass<*>>>
-)
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+annotation class ExecuteLate
