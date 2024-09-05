@@ -66,8 +66,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTRaise,
             is Python.ASTTry,
             is Python.ASTTryStar,
-            is Python.ASTWith,
-            is Python.ASTAsyncWith ->
+            is Python.NormalOrAsyncWith ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node

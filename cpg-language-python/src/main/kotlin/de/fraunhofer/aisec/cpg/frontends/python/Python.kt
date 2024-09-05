@@ -333,15 +333,25 @@ interface Python {
     }
 
     /**
+     * ast.With and ast.AsyncWith are not related according to the Python syntax. However, they are
+     * so similar, that we make use of this interface to avoid a lot of duplicate code.
+     */
+    sealed class NormalOrAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        abstract val items: ASTwithitem
+        abstract val body: List<ASTBASEstmt>
+        abstract val type_comment: String?
+    }
+
+    /**
      * ```
      * ast.With = class With(stmt)
      *  |  With(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val items: ASTwithitem by lazy { "items" of pyObject }
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-        val type_comment: String? by lazy { "type_comment" of pyObject }
+    class ASTWith(pyObject: PyObject) : NormalOrAsyncWith(pyObject) {
+        override val items: ASTwithitem by lazy { "items" of pyObject }
+        override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        override val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
     /**
@@ -350,12 +360,10 @@ interface Python {
      *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class ASTAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val target: ASTBASEexpr by lazy { "target" of pyObject }
-        val iter: ASTBASEexpr by lazy { "iter" of pyObject }
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
-        val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
-        val type_comment: String? by lazy { "type_comment" of pyObject }
+    class ASTAsyncWith(pyObject: PyObject) : NormalOrAsyncWith(pyObject) {
+        override val items: ASTwithitem by lazy { "items" of pyObject }
+        override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        override val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
     /**
