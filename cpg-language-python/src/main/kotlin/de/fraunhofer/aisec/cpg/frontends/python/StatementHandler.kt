@@ -140,9 +140,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         node.orelse.firstOrNull()?.let {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("Cannot handle \"orelse\" in while loops.")
-            )
+            ret.additionalProblems +=
+                newProblem(
+                    problem = "Cannot handle \"orelse\" in while loops.",
+                    rawNode = node.orelse
+                )
         }
         return ret
     }
@@ -153,9 +155,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         node.orelse.firstOrNull()?.let {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("Cannot handle \"orelse\" in for loops.")
-            )
+            ret.additionalProblems +=
+                newProblem(
+                    problem = "Cannot handle \"orelse\" in for loops.",
+                    rawNode = node.orelse
+                )
         }
         return ret
     }
@@ -166,9 +170,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         node.orelse.firstOrNull()?.let {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("Cannot handle \"orelse\" in async for loops.")
-            )
+            ret.additionalProblems +=
+                newProblem(
+                    problem = "Cannot handle \"orelse\" in async for loops.",
+                    rawNode = node.orelse
+                )
         }
         return ret
     }
@@ -253,9 +259,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(cls)
 
         stmt.keywords.forEach {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("could not parse keyword $it in class")
-            )
+            cls.addDeclaration(newProblemDeclaration("could not parse keyword $it in class"))
         }
 
         for (s in stmt.body) {
@@ -431,11 +435,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     is ConstructorDeclaration -> result.receiver = recvNode
                     is MethodDeclaration -> result.receiver = recvNode
                     else ->
-                        frontend.currentTU?.addDeclaration(
-                            newProblemDeclaration(
-                                "Expected a constructor or method declaration. Got something else."
+                        result.additionalProblems +=
+                            newProblem(
+                                problem =
+                                    "Expected a constructor or method declaration. Got something else.",
+                                rawNode = result
                             )
-                        )
                 }
             }
         }
