@@ -55,19 +55,6 @@ class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver, HasAli
     /** Specifies, whether this a pre fix operation. */
     var isPrefix = false
 
-    /**
-     * Is this reference used for writing data instead of just reading it? Determines dataflow
-     * direction
-     */
-    var access = AccessValues.READ
-
-    /**
-     * Is this reference used in the [AssignExpression.lhs] or [UnaryOperator.input] or
-     * [ForEachStatement.variable] which has a dedicated handling in the
-     * [ControlFlowSensitiveDFGPass]?
-     */
-    var dfgHandlerHint = false
-
     private fun changeExpressionAccess() {
         var access = AccessValues.READ
         if (operatorCode == "++" || operatorCode == "--") {
@@ -76,8 +63,8 @@ class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver, HasAli
         }
         if (input is Reference) {
             (input as? Reference)?.access = access
-        } else if (input is UnaryOperator) {
-            (input as UnaryOperator).access = access
+        } else if (input is UnaryOperator && (input as UnaryOperator).input is Reference) {
+            ((input as UnaryOperator).input as Reference)?.access = access
         }
     }
 
