@@ -82,6 +82,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return ok
     }
 
+    /** Replaces the first occurrence of an edge with [old] with a new edge to [new]. */
     fun replace(old: NodeType, new: NodeType): Boolean {
         val idx = this.indexOfFirst { it.end == old }
         if (idx != -1) {
