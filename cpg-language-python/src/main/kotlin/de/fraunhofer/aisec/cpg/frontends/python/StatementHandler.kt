@@ -44,7 +44,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
-            is Python.NormalOrAsyncFunctionDef -> handleFunctionDef(node)
+            is Python.ASTFunctionDef -> handleFunctionDef(node)
+            is Python.ASTAsyncFunctionDef -> handleFunctionDef(node)
             is Python.ASTPass -> return newEmptyStatement(rawNode = node)
             is Python.ASTImportFrom -> handleImportFrom(node)
             is Python.ASTAssign -> handleAssign(node)
@@ -53,7 +54,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTIf -> handleIf(node)
             is Python.ASTAnnAssign -> handleAnnAssign(node)
             is Python.ASTExpr -> handleExpressionStatement(node)
-            is Python.NormalOrAsyncFor -> handleFor(node)
+            is Python.ASTFor -> handleFor(node)
+            is Python.ASTAsyncFor -> handleFor(node)
             is Python.ASTWhile -> handleWhile(node)
             is Python.ASTImport -> handleImport(node)
             is Python.ASTBreak -> newBreakStatement(rawNode = node)
@@ -66,7 +68,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.ASTRaise,
             is Python.ASTTry,
             is Python.ASTTryStar,
-            is Python.NormalOrAsyncWith ->
+            is Python.ASTWith,
+            is Python.ASTAsyncWith ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
@@ -142,7 +145,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleFor(node: Python.NormalOrAsyncFor): Statement {
         val ret = newForEachStatement(rawNode = node)
-        if (node is Python.ASTAsyncFor) {
+        if (node.isAsync) {
             ret.addDeclaration(
                 newProblemDeclaration(
                     problem = "The \"async\" keyword is not yet supported.",
@@ -153,7 +156,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node as Python.ASTBASEstmt)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -318,7 +321,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+            result.body = makeBlock(s.body).codeAndLocationFromChildren(s as Python.ASTBASEstmt)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -426,7 +429,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     fun handleDeclaratorList(
-        node: Python.AST,
+        node: Python.WithPythonLocation,
         decoratorList: List<Python.ASTBASEexpr>
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()

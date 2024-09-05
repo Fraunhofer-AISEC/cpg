@@ -138,17 +138,25 @@ interface Python {
     sealed class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
+     * Several classes are duplicated in the python AST for async and non-async variants. This
+     * interface is a common interface for those AST classes.
+     */
+    interface AsyncOrNot : WithPythonLocation {
+        var isAsync: Boolean
+    }
+
+    /**
      * ast.FunctionDef and ast.AsyncFunctionDef are not related according to the Python syntax.
      * However, they are so similar, that we make use of this interface to avoid a lot of duplicate
      * code.
      */
-    sealed class NormalOrAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        abstract val name: String
-        abstract val args: ASTarguments
-        abstract val body: List<ASTBASEstmt>
-        abstract val decorator_list: List<ASTBASEexpr>
-        abstract val returns: ASTBASEexpr?
-        abstract val type_comment: String?
+    interface NormalOrAsyncFunctionDef : AsyncOrNot {
+        val name: String
+        val args: ASTarguments
+        val body: List<ASTBASEstmt>
+        val decorator_list: List<ASTBASEexpr>
+        val returns: ASTBASEexpr?
+        val type_comment: String?
     }
 
     /**
@@ -157,7 +165,7 @@ interface Python {
      *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTFunctionDef(pyObject: PyObject) : NormalOrAsyncFunctionDef(pyObject) {
+    class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject), NormalOrAsyncFunctionDef {
         override val name: String by lazy { "name" of pyObject }
 
         override val args: ASTarguments by lazy { "args" of pyObject }
@@ -169,6 +177,8 @@ interface Python {
         override val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
 
         override val type_comment: String? by lazy { "type_comment" of pyObject }
+
+        override var isAsync: Boolean = false
     }
 
     /**
@@ -177,7 +187,8 @@ interface Python {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTAsyncFunctionDef(pyObject: PyObject) : NormalOrAsyncFunctionDef(pyObject) {
+    class ASTAsyncFunctionDef(pyObject: PyObject) :
+        ASTBASEstmt(pyObject), NormalOrAsyncFunctionDef {
         override val name: String by lazy { "name" of pyObject }
 
         override val args: ASTarguments by lazy { "args" of pyObject }
@@ -189,6 +200,8 @@ interface Python {
         override val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
 
         override val type_comment: String? by lazy { "type_comment" of pyObject }
+
+        override var isAsync: Boolean = true
     }
 
     /**
@@ -272,12 +285,12 @@ interface Python {
      * ast.For and ast.AsyncFor are not related according to the Python syntax. However, they are so
      * similar, that we make use of this interface to avoid a lot of duplicate code.
      */
-    sealed class NormalOrAsyncFor(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        abstract val target: ASTBASEexpr
-        abstract val iter: ASTBASEexpr
-        abstract val body: List<ASTBASEstmt>
-        abstract val orelse: List<ASTBASEstmt>
-        abstract val type_comment: String?
+    interface NormalOrAsyncFor : AsyncOrNot {
+        val target: ASTBASEexpr
+        val iter: ASTBASEexpr
+        val body: List<ASTBASEstmt>
+        val orelse: List<ASTBASEstmt>
+        val type_comment: String?
     }
 
     /**
@@ -286,12 +299,13 @@ interface Python {
      *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class ASTFor(pyObject: PyObject) : NormalOrAsyncFor(pyObject) {
+    class ASTFor(pyObject: PyObject) : ASTBASEstmt(pyObject), NormalOrAsyncFor {
         override val target: ASTBASEexpr by lazy { "target" of pyObject }
         override val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         override val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
         override val type_comment: String? by lazy { "type_comment" of pyObject }
+        override var isAsync: Boolean = false
     }
 
     /**
@@ -300,12 +314,13 @@ interface Python {
      *  |  AsyncFor(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
      * ```
      */
-    class ASTAsyncFor(pyObject: PyObject) : NormalOrAsyncFor(pyObject) {
+    class ASTAsyncFor(pyObject: PyObject) : ASTBASEstmt(pyObject), NormalOrAsyncFor {
         override val target: ASTBASEexpr by lazy { "target" of pyObject }
         override val iter: ASTBASEexpr by lazy { "iter" of pyObject }
         override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         override val orelse: List<ASTBASEstmt> by lazy { "orelse" of pyObject }
         override val type_comment: String? by lazy { "type_comment" of pyObject }
+        override var isAsync: Boolean = true
     }
 
     /**
@@ -336,10 +351,10 @@ interface Python {
      * ast.With and ast.AsyncWith are not related according to the Python syntax. However, they are
      * so similar, that we make use of this interface to avoid a lot of duplicate code.
      */
-    sealed class NormalOrAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        abstract val items: ASTwithitem
-        abstract val body: List<ASTBASEstmt>
-        abstract val type_comment: String?
+    interface NormalOrAsyncWith : AsyncOrNot {
+        val items: ASTwithitem
+        val body: List<ASTBASEstmt>
+        val type_comment: String?
     }
 
     /**
@@ -348,10 +363,11 @@ interface Python {
      *  |  With(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class ASTWith(pyObject: PyObject) : NormalOrAsyncWith(pyObject) {
+    class ASTWith(pyObject: PyObject) : ASTBASEstmt(pyObject), NormalOrAsyncWith {
         override val items: ASTwithitem by lazy { "items" of pyObject }
         override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         override val type_comment: String? by lazy { "type_comment" of pyObject }
+        override var isAsync: Boolean = false
     }
 
     /**
@@ -360,10 +376,11 @@ interface Python {
      *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
      * ```
      */
-    class ASTAsyncWith(pyObject: PyObject) : NormalOrAsyncWith(pyObject) {
+    class ASTAsyncWith(pyObject: PyObject) : ASTBASEstmt(pyObject), NormalOrAsyncWith {
         override val items: ASTwithitem by lazy { "items" of pyObject }
         override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
         override val type_comment: String? by lazy { "type_comment" of pyObject }
+        override var isAsync: Boolean = true
     }
 
     /**
