@@ -258,6 +258,12 @@ abstract class Node :
     var annotations by unwrapping(Node::annotationEdges)
 
     /**
+     * Additional problem nodes. These nodes represent problems which occurred during processing of
+     * a node (i.e. only partially processed).
+     */
+    val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+
+    /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
      * needs to be disconnected completely, we will have to take care of correctly disconnecting

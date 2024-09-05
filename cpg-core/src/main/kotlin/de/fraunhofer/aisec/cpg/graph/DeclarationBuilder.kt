@@ -404,6 +404,27 @@ fun MetadataProvider.newProblemDeclaration(
 }
 
 /**
+ * Creates a new [Problem]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newProblem(
+    problem: String = "",
+    problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
+    rawNode: Any? = null
+): Problem {
+    val node = Problem()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    node.problem = problem
+    node.problemType = problemType
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [IncludeDeclaration]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
