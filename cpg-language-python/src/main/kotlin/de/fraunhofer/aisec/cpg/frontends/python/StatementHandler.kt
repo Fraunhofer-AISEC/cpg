@@ -259,7 +259,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(cls)
 
         stmt.keywords.forEach {
-            cls.addDeclaration(newProblemDeclaration("could not parse keyword $it in class"))
+            cls.additionalProblems +=
+                newProblem(problem = "could not parse keyword $it in class", rawNode = it)
         }
 
         for (s in stmt.body) {
@@ -414,13 +415,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // first argument is the `receiver`
             val recvPythonNode = positionalArguments.firstOrNull()
             if (recvPythonNode == null) {
-                val problem =
-                    newProblemDeclaration(
+                result.additionalProblems +=
+                    newProblem(
                         "Expected a receiver",
                         problemType = ProblemNode.ProblemType.TRANSLATION,
                         rawNode = args
                     )
-                frontend.scopeManager.addDeclaration(problem)
             } else {
                 val tpe = recordDeclaration.toType()
                 val recvNode =
@@ -462,43 +462,39 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
 
         if (args.kwonlyargs.isNotEmpty()) {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`kwonlyargs` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = args
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
 
         if (args.kw_defaults.isNotEmpty()) {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`kw_defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = args
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
 
         args.kwarg?.let {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`kwarg` is not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = it
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
 
         if (args.defaults.isNotEmpty()) {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = args
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
     }
 
