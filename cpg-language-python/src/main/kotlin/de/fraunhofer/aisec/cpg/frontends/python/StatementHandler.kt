@@ -139,7 +139,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let {
+        if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblem(
                     problem = "Cannot handle \"orelse\" in while loops.",
@@ -154,7 +154,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let {
+        if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblem(
                     problem = "Cannot handle \"orelse\" in for loops.",
@@ -169,7 +169,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let {
+        if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblem(
                     problem = "Cannot handle \"orelse\" in async for loops.",
