@@ -401,7 +401,7 @@ val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
 val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
         return this.findAnnotations<ExecuteBefore>()
-            .filter { it.soft == true }
+            .filter { it.softDependency == true }
             .map { it.other }
             .toSet()
     }
@@ -409,7 +409,7 @@ val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
         return this.findAnnotations<ExecuteBefore>()
-            .filter { it.soft == false }
+            .filter { it.softDependency == false }
             .map { it.other }
             .toSet()
     }

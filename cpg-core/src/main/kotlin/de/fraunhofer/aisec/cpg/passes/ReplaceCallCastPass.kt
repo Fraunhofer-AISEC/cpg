@@ -75,7 +75,7 @@ class ReplaceCallCastPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
         var callee = call.callee
-        if (parent != null && callee != null && call.arguments.size == 1) {
+        if (parent != null && call.arguments.size == 1) {
             val language = parent.language
 
             var pointer = false
