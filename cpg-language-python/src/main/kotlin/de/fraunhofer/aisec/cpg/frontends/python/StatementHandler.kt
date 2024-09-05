@@ -113,7 +113,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Wildcards luckily do not have aliases
             val decl =
                 if (imp.name == "*") {
-                    // In the wildcard case, our "import" is the module name and we set "wildcard"
+                    // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
                     newImportDeclaration(module, true, rawNode = imp)
                 } else {
@@ -440,12 +440,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         }
 
-        if (
-            recordDeclaration != null && positionalArguments.size > 1
-        ) { // TODO the second check fixes a bug but is this correct...???
-            // first argument is the receiver
-            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
-                handleArgument(arg, arg in args.posonlyargs)
+        if (recordDeclaration != null) {
+            if (
+                positionalArguments.size > 1 // more arguments than only a receiver
+            ) { // first argument is the receiver
+                for (arg in positionalArguments.subList(1, positionalArguments.size)) {
+                    handleArgument(arg, arg in args.posonlyargs)
+                }
             }
         } else {
             for (arg in positionalArguments) {
