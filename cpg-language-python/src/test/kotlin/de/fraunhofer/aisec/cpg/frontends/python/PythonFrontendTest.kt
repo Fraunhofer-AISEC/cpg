@@ -1256,6 +1256,27 @@ class PythonFrontendTest : BaseTest() {
         assertInvokes(call, cCompletelyDifferentFunc)
     }
 
+    @Test
+    fun testTypePropagation() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("type_propagation.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        var a = tu.variables["a"]
+        assertNotNull(a)
+        println("type: {${a.type}, assigned: {${a.assignedTypes}")
+
+        var refs = tu.refs("a")
+        refs.forEach { println("type: {${it.type}, assigned: {${it.assignedTypes}") }
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

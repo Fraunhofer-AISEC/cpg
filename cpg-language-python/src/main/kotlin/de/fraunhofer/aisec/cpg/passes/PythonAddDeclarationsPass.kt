@@ -123,6 +123,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 newVariableDeclaration(node.name)
             }
 
+        decl.type = node.dynamicType()
         decl.code = node.code
         decl.location = node.location
         decl.isImplicit = true
