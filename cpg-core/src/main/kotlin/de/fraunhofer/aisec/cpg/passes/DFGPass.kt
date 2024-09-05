@@ -191,14 +191,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected open fun handleVariableDeclaration(node: VariableDeclaration) {
-        var granularity = default()
-        if (
-            node.initializer is UnaryOperator &&
-                (node.initializer as UnaryOperator).operatorCode == "&"
-        ) {
-            granularity = PointerDataflowGranularity()
-        }
-        node.initializer?.let { node.addPrevDFG(it, granularity) }
+        node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**
@@ -411,20 +404,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleReference(node: Reference) {
         node.refersTo?.let {
-            var granularity = default()
-            if (
-                it is VariableDeclaration &&
-                    it.initializer is UnaryOperator &&
-                    (it.initializer as UnaryOperator).operatorCode == "&"
-            ) {
-                granularity = PointerDataflowGranularity()
-            }
             when (node.access) {
-                AccessValues.WRITE -> node.addNextDFG(it, granularity)
-                AccessValues.READ -> node.addPrevDFG(it, granularity)
+                AccessValues.WRITE -> node.addNextDFG(it)
+                AccessValues.READ -> node.addPrevDFG(it)
                 else -> {
-                    node.addNextDFG(it, granularity)
-                    node.addPrevDFG(it, granularity)
+                    node.addNextDFG(it)
+                    node.addPrevDFG(it)
                 }
             }
         }
