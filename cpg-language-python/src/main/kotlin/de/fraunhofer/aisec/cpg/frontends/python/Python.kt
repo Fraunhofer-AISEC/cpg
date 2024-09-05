@@ -138,23 +138,37 @@ interface Python {
     sealed class ASTBASEstmt(pyObject: PyObject) : AST(pyObject), WithPythonLocation
 
     /**
+     * ast.FunctionDef and ast.AsyncFunctionDef are not related according to the Python syntax.
+     * However, they are so similar, that we make use of this interface to avoid a lot of duplicate
+     * code.
+     */
+    sealed class NormalOrAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
+        abstract val name: String
+        abstract val args: ASTarguments
+        abstract val body: List<ASTBASEstmt>
+        abstract val decorator_list: List<ASTBASEexpr>
+        abstract val returns: ASTBASEexpr?
+        abstract val type_comment: String?
+    }
+
+    /**
      * ```
      * ast.FunctionDef = class FunctionDef(stmt)
      *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val name: String by lazy { "name" of pyObject }
+    class ASTFunctionDef(pyObject: PyObject) : NormalOrAsyncFunctionDef(pyObject) {
+        override val name: String by lazy { "name" of pyObject }
 
-        val args: ASTarguments by lazy { "args" of pyObject }
+        override val args: ASTarguments by lazy { "args" of pyObject }
 
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
 
-        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
+        override val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
 
-        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
+        override val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
 
-        val type_comment: String? by lazy { "type_comment" of pyObject }
+        override val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
     /**
@@ -163,18 +177,18 @@ interface Python {
      *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
      * ```
      */
-    class ASTAsyncFunctionDef(pyObject: PyObject) : ASTBASEstmt(pyObject) {
-        val name: String by lazy { "name" of pyObject }
+    class ASTAsyncFunctionDef(pyObject: PyObject) : NormalOrAsyncFunctionDef(pyObject) {
+        override val name: String by lazy { "name" of pyObject }
 
-        val args: ASTarguments by lazy { "args" of pyObject }
+        override val args: ASTarguments by lazy { "args" of pyObject }
 
-        val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
+        override val body: List<ASTBASEstmt> by lazy { "body" of pyObject }
 
-        val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
+        override val decorator_list: List<ASTBASEexpr> by lazy { "decorator_list" of pyObject }
 
-        val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
+        override val returns: ASTBASEexpr? by lazy { "returns" of pyObject }
 
-        val type_comment: String? by lazy { "type_comment" of pyObject }
+        override val type_comment: String? by lazy { "type_comment" of pyObject }
     }
 
     /**

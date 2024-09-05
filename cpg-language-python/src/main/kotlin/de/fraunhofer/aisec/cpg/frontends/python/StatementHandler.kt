@@ -44,8 +44,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     override fun handleNode(node: Python.ASTBASEstmt): Statement {
         return when (node) {
             is Python.ASTClassDef -> handleClassDef(node)
-            is Python.ASTFunctionDef -> handleFunctionDef(node)
-            is Python.ASTAsyncFunctionDef -> handleAsyncFunctionDef(node)
+            is Python.NormalOrAsyncFunctionDef -> handleFunctionDef(node)
             is Python.ASTPass -> return newEmptyStatement(rawNode = node)
             is Python.ASTImportFrom -> handleImportFrom(node)
             is Python.ASTAssign -> handleAssign(node)
@@ -273,7 +272,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(
-        s: Python.ASTFunctionDef,
+        s: Python.NormalOrAsyncFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
         val result =
@@ -297,67 +296,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        // Handle decorators (which are translated into CPG "annotations")
-        result.annotations += handleAnnotations(s)
-
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
+        if (s is Python.ASTAsyncFunctionDef) {
+            result.addDeclaration(
+                newProblemDeclaration(
+                    problem = "The \"async\" keyword is not yet supported.",
+                    rawNode = s
+                )
+            )
         }
-        result.type = FunctionType.computeType(result)
-
-        handleArguments(s.args, result, recordDeclaration)
-
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
-        }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
-        return wrapDeclarationToStatement(result)
-    }
-
-    /**
-     * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [Python.ASTFunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
-     *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [Python.ASTFunctionDef] could be one of
-     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
-     *       [ConstructorDeclaration]
-     *     - a [FunctionDeclaration] if neither of the above apply
-     *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
-     */
-    private fun handleAsyncFunctionDef(
-        s: Python.ASTAsyncFunctionDef,
-        recordDeclaration: RecordDeclaration? = null
-    ): DeclarationStatement {
-        val result =
-            if (recordDeclaration != null) {
-                if (s.name == "__init__") {
-                    newConstructorDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        rawNode = s
-                    )
-                } else {
-                    newMethodDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        isStatic = false,
-                        rawNode = s
-                    )
-                }
-            } else {
-                newFunctionDeclaration(name = s.name, rawNode = s)
-            }
-        frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
         result.annotations += handleAnnotations(s)
@@ -477,11 +423,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(node: Python.ASTAsyncFunctionDef): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    private fun handleAnnotations(node: Python.ASTFunctionDef): Collection<Annotation> {
+    private fun handleAnnotations(node: Python.NormalOrAsyncFunctionDef): Collection<Annotation> {
         return handleDeclaratorList(node, node.decorator_list)
     }
 
