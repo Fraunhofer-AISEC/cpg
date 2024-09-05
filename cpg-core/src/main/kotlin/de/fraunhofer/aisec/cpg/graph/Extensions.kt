@@ -757,13 +757,11 @@ private fun Node.eogDistanceTo(to: Node): Int {
  *
  * When called on the right-hand side of this assignment, this function will return `a`.
  */
-fun Expression?.unwrapReference(removeUnaryOperator: Boolean = true): Node? {
+fun Expression?.unwrapReference(): Node? {
     return when {
         this is Reference -> this
-        this is UnaryOperator &&
-            (this.operatorCode == "*" || this.operatorCode == "&") &&
-            removeUnaryOperator -> this.input.unwrapReference()
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") -> this
+        this is PointerReference -> this
+        this is PointerDereference -> this
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
