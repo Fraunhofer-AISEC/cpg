@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>getAndRemoveFirstPassWithoutDependencies</title>
+    <title>PassOrderingHelper</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,9 +43,9 @@
                             cpg
                     </a>            </div>
             <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes.configuration/-pass-with-deps-container/get-and-remove-first-pass-without-dependencies.html&quot;}"><div class="versions-dropdown">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes.configuration/-pass-ordering-helper/-pass-ordering-helper.html&quot;}"><div class="versions-dropdown">
   <div class="versions-dropdown-button">main</div>
-  <div class="versions-dropdown-data"><a href="../../../older/8.3.0/cpg-core/de.fraunhofer.aisec.cpg.passes.configuration/-pass-with-deps-container/get-and-remove-first-pass-without-dependencies.html">8.3.0</a><a href="../../../older/8.2.0/cpg-core/de.fraunhofer.aisec.cpg.passes.configuration/-pass-with-deps-container/get-and-remove-first-pass-without-dependencies.html">8.2.0</a><a href="get-and-remove-first-pass-without-dependencies.html">main</a></div>
+  <div class="versions-dropdown-data"><a href="../../../not-found-version.html?v=8.3.0">8.3.0</a><a href="../../../not-found-version.html?v=8.2.0">8.2.0</a><a href="-pass-ordering-helper.html">main</a></div>
 </div>
 </dokka-template-command>            </div>
         </div>
@@ -63,12 +63,12 @@
                 <div class="sidebar--inner" id="sideMenu"></div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.passes.configuration/PassWithDepsContainer/getAndRemoveFirstPassWithoutDependencies/#/PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes.configuration</a><span class="delimiter">/</span><a href="index.html">PassWithDepsContainer</a><span class="delimiter">/</span><span class="current">getAndRemoveFirstPassWithoutDependencies</span></div>
+<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.passes.configuration/PassOrderingHelper/PassOrderingHelper/#kotlin.collections.List[kotlin.reflect.KClass[de.fraunhofer.aisec.cpg.passes.Pass[*]]]/PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes.configuration</a><span class="delimiter">/</span><a href="index.html">PassOrderingHelper</a><span class="delimiter">/</span><span class="current">PassOrderingHelper</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>get</span><wbr><span>And</span><wbr><span>Remove</span><wbr><span>First</span><wbr><span>Pass</span><wbr><span>Without</span><wbr><span><span>Dependencies</span></span></h1>
+    <h1 class="cover"><span>Pass</span><wbr><span>Ordering</span><wbr><span><span>Helper</span></span></h1>
   </div>
-  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-and-remove-first-pass-without-dependencies.html"><span class="token function">getAndRemoveFirstPassWithoutDependencies</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.reflect/-k-class/index.html">KClass</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="../../de.fraunhofer.aisec.cpg.passes/-pass/index.html">Pass</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><p class="paragraph">Finds the first pass that has all its dependencies satisfied. This pass is then removed from the other passes dependencies and returned.</p><span class="kdoc-tag"><h4 class="">Return</h4><p class="paragraph">The first pass that has no active dependencies on success. null otherwise.</p></span></div></div>
+  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">passes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.reflect/-k-class/index.html">KClass</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="../../de.fraunhofer.aisec.cpg.passes/-pass/index.html">Pass</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><p class="paragraph">Collects the requested passes provided as <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes.configuration/-pass-ordering-helper/[60]init[62].html">passes</a> and populates the internal <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes.configuration/-pass-ordering-helper/working-list.html">workingList</a> consisting of pairs of passes and their dependencies. Also, this function adds all <code class="lang-kotlin">hardDependencies</code></p></div></div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
