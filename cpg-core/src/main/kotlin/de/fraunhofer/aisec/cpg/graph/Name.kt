@@ -70,11 +70,13 @@ class Name(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Name) return false
+        if (other is String) return this.fullName == other
+        if (other is Name)
+            return localName == other.localName &&
+                parent == other.parent &&
+                delimiter == other.delimiter
 
-        return localName == other.localName &&
-            parent == other.parent &&
-            delimiter == other.delimiter
+        return false
     }
 
     override fun get(index: Int) = fullName[index]
@@ -153,9 +155,9 @@ internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimit
 }
 
 /** Returns a new [Name] based on the [localName] and the current name as parent. */
-fun Name?.fqn(localName: String) =
+fun Name?.fqn(localName: String, delimiter: String = this?.delimiter ?: ".") =
     if (this == null) {
-        Name(localName)
+        Name(localName, null, delimiter)
     } else {
-        Name(localName, this, this.delimiter)
+        Name(localName, this, delimiter)
     }

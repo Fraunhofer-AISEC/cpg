@@ -932,7 +932,7 @@ fun TranslationContext.tryRecordInference(
         // At this point, we need to check whether we have any type reference to our parent
         // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
         // have a high chance that this is actually a parent record and not a namespace
-        var parentType = typeManager.typeExists(parentName)
+        var parentType = typeManager.lookupResolvedType(parentName)
         holder =
             if (parentType != null) {
                 tryRecordInference(parentType, locationHint = locationHint)
