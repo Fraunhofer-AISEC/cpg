@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.function.Supplier
 
-abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST>(
+abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
     configConstructor: Supplier<ResultNode>,
     lang: PythonLanguageFrontend
 ) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(configConstructor, lang) {
