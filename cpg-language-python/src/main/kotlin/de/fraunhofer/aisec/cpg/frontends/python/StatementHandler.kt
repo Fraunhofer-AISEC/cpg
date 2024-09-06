@@ -497,7 +497,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * This function "wraps" a list of [Python.ASTBASEstmt] nodes into a [Block]. Since the list
+     * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
      */
