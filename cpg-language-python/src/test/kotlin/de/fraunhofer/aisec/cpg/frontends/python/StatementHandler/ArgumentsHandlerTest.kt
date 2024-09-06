@@ -41,7 +41,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import org.junit.jupiter.api.BeforeAll
 
-class StatementHandlerTest {
+class ArgumentsHandlerTest {
 
     companion object {
         private lateinit var topLevel: Path
@@ -51,8 +51,12 @@ class StatementHandlerTest {
         @BeforeAll
         fun setup() {
             topLevel = Path.of("src", "test", "resources", "python")
+            analyzeFile("arguments.py")
+        }
+
+        fun analyzeFile(fileName: String) {
             result =
-                analyze(listOf(topLevel.resolve("arguments.py").toFile()), topLevel, true) {
+                analyze(listOf(topLevel.resolve(fileName).toFile()), topLevel, true) {
                     it.registerLanguage<PythonLanguage>()
                 }
             assertNotNull(result)
@@ -142,6 +146,28 @@ class StatementHandlerTest {
                 param.default?.evaluate(),
                 "Default value for parameter '$paramName' is incorrect"
             )
+        }
+    }
+
+    @Test
+    fun testNonAndDefaultArguments() {
+        var func = result.functions["foo"]
+        assertNotNull(func, "Function 'foo' should be found")
+
+        var defaults = mapOf("a" to null, "b" to null, "c" to 3, "d" to 4)
+        for ((paramName, expectedDefaultValue) in defaults) {
+            var param = func.parameters[paramName]
+            assertNotNull(param, "Failed to find argument '$paramName'")
+
+            expectedDefaultValue?.let {
+                assertContains(param.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
+                assertNotNull(param.default, "Parameter '$paramName' should have a default value")
+                assertEquals(
+                    expectedDefaultValue.toLong(),
+                    param.default?.evaluate(),
+                    "Default value for parameter '$paramName' is incorrect"
+                )
+            }
         }
     }
 

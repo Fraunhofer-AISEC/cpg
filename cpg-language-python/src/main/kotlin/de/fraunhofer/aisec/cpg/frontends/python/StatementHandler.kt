@@ -394,64 +394,94 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
         // both in positional as well as keyword style.
         var positionalArguments = args.posonlyargs + args.args
-        // Handle arguments
-        if (recordDeclaration != null) {
-            // first argument is the `receiver`
-            val recvPythonNode = positionalArguments.firstOrNull()
-            if (recvPythonNode == null) {
-                val problem =
-                    newProblemDeclaration(
-                        "Expected a receiver",
-                        problemType = ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = args
-                    )
-                frontend.scopeManager.addDeclaration(problem)
-            } else {
-                val tpe = recordDeclaration.toType()
-                val recvNode =
-                    newVariableDeclaration(
-                        name = recvPythonNode.arg,
-                        type = tpe,
-                        implicitInitializerAllowed = false,
-                        rawNode = recvPythonNode
-                    )
-                frontend.scopeManager.addDeclaration(recvNode)
-                when (result) {
-                    is ConstructorDeclaration -> result.receiver = recvNode
-                    is MethodDeclaration -> result.receiver = recvNode
-                    else -> TODO()
-                }
-            }
+
+        // Handle receiver if it exists
+        recordDeclaration?.let {
+            handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
         }
 
-        if (recordDeclaration != null) {
-            // first argument is the receiver
-            for ((idx, arg) in positionalArguments.drop(1).withIndex()) {
-                val defaultValue =
-                    args.defaults.getOrNull(idx)?.let { frontend.expressionHandler.handle(it) }
-                handleArgument(
-                    arg,
-                    isPosOnly = arg in args.posonlyargs,
-                    isKwoOnly = defaultValue != null,
-                    defaultValue = defaultValue
-                )
-            }
-        } else {
-            for ((idx, arg) in positionalArguments.withIndex()) {
-                val defaultValue =
-                    args.defaults.getOrNull(idx)?.let { frontend.expressionHandler.handle(it) }
-                handleArgument(
-                    arg,
-                    isPosOnly = arg in args.posonlyargs,
-                    isKwoOnly = defaultValue != null,
-                    defaultValue = defaultValue
-                )
-            }
-        }
+        // Handle positional arguments (skip the receiver if it exists)
+        val startIdx = if (recordDeclaration != null) 1 else 0
+        handlePositionalArguments(positionalArguments, args, startIdx)
 
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
         args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
 
+        handleKeywordOnlyArguments(args)
+    }
+
+    private fun handleReceiverArgument(
+        positionalArguments: List<Python.ASTarg>,
+        args: Python.ASTarguments,
+        result: FunctionDeclaration,
+        recordDeclaration: RecordDeclaration
+    ) {
+        // first argument is the receiver
+        val recvPythonNode = positionalArguments.firstOrNull()
+        if (recvPythonNode == null) {
+            val problem =
+                newProblemDeclaration(
+                    "Expected a receiver",
+                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = args
+                )
+            frontend.scopeManager.addDeclaration(problem)
+        } else {
+            val tpe = recordDeclaration.toType()
+            val defaultValue =
+                args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
+            val recvNode =
+                newVariableDeclaration(
+                    name = recvPythonNode.arg,
+                    type = tpe,
+                    implicitInitializerAllowed = false,
+                    rawNode = recvPythonNode
+                )
+            if (defaultValue != null) {
+                val problem =
+                    newProblemDeclaration(
+                        "Receiver with default value",
+                        problemType = ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = args
+                    )
+                frontend.scopeManager.addDeclaration(problem)
+            }
+            frontend.scopeManager.addDeclaration(recvNode)
+            when (result) {
+                is ConstructorDeclaration -> result.receiver = recvNode
+                is MethodDeclaration -> result.receiver = recvNode
+                else -> TODO()
+            }
+        }
+    }
+
+    private fun handlePositionalArguments(
+        positionalArguments: List<Python.ASTarg>,
+        args: Python.ASTarguments,
+        startIdx: Int
+    ) {
+        val nonDefaultArgsCount = positionalArguments.size - args.defaults.size
+
+        for ((idx, arg) in positionalArguments.drop(startIdx).withIndex()) {
+            val defaultIndex = idx - nonDefaultArgsCount
+            val defaultValue =
+                if (defaultIndex >= 0) {
+                    args.defaults.getOrNull(defaultIndex)?.let {
+                        frontend.expressionHandler.handle(it)
+                    }
+                } else {
+                    null
+                }
+            handleArgument(
+                arg,
+                isPosOnly = arg in args.posonlyargs,
+                isKwoOnly = defaultValue != null,
+                defaultValue = defaultValue
+            )
+        }
+    }
+
+    private fun handleKeywordOnlyArguments(args: Python.ASTarguments) {
         for (idx in args.kwonlyargs.indices) {
             val arg = args.kwonlyargs[idx]
             val default = args.kw_defaults.getOrNull(idx)
