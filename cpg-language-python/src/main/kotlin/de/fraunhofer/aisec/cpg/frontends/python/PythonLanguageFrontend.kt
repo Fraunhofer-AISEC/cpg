@@ -310,7 +310,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
  * @param pyObject the Python object
  * @return our Kotlin view of the Python `ast` object
  */
-fun fromPython(pyObject: Any?): Python.AST.AST {
+fun fromPython(pyObject: Any?): Python.BaseObject {
     if (pyObject !is PyObject) {
         TODO("Expected a PyObject")
     } else {
@@ -442,7 +442,7 @@ fun fromPython(pyObject: Any?): Python.AST.AST {
             "ast.withitem" -> Python.AST.withitem(pyObject)
 
             // complex numbers
-            "complex" -> TODO("Complex numbers are not supported yet")
+            "complex" -> Python.Complex(pyObject)
             "ellipsis" -> Python.Ellipsis(pyObject)
             else -> {
                 TODO("Implement for ${pyObject.getAttr("__class__")}")

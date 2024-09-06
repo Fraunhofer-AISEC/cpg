@@ -35,6 +35,18 @@ import jep.python.PyObject
 interface Python {
 
     /**
+     * This is an abstract class that is common to all our python objects. Represents python's
+     * `object`.
+     */
+    abstract class BaseObject(var pyObject: PyObject)
+
+    /** The `ellipsis` class. */
+    class Ellipsis(pyObject: PyObject) : BaseObject(pyObject)
+
+    /** The `complex` class. */
+    class Complex(pyObject: PyObject) : BaseObject(pyObject)
+
+    /**
      * This interface makes Python's `ast` nodes accessible to Kotlin. It does not contain any
      * complex logic but rather aims at making all Python `ast` properties accessible to Kotlin
      * (under the same name as in Python).
@@ -83,7 +95,7 @@ interface Python {
          *
          * @param pyObject The Python object returned by jep.
          */
-        abstract class AST(val pyObject: PyObject)
+        abstract class AST(pyObject: PyObject) : BaseObject(pyObject)
 
         /**
          * ```
@@ -1314,8 +1326,6 @@ interface Python {
             val optional_vars: BaseExpr? by lazy { "optional_vars" of pyObject }
         }
     }
-
-    class Ellipsis(python: PyObject) : AST(python)
 }
 
 private inline infix fun <reified T> String.of(pyObject: PyObject): T {
