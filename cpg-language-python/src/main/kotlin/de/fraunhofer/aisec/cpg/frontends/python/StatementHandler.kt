@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.frontends.python.Python.IsAsync
+import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -40,37 +40,37 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, Python.ASTBASEstmt>(::ProblemExpression, frontend) {
+    PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: Python.ASTBASEstmt): Statement {
+    override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
-            is Python.ASTClassDef -> handleClassDef(node)
-            is Python.ASTFunctionDef -> handleFunctionDef(node)
-            is Python.ASTAsyncFunctionDef -> handleFunctionDef(node)
-            is Python.ASTPass -> return newEmptyStatement(rawNode = node)
-            is Python.ASTImportFrom -> handleImportFrom(node)
-            is Python.ASTAssign -> handleAssign(node)
-            is Python.ASTAugAssign -> handleAugAssign(node)
-            is Python.ASTReturn -> handleReturn(node)
-            is Python.ASTIf -> handleIf(node)
-            is Python.ASTAnnAssign -> handleAnnAssign(node)
-            is Python.ASTExpr -> handleExpressionStatement(node)
-            is Python.ASTFor -> handleFor(node)
-            is Python.ASTAsyncFor -> handleFor(node)
-            is Python.ASTWhile -> handleWhile(node)
-            is Python.ASTImport -> handleImport(node)
-            is Python.ASTBreak -> newBreakStatement(rawNode = node)
-            is Python.ASTContinue -> newContinueStatement(rawNode = node)
-            is Python.ASTAssert,
-            is Python.ASTDelete,
-            is Python.ASTGlobal,
-            is Python.ASTMatch,
-            is Python.ASTNonlocal,
-            is Python.ASTRaise,
-            is Python.ASTTry,
-            is Python.ASTTryStar,
-            is Python.ASTWith,
-            is Python.ASTAsyncWith ->
+            is Python.AST.ClassDef -> handleClassDef(node)
+            is Python.AST.FunctionDef -> handleFunctionDef(node)
+            is Python.AST.AsyncFunctionDef -> handleFunctionDef(node)
+            is Python.AST.Pass -> return newEmptyStatement(rawNode = node)
+            is Python.AST.ImportFrom -> handleImportFrom(node)
+            is Python.AST.Assign -> handleAssign(node)
+            is Python.AST.AugAssign -> handleAugAssign(node)
+            is Python.AST.Return -> handleReturn(node)
+            is Python.AST.If -> handleIf(node)
+            is Python.AST.AnnAssign -> handleAnnAssign(node)
+            is Python.AST.Expr -> handleExpressionStatement(node)
+            is Python.AST.For -> handleFor(node)
+            is Python.AST.AsyncFor -> handleFor(node)
+            is Python.AST.While -> handleWhile(node)
+            is Python.AST.Import -> handleImport(node)
+            is Python.AST.Break -> newBreakStatement(rawNode = node)
+            is Python.AST.Continue -> newContinueStatement(rawNode = node)
+            is Python.AST.Assert,
+            is Python.AST.Delete,
+            is Python.AST.Global,
+            is Python.AST.Match,
+            is Python.AST.Nonlocal,
+            is Python.AST.Raise,
+            is Python.AST.Try,
+            is Python.AST.TryStar,
+            is Python.AST.With,
+            is Python.AST.AsyncWith ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
@@ -78,7 +78,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleImport(node: Python.ASTImport): Statement {
+    private fun handleImport(node: Python.AST.Import): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val alias = imp.asname
@@ -99,7 +99,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    private fun handleImportFrom(node: Python.ASTImportFrom): Statement {
+    private fun handleImportFrom(node: Python.AST.ImportFrom): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         val level = node.level
         if (level == null || level > 0) {
@@ -136,7 +136,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    private fun handleWhile(node: Python.ASTWhile): Statement {
+    private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
@@ -144,7 +144,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleFor(node: Python.NormalOrAsyncFor): Statement {
+    private fun handleFor(node: Python.AST.NormalOrAsyncFor): Statement {
         val ret = newForEachStatement(rawNode = node)
         if (node is IsAsync) {
             ret.addDeclaration(
@@ -162,11 +162,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleExpressionStatement(node: Python.ASTExpr): Statement {
+    private fun handleExpressionStatement(node: Python.AST.Expr): Statement {
         return frontend.expressionHandler.handle(node.value)
     }
 
-    private fun handleAnnAssign(node: Python.ASTAnnAssign): Statement {
+    private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
         // TODO: annotations
         val lhs = frontend.expressionHandler.handle(node.target)
         return if (node.value != null) {
@@ -180,7 +180,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleIf(node: Python.ASTIf): Statement {
+    private fun handleIf(node: Python.AST.If): Statement {
         val ret = newIfStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
@@ -198,13 +198,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleReturn(node: Python.ASTReturn): Statement {
+    private fun handleReturn(node: Python.AST.Return): Statement {
         val ret = newReturnStatement(rawNode = node)
         node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
         return ret
     }
 
-    private fun handleAssign(node: Python.ASTAssign): Statement {
+    private fun handleAssign(node: Python.AST.Assign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
@@ -223,7 +223,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
-    private fun handleAugAssign(node: Python.ASTAugAssign): Statement {
+    private fun handleAugAssign(node: Python.AST.AugAssign): Statement {
         val lhs = frontend.expressionHandler.handle(node.target)
         val rhs = frontend.expressionHandler.handle(node.value)
         val op = frontend.operatorToString(node.op) + "="
@@ -235,7 +235,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
-    private fun handleClassDef(stmt: Python.ASTClassDef): Statement {
+    private fun handleClassDef(stmt: Python.AST.ClassDef): Statement {
         val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
@@ -249,7 +249,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         for (s in stmt.body) {
             when (s) {
-                is Python.ASTFunctionDef -> handleFunctionDef(s, cls)
+                is Python.AST.FunctionDef -> handleFunctionDef(s, cls)
                 else -> cls.statements += handleNode(s)
             }
         }
@@ -262,9 +262,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [Python.ASTFunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
+     * - A [Python.AST.FunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
      *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [Python.ASTFunctionDef] could be one of
+     * - A [Python.AST.FunctionDef] could be one of
      *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
      *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
      *       [ConstructorDeclaration]
@@ -274,7 +274,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(
-        s: Python.NormalOrAsyncFunctionDef,
+        s: Python.AST.NormalOrAsyncFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
         val result =
@@ -298,7 +298,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        if (s is Python.ASTAsyncFunctionDef) {
+        if (s is Python.AST.AsyncFunctionDef) {
             result.addDeclaration(
                 newProblemDeclaration(
                     problem = "The \"async\" keyword is not yet supported.",
@@ -333,7 +333,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */
     private fun handleArguments(
-        args: Python.ASTarguments,
+        args: Python.AST.arguments,
         result: FunctionDeclaration,
         recordDeclaration: RecordDeclaration?
     ) {
@@ -425,17 +425,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(node: Python.NormalOrAsyncFunctionDef): Collection<Annotation> {
+    private fun handleAnnotations(
+        node: Python.AST.NormalOrAsyncFunctionDef
+    ): Collection<Annotation> {
         return handleDeclaratorList(node, node.decorator_list)
     }
 
-    private fun handleDeclaratorList(
-        node: Python.WithPythonLocation,
-        decoratorList: List<Python.ASTBASEexpr>
+    fun handleDeclaratorList(
+        node: Python.AST.WithASTLocation,
+        decoratorList: List<Python.AST.BaseExpr>
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            if (decorator !is Python.ASTCall) {
+            if (decorator !is Python.AST.Call) {
                 log.warn(
                     "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
                 )
@@ -489,8 +491,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [parentNode].
      */
     private fun makeBlock(
-        stmts: List<Python.ASTBASEstmt>,
-        parentNode: Python.WithPythonLocation
+        stmts: List<Python.AST.BaseStmt>,
+        parentNode: Python.AST.WithASTLocation
     ): Block {
         val result = newBlock()
         for (stmt in stmts) {
@@ -498,7 +500,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt
-        var baseStmt = parentNode as? Python.ASTBASEstmt
+        var baseStmt = parentNode as? Python.AST.BaseStmt
         return if (baseStmt != null) {
             result.codeAndLocationFromChildren(baseStmt)
         } else {
@@ -511,7 +513,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     internal fun handleArgument(
-        node: Python.ASTarg,
+        node: Python.AST.arg,
         isPosOnly: Boolean = false,
         isVariadic: Boolean = false
     ) {
