@@ -144,7 +144,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             ret.additionalProblems +=
                 newProblemExpression(
                     problem = "Cannot handle \"orelse\" in while loops.",
-                    rawNode = node.orelse
+                    rawNode = node
                 )
         }
         return ret
@@ -168,7 +168,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             ret.additionalProblems +=
                 newProblemExpression(
                     problem = "Cannot handle \"orelse\" in for loops.",
-                    rawNode = node.orelse
+                    rawNode = node
                 )
         }
         return ret
