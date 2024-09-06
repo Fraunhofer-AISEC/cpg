@@ -141,7 +141,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
-                newProblem(
+                newProblemExpression(
                     problem = "Cannot handle \"orelse\" in while loops.",
                     rawNode = node.orelse
                 )
@@ -156,7 +156,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
-                newProblem(
+                newProblemExpression(
                     problem = "Cannot handle \"orelse\" in for loops.",
                     rawNode = node.orelse
                 )
@@ -171,7 +171,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
-                newProblem(
+                newProblemExpression(
                     problem = "Cannot handle \"orelse\" in async for loops.",
                     rawNode = node.orelse
                 )
@@ -260,7 +260,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         stmt.keywords.forEach {
             cls.additionalProblems +=
-                newProblem(problem = "could not parse keyword $it in class", rawNode = it)
+                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
         }
 
         for (s in stmt.body) {
@@ -416,11 +416,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             val recvPythonNode = positionalArguments.firstOrNull()
             if (recvPythonNode == null) {
                 result.additionalProblems +=
-                    newProblem(
-                        "Expected a receiver",
-                        problemType = ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = args
-                    )
+                    newProblemExpression("Expected a receiver", rawNode = args)
             } else {
                 val tpe = recordDeclaration.toType()
                 val recvNode =
@@ -436,7 +432,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     is MethodDeclaration -> result.receiver = recvNode
                     else ->
                         result.additionalProblems +=
-                            newProblem(
+                            newProblemExpression(
                                 problem =
                                     "Expected a constructor or method declaration. Got something else.",
                                 rawNode = result
