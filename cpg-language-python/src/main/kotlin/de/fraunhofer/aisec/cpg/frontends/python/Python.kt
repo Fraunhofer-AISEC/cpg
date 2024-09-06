@@ -50,7 +50,7 @@ interface Python {
          * `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have extra location
          * properties as implemented here.
          */
-        interface WithASTLocation { // TODO make the fields accessible `by lazy`
+        interface WithLocation { // TODO make the fields accessible `by lazy`
             val pyObject: PyObject
 
             /** Maps to the `lineno` filed from Python's ast. */
@@ -144,13 +144,13 @@ interface Python {
          *  |  | Continue
          * ```
          */
-        sealed class BaseStmt(pyObject: PyObject) : AST(pyObject), WithASTLocation
+        sealed class BaseStmt(pyObject: PyObject) : AST(pyObject), WithLocation
 
         /**
          * Several classes are duplicated in the python AST for async and non-async variants. This
          * interface is a common interface for those AST classes.
          */
-        interface AsyncOrNot : WithASTLocation
+        interface AsyncOrNot : WithLocation
 
         /** This interface denotes that this is an "async" node. */
         interface IsAsync : AsyncOrNot
@@ -537,7 +537,7 @@ interface Python {
          *
          * ast.expr = class expr(AST)
          */
-        sealed class BaseExpr(pyObject: PyObject) : AST(pyObject), WithASTLocation
+        sealed class BaseExpr(pyObject: PyObject) : AST(pyObject), WithLocation
 
         /**
          * ```
@@ -1265,7 +1265,7 @@ interface Python {
          *  |  arg(identifier arg, expr? annotation, string? type_comment)
          * ```
          */
-        class arg(pyObject: PyObject) : AST(pyObject), WithASTLocation {
+        class arg(pyObject: PyObject) : AST(pyObject), WithLocation {
             val arg: String by lazy { "arg" of pyObject }
             val annotation: BaseExpr? by lazy { "annotation" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }

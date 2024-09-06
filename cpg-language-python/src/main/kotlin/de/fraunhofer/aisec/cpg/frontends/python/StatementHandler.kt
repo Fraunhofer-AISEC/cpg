@@ -432,7 +432,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     fun handleDeclaratorList(
-        node: Python.AST.WithASTLocation,
+        node: Python.AST.WithLocation,
         decoratorList: List<Python.AST.BaseExpr>
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
@@ -492,7 +492,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun makeBlock(
         stmts: List<Python.AST.BaseStmt>,
-        parentNode: Python.AST.WithASTLocation
+        parentNode: Python.AST.WithLocation
     ): Block {
         val result = newBlock()
         for (stmt in stmts) {

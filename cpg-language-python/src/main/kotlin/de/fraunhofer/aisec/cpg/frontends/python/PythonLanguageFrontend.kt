@@ -234,7 +234,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     }
 
     override fun locationOf(astNode: Python.AST.AST): PhysicalLocation? {
-        return if (astNode is Python.AST.WithASTLocation) {
+        return if (astNode is Python.AST.WithLocation) {
             PhysicalLocation(
                 uri,
                 Region(
