@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -45,7 +46,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return when (node) {
             is Python.AST.ClassDef -> handleClassDef(node)
             is Python.AST.FunctionDef -> handleFunctionDef(node)
-            is Python.AST.AsyncFunctionDef -> handleAsyncFunctionDef(node)
+            is Python.AST.AsyncFunctionDef -> handleFunctionDef(node)
             is Python.AST.Pass -> return newEmptyStatement(rawNode = node)
             is Python.AST.ImportFrom -> handleImportFrom(node)
             is Python.AST.Assign -> handleAssign(node)
@@ -55,7 +56,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.AnnAssign -> handleAnnAssign(node)
             is Python.AST.Expr -> handleExpressionStatement(node)
             is Python.AST.For -> handleFor(node)
-            is Python.AST.AsyncFor -> handleAsyncFor(node)
+            is Python.AST.AsyncFor -> handleFor(node)
             is Python.AST.While -> handleWhile(node)
             is Python.AST.Import -> handleImport(node)
             is Python.AST.Break -> newBreakStatement(rawNode = node)
@@ -138,7 +139,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        ret.statement = makeBlock(node.body, parentNode = node)
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblemExpression(
@@ -149,30 +150,24 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleFor(node: Python.AST.For): Statement {
+    private fun handleFor(node: Python.AST.NormalOrAsyncFor): Statement {
         val ret = newForEachStatement(rawNode = node)
+        if (node is IsAsync) {
+            ret.addDeclaration(
+                newProblemDeclaration(
+                    problem = "The \"async\" keyword is not yet supported.",
+                    rawNode = node
+                )
+            )
+        }
+
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        ret.statement = makeBlock(node.body, parentNode = node)
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblemExpression(
                     problem = "Cannot handle \"orelse\" in for loops.",
-                    rawNode = node.orelse
-                )
-        }
-        return ret
-    }
-
-    private fun handleAsyncFor(node: Python.AST.AsyncFor): Statement {
-        val ret = newForEachStatement(rawNode = node)
-        ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        if (node.orelse.isNotEmpty()) {
-            ret.additionalProblems +=
-                newProblemExpression(
-                    problem = "Cannot handle \"orelse\" in async for loops.",
                     rawNode = node.orelse
                 )
         }
@@ -202,13 +197,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
             if (node.body.isNotEmpty()) {
-                makeBlock(node.body).codeAndLocationFromChildren(node)
+                makeBlock(node.body, parentNode = node)
             } else {
                 null
             }
         ret.elseStatement =
             if (node.orelse.isNotEmpty()) {
-                makeBlock(node.orelse).codeAndLocationFromChildren(node)
+                makeBlock(node.orelse, parentNode = node)
             } else {
                 null
             }
@@ -290,7 +285,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(
-        s: Python.AST.FunctionDef,
+        s: Python.AST.NormalOrAsyncFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
         val result =
@@ -314,67 +309,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        // Handle decorators (which are translated into CPG "annotations")
-        result.annotations += handleAnnotations(s)
-
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
+        if (s is Python.AST.AsyncFunctionDef) {
+            result.addDeclaration(
+                newProblemDeclaration(
+                    problem = "The \"async\" keyword is not yet supported.",
+                    rawNode = s
+                )
+            )
         }
-        result.type = FunctionType.computeType(result)
-
-        handleArguments(s.args, result, recordDeclaration)
-
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
-        }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
-        return wrapDeclarationToStatement(result)
-    }
-
-    /**
-     * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [Python.AST.FunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
-     *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [Python.AST.FunctionDef] could be one of
-     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
-     *       [ConstructorDeclaration]
-     *     - a [FunctionDeclaration] if neither of the above apply
-     *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
-     */
-    private fun handleAsyncFunctionDef(
-        s: Python.AST.AsyncFunctionDef,
-        recordDeclaration: RecordDeclaration? = null
-    ): DeclarationStatement {
-        val result =
-            if (recordDeclaration != null) {
-                if (s.name == "__init__") {
-                    newConstructorDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        rawNode = s
-                    )
-                } else {
-                    newMethodDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        isStatic = false,
-                        rawNode = s
-                    )
-                }
-            } else {
-                newFunctionDeclaration(name = s.name, rawNode = s)
-            }
-        frontend.scopeManager.enterScope(result)
 
         // Handle decorators (which are translated into CPG "annotations")
         result.annotations += handleAnnotations(s)
@@ -391,7 +333,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s)
+            result.body = makeBlock(s.body, parentNode = s)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -494,16 +436,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleAnnotations(node: Python.AST.AsyncFunctionDef): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    private fun handleAnnotations(node: Python.AST.FunctionDef): Collection<Annotation> {
+    private fun handleAnnotations(
+        node: Python.AST.NormalOrAsyncFunctionDef
+    ): Collection<Annotation> {
         return handleDeclaratorList(node, node.decorator_list)
     }
 
     fun handleDeclaratorList(
-        node: Python.AST.AST,
+        node: Python.AST.WithLocation,
         decoratorList: List<Python.AST.BaseExpr>
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
@@ -556,15 +496,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return annotations
     }
 
+    /**
+     * This function "wraps" a list of [Python.ASTBASEstmt] nodes into a [Block]. Since the list
+     * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
+     * [parentNode].
+     */
     private fun makeBlock(
         stmts: List<Python.AST.BaseStmt>,
-        rawNode: Python.AST.AST? = null
+        parentNode: Python.AST.WithLocation
     ): Block {
-        val result = newBlock(rawNode = rawNode)
+        val result = newBlock()
         for (stmt in stmts) {
             result.statements += handle(stmt)
         }
-        return result
+
+        // Try to retrieve the code and location from the parent node, if it is a base stmt
+        var baseStmt = parentNode as? Python.AST.BaseStmt
+        return if (baseStmt != null) {
+            result.codeAndLocationFromChildren(baseStmt)
+        } else {
+            // Otherwise, continue without setting the location
+            log.warn(
+                "Could not set location on wrapped block because the parent node is not a python statement"
+            )
+            result
+        }
     }
 
     internal fun handleArgument(

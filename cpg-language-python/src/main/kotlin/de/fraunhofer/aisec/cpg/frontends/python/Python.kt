@@ -62,7 +62,7 @@ interface Python {
          * `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have extra location
          * properties as implemented here.
          */
-        interface WithASTLocation { // TODO make the fields accessible `by lazy`
+        interface WithLocation { // TODO make the fields accessible `by lazy`
             val pyObject: PyObject
 
             /** Maps to the `lineno` filed from Python's ast. */
@@ -156,7 +156,30 @@ interface Python {
          *  |  | Continue
          * ```
          */
-        sealed class BaseStmt(pyObject: PyObject) : AST(pyObject), WithASTLocation
+        sealed class BaseStmt(pyObject: PyObject) : AST(pyObject), WithLocation
+
+        /**
+         * Several classes are duplicated in the python AST for async and non-async variants. This
+         * interface is a common interface for those AST classes.
+         */
+        interface AsyncOrNot : WithLocation
+
+        /** This interface denotes that this is an "async" node. */
+        interface IsAsync : AsyncOrNot
+
+        /**
+         * ast.FunctionDef and ast.AsyncFunctionDef are not related according to the Python syntax.
+         * However, they are so similar, that we make use of this interface to avoid a lot of
+         * duplicate code.
+         */
+        interface NormalOrAsyncFunctionDef : AsyncOrNot {
+            val name: String
+            val args: arguments
+            val body: kotlin.collections.List<BaseStmt>
+            val decorator_list: kotlin.collections.List<BaseExpr>
+            val returns: BaseExpr?
+            val type_comment: String?
+        }
 
         /**
          * ```
@@ -164,20 +187,20 @@ interface Python {
          *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
          * ```
          */
-        class FunctionDef(pyObject: PyObject) : BaseStmt(pyObject) {
-            val name: String by lazy { "name" of pyObject }
+        class FunctionDef(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncFunctionDef {
+            override val name: String by lazy { "name" of pyObject }
 
-            val args: arguments by lazy { "args" of pyObject }
+            override val args: arguments by lazy { "args" of pyObject }
 
-            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
-            val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
+            override val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
                 "decorator_list" of pyObject
             }
 
-            val returns: BaseExpr? by lazy { "returns" of pyObject }
+            override val returns: BaseExpr? by lazy { "returns" of pyObject }
 
-            val type_comment: String? by lazy { "type_comment" of pyObject }
+            override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
         /**
@@ -186,20 +209,21 @@ interface Python {
          *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
          * ```
          */
-        class AsyncFunctionDef(pyObject: PyObject) : BaseStmt(pyObject) {
-            val name: String by lazy { "name" of pyObject }
+        class AsyncFunctionDef(pyObject: PyObject) :
+            BaseStmt(pyObject), NormalOrAsyncFunctionDef, IsAsync {
+            override val name: String by lazy { "name" of pyObject }
 
-            val args: arguments by lazy { "args" of pyObject }
+            override val args: arguments by lazy { "args" of pyObject }
 
-            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
-            val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
+            override val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
                 "decorator_list" of pyObject
             }
 
-            val returns: BaseExpr? by lazy { "returns" of pyObject }
+            override val returns: BaseExpr? by lazy { "returns" of pyObject }
 
-            val type_comment: String? by lazy { "type_comment" of pyObject }
+            override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
         /**
@@ -282,17 +306,29 @@ interface Python {
         }
 
         /**
+         * ast.For and ast.AsyncFor are not related according to the Python syntax. However, they
+         * are so similar, that we make use of this interface to avoid a lot of duplicate code.
+         */
+        interface NormalOrAsyncFor : AsyncOrNot {
+            val target: BaseExpr
+            val iter: BaseExpr
+            val body: kotlin.collections.List<BaseStmt>
+            val orelse: kotlin.collections.List<BaseStmt>
+            val type_comment: String?
+        }
+
+        /**
          * ```
          * ast.For = class For(stmt)
          *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
          * ```
          */
-        class For(pyObject: PyObject) : BaseStmt(pyObject) {
-            val target: BaseExpr by lazy { "target" of pyObject }
-            val iter: BaseExpr by lazy { "iter" of pyObject }
-            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
-            val type_comment: String? by lazy { "type_comment" of pyObject }
+        class For(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncFor {
+            override val target: BaseExpr by lazy { "target" of pyObject }
+            override val iter: BaseExpr by lazy { "iter" of pyObject }
+            override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            override val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
+            override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
         /**
@@ -301,12 +337,12 @@ interface Python {
          *  |  AsyncFor(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
          * ```
          */
-        class AsyncFor(pyObject: PyObject) : BaseStmt(pyObject) {
-            val target: BaseExpr by lazy { "target" of pyObject }
-            val iter: BaseExpr by lazy { "iter" of pyObject }
-            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
-            val type_comment: String? by lazy { "type_comment" of pyObject }
+        class AsyncFor(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncFor, IsAsync {
+            override val target: BaseExpr by lazy { "target" of pyObject }
+            override val iter: BaseExpr by lazy { "iter" of pyObject }
+            override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            override val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
+            override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
         /**
@@ -334,15 +370,25 @@ interface Python {
         }
 
         /**
+         * ast.With and ast.AsyncWith are not related according to the Python syntax. However, they
+         * are so similar, that we make use of this interface to avoid a lot of duplicate code.
+         */
+        interface NormalOrAsyncWith : AsyncOrNot {
+            val items: kotlin.collections.List<withitem>
+            val body: kotlin.collections.List<BaseStmt>
+            val type_comment: String?
+        }
+
+        /**
          * ```
          * ast.With = class With(stmt)
          *  |  With(withitem* items, stmt* body, string? type_comment)
          * ```
          */
-        class With(pyObject: PyObject) : BaseStmt(pyObject) {
-            val items: withitem by lazy { "items" of pyObject }
-            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val type_comment: String? by lazy { "type_comment" of pyObject }
+        class With(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncWith {
+            override val items: kotlin.collections.List<withitem> by lazy { "items" of pyObject }
+            override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
         /**
@@ -351,12 +397,10 @@ interface Python {
          *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
          * ```
          */
-        class AsyncWith(pyObject: PyObject) : BaseStmt(pyObject) {
-            val target: BaseExpr by lazy { "target" of pyObject }
-            val iter: BaseExpr by lazy { "iter" of pyObject }
-            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
-            val type_comment: String? by lazy { "type_comment" of pyObject }
+        class AsyncWith(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncWith, IsAsync {
+            override val items: kotlin.collections.List<withitem> by lazy { "items" of pyObject }
+            override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
         /**
@@ -505,7 +549,7 @@ interface Python {
          *
          * ast.expr = class expr(AST)
          */
-        sealed class BaseExpr(pyObject: PyObject) : AST(pyObject), WithASTLocation
+        sealed class BaseExpr(pyObject: PyObject) : AST(pyObject), WithLocation
 
         /**
          * ```
@@ -1233,7 +1277,7 @@ interface Python {
          *  |  arg(identifier arg, expr? annotation, string? type_comment)
          * ```
          */
-        class arg(pyObject: PyObject) : AST(pyObject), WithASTLocation {
+        class arg(pyObject: PyObject) : AST(pyObject), WithLocation {
             val arg: String by lazy { "arg" of pyObject }
             val annotation: BaseExpr? by lazy { "annotation" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
