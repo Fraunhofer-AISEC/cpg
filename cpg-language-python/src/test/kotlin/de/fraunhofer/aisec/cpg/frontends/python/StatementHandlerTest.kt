@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -85,5 +86,23 @@ class StatementHandlerTest {
         val variadicArg = func.parameters["args"]
         assertNotNull(variadicArg, "Failed to find variadic argc")
         assertEquals(true, variadicArg.isVariadic)
+    }
+
+    @Test
+    fun testAsync() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("async.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val myFunc = tu.functions["my_func"]
+        assertNotNull(myFunc)
+        assertEquals(1, myFunc.parameters.size)
+
+        val myOtherFunc = tu.functions["my_other_func"]
+        assertNotNull(myOtherFunc)
+        assertEquals(1, myOtherFunc.parameters.size)
     }
 }
