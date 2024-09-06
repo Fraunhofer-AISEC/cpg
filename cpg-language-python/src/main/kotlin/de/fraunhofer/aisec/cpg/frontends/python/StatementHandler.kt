@@ -139,7 +139,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        if (node.orelse.isNotEmpty()) {
+            ret.additionalProblems +=
+                newProblemExpression(
+                    problem = "Cannot handle \"orelse\" in while loops.",
+                    rawNode = node.orelse
+                )
+        }
         return ret
     }
 
@@ -148,7 +154,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        if (node.orelse.isNotEmpty()) {
+            ret.additionalProblems +=
+                newProblemExpression(
+                    problem = "Cannot handle \"orelse\" in for loops.",
+                    rawNode = node.orelse
+                )
+        }
         return ret
     }
 
@@ -157,7 +169,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        if (node.orelse.isNotEmpty()) {
+            ret.additionalProblems +=
+                newProblemExpression(
+                    problem = "Cannot handle \"orelse\" in async for loops.",
+                    rawNode = node.orelse
+                )
+        }
         return ret
     }
 
@@ -241,9 +259,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(cls)
 
         stmt.keywords.forEach {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("could not parse keyword $it in class")
-            )
+            cls.additionalProblems +=
+                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
         }
 
         for (s in stmt.body) {
@@ -398,13 +415,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // first argument is the `receiver`
             val recvPythonNode = positionalArguments.firstOrNull()
             if (recvPythonNode == null) {
-                val problem =
-                    newProblemDeclaration(
-                        "Expected a receiver",
-                        problemType = ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = args
-                    )
-                frontend.scopeManager.addDeclaration(problem)
+                result.additionalProblems +=
+                    newProblemExpression("Expected a receiver", rawNode = args)
             } else {
                 val tpe = recordDeclaration.toType()
                 val recvNode =
@@ -418,7 +430,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 when (result) {
                     is ConstructorDeclaration -> result.receiver = recvNode
                     is MethodDeclaration -> result.receiver = recvNode
-                    else -> TODO()
+                    else ->
+                        result.additionalProblems +=
+                            newProblemExpression(
+                                problem =
+                                    "Expected a constructor or method declaration. Got something else.",
+                                rawNode = result
+                            )
                 }
             }
         }
