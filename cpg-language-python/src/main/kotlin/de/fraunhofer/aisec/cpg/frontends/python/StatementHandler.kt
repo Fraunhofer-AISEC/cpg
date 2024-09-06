@@ -114,7 +114,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Wildcards luckily do not have aliases
             val decl =
                 if (imp.name == "*") {
-                    // In the wildcard case, our "import" is the module name and we set "wildcard"
+                    // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
                     newImportDeclaration(module, true, rawNode = imp)
                 } else {
@@ -140,7 +140,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        if (node.orelse.isNotEmpty()) {
+            ret.additionalProblems +=
+                newProblemExpression(
+                    problem = "Cannot handle \"orelse\" in while loops.",
+                    rawNode = node
+                )
+        }
         return ret
     }
 
@@ -158,7 +164,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body, parentNode = node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        if (node.orelse.isNotEmpty()) {
+            ret.additionalProblems +=
+                newProblemExpression(
+                    problem = "Cannot handle \"orelse\" in for loops.",
+                    rawNode = node
+                )
+        }
         return ret
     }
 
@@ -242,9 +254,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.enterScope(cls)
 
         stmt.keywords.forEach {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("could not parse keyword $it in class")
-            )
+            cls.additionalProblems +=
+                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
         }
 
         for (s in stmt.body) {
@@ -339,20 +350,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
-        // both in positional as well as keyword style.
+        // both in positional and keyword style.
         var positionalArguments = args.posonlyargs + args.args
         // Handle arguments
         if (recordDeclaration != null) {
             // first argument is the `receiver`
             val recvPythonNode = positionalArguments.firstOrNull()
             if (recvPythonNode == null) {
-                val problem =
-                    newProblemDeclaration(
-                        "Expected a receiver",
-                        problemType = ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = args
-                    )
-                frontend.scopeManager.addDeclaration(problem)
+                result.additionalProblems +=
+                    newProblemExpression("Expected a receiver", rawNode = args)
             } else {
                 val tpe = recordDeclaration.toType()
                 val recvNode =
@@ -366,15 +372,24 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 when (result) {
                     is ConstructorDeclaration -> result.receiver = recvNode
                     is MethodDeclaration -> result.receiver = recvNode
-                    else -> TODO()
+                    else ->
+                        result.additionalProblems +=
+                            newProblemExpression(
+                                problem =
+                                    "Expected a constructor or method declaration. Got something else.",
+                                rawNode = result
+                            )
                 }
             }
         }
 
         if (recordDeclaration != null) {
-            // first argument is the receiver
-            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
-                handleArgument(arg, arg in args.posonlyargs)
+            if (
+                positionalArguments.size > 1 // more arguments than only a receiver
+            ) { // first argument is the receiver
+                for (arg in positionalArguments.subList(1, positionalArguments.size)) {
+                    handleArgument(arg, arg in args.posonlyargs)
+                }
             }
         } else {
             for (arg in positionalArguments) {
@@ -385,43 +400,39 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
 
         if (args.kwonlyargs.isNotEmpty()) {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`kwonlyargs` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = args
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
 
         if (args.kw_defaults.isNotEmpty()) {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`kw_defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = args
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
 
         args.kwarg?.let {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`kwarg` is not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = it
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
 
         if (args.defaults.isNotEmpty()) {
-            val problem =
+            result.additionalProblems +=
                 newProblemDeclaration(
                     "`defaults` are not yet supported",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = args
                 )
-            frontend.scopeManager.addDeclaration(problem)
         }
     }
 
@@ -486,7 +497,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * This function "wraps" a list of [Python.ASTBASEstmt] nodes into a [Block]. Since the list
+     * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
      */
