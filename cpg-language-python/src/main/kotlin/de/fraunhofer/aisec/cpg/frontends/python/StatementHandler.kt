@@ -429,7 +429,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return handleDeclaratorList(node, node.decorator_list)
     }
 
-    fun handleDeclaratorList(
+    private fun handleDeclaratorList(
         node: Python.WithPythonLocation,
         decoratorList: List<Python.ASTBASEexpr>
     ): List<Annotation> {
