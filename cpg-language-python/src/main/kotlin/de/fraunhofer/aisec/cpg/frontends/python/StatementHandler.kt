@@ -139,7 +139,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleWhile(node: Python.ASTWhile): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node)
+        ret.statement = makeBlock(node.body, parentNode = node)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -157,9 +157,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
-        (node as? Python.ASTBASEstmt)?.let {
-            ret.statement = makeBlock(node.body).codeAndLocationFromChildren(it)
-        }
+        ret.statement = makeBlock(node.body, parentNode = node)
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -187,13 +185,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
             if (node.body.isNotEmpty()) {
-                makeBlock(node.body).codeAndLocationFromChildren(node)
+                makeBlock(node.body, parentNode = node)
             } else {
                 null
             }
         ret.elseStatement =
             if (node.orelse.isNotEmpty()) {
-                makeBlock(node.orelse).codeAndLocationFromChildren(node)
+                makeBlock(node.orelse, parentNode = node)
             } else {
                 null
             }
@@ -324,9 +322,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            (s as? Python.ASTBASEstmt)?.let {
-                result.body = makeBlock(s.body).codeAndLocationFromChildren(it)
-            }
+            result.body = makeBlock(s.body, parentNode = s)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -487,12 +483,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return annotations
     }
 
-    private fun makeBlock(stmts: List<Python.ASTBASEstmt>, rawNode: Python.AST? = null): Block {
-        val result = newBlock(rawNode = rawNode)
+    /**
+     * This function "wraps" a list of [Python.ASTBASEstmt] nodes into a [Block]. Since the list
+     * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
+     * [parentNode].
+     */
+    private fun makeBlock(
+        stmts: List<Python.ASTBASEstmt>,
+        parentNode: Python.WithPythonLocation
+    ): Block {
+        val result = newBlock()
         for (stmt in stmts) {
             result.statements += handle(stmt)
         }
-        return result
+
+        // Try to retrieve the code and location from the parent node, if it is a base stmt
+        var baseStmt = parentNode as? Python.ASTBASEstmt
+        return if (baseStmt != null) {
+            result.codeAndLocationFromChildren(baseStmt)
+        } else {
+            // Otherwise, continue without setting the location
+            log.warn(
+                "Could not set location on wrapped block because the parent node is not a python statement"
+            )
+            result
+        }
     }
 
     internal fun handleArgument(
