@@ -156,7 +156,7 @@ class PassOrderingHelper {
 
         // take care of [ExecuteBefore] dependencies
         for (dep in newElement.findAnnotations<ExecuteBefore>()) {
-            if (!dep.soft) {
+            if (!dep.softDependency) {
                 addToWorkingList(dep.other)
             }
         }
