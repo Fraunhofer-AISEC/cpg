@@ -222,9 +222,7 @@ class TypeManager {
         return t
     }
 
-    /**
-     * Checks, whether a [Type] with the given [name] exists.
-     */
+    /** Checks, whether a [Type] with the given [name] exists. */
     fun typeExists(name: CharSequence): Boolean {
         return firstOrderTypes.any { type: Type -> type.root.name == name }
     }

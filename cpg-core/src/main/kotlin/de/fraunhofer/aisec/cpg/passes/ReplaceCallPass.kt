@@ -135,7 +135,9 @@ class ReplaceCallPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                     }
 
                 val type = typeManager.lookupResolvedType(fqn)
-                if (type != null) walker.replaceCallWithCast(type, parent, call, pointer)
+                if (type != null) {
+                    walker.replaceCallWithCast(type, parent, call, pointer)
+                }
             }
         }
     }

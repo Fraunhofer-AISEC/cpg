@@ -120,7 +120,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString]
+    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {
