@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, Python.AST.BASEstmt>(::ProblemExpression, frontend) {
+    PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: Python.AST.BASEstmt): Statement {
+    override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
             is Python.AST.ClassDef -> handleClassDef(node)
             is Python.AST.FunctionDef -> handleFunctionDef(node)
@@ -487,7 +487,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     fun handleDeclaratorList(
         node: Python.AST.AST,
-        decoratorList: List<Python.AST.BASEexpr>
+        decoratorList: List<Python.AST.BaseExpr>
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
@@ -540,7 +540,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun makeBlock(
-        stmts: List<Python.AST.BASEstmt>,
+        stmts: List<Python.AST.BaseStmt>,
         rawNode: Python.AST.AST? = null
     ): Block {
         val result = newBlock(rawNode = rawNode)

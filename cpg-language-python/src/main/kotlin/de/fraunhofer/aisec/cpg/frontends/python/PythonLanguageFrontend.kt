@@ -278,7 +278,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         return tud
     }
 
-    fun operatorToString(op: Python.AST.BASEoperator) =
+    fun operatorToString(op: Python.AST.BaseOperator) =
         when (op) {
             is Python.AST.Add -> "+"
             is Python.AST.Sub -> "-"
@@ -295,7 +295,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             is Python.AST.FloorDiv -> "//"
         }
 
-    fun operatorUnaryToString(op: Python.AST.BASEunaryop) =
+    fun operatorUnaryToString(op: Python.AST.BaseUnaryOp) =
         when (op) {
             is Python.AST.Invert -> "~"
             is Python.AST.Not -> "not"

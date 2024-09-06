@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Expression, Python.AST.BASEexpr>(::ProblemExpression, frontend) {
+    PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
 
     /*
     Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
@@ -49,7 +49,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private val formattedValConversionRepr = 114L
     private val formattedValConversionASCII = 97L
 
-    override fun handleNode(node: Python.AST.BASEexpr): Expression {
+    override fun handleNode(node: Python.AST.BaseExpr): Expression {
         return when (node) {
             is Python.AST.Name -> handleName(node)
             is Python.AST.Call -> handleCall(node)

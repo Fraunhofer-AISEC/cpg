@@ -40,13 +40,14 @@ interface Python {
      * (under the same name as in Python).
      *
      * Python's AST object are mapped as close as possible to the original. Exceptions:
-     * - `identifier` fields are mapped as Kotlin `String`s
-     * - Python's `int` is mapped to `Int`
-     * - Constants are mapped as `Any` (thus Jep's conversion to Java makes the translation)
+     * - `identifier` fields are mapped as Kotlin [String]s
+     * - Python's `int` is mapped to [Int]
+     * - Constants are mapped as [Any] (thus Jep's conversion to Java makes the translation)
      */
     interface AST {
+
         /**
-         * `ast.stmt` [AST.BASEstmt] and `ast.expr` [AST.BASEexpr] nodes have extra location
+         * `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have extra location
          * properties as implemented here.
          */
         interface WithASTLocation { // TODO make the fields accessible `by lazy`
@@ -95,7 +96,7 @@ interface Python {
          *
          * Note: We currently only support `Module`s.
          */
-        abstract class BASEmod(pyObject: PyObject) : AST(pyObject)
+        abstract class BaseMod(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -104,7 +105,7 @@ interface Python {
          * ```
          */
         class Module(pyObject: PyObject) : AST(pyObject) {
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
             val type_ignores: kotlin.collections.List<type_ignore> by lazy {
                 "type_ignores" of pyObject
@@ -143,7 +144,7 @@ interface Python {
          *  |  | Continue
          * ```
          */
-        sealed class BASEstmt(pyObject: PyObject) : AST(pyObject), WithASTLocation
+        sealed class BaseStmt(pyObject: PyObject) : AST(pyObject), WithASTLocation
 
         /**
          * ```
@@ -151,18 +152,18 @@ interface Python {
          *  |  FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
          * ```
          */
-        class FunctionDef(pyObject: PyObject) : BASEstmt(pyObject) {
+        class FunctionDef(pyObject: PyObject) : BaseStmt(pyObject) {
             val name: String by lazy { "name" of pyObject }
 
             val args: arguments by lazy { "args" of pyObject }
 
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
-            val decorator_list: kotlin.collections.List<BASEexpr> by lazy {
+            val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
                 "decorator_list" of pyObject
             }
 
-            val returns: BASEexpr? by lazy { "returns" of pyObject }
+            val returns: BaseExpr? by lazy { "returns" of pyObject }
 
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
@@ -173,18 +174,18 @@ interface Python {
          *  |  AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment)
          * ```
          */
-        class AsyncFunctionDef(pyObject: PyObject) : BASEstmt(pyObject) {
+        class AsyncFunctionDef(pyObject: PyObject) : BaseStmt(pyObject) {
             val name: String by lazy { "name" of pyObject }
 
             val args: arguments by lazy { "args" of pyObject }
 
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
-            val decorator_list: kotlin.collections.List<BASEexpr> by lazy {
+            val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
                 "decorator_list" of pyObject
             }
 
-            val returns: BASEexpr? by lazy { "returns" of pyObject }
+            val returns: BaseExpr? by lazy { "returns" of pyObject }
 
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
@@ -195,16 +196,16 @@ interface Python {
          *  |  ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list)
          * ```
          */
-        class ClassDef(pyObject: PyObject) : BASEstmt(pyObject) {
+        class ClassDef(pyObject: PyObject) : BaseStmt(pyObject) {
             val name: String by lazy { "name" of pyObject }
 
-            val bases: kotlin.collections.List<BASEexpr> by lazy { "bases" of pyObject }
+            val bases: kotlin.collections.List<BaseExpr> by lazy { "bases" of pyObject }
 
             val keywords: kotlin.collections.List<keyword> by lazy { "keywords" of pyObject }
 
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
-            val decorator_list: kotlin.collections.List<BASEexpr> by lazy {
+            val decorator_list: kotlin.collections.List<BaseExpr> by lazy {
                 "decorator_list" of pyObject
             }
         }
@@ -215,8 +216,8 @@ interface Python {
          *  |  Return(expr? value)
          * ```
          */
-        class Return(pyObject: PyObject) : BASEstmt(pyObject) {
-            val value: BASEexpr? by lazy { "value" of pyObject }
+        class Return(pyObject: PyObject) : BaseStmt(pyObject) {
+            val value: BaseExpr? by lazy { "value" of pyObject }
         }
 
         /**
@@ -225,8 +226,8 @@ interface Python {
          *  |  Delete(expr* targets)
          * ```
          */
-        class Delete(pyObject: PyObject) : BASEstmt(pyObject) {
-            val targets: kotlin.collections.List<BASEexpr> by lazy { "targets" of pyObject }
+        class Delete(pyObject: PyObject) : BaseStmt(pyObject) {
+            val targets: kotlin.collections.List<BaseExpr> by lazy { "targets" of pyObject }
         }
 
         /**
@@ -235,10 +236,10 @@ interface Python {
          *  |  Assign(expr* targets, expr value, string? type_comment)
          * ```
          */
-        class Assign(pyObject: PyObject) : BASEstmt(pyObject) {
-            val targets: kotlin.collections.List<BASEexpr> by lazy { "targets" of pyObject }
+        class Assign(pyObject: PyObject) : BaseStmt(pyObject) {
+            val targets: kotlin.collections.List<BaseExpr> by lazy { "targets" of pyObject }
 
-            val value: BASEexpr by lazy { "value" of pyObject }
+            val value: BaseExpr by lazy { "value" of pyObject }
 
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
@@ -249,10 +250,10 @@ interface Python {
          *  |  AugAssign(expr target, operator op, expr value)
          * ```
          */
-        class AugAssign(pyObject: PyObject) : BASEstmt(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val op: BASEoperator by lazy { "op" of pyObject }
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class AugAssign(pyObject: PyObject) : BaseStmt(pyObject) {
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val op: BaseOperator by lazy { "op" of pyObject }
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -261,10 +262,10 @@ interface Python {
          *  |  AnnAssign(expr target, expr annotation, expr? value, int simple)
          * ```
          */
-        class AnnAssign(pyObject: PyObject) : BASEstmt(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val annotation: BASEexpr by lazy { "annotation" of pyObject }
-            val value: BASEexpr? by lazy { "value" of pyObject }
+        class AnnAssign(pyObject: PyObject) : BaseStmt(pyObject) {
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val annotation: BaseExpr by lazy { "annotation" of pyObject }
+            val value: BaseExpr? by lazy { "value" of pyObject }
             val simple: Long by lazy { "simple" of pyObject }
         }
 
@@ -274,11 +275,11 @@ interface Python {
          *  |  For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
          * ```
          */
-        class For(pyObject: PyObject) : BASEstmt(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val iter: BASEexpr by lazy { "iter" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
+        class For(pyObject: PyObject) : BaseStmt(pyObject) {
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val iter: BaseExpr by lazy { "iter" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
@@ -288,11 +289,11 @@ interface Python {
          *  |  AsyncFor(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
          * ```
          */
-        class AsyncFor(pyObject: PyObject) : BASEstmt(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val iter: BASEexpr by lazy { "iter" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
+        class AsyncFor(pyObject: PyObject) : BaseStmt(pyObject) {
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val iter: BaseExpr by lazy { "iter" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
@@ -302,10 +303,10 @@ interface Python {
          *  |  While(expr test, stmt* body, stmt* orelse)
          * ```
          */
-        class While(pyObject: PyObject) : BASEstmt(pyObject) {
-            val test: BASEexpr by lazy { "test" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
+        class While(pyObject: PyObject) : BaseStmt(pyObject) {
+            val test: BaseExpr by lazy { "test" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
         }
 
         /**
@@ -314,10 +315,10 @@ interface Python {
          *  |  If(expr test, stmt* body, stmt* orelse)
          * ```
          */
-        class If(pyObject: PyObject) : BASEstmt(pyObject) {
-            val test: BASEexpr by lazy { "test" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
+        class If(pyObject: PyObject) : BaseStmt(pyObject) {
+            val test: BaseExpr by lazy { "test" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
         }
 
         /**
@@ -326,9 +327,9 @@ interface Python {
          *  |  With(withitem* items, stmt* body, string? type_comment)
          * ```
          */
-        class With(pyObject: PyObject) : BASEstmt(pyObject) {
+        class With(pyObject: PyObject) : BaseStmt(pyObject) {
             val items: withitem by lazy { "items" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
@@ -338,11 +339,11 @@ interface Python {
          *  |  AsyncWith(withitem* items, stmt* body, string? type_comment)
          * ```
          */
-        class AsyncWith(pyObject: PyObject) : BASEstmt(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val iter: BASEexpr by lazy { "iter" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
+        class AsyncWith(pyObject: PyObject) : BaseStmt(pyObject) {
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val iter: BaseExpr by lazy { "iter" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
@@ -352,8 +353,8 @@ interface Python {
          *  |  Match(expr subject, match_case* cases)
          * ```
          */
-        class Match(pyObject: PyObject) : BASEstmt(pyObject) {
-            val subject: BASEexpr by lazy { "subject" of pyObject }
+        class Match(pyObject: PyObject) : BaseStmt(pyObject) {
+            val subject: BaseExpr by lazy { "subject" of pyObject }
             val cases: kotlin.collections.List<match_case> by lazy { "cases" of pyObject }
         }
 
@@ -363,9 +364,9 @@ interface Python {
          *  |  Raise(expr? exc, expr? cause)
          * ```
          */
-        class Raise(pyObject: PyObject) : BASEstmt(pyObject) {
-            val exc: BASEexpr? by lazy { "exc" of pyObject }
-            val cause: BASEexpr? by lazy { "cause" of pyObject }
+        class Raise(pyObject: PyObject) : BaseStmt(pyObject) {
+            val exc: BaseExpr? by lazy { "exc" of pyObject }
+            val cause: BaseExpr? by lazy { "cause" of pyObject }
         }
 
         /**
@@ -374,11 +375,11 @@ interface Python {
          *  |  Try(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
          * ```
          */
-        class Try(pyObject: PyObject) : BASEstmt(pyObject) {
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+        class Try(pyObject: PyObject) : BaseStmt(pyObject) {
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
             val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
-            val stmt: kotlin.collections.List<BASEstmt> by lazy { "StmtBase" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
+            val stmt: kotlin.collections.List<BaseStmt> by lazy { "StmtBase" of pyObject }
         }
 
         /**
@@ -387,11 +388,11 @@ interface Python {
          *  |  TryStar(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
          * ```
          */
-        class TryStar(pyObject: PyObject) : BASEstmt(pyObject) {
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+        class TryStar(pyObject: PyObject) : BaseStmt(pyObject) {
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
             val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
-            val orelse: kotlin.collections.List<BASEstmt> by lazy { "orelse" of pyObject }
-            val finalbody: kotlin.collections.List<BASEstmt> by lazy { "finalbody" of pyObject }
+            val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
+            val finalbody: kotlin.collections.List<BaseStmt> by lazy { "finalbody" of pyObject }
         }
 
         /**
@@ -400,9 +401,9 @@ interface Python {
          *  |  Assert(expr test, expr? msg)
          * ```
          */
-        class Assert(pyObject: PyObject) : BASEstmt(pyObject) {
-            val test: BASEexpr by lazy { "test" of pyObject }
-            val msg: BASEexpr? by lazy { "msg" of pyObject }
+        class Assert(pyObject: PyObject) : BaseStmt(pyObject) {
+            val test: BaseExpr by lazy { "test" of pyObject }
+            val msg: BaseExpr? by lazy { "msg" of pyObject }
         }
 
         /**
@@ -411,7 +412,7 @@ interface Python {
          *  |  Import(alias* names)
          * ```
          */
-        class Import(pyObject: PyObject) : BASEstmt(pyObject) {
+        class Import(pyObject: PyObject) : BaseStmt(pyObject) {
             val names: kotlin.collections.List<alias> by lazy { "names" of pyObject }
         }
 
@@ -421,7 +422,7 @@ interface Python {
          *  |  ImportFrom(identifier? module, alias* names, int? level)
          * ```
          */
-        class ImportFrom(pyObject: PyObject) : BASEstmt(pyObject) {
+        class ImportFrom(pyObject: PyObject) : BaseStmt(pyObject) {
             val module: String? by lazy { "module" of pyObject }
             val names: kotlin.collections.List<alias> by lazy { "names" of pyObject }
             val level: Long? by lazy { "level" of pyObject }
@@ -433,7 +434,7 @@ interface Python {
          *  |  Global(identifier* names)
          * ```
          */
-        class Global(pyObject: PyObject) : BASEstmt(pyObject) {
+        class Global(pyObject: PyObject) : BaseStmt(pyObject) {
             val names: kotlin.collections.List<String> by lazy { "names" of pyObject }
         }
 
@@ -443,13 +444,13 @@ interface Python {
          *  |  Nonlocal(identifier* names)
          * ```
          */
-        class Nonlocal(pyObject: PyObject) : BASEstmt(pyObject) {
+        class Nonlocal(pyObject: PyObject) : BaseStmt(pyObject) {
             val names: kotlin.collections.List<String> by lazy { "names" of pyObject }
         }
 
         /**
          * Represents `ast.Expr` expressions. Note: do not confuse with
-         * - [BASEexpr] -> the expression class
+         * - [BaseExpr] -> the expression class
          * - [Expression] -> the expression as part of `mod`
          *
          * ```
@@ -457,8 +458,8 @@ interface Python {
          *  |  Expr(expr value)
          * ```
          */
-        class Expr(pyObject: PyObject) : BASEstmt(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class Expr(pyObject: PyObject) : BaseStmt(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -467,7 +468,7 @@ interface Python {
          *  |  Pass
          * ```
          */
-        class Pass(pyObject: PyObject) : BASEstmt(pyObject)
+        class Pass(pyObject: PyObject) : BaseStmt(pyObject)
 
         /**
          * ```
@@ -475,7 +476,7 @@ interface Python {
          *  |  Break
          * ```
          */
-        class Break(pyObject: PyObject) : BASEstmt(pyObject)
+        class Break(pyObject: PyObject) : BaseStmt(pyObject)
 
         /**
          * ```
@@ -483,7 +484,7 @@ interface Python {
          *  |  Continue
          * ```
          */
-        class Continue(pyObject: PyObject) : BASEstmt(pyObject)
+        class Continue(pyObject: PyObject) : BaseStmt(pyObject)
 
         /**
          * Represents `ast.expr` expressions. Note: do not confuse with
@@ -492,7 +493,7 @@ interface Python {
          *
          * ast.expr = class expr(AST)
          */
-        sealed class BASEexpr(pyObject: PyObject) : AST(pyObject), WithASTLocation
+        sealed class BaseExpr(pyObject: PyObject) : AST(pyObject), WithASTLocation
 
         /**
          * ```
@@ -500,9 +501,9 @@ interface Python {
          *  |  BoolOp(boolop op, expr* values)
          * ```
          */
-        class BoolOp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val op: BASEboolop by lazy { "op" of pyObject }
-            val values: kotlin.collections.List<BASEexpr> by lazy { "values" of pyObject }
+        class BoolOp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val op: BaseBoolOp by lazy { "op" of pyObject }
+            val values: kotlin.collections.List<BaseExpr> by lazy { "values" of pyObject }
         }
 
         /**
@@ -511,9 +512,9 @@ interface Python {
          *  |  NamedExpr(expr target, expr value)
          * ```
          */
-        class NamedExpr(pyObject: PyObject) : BASEexpr(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class NamedExpr(pyObject: PyObject) : BaseExpr(pyObject) {
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -522,10 +523,10 @@ interface Python {
          *  |  BinOp(expr left, operator op, expr right)
          * ```
          */
-        class BinOp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val left: BASEexpr by lazy { "left" of pyObject }
-            val op: BASEoperator by lazy { "op" of pyObject }
-            val right: BASEexpr by lazy { "right" of pyObject }
+        class BinOp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val left: BaseExpr by lazy { "left" of pyObject }
+            val op: BaseOperator by lazy { "op" of pyObject }
+            val right: BaseExpr by lazy { "right" of pyObject }
         }
 
         /**
@@ -534,9 +535,9 @@ interface Python {
          *  |  UnaryOp(unaryop op, expr operand)
          * ```
          */
-        class UnaryOp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val op: BASEunaryop by lazy { "op" of pyObject }
-            val operand: BASEexpr by lazy { "operand" of pyObject }
+        class UnaryOp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val op: BaseUnaryOp by lazy { "op" of pyObject }
+            val operand: BaseExpr by lazy { "operand" of pyObject }
         }
 
         /**
@@ -545,9 +546,9 @@ interface Python {
          *  |  Lambda(arguments args, expr body)
          * ```
          */
-        class Lambda(pyObject: PyObject) : BASEexpr(pyObject) {
+        class Lambda(pyObject: PyObject) : BaseExpr(pyObject) {
             val args: arguments by lazy { "args" of pyObject }
-            val body: BASEexpr by lazy { "body" of pyObject }
+            val body: BaseExpr by lazy { "body" of pyObject }
         }
 
         /**
@@ -556,10 +557,10 @@ interface Python {
          *  |  IfExp(expr test, expr body, expr orelse)
          * ```
          */
-        class IfExp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val test: BASEexpr by lazy { "test" of pyObject }
-            val body: BASEexpr by lazy { "body" of pyObject }
-            val orelse: BASEexpr by lazy { "orelse" of pyObject }
+        class IfExp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val test: BaseExpr by lazy { "test" of pyObject }
+            val body: BaseExpr by lazy { "body" of pyObject }
+            val orelse: BaseExpr by lazy { "orelse" of pyObject }
         }
 
         /**
@@ -568,9 +569,9 @@ interface Python {
          *  |  Dict(expr* keys, expr* values)
          * ```
          */
-        class Dict(pyObject: PyObject) : BASEexpr(pyObject) {
-            val keys: kotlin.collections.List<BASEexpr?> by lazy { "keys" of pyObject }
-            val values: kotlin.collections.List<BASEexpr> by lazy { "values" of pyObject }
+        class Dict(pyObject: PyObject) : BaseExpr(pyObject) {
+            val keys: kotlin.collections.List<BaseExpr?> by lazy { "keys" of pyObject }
+            val values: kotlin.collections.List<BaseExpr> by lazy { "values" of pyObject }
         }
 
         /**
@@ -579,8 +580,8 @@ interface Python {
          *  |  Set(expr* elts)
          * ```
          */
-        class Set(pyObject: PyObject) : BASEexpr(pyObject) {
-            val elts: kotlin.collections.List<BASEexpr> by lazy { "elts" of pyObject }
+        class Set(pyObject: PyObject) : BaseExpr(pyObject) {
+            val elts: kotlin.collections.List<BaseExpr> by lazy { "elts" of pyObject }
         }
 
         /**
@@ -589,8 +590,8 @@ interface Python {
          *  |  ListComp(expr elt, comprehension* generators)
          * ```
          */
-        class ListComp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val elt: BASEexpr by lazy { "elt" of pyObject }
+        class ListComp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val elt: BaseExpr by lazy { "elt" of pyObject }
             val generators: kotlin.collections.List<comprehension> by lazy {
                 "generators" of pyObject
             }
@@ -602,8 +603,8 @@ interface Python {
          *  |  SetComp(expr elt, comprehension* generators)
          * ```
          */
-        class SetComp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val elt: BASEexpr by lazy { "elt" of pyObject }
+        class SetComp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val elt: BaseExpr by lazy { "elt" of pyObject }
             val generators: kotlin.collections.List<comprehension> by lazy {
                 "generators" of pyObject
             }
@@ -615,9 +616,9 @@ interface Python {
          *  |  DictComp(expr key, expr value, comprehension* generators)
          * ```
          */
-        class DictComp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val key: BASEexpr by lazy { "key" of pyObject }
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class DictComp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val key: BaseExpr by lazy { "key" of pyObject }
+            val value: BaseExpr by lazy { "value" of pyObject }
             val generators: kotlin.collections.List<comprehension> by lazy {
                 "generators" of pyObject
             }
@@ -629,8 +630,8 @@ interface Python {
          *  |  GeneratorExp(expr elt, comprehension* generators)
          * ```
          */
-        class GeneratorExp(pyObject: PyObject) : BASEexpr(pyObject) {
-            val elt: BASEexpr by lazy { "elt" of pyObject }
+        class GeneratorExp(pyObject: PyObject) : BaseExpr(pyObject) {
+            val elt: BaseExpr by lazy { "elt" of pyObject }
             val generators: kotlin.collections.List<comprehension> by lazy {
                 "generators" of pyObject
             }
@@ -642,8 +643,8 @@ interface Python {
          *  |  Await(expr value)
          * ```
          */
-        class Await(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class Await(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -652,8 +653,8 @@ interface Python {
          *  |  Yield(expr? value)
          * ```
          */
-        class Yield(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr? by lazy { "value" of pyObject }
+        class Yield(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr? by lazy { "value" of pyObject }
         }
 
         /**
@@ -662,8 +663,8 @@ interface Python {
          *  |  YieldFrom(expr value)
          * ```
          */
-        class YieldFrom(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class YieldFrom(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -672,10 +673,10 @@ interface Python {
          *  |  Compare(expr left, cmpop* ops, expr* comparators)
          * ```
          */
-        class Compare(pyObject: PyObject) : BASEexpr(pyObject) {
-            val left: BASEexpr by lazy { "left" of pyObject }
-            val ops: kotlin.collections.List<BASEcmpop> by lazy { "ops" of pyObject }
-            val comparators: kotlin.collections.List<BASEexpr> by lazy { "comparators" of pyObject }
+        class Compare(pyObject: PyObject) : BaseExpr(pyObject) {
+            val left: BaseExpr by lazy { "left" of pyObject }
+            val ops: kotlin.collections.List<BaseCmpOp> by lazy { "ops" of pyObject }
+            val comparators: kotlin.collections.List<BaseExpr> by lazy { "comparators" of pyObject }
         }
 
         /**
@@ -684,10 +685,10 @@ interface Python {
          *  |  Call(expr func, expr* args, keyword* keywords)
          * ```
          */
-        class Call(pyObject: PyObject) : BASEexpr(pyObject) {
-            val func: BASEexpr by lazy { "func" of pyObject }
+        class Call(pyObject: PyObject) : BaseExpr(pyObject) {
+            val func: BaseExpr by lazy { "func" of pyObject }
 
-            val args: kotlin.collections.List<BASEexpr> by lazy { "args" of pyObject }
+            val args: kotlin.collections.List<BaseExpr> by lazy { "args" of pyObject }
 
             val keywords: kotlin.collections.List<keyword> by lazy { "keywords" of pyObject }
         }
@@ -698,10 +699,10 @@ interface Python {
          *  |  FormattedValue(expr value, int conversion, expr? format_spec)
          * ```
          */
-        class FormattedValue(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class FormattedValue(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
             val conversion: Long? by lazy { "conversion" of pyObject }
-            val format_spec: BASEexpr? by lazy { "format_spec" of pyObject }
+            val format_spec: BaseExpr? by lazy { "format_spec" of pyObject }
         }
 
         /**
@@ -710,8 +711,8 @@ interface Python {
          *  |  JoinedStr(expr* values)
          * ```
          */
-        class JoinedStr(pyObject: PyObject) : BASEexpr(pyObject) {
-            val values: kotlin.collections.List<BASEexpr> by lazy { "values" of pyObject }
+        class JoinedStr(pyObject: PyObject) : BaseExpr(pyObject) {
+            val values: kotlin.collections.List<BaseExpr> by lazy { "values" of pyObject }
         }
 
         /**
@@ -720,7 +721,7 @@ interface Python {
          *  |  Constant(constant value, string? kind)
          * ```
          */
-        class Constant(pyObject: PyObject) : BASEexpr(pyObject) {
+        class Constant(pyObject: PyObject) : BaseExpr(pyObject) {
             val value: Any by lazy { "value" of pyObject }
             val kind: String? by lazy { "kind" of pyObject }
         }
@@ -731,10 +732,10 @@ interface Python {
          *  |  Attribute(expr value, identifier attr, expr_context ctx)
          * ```
          */
-        class Attribute(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class Attribute(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
             val attr: String by lazy { "attr" of pyObject }
-            val ctx: BASEexpr_context by lazy { "ctx" of pyObject }
+            val ctx: BaseExprContext by lazy { "ctx" of pyObject }
         }
 
         /**
@@ -743,10 +744,10 @@ interface Python {
          *  |  Subscript(expr value, expr slice, expr_context ctx)
          * ```
          */
-        class Subscript(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
-            val slice: BASEexpr by lazy { "slice" of pyObject }
-            val ctx: BASEexpr_context by lazy { "ctx" of pyObject }
+        class Subscript(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
+            val slice: BaseExpr by lazy { "slice" of pyObject }
+            val ctx: BaseExprContext by lazy { "ctx" of pyObject }
         }
 
         /**
@@ -755,9 +756,9 @@ interface Python {
          *  |  Starred(expr value, expr_context ctx)
          * ```
          */
-        class Starred(pyObject: PyObject) : BASEexpr(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
-            val ctx: BASEexpr_context by lazy { "ctx" of pyObject }
+        class Starred(pyObject: PyObject) : BaseExpr(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
+            val ctx: BaseExprContext by lazy { "ctx" of pyObject }
         }
 
         /**
@@ -766,9 +767,9 @@ interface Python {
          *  |  Name(identifier id, expr_context ctx)
          * ```
          */
-        class Name(pyObject: PyObject) : BASEexpr(pyObject) {
+        class Name(pyObject: PyObject) : BaseExpr(pyObject) {
             val id: String by lazy { "id" of pyObject }
-            val ctx: BASEexpr_context by lazy { "ctx" of pyObject }
+            val ctx: BaseExprContext by lazy { "ctx" of pyObject }
         }
 
         /**
@@ -777,9 +778,9 @@ interface Python {
          *  |  List(expr* elts, expr_context ctx)
          * ```
          */
-        class List(pyObject: PyObject) : BASEexpr(pyObject) {
-            val elts: kotlin.collections.List<BASEexpr> by lazy { "elts" of pyObject }
-            val ctx: BASEexpr_context by lazy { "ctx" of pyObject }
+        class List(pyObject: PyObject) : BaseExpr(pyObject) {
+            val elts: kotlin.collections.List<BaseExpr> by lazy { "elts" of pyObject }
+            val ctx: BaseExprContext by lazy { "ctx" of pyObject }
         }
 
         /**
@@ -788,9 +789,9 @@ interface Python {
          *  |  Tuple(expr* elts, expr_context ctx)
          * ```
          */
-        class Tuple(pyObject: PyObject) : BASEexpr(pyObject) {
-            val elts: kotlin.collections.List<BASEexpr> by lazy { "elts" of pyObject }
-            val ctx: BASEexpr_context by lazy { "ctx" of pyObject }
+        class Tuple(pyObject: PyObject) : BaseExpr(pyObject) {
+            val elts: kotlin.collections.List<BaseExpr> by lazy { "elts" of pyObject }
+            val ctx: BaseExprContext by lazy { "ctx" of pyObject }
         }
 
         /**
@@ -799,10 +800,10 @@ interface Python {
          *  |  Slice(expr? lower, expr? upper, expr? step)
          * ```
          */
-        class Slice(pyObject: PyObject) : BASEexpr(pyObject) {
-            val lower: BASEexpr? by lazy { "lower" of pyObject }
-            val upper: BASEexpr? by lazy { "upper" of pyObject }
-            val step: BASEexpr? by lazy { "step" of pyObject }
+        class Slice(pyObject: PyObject) : BaseExpr(pyObject) {
+            val lower: BaseExpr? by lazy { "lower" of pyObject }
+            val upper: BaseExpr? by lazy { "upper" of pyObject }
+            val step: BaseExpr? by lazy { "step" of pyObject }
         }
 
         /**
@@ -811,7 +812,7 @@ interface Python {
          *  |  boolop = And | Or
          * ```
          */
-        sealed class BASEboolop(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseBoolOp(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -819,14 +820,14 @@ interface Python {
          *  |  And
          * ```
          */
-        class And(pyObject: PyObject) : BASEboolop(pyObject)
+        class And(pyObject: PyObject) : BaseBoolOp(pyObject)
 
         /**
          * ```
          * ast.Or = class Or(boolop)
          *  |  Or
          */
-        class Or(pyObject: PyObject) : BASEboolop(pyObject)
+        class Or(pyObject: PyObject) : BaseBoolOp(pyObject)
 
         /**
          * ```
@@ -834,7 +835,7 @@ interface Python {
          *  |  cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
          * ```
          */
-        sealed class BASEcmpop(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseCmpOp(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -842,7 +843,7 @@ interface Python {
          *  |  Eq
          * ```
          */
-        class Eq(pyObject: PyObject) : BASEcmpop(pyObject)
+        class Eq(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -850,7 +851,7 @@ interface Python {
          *  |  NotEq
          * ```
          */
-        class NotEq(pyObject: PyObject) : BASEcmpop(pyObject)
+        class NotEq(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -858,7 +859,7 @@ interface Python {
          *  |  Lt
          * ```
          */
-        class Lt(pyObject: PyObject) : BASEcmpop(pyObject)
+        class Lt(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -866,7 +867,7 @@ interface Python {
          *  |  LtE
          * ```
          */
-        class LtE(pyObject: PyObject) : BASEcmpop(pyObject)
+        class LtE(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -874,7 +875,7 @@ interface Python {
          *  |  Gt
          * ```
          */
-        class Gt(pyObject: PyObject) : BASEcmpop(pyObject)
+        class Gt(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -882,7 +883,7 @@ interface Python {
          *  |  GtE
          * ```
          */
-        class GtE(pyObject: PyObject) : BASEcmpop(pyObject)
+        class GtE(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -890,7 +891,7 @@ interface Python {
          *  |  Is
          * ```
          */
-        class Is(pyObject: PyObject) : BASEcmpop(pyObject)
+        class Is(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -898,7 +899,7 @@ interface Python {
          *  |  IsNot
          * ```
          */
-        class IsNot(pyObject: PyObject) : BASEcmpop(pyObject)
+        class IsNot(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -906,7 +907,7 @@ interface Python {
          *  |  In
          * ```
          */
-        class In(pyObject: PyObject) : BASEcmpop(pyObject)
+        class In(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -914,7 +915,7 @@ interface Python {
          *  |  NotIn
          * ```
          */
-        class NotIn(pyObject: PyObject) : BASEcmpop(pyObject)
+        class NotIn(pyObject: PyObject) : BaseCmpOp(pyObject)
 
         /**
          * ```
@@ -922,7 +923,7 @@ interface Python {
          *  |  expr_context = Load | Store | Del
          * ```
          */
-        sealed class BASEexpr_context(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseExprContext(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -930,7 +931,7 @@ interface Python {
          *  |  Load
          * ```
          */
-        class Load(pyObject: PyObject) : BASEexpr_context(pyObject)
+        class Load(pyObject: PyObject) : BaseExprContext(pyObject)
 
         /**
          * ```
@@ -938,7 +939,7 @@ interface Python {
          *  |  Store
          * ```
          */
-        class Store(pyObject: PyObject) : BASEexpr_context(pyObject)
+        class Store(pyObject: PyObject) : BaseExprContext(pyObject)
 
         /**
          * ```
@@ -946,7 +947,7 @@ interface Python {
          *  |  Del
          * ```
          */
-        class Del(pyObject: PyObject) : BASEexpr_context(pyObject)
+        class Del(pyObject: PyObject) : BaseExprContext(pyObject)
 
         /**
          * ```
@@ -954,7 +955,7 @@ interface Python {
          *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
          * ```
          */
-        sealed class BASEoperator(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseOperator(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -962,7 +963,7 @@ interface Python {
          *  |  Add
          * ```
          */
-        class Add(pyObject: PyObject) : BASEoperator(pyObject)
+        class Add(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -970,7 +971,7 @@ interface Python {
          *  |  Sub
          * ```
          */
-        class Sub(pyObject: PyObject) : BASEoperator(pyObject)
+        class Sub(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -978,7 +979,7 @@ interface Python {
          *  |  Mult
          * ```
          */
-        class Mult(pyObject: PyObject) : BASEoperator(pyObject)
+        class Mult(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -986,7 +987,7 @@ interface Python {
          *  |  MatMult
          * ```
          */
-        class MatMult(pyObject: PyObject) : BASEoperator(pyObject)
+        class MatMult(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -994,7 +995,7 @@ interface Python {
          *  |  Div
          * ```
          */
-        class Div(pyObject: PyObject) : BASEoperator(pyObject)
+        class Div(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1002,7 +1003,7 @@ interface Python {
          *  |  Mod
          * ```
          */
-        class Mod(pyObject: PyObject) : BASEoperator(pyObject)
+        class Mod(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1010,7 +1011,7 @@ interface Python {
          *  |  Pow
          * ```
          */
-        class Pow(pyObject: PyObject) : BASEoperator(pyObject)
+        class Pow(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1018,7 +1019,7 @@ interface Python {
          *  |  LShift
          * ```
          */
-        class LShift(pyObject: PyObject) : BASEoperator(pyObject)
+        class LShift(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1026,7 +1027,7 @@ interface Python {
          *  |  RShift
          * ```
          */
-        class RShift(pyObject: PyObject) : BASEoperator(pyObject)
+        class RShift(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1034,7 +1035,7 @@ interface Python {
          *  |  BitOr
          * ```
          */
-        class BitOr(pyObject: PyObject) : BASEoperator(pyObject)
+        class BitOr(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1042,7 +1043,7 @@ interface Python {
          *  |  BitXor
          * ```
          */
-        class BitXor(pyObject: PyObject) : BASEoperator(pyObject)
+        class BitXor(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1050,7 +1051,7 @@ interface Python {
          *  |  BitAnd
          * ```
          */
-        class BitAnd(pyObject: PyObject) : BASEoperator(pyObject)
+        class BitAnd(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1058,7 +1059,7 @@ interface Python {
          *  |  FloorDiv
          * ```
          */
-        class FloorDiv(pyObject: PyObject) : BASEoperator(pyObject)
+        class FloorDiv(pyObject: PyObject) : BaseOperator(pyObject)
 
         /**
          * ```
@@ -1073,7 +1074,7 @@ interface Python {
          *  |  | MatchOr(pattern* patterns)
          * ```
          */
-        abstract class BASEpattern(pyObject: PyObject) : AST(pyObject)
+        abstract class BasePattern(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -1081,8 +1082,8 @@ interface Python {
          *  |  MatchValue(expr value)
          * ```
          */
-        class MatchValue(pyObject: PyObject) : BASEpattern(pyObject) {
-            val value: BASEexpr by lazy { "value" of pyObject }
+        class MatchValue(pyObject: PyObject) : BasePattern(pyObject) {
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -1091,7 +1092,7 @@ interface Python {
          *  |  MatchSingleton(constant value)
          * ```
          */
-        class MatchSingleton(pyObject: PyObject) : BASEpattern(pyObject) {
+        class MatchSingleton(pyObject: PyObject) : BasePattern(pyObject) {
             val value: Any by lazy { "value" of pyObject }
         }
 
@@ -1101,8 +1102,8 @@ interface Python {
          *  |  MatchSequence(pattern* patterns)
          * ```
          */
-        class MatchSequence(pyObject: PyObject) : BASEpattern(pyObject) {
-            val patterns: kotlin.collections.List<BASEpattern> by lazy { "patterns" of pyObject }
+        class MatchSequence(pyObject: PyObject) : BasePattern(pyObject) {
+            val patterns: kotlin.collections.List<BasePattern> by lazy { "patterns" of pyObject }
         }
 
         /**
@@ -1111,9 +1112,9 @@ interface Python {
          *  |  MatchMapping(expr* keys, pattern* patterns, identifier? rest)
          * ```
          */
-        class MatchMapping(pyObject: PyObject) : BASEpattern(pyObject) {
-            val key: kotlin.collections.List<BASEexpr> by lazy { "keys" of pyObject }
-            val patterns: kotlin.collections.List<BASEpattern> by lazy { "patterns" of pyObject }
+        class MatchMapping(pyObject: PyObject) : BasePattern(pyObject) {
+            val key: kotlin.collections.List<BaseExpr> by lazy { "keys" of pyObject }
+            val patterns: kotlin.collections.List<BasePattern> by lazy { "patterns" of pyObject }
             val rest: String? by lazy { "rest" of pyObject }
         }
 
@@ -1123,11 +1124,11 @@ interface Python {
          *  |  MatchClass(expr cls, pattern* patterns, identifier* kwd_attrs, pattern* kwd_patterns)
          * ```
          */
-        class MatchClass(pyObject: PyObject) : BASEpattern(pyObject) {
-            val cls: BASEexpr by lazy { "cls" of pyObject }
-            val patterns: kotlin.collections.List<BASEpattern> by lazy { "patterns" of pyObject }
+        class MatchClass(pyObject: PyObject) : BasePattern(pyObject) {
+            val cls: BaseExpr by lazy { "cls" of pyObject }
+            val patterns: kotlin.collections.List<BasePattern> by lazy { "patterns" of pyObject }
             val kwd_attrs: kotlin.collections.List<String> by lazy { "kwd_attrs" of pyObject }
-            val kwd_patterns: kotlin.collections.List<BASEpattern> by lazy {
+            val kwd_patterns: kotlin.collections.List<BasePattern> by lazy {
                 "kwd_patterns" of pyObject
             }
         }
@@ -1138,7 +1139,7 @@ interface Python {
          *  |  MatchStar(identifier? name)
          * ```
          */
-        class MatchStar(pyObject: PyObject) : BASEpattern(pyObject) {
+        class MatchStar(pyObject: PyObject) : BasePattern(pyObject) {
             val name: String? by lazy { "name" of pyObject }
         }
 
@@ -1148,8 +1149,8 @@ interface Python {
          *  |  MatchAs(pattern? pattern, identifier? name)
          * ```
          */
-        class MatchAs(pyObject: PyObject) : BASEpattern(pyObject) {
-            val pattern: BASEpattern? by lazy { "pattern" of pyObject }
+        class MatchAs(pyObject: PyObject) : BasePattern(pyObject) {
+            val pattern: BasePattern? by lazy { "pattern" of pyObject }
             val name: String? by lazy { "name" of pyObject }
         }
 
@@ -1159,8 +1160,8 @@ interface Python {
          *  |  MatchOr(pattern* patterns)
          * ```
          */
-        class MatchOr(pyObject: PyObject) : BASEpattern(pyObject) {
-            val patterns: kotlin.collections.List<BASEpattern> by lazy { "patterns" of pyObject }
+        class MatchOr(pyObject: PyObject) : BasePattern(pyObject) {
+            val patterns: kotlin.collections.List<BasePattern> by lazy { "patterns" of pyObject }
         }
 
         /**
@@ -1169,7 +1170,7 @@ interface Python {
          *  |  unaryop = Invert | Not | UAdd | USub
          * ```
          */
-        sealed class BASEunaryop(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseUnaryOp(pyObject: PyObject) : AST(pyObject)
 
         /**
          * ```
@@ -1177,7 +1178,7 @@ interface Python {
          *  |  Invert
          * ```
          */
-        class Invert(pyObject: PyObject) : BASEunaryop(pyObject)
+        class Invert(pyObject: PyObject) : BaseUnaryOp(pyObject)
 
         /**
          * ```
@@ -1185,7 +1186,7 @@ interface Python {
          *  |  Not
          * ```
          */
-        class Not(pyObject: PyObject) : BASEunaryop(pyObject)
+        class Not(pyObject: PyObject) : BaseUnaryOp(pyObject)
 
         /**
          * ```
@@ -1193,7 +1194,7 @@ interface Python {
          *  |  UAdd
          * ```
          */
-        class UAdd(pyObject: PyObject) : BASEunaryop(pyObject)
+        class UAdd(pyObject: PyObject) : BaseUnaryOp(pyObject)
 
         /**
          * ```
@@ -1201,7 +1202,7 @@ interface Python {
          *  |  USub
          * ```
          */
-        class USub(pyObject: PyObject) : BASEunaryop(pyObject)
+        class USub(pyObject: PyObject) : BaseUnaryOp(pyObject)
 
         /**
          * ```
@@ -1222,7 +1223,7 @@ interface Python {
          */
         class arg(pyObject: PyObject) : AST(pyObject), WithASTLocation {
             val arg: String by lazy { "arg" of pyObject }
-            val annotation: BASEexpr? by lazy { "annotation" of pyObject }
+            val annotation: BaseExpr? by lazy { "annotation" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
         }
 
@@ -1237,9 +1238,9 @@ interface Python {
             val args: kotlin.collections.List<arg> by lazy { "args" of pyObject }
             val vararg: arg? by lazy { "vararg" of pyObject }
             val kwonlyargs: kotlin.collections.List<arg> by lazy { "kwonlyargs" of pyObject }
-            val kw_defaults: kotlin.collections.List<BASEexpr> by lazy { "kw_defaults" of pyObject }
+            val kw_defaults: kotlin.collections.List<BaseExpr> by lazy { "kw_defaults" of pyObject }
             val kwarg: arg? by lazy { "kwarg" of pyObject }
-            val defaults: kotlin.collections.List<BASEexpr> by lazy { "defaults" of pyObject }
+            val defaults: kotlin.collections.List<BaseExpr> by lazy { "defaults" of pyObject }
         }
 
         /**
@@ -1249,9 +1250,9 @@ interface Python {
          * ```
          */
         class comprehension(pyObject: PyObject) : AST(pyObject) {
-            val target: BASEexpr by lazy { "target" of pyObject }
-            val iter: BASEexpr by lazy { "iter" of pyObject }
-            val ifs: kotlin.collections.List<BASEexpr> by lazy { "ifs" of pyObject }
+            val target: BaseExpr by lazy { "target" of pyObject }
+            val iter: BaseExpr by lazy { "iter" of pyObject }
+            val ifs: kotlin.collections.List<BaseExpr> by lazy { "ifs" of pyObject }
             val is_async: Long by lazy { "is_async" of pyObject }
         }
 
@@ -1264,9 +1265,9 @@ interface Python {
          * TODO: excepthandler <-> ExceptHandler
          */
         class excepthandler(pyObject: PyObject) : AST(pyObject) {
-            val type: BASEexpr by lazy { "type" of pyObject }
+            val type: BaseExpr by lazy { "type" of pyObject }
             val name: String by lazy { "name" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
         }
 
         /**
@@ -1277,7 +1278,7 @@ interface Python {
          */
         class keyword(pyObject: PyObject) : AST(pyObject) {
             val arg: String? by lazy { "arg" of pyObject }
-            val value: BASEexpr by lazy { "value" of pyObject }
+            val value: BaseExpr by lazy { "value" of pyObject }
         }
 
         /**
@@ -1287,9 +1288,9 @@ interface Python {
          * ```
          */
         class match_case(pyObject: PyObject) : AST(pyObject) {
-            val pattern: BASEpattern by lazy { "pattern" of pyObject }
-            val guard: BASEexpr? by lazy { "guard" of pyObject }
-            val body: kotlin.collections.List<BASEstmt> by lazy { "body" of pyObject }
+            val pattern: BasePattern by lazy { "pattern" of pyObject }
+            val guard: BaseExpr? by lazy { "guard" of pyObject }
+            val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
         }
 
         /**
@@ -1309,8 +1310,8 @@ interface Python {
          * ```
          */
         class withitem(pyObject: PyObject) : AST(pyObject) {
-            val context_expr: BASEexpr by lazy { "context_expr" of pyObject }
-            val optional_vars: BASEexpr? by lazy { "optional_vars" of pyObject }
+            val context_expr: BaseExpr by lazy { "context_expr" of pyObject }
+            val optional_vars: BaseExpr? by lazy { "optional_vars" of pyObject }
         }
     }
 }
