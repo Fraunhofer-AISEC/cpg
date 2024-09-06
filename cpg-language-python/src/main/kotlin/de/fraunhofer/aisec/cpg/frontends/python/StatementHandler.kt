@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.Python.IsAsync
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -145,7 +146,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleFor(node: Python.NormalOrAsyncFor): Statement {
         val ret = newForEachStatement(rawNode = node)
-        if (node.isAsync) {
+        if (node is IsAsync) {
             ret.addDeclaration(
                 newProblemDeclaration(
                     problem = "The \"async\" keyword is not yet supported.",
@@ -156,7 +157,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body).codeAndLocationFromChildren(node as Python.ASTBASEstmt)
+        (node as? Python.ASTBASEstmt)?.let {
+            ret.statement = makeBlock(node.body).codeAndLocationFromChildren(it)
+        }
         node.orelse.firstOrNull()?.let { TODO("Not supported") }
         return ret
     }
@@ -321,7 +324,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body).codeAndLocationFromChildren(s as Python.ASTBASEstmt)
+            (s as? Python.ASTBASEstmt)?.let {
+                result.body = makeBlock(s.body).codeAndLocationFromChildren(it)
+            }
         }
 
         frontend.scopeManager.leaveScope(result)
