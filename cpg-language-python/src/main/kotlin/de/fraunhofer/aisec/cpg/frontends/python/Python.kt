@@ -362,7 +362,7 @@ interface Python {
          * are so similar, that we make use of this interface to avoid a lot of duplicate code.
          */
         interface NormalOrAsyncWith : AsyncOrNot {
-            val items: withitem
+            val items: kotlin.collections.List<withitem>
             val body: kotlin.collections.List<BaseStmt>
             val type_comment: String?
         }
@@ -374,7 +374,7 @@ interface Python {
          * ```
          */
         class With(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncWith {
-            override val items: withitem by lazy { "items" of pyObject }
+            override val items: kotlin.collections.List<withitem> by lazy { "items" of pyObject }
             override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
             override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
@@ -386,7 +386,7 @@ interface Python {
          * ```
          */
         class AsyncWith(pyObject: PyObject) : BaseStmt(pyObject), NormalOrAsyncWith, IsAsync {
-            override val items: withitem by lazy { "items" of pyObject }
+            override val items: kotlin.collections.List<withitem> by lazy { "items" of pyObject }
             override val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
             override val type_comment: String? by lazy { "type_comment" of pyObject }
         }
