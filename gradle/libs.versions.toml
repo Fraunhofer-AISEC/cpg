@@ -2,7 +2,7 @@
 kotlin = "2.0.0"
 kotlin19 = "1.9.10"
 neo4j = "4.0.10"
-log4j = "2.23.0"
+log4j = "2.24.0"
 sonarqube = "5.1.0.4882"
 spotless = "6.25.0"
 nexus-publish = "2.0.0"
