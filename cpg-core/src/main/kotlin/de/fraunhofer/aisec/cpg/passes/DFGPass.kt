@@ -31,8 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -191,7 +189,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected open fun handleVariableDeclaration(node: VariableDeclaration) {
-        node.initializer?.let { node.addPrevDFG(it) }
+        node.initializer?.let {
+            val granularity =
+                if (it is PointerReference) PointerDataflowGranularity() else default()
+            node.addPrevDFG(it, granularity)
+        }
     }
 
     /**
@@ -323,34 +325,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleUnaryOperator(node: UnaryOperator) {
         if ((node.input as? Reference)?.access == AccessValues.WRITE) {
-            node.input.let {
-                val granularity =
-                    if (
-                        node.operatorCode == "*" &&
-                            (it.type is PointerType || (it.type as? NumericType)?.bitWidth == 64)
-                    ) {
-                        PointerDataflowGranularity()
-                    } else {
-                        default()
-                    }
-                node.addNextDFG(it, granularity)
-            }
+            node.input.let { node.addNextDFG(it) }
         } else {
             node.input.let {
-                val granularity: Granularity =
-                    if (
-                        (node.operatorCode == "*" &&
-                            (it.type is PointerType ||
-                                (it.type as? NumericType)?.bitWidth == 64)) ||
-                            (node.operatorCode == "&")
-                    ) {
-                        PointerDataflowGranularity()
-                    } else {
-                        default()
-                    }
-                node.addPrevDFG(it, granularity)
+                node.addPrevDFG(it)
                 if (node.operatorCode == "++" || node.operatorCode == "--") {
-                    node.addNextDFG(it, granularity)
+                    node.addNextDFG(it)
                 }
             }
         }

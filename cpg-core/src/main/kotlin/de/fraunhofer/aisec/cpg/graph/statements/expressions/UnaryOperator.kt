@@ -63,8 +63,6 @@ class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver, HasAli
         }
         if (input is Reference) {
             (input as? Reference)?.access = access
-        } else if (input is UnaryOperator && (input as UnaryOperator).input is Reference) {
-            ((input as UnaryOperator).input as Reference)?.access = access
         }
     }
 

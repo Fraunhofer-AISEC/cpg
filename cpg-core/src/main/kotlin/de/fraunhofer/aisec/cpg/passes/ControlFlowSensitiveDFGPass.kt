@@ -135,7 +135,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                                 (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
-                        key.addPrevDFG(it)
+                        val granularity =
+                            if (it is PointerReference) PointerDataflowGranularity() else default()
+                        key.addPrevDFG(it, granularity)
                     }
                 }
             }
