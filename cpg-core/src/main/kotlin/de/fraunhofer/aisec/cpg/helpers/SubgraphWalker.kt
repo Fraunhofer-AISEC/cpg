@@ -346,8 +346,26 @@ object SubgraphWalker {
     }
 }
 
+/**
+ * Tries to replace the [old] expression with a [new] one, given the [parent].
+ *
+ * There are two things to consider:
+ * - First, this only works if [parent] is either an [ArgumentHolder] or [StatementHolder].
+ *   Otherwise, we cannot instruct the parent to exchange the node
+ * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
+ *   only support a replacement very early in the pass system. To be specific, we only allow
+ *   replacement before any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
+ *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
+ */
 context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
+    // We do not allow to replace nodes where the DFG (or other dependent nodes, such as PDG have
+    // been set). The reason for that is that these edges contain a lot of information on the edges
+    // themselves and replacing this edge would be very complicated.
+    if (old.prevDFG.isNotEmpty() || old.nextDFG.isNotEmpty()) {
+        return false
+    }
+
     val success =
         when (parent) {
             is ArgumentHolder -> parent.replace(old, new)
@@ -359,13 +377,12 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
                 return false
             }
         }
-
     if (!success) {
         Pass.log.error(
             "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
         )
     } else {
-        // Store any eventual EOG nodes and disconnect old node
+        // Store any eventual EOG/DFG nodes and disconnect old node
         val oldPrevEOG = old.prevEOG.toMutableList()
         val oldNextEOG = old.nextEOG.toMutableList()
         old.disconnectFromGraph()

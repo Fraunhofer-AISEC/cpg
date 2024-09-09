@@ -107,7 +107,7 @@ fun MetadataProvider.newOperatorDeclaration(
     operatorCode: String,
     recordDeclaration: RecordDeclaration? = null,
     rawNode: Any? = null
-): MethodDeclaration {
+): OperatorDeclaration {
     val node = OperatorDeclaration()
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 

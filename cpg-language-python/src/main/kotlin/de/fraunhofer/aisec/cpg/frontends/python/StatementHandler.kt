@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -300,12 +301,22 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = s
                     )
                 } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
-                    newOperatorDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        operatorCode = language.operatorCodeFor(s.name) ?: "",
-                        rawNode = s
-                    )
+                    var decl =
+                        newOperatorDeclaration(
+                            name = s.name,
+                            recordDeclaration = recordDeclaration,
+                            operatorCode = language.operatorCodeFor(s.name) ?: "",
+                            rawNode = s
+                        )
+                    if (decl.operatorCode == "") {
+                        Util.warnWithFileLocation(
+                            decl,
+                            log,
+                            "Could not find operator code for operator {}. This will most likely result in a failure",
+                            s.name
+                        )
+                    }
+                    decl
                 } else {
                     newMethodDeclaration(
                         name = s.name,
