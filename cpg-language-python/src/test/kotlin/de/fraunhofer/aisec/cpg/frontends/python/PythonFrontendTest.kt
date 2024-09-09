@@ -439,6 +439,35 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testClassTypeAnnotations() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("class_type_annotations.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val other = tu.records["Other"]
+        assertNotNull(other)
+        assertFullName("class_type_annotations.Other", other.toType())
+
+        val foo = tu.records["Foo"]
+        assertNotNull(foo)
+        assertFullName("class_type_annotations.Foo", foo.toType())
+
+        val fromOther = tu.functions["from_other"]
+        assertNotNull(fromOther)
+
+        val paramType = fromOther.parameters.firstOrNull()?.type
+        assertNotNull(paramType)
+        assertEquals(other.toType(), paramType)
+    }
+
+    @Test
     fun testCtor() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
