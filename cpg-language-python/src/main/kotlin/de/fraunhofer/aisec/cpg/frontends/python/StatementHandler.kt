@@ -64,7 +64,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Import -> handleImport(node)
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
-            is Python.AST.Assert,
+            is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Delete,
             is Python.AST.Global,
             is Python.AST.Match,
@@ -79,6 +79,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    private fun handleAssert(node: Python.AST.Assert): Statement {
+        val assertStatement = newAssertStatement(rawNode = node)
+
+        val testExpression = frontend.expressionHandler.handle(node.test)
+        assertStatement.condition = testExpression
+
+        node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
+
+        return assertStatement
     }
 
     private fun handleImport(node: Python.AST.Import): Statement {
