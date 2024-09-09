@@ -57,7 +57,7 @@ class Usage(
 /** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
 class Usages<NodeType : Reference>(thisRef: ValueDeclaration) :
     EdgeList<Reference, Usage>(thisRef = thisRef, init = ::Usage) {
-    override fun handlePostAdd(edge: Usage) {
+    override fun handleOnAdd(edge: Usage) {
         edge.access = edge.end.access
     }
 }

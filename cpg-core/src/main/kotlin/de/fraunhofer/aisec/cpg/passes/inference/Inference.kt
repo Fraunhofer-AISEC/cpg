@@ -329,7 +329,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     inferred.startInference(ctx)?.inferTemplateParameter(inferredTypeIdentifier)
                 typeCounter++
                 if (typeParamDeclaration != null) {
-                    inferred.addParameter(typeParamDeclaration)
+                    inferred.parameters += typeParamDeclaration
                 }
             } else if (node is Expression) {
                 val inferredNonTypeIdentifier = "N$nonTypeCounter"
@@ -342,7 +342,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 }
                 nonTypeCounter++
                 if (paramVariableDeclaration != null) {
-                    inferred.addParameter(paramVariableDeclaration)
+                    inferred.parameters += paramVariableDeclaration
                 }
             }
         }

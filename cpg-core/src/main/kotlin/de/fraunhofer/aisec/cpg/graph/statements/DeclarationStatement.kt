@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -46,7 +45,6 @@ open class DeclarationStatement : Statement() {
      * it only contains a single [Declaration].
      */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var declarationEdges = astEdgesOf<Declaration>()
     override var declarations by unwrapping(DeclarationStatement::declarationEdges)
 

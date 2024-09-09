@@ -25,25 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
 class IfStatement : Statement(), BranchingNode, ArgumentHolder {
+    @Relationship(value = "INITIALIZER_STATEMENT")
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ initializer statement. */
-    @AST var initializerStatement: Statement? = null
+    var initializerStatement by unwrapping(IfStatement::initializerStatementEdge)
 
+    @Relationship(value = "CONDITION_DECLARATION")
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ alternative to the condition. */
-    @AST var conditionDeclaration: Declaration? = null
+    var conditionDeclaration by unwrapping(IfStatement::conditionDeclarationEdge)
 
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
-    @AST var condition: Expression? = null
+    var condition by unwrapping(IfStatement::conditionEdge)
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
@@ -51,13 +59,15 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** C++ constexpr construct. */
     var isConstExpression = false
 
+    @Relationship(value = "THEN_STATEMENT") var thenStatementEdge = astOptionalEdgeOf<Statement>()
     /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
-    @AST var thenStatement: Statement? = null
+    var thenStatement by unwrapping(IfStatement::thenStatementEdge)
 
+    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */
-    @AST var elseStatement: Statement? = null
+    var elseStatement by unwrapping(IfStatement::elseStatementEdge)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

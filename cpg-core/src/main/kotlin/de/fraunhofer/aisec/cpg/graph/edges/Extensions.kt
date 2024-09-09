@@ -23,24 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-@file:Suppress("UNCHECKED_CAST")
-
 package de.fraunhofer.aisec.cpg.graph.edges
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeSet
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.isAccessible
 
-@Suppress("UNCHECKED_CAST")
 fun <EdgeType : Edge<Node>> MutableList<Node>.add(
     target: Node,
     builder: EdgeType.() -> Unit
 ): Boolean {
     if (this is UnwrappedEdgeList<*, *>) {
+        @Suppress("UNCHECKED_CAST")
         return (this as UnwrappedEdgeList<Node, EdgeType>).add(target, builder)
     }
 
@@ -65,4 +64,19 @@ fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeTy
     edgeProperty.isAccessible = true
     val edge = edgeProperty.call(this)
     return edge.unwrap()
+}
+
+/** See [EdgeSingletonList.UnwrapDelegate]. */
+fun <
+    PropertyType : Node,
+    NullablePropertyType : PropertyType?,
+    NodeType : Node,
+    EdgeType : Edge<PropertyType>
+> NodeType.unwrapping(
+    edgeProperty:
+        KProperty1<NodeType, EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>>,
+): EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>.UnwrapDelegate<NodeType> {
+    edgeProperty.isAccessible = true
+    val edge = edgeProperty.call(this)
+    return edge.delegate()
 }

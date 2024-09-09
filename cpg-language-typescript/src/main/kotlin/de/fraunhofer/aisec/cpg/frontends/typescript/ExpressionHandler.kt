@@ -62,8 +62,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
-        val key = node.children?.first()?.let { this.handle(it) }
-        val value = node.children?.last()?.let { this.handle(it) }
+        val key =
+            node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
+        val value =
+            node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
         return newKeyValueExpression(key, value, rawNode = node)
     }
@@ -140,8 +142,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
-        val key = node.children?.first()?.let { this.handle(it) }
-        val value = node.children?.last()?.let { this.handle(it) }
+        val key =
+            node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
+        val value =
+            node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
         return newKeyValueExpression(key, value, rawNode = node)
     }

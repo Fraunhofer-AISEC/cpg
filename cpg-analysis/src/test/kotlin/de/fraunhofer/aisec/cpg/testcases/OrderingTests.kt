@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 class GraphExamples {
@@ -45,7 +44,6 @@ class GraphExamples {
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
                     .registerPass<UnreachableEOGPass>()
-                    .registerPass<EdgeCachePass>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -244,7 +242,6 @@ class GraphExamples {
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
                     .registerPass<UnreachableEOGPass>()
-                    .registerPass<EdgeCachePass>()
                     .build()
         ) =
             testFrontend(config).build {

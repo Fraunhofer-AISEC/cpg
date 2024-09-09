@@ -42,7 +42,7 @@ import org.neo4j.ogm.annotation.Transient
 /** The Python language. */
 class PythonLanguage :
     Language<PythonLanguageFrontend>(), HasShortCircuitOperators, HasOperatorOverloading {
-    override val fileExtensions = listOf("py")
+    override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class

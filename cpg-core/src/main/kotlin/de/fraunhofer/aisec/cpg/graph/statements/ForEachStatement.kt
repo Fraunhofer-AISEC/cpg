@@ -29,30 +29,38 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 class ForEachStatement : Statement(), BranchingNode, StatementHolder {
+
+    @Relationship("VARIABLE")
+    var variableEdge =
+        astOptionalEdgeOf<Statement>(
+            onChanged = { _, new ->
+                val end = new?.end
+                if (end is Reference) {
+                    end.access = AccessValues.WRITE
+                }
+            }
+        )
+
     /**
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    @AST
-    var variable: Statement? = null
-        set(value) {
-            if (value is Reference) {
-                value.access = AccessValues.WRITE
-            }
-            field = value
-        }
+    var variable by unwrapping(ForEachStatement::variableEdge)
 
+    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the iteration subject of the loop. */
-    @AST var iterable: Statement? = null
+    var iterable by unwrapping(ForEachStatement::iterableEdge)
 
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the body of the loop. */
-    @AST var statement: Statement? = null
+    var statement by unwrapping(ForEachStatement::statementEdge)
 
     override val branchedBy: Node?
         get() = iterable
@@ -70,22 +78,6 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         }
 
     override var statements by unwrapping(ForEachStatement::statementEdges)
-
-    override fun addStatement(s: Statement) {
-        when {
-            variable == null -> variable = s
-            iterable == null -> iterable = s
-            statement == null -> statement = s
-            statement !is Block -> {
-                val block = Block()
-                block.language = this.language
-                statement?.let { block.statements += it }
-                block.statements += s
-                statement = block
-            }
-            else -> (statement as? Block)?.statements += s
-        }
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

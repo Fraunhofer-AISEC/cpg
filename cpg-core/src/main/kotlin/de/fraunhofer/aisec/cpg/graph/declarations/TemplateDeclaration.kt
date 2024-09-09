@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
@@ -52,7 +51,6 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
 
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @AST
     var parameterEdges = astEdgesOf<Declaration>()
     val parameters by unwrapping(TemplateDeclaration::parameterEdges)
 
@@ -82,14 +80,6 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             }
             return defaults
         }
-
-    fun addParameter(parameterizedType: TypeParameterDeclaration) {
-        parameterEdges.add(parameterizedType)
-    }
-
-    fun addParameter(nonTypeTemplateParamDeclaration: ParameterDeclaration) {
-        parameterEdges.add(nonTypeTemplateParamDeclaration)
-    }
 
     override val declarations: List<Declaration>
         get() {

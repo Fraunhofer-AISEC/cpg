@@ -1256,6 +1256,33 @@ class PythonFrontendTest : BaseTest() {
         assertInvokes(call, cCompletelyDifferentFunc)
     }
 
+    @Test
+    fun testInterfaceStubs() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("complex_class.pyi").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        with(result) {
+            val foo = records["Foo"]
+            assertNotNull(foo)
+
+            val bar = foo.methods["bar"]
+            assertNotNull(bar)
+
+            assertEquals(assertResolvedType("int"), bar.returnTypes.singleOrNull())
+            assertEquals(assertResolvedType("int"), bar.parameters.firstOrNull()?.type)
+            assertEquals(assertResolvedType("complex_class.Foo"), bar.receiver?.type)
+        }
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

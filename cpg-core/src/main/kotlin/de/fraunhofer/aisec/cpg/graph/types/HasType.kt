@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -127,6 +129,18 @@ interface HasType : ContextProvider, LanguageProvider {
          * [HasType.assignedTypes].
          */
         fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType)
+
+        /**
+         * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
+         * [TypeObserver] with the [old] node and registers it with the [new] one.
+         */
+        fun <NodeType : Node> exchangeTypeObserver(
+            old: AstEdge<NodeType>?,
+            new: AstEdge<NodeType>?
+        ) {
+            (old?.end as? HasType)?.unregisterTypeObserver(this)
+            (new?.end as? HasType)?.registerTypeObserver(this)
+        }
     }
 
     /**

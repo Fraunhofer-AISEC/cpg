@@ -1310,7 +1310,7 @@ fun Expression.conditional(
 context(LanguageFrontend<*, *>, StatementHolder)
 infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
     val node = (this@LanguageFrontend).newAssignExpression("=")
-    node.lhs = listOf(this)
+    node.lhs = mutableListOf(this)
     init(node)
     // node.rhs = listOf(init(node))
 

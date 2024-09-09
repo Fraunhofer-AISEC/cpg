@@ -33,7 +33,7 @@ import kotlin.test.assertSame
 
 class ControlDependenceTest {
     @Test
-    fun testPostAdd() {
+    fun testOnAdd() {
         with(TestLanguageFrontend()) {
             // <node1> -- CDG --> <node2>
             // this should be 1 nextDFG for node1 and 1 prevDFG for node2

@@ -2,7 +2,7 @@
 kotlin = "2.0.0"
 kotlin19 = "1.9.10"
 neo4j = "4.0.10"
-log4j = "2.23.0"
+log4j = "2.24.0"
 sonarqube = "5.1.0.4882"
 spotless = "6.25.0"
 nexus-publish = "2.0.0"
@@ -23,7 +23,7 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 
-apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.16.0"}
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.17.0"}
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 

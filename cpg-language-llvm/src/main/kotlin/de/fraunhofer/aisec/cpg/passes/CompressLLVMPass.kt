@@ -227,7 +227,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
             alreadyChecked.add(currentNode)
             // We exclude sub-try statements as they would mess up with the results
             val toAdd =
-                SubgraphWalker.getAstChildren(currentNode).filter { n ->
+                currentNode.astChildren.filter { n ->
                     n !is TryStatement && !alreadyChecked.contains(n) && !worklist.contains(n)
                 }
             worklist.addAll(toAdd)

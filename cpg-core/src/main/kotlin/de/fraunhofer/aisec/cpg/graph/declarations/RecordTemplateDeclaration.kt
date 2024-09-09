@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -40,7 +39,6 @@ class RecordTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the ClassTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    @AST
     val realizationEdges = astEdgesOf<RecordDeclaration>()
     override val realizations by unwrapping(RecordTemplateDeclaration::realizationEdges)
 
