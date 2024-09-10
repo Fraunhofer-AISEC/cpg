@@ -209,9 +209,10 @@ class ArgumentsHandlerTest {
         val parameterB = func.parameters["b"]
         val parameterC = func.parameters["c"]
         assertNull(parameterA?.default, "Expected the parameter `a` to not have a default value.")
+
         assertNotNull(parameterB?.default, "Expected the parameter `b` to have a default value.")
-        assertEquals(1.toLong(), parameterB.default?.evaluate())
+        assertEquals(1.toLong(), parameterB?.default?.evaluate())
         assertNotNull(parameterC?.default, "Expected the parameter `c` to have a default value.")
-        assertEquals(2.toLong(), parameterB.default?.evaluate())
+        assertEquals(2.toLong(), parameterC?.default?.evaluate())
     }
 }
