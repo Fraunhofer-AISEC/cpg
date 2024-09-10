@@ -83,12 +83,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleAssert(node: Python.AST.Assert): Statement {
         val assertStatement = newAssertStatement(rawNode = node)
-
         val testExpression = frontend.expressionHandler.handle(node.test)
         assertStatement.condition = testExpression
-
         node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
-
         return assertStatement
     }
 

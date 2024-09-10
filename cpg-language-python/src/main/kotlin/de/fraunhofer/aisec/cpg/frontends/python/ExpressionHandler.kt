@@ -84,18 +84,12 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleNamedExpr(node: Python.AST.NamedExpr): Expression {
-        val targetExpr = handle(node.target)
-
-        val valueExpr = handle(node.value)
-
-        val expression =
-            newAssignExpression(
-                operatorCode = ":=",
-                lhs = listOf(targetExpr),
-                rhs = listOf(valueExpr),
-                rawNode = node
-            )
-        return expression
+        return newAssignExpression(
+            operatorCode = ":=",
+            lhs = listOf(handle(node.target)),
+            rhs = listOf(handle(node.value)),
+            rawNode = node
+        )
     }
 
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
