@@ -1312,6 +1312,38 @@ class PythonFrontendTest : BaseTest() {
         }
     }
 
+    @Test
+    fun testNamedExpression() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("named_expressions.py").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        val namedExpression = result.functions["named_expression"]
+        assertNotNull(namedExpression)
+
+        val assignExpression = result.statements[1] as? AssignExpression
+        assertNotNull(assignExpression)
+        assertEquals(":=", assignExpression.operatorCode)
+
+        val lhs = assignExpression.lhs.firstOrNull() as? Reference
+        assertNotNull(lhs)
+
+        val lhsVariable = lhs.refersTo as? VariableDeclaration
+        assertLocalName("x", lhsVariable)
+
+        val rhs = assignExpression.rhs.firstOrNull() as? Literal<*>
+        assertNotNull(rhs)
+
+        assertEquals(4.toLong(), rhs.evaluate())
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

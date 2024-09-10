@@ -68,7 +68,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.FormattedValue -> handleFormattedValue(node)
             is Python.AST.JoinedStr -> handleJoinedStr(node)
             is Python.AST.Starred -> handleStarred(node)
-            is Python.AST.NamedExpr,
+            is Python.AST.NamedExpr -> handleNamedExpr(node)
             is Python.AST.GeneratorExp,
             is Python.AST.ListComp,
             is Python.AST.SetComp,
@@ -81,6 +81,21 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    private fun handleNamedExpr(node: Python.AST.NamedExpr): Expression {
+        val targetExpr = handle(node.target)
+
+        val valueExpr = handle(node.value)
+
+        val expression =
+            newAssignExpression(
+                operatorCode = ":=",
+                lhs = listOf(targetExpr),
+                rhs = listOf(valueExpr),
+                rawNode = node
+            )
+        return expression
     }
 
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
