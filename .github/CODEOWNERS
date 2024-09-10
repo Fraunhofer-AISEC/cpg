@@ -6,8 +6,8 @@ cpg-language-go         @oxisto
 *.ts                    @oxisto
 cpg-language-typescript @oxisto
 
-*.py                    @maximiliankaul
-cpg-language-python     @maximiliankaul
+*.py                    @maximiliankaul @lshala
+cpg-language-python     @maximiliankaul @lshala
 
 *.c                     @peckto
 *.cpp                   @peckto
