@@ -19,6 +19,9 @@ def defaults(b=1, c=2, *d, e):
 def foo(a, b, c=3, d=4):
     pass
 
+def bar(self, a, b=1, c=2):
+    pass
+
 class MyClass:
     def my_method(self=5, d=3, e=1):
         pass

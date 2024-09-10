@@ -172,12 +172,31 @@ class ArgumentsHandlerTest {
     }
 
     @Test
+    fun testDefaultsArgumentsWithReceiver() {
+        var func = result.functions["bar"]
+        assertNotNull(func, "Function 'bar' should be found")
+
+        var defaults = mapOf("b" to 1, "c" to 2)
+        for ((paramName, expectedDefaultValue) in defaults) {
+            var param = func.parameters[paramName]
+            assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
+
+            assertNotNull(param.default, "Parameter '$paramName' should have a default value")
+            assertEquals(
+                expectedDefaultValue.toLong(),
+                param.default?.evaluate(),
+                "Default value for parameter '$paramName' is incorrect"
+            )
+        }
+    }
+
+    @Test
     fun testKwArguments() {
         var func = result.functions["kw_args"]
         assertNotNull(func, "Function 'kw_args' should be found")
 
         var kwArgs = func.parameters["kwargs"]
         assertNotNull(kwArgs, "Failed to find kw args")
-        assertEquals(true, kwArgs.isVariadic)
+        assertEquals(false, kwArgs.isVariadic)
     }
 }

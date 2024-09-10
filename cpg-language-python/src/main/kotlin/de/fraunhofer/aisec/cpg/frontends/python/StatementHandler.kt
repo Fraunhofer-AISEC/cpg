@@ -364,11 +364,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handlePositionalArguments(positionalArguments, args, startIdx)
 
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
-        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
+        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = false) }
 
         handleKeywordOnlyArguments(args)
     }
 
+    /**
+     * This method retrieves the first argument of the [positionalArguments], which is typically the
+     * receiver object.
+     *
+     * A receiver can also have a default value. However, this case is not handled and is therefore
+     * passed with a problem expression.
+     */
     private fun handleReceiverArgument(
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
@@ -409,6 +416,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * This method extracts the [positionalArguments] from the provided list and maps them to the
+     * corresponding function parameters.
+     */
     private fun handlePositionalArguments(
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
@@ -435,6 +446,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * This method extracts the keyword-only arguments from [args] and maps them to the
+     * corresponding function parameters.
+     */
     private fun handleKeywordOnlyArguments(args: Python.AST.arguments) {
         for (idx in args.kwonlyargs.indices) {
             val arg = args.kwonlyargs[idx]
