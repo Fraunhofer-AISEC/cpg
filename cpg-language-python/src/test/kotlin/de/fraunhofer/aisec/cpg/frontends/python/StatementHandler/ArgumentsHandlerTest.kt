@@ -199,4 +199,19 @@ class ArgumentsHandlerTest {
         assertNotNull(kwArgs, "Failed to find kw args")
         assertEquals(false, kwArgs.isVariadic)
     }
+
+    @Test
+    fun testMethodDefaults() {
+        val func = result.functions["method_with_some_defaults"]
+
+        assertEquals(3, func.parameters.size)
+        val parameterA = func.parameters["a"]
+        val parameterB = func.parameters["b"]
+        val parameterC = func.parameters["c"]
+        assertNull(parameterA?.default, "Expected the parameter `a` to not have a default value.")
+        assertNotNull(parameterB?.default, "Expected the parameter `b` to have a default value.")
+        assertEquals(1.toLong(), parameterB.default?.evaluate())
+        assertNotNull(parameterC?.default, "Expected the parameter `c` to have a default value.")
+        assertEquals(2.toLong(), parameterB.default?.evaluate())
+    }
 }

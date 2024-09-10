@@ -25,3 +25,5 @@ def bar(self, a, b=1, c=2):
 class MyClass:
     def my_method(self=5, d=3, e=1):
         pass
+    def method_with_some_defaults(self, a, b = 1, c = 2):
+        pass
