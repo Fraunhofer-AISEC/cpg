@@ -138,7 +138,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.addNextDFG(target) }
+                targets.forEach { target ->
+                    val granularity =
+                        if (it is PointerReference) PointerDataflowGranularity() else default()
+                    it.addNextDFG(target, granularity)
+                }
             }
         }
 
