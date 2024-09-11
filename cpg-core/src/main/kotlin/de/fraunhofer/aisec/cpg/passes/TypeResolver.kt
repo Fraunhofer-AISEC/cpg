@@ -90,7 +90,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
                 var originDeclares = target.recordDeclaration
                 var name = target.name
-                log.trace("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
+                log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
                 type.declaredFrom = originDeclares
                 type.recordDeclaration = originDeclares
                 type.typeOrigin = Type.Origin.RESOLVED
@@ -105,7 +105,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // and set the name to the declared type.
             if (declares != null) {
                 var declaredType = declares.declaredType
-                log.trace(
+                log.debug(
                     "Resolving type {} in {} scope to {}",
                     type.name,
                     type.scope,
