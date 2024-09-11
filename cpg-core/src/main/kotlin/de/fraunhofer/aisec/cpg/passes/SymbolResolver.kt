@@ -630,17 +630,17 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun resolveMemberByName(
         symbol: String,
-        possibleContainingTypes: Set<Type>
+        possibleContainingTypes: Set<ObjectType>
     ): Set<Declaration> {
         var candidates = mutableSetOf<Declaration>()
-        val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
+        val records = possibleContainingTypes.mapNotNull { it.recordDeclaration }.toSet()
         for (record in records) {
             candidates.addAll(ctx.scopeManager.findSymbols(record.name.fqn(symbol)))
         }
 
         // Find invokes by supertypes
         if (candidates.isEmpty() && symbol.isNotEmpty()) {
-            val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
+            val records = possibleContainingTypes.mapNotNull { it.recordDeclaration }.toSet()
             candidates = getInvocationCandidatesFromParents(symbol, records).toMutableSet()
         }
 
@@ -662,11 +662,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param call
      */
     protected fun createMethodDummies(
-        possibleContainingTypes: Set<Type>,
+        possibleContainingTypes: Set<ObjectType>,
         bestGuess: ObjectType?,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        var records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }
+        var records = possibleContainingTypes.mapNotNull { it.recordDeclaration }
 
         // We access an unknown method of an unknown record. so we need to handle that
         // along the way as well. We prefer the base type
@@ -729,7 +729,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * returns a [Pair], where the first element is the set of types and the second is our best
      * guess.
      */
-    protected fun getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
+    protected fun getPossibleContainingTypes(
+        call: CallExpression
+    ): Pair<Set<ObjectType>, ObjectType?> {
         val possibleTypes = mutableSetOf<Type>()
         var bestGuess: Type? = null
         if (call is MemberCallExpression) {
@@ -747,7 +749,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
 
-        return Pair(possibleTypes, bestGuess)
+        return Pair(
+            possibleTypes.mapNotNull { it.root as? ObjectType }.toSet(),
+            bestGuess?.root as? ObjectType
+        )
     }
 
     protected fun getInvocationCandidatesFromParents(
@@ -861,7 +866,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             listOfNotNull(func)
         } else {
-            createMethodDummies(suitableBases, bestGuess?.root as? ObjectType, call)
+            createMethodDummies(suitableBases, bestGuess, call)
         }
     }
 

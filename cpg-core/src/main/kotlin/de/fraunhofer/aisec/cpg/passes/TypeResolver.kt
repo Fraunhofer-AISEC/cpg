@@ -90,7 +90,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
                 var originDeclares = target.recordDeclaration
                 var name = target.name
-                log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
+                log.trace("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
                 type.declaredFrom = originDeclares
                 type.recordDeclaration = originDeclares
                 type.typeOrigin = Type.Origin.RESOLVED
@@ -105,7 +105,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // and set the name to the declared type.
             if (declares != null) {
                 var declaredType = declares.declaredType
-                log.debug(
+                log.trace(
                     "Resolving type {} in {} scope to {}",
                     type.name,
                     type.scope,
@@ -139,6 +139,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     fun resolveFirstOrderTypes() {
+        log.info("Need to resolve {} first order types", typeManager.firstOrderTypes.size)
+
         for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
             if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
                 resolveType(type)
