@@ -284,7 +284,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
             var type = current.objectType(parentName)
-            TypeResolver.resolveType(type)
+            if (type is ObjectType) {
+                TypeResolver.resolveType(type)
+            }
             type
         } else {
             current.unknownType()
@@ -403,7 +405,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         var record = base.recordDeclaration
-        if (record == null) {
+        if (base !is UnknownType && base !is AutoType && record == null) {
             // We access an unknown field of an unknown record. so we need to handle that along the
             // way as well
             record = ctx.tryRecordInference(base, locationHint = ref)
@@ -661,21 +663,17 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun createMethodDummies(
         possibleContainingTypes: Set<Type>,
-        bestGuess: Type?,
+        bestGuess: ObjectType?,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        var records =
-            possibleContainingTypes.mapNotNull {
-                val root = it.root as? ObjectType
-                root?.recordDeclaration
-            }
+        var records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }
 
         // We access an unknown method of an unknown record. so we need to handle that
         // along the way as well. We prefer the base type
         if (records.isEmpty()) {
             records =
                 listOfNotNull(
-                    ctx.tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
+                    ctx.tryRecordInference(bestGuess ?: unknownType(), locationHint = call)
                 )
         }
         records = records.distinct()
@@ -863,7 +861,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             listOfNotNull(func)
         } else {
-            createMethodDummies(suitableBases, bestGuess, call)
+            createMethodDummies(suitableBases, bestGuess?.root as? ObjectType, call)
         }
     }
 

@@ -61,7 +61,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     companion object {
         context(ContextProvider)
-        fun resolveType(type: Type): Boolean {
+        fun resolveType(type: ObjectType): Boolean {
             // Let's start by looking up the type according to their name and scope. We exclusively
             // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
             // constructor declarations and such with the same name. It seems this is ok since most
@@ -79,7 +79,11 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Check for a possible typedef
             var target = ctx?.scopeManager?.typedefFor(type.name, type.scope)
             if (target != null) {
-                if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
+                if (
+                    target.typeOrigin == Type.Origin.UNRESOLVED &&
+                        type != target &&
+                        target is ObjectType
+                ) {
                     // Make sure our typedef target is resolved
                     resolveType(target)
                 }
