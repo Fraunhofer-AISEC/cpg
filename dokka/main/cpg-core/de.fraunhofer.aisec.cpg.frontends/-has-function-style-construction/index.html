@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>ReplaceCallCastPass</title>
+    <title>HasFunctionStyleConstruction</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,9 +43,9 @@
                             cpg
                     </a>            </div>
             <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-replace-call-cast-pass/-replace-call-cast-pass.html&quot;}"><div class="versions-dropdown">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends/-has-function-style-construction/index.html&quot;}"><div class="versions-dropdown">
   <div class="versions-dropdown-button">main</div>
-  <div class="versions-dropdown-data"><a href="../../../older/8.3.0/cpg-core/de.fraunhofer.aisec.cpg.passes/-replace-call-cast-pass/-replace-call-cast-pass.html">8.3.0</a><a href="../../../older/8.2.0/cpg-core/de.fraunhofer.aisec.cpg.passes/-replace-call-cast-pass/-replace-call-cast-pass.html">8.2.0</a><a href="-replace-call-cast-pass.html">main</a></div>
+  <div class="versions-dropdown-data"><a href="../../../not-found-version.html?v=8.3.0">8.3.0</a><a href="../../../not-found-version.html?v=8.2.0">8.2.0</a><a href="index.html">main</a></div>
 </div>
 </dokka-template-command>            </div>
         </div>
@@ -63,12 +63,16 @@
                 <div class="sidebar--inner" id="sideMenu"></div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="member" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.passes/ReplaceCallCastPass/ReplaceCallCastPass/#de.fraunhofer.aisec.cpg.TranslationContext/PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes</a><span class="delimiter">/</span><a href="index.html">ReplaceCallCastPass</a><span class="delimiter">/</span><span class="current">ReplaceCallCastPass</span></div>
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.frontends/HasFunctionStyleConstruction///PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.frontends</a><span class="delimiter">/</span><span class="current">HasFunctionStyleConstruction</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Replace</span><wbr><span>Call</span><wbr><span>Cast</span><wbr><span><span>Pass</span></span></h1>
+    <h1 class="cover"><span>Has</span><wbr><span>Function</span><wbr><span>Style</span><wbr><span><span>Construction</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">HasFunctionStyleConstruction</a> : <a href="../-has-call-expression-ambiguity/index.html">HasCallExpressionAmbiguity</a></div><p class="paragraph">A language trait, that specifies that the language has functional style (object) construction, meaning that constructor calls look like regular call expressions (usually meaning that the language has no dedicated <code class="lang-kotlin">new</code> keyword).</p><p class="paragraph">Since we can therefore not distinguish between a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a> and a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-construct-expression/index.html">ConstructExpression</a> in the frontend, we need to employ an additional pass (<a href="../../de.fraunhofer.aisec.cpg.passes/-resolve-call-expression-ambiguity-pass/index.html">ResolveCallExpressionAmbiguityPass</a>) after the initial language frontends are done.</p></div></div>
   </div>
-  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span></div></div></div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"></div>
+    <div class="tabs-section-body"></div>
+  </div>
 </div>
       <div class="footer">
         <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
