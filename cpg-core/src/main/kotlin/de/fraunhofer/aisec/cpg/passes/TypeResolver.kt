@@ -98,8 +98,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             // If we found the "real" declared type, we can normalize the name of our scoped type
-            // and
-            // set the name to the declared type.
+            // and set the name to the declared type.
             if (declares != null) {
                 var declaredType = declares.declaredType
                 log.debug(

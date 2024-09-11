@@ -946,13 +946,5 @@ fun TranslationContext.tryRecordInference(
             ?.startInference(this)
             ?.inferRecordDeclaration(type, kind, locationHint)
 
-    // update the type's record. Because types are only unique per scope, we potentially need to
-    // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
-    if (record != null) {
-        typeManager.firstOrderTypes
-            .filter { it.name == record.name }
-            .forEach { it.recordDeclaration = record }
-    }
-
     return record
 }
