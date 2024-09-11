@@ -348,20 +348,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             if (callee is MemberExpression) {
                 newMemberCallExpression(callee, rawNode = node)
             } else {
-                // try to resolve -> [ConstructExpression]
-                val currentScope = frontend.scopeManager.currentScope
-                /*val record =
-                    currentScope?.let { frontend.scopeManager.getRecordForName(callee.name) }
-
-                if (record != null) {
-                    // construct expression
-                    val constructExpr =
-                        newConstructExpression((node.func as? Python.AST.Name)?.id, rawNode = node)
-                    constructExpr.type = record.toType()
-                    constructExpr
-                } else {*/
                 newCallExpression(callee, rawNode = node)
-                // }
             }
 
         for (arg in node.args) {

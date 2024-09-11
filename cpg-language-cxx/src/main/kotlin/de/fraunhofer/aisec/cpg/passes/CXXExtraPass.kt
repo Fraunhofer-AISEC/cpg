@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ReplaceCallPass::class)
+@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
@@ -92,9 +92,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * operator where some arguments are wrapped in parentheses. This function tries to resolve
      * this.
      *
-     * Note: This is done especially for the C++ frontend. [ReplaceCallPass.handleCall] handles the
-     * more general case (which also applies to C++), in which a cast and a call are
-     * indistinguishable and need to be resolved once all types are known.
+     * Note: This is done especially for the C++ frontend.
+     * [ResolveCallExpressionAmbiguityPass.handleCall] handles the more general case (which also
+     * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
+     * once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
         val fakeUnaryOp = binOp.lhs

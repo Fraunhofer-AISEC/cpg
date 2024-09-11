@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HasFunctionalCasts
-import de.fraunhofer.aisec.cpg.frontends.HasFunctionalConstructs
+import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleCasts
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -40,18 +41,20 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 
 /**
- * If a [Language] has the trait [HasFunctionalCasts] or [HasFunctionalConstructs], we cannot
- * distinguish between [CallExpression], [CastExpression] or [ConstructExpression] during the
- * initial translation. This stems from the fact that we might not know all the types yet. We
- * therefore need to handle them as regular call expression in a [LanguageFrontend] or [Handler] and
- * then later replace them with a [CastExpression] or [ConstructExpression], if the
- * [CallExpression.callee] refers to name of a [Type] / [RecordDeclaration] rather than a function.
+ * If a [Language] has the trait [HasCallExpressionAmbiguity], we cannot distinguish between
+ * [CallExpression], [CastExpression] or [ConstructExpression] during the initial translation. This
+ * stems from the fact that we might not know all the types yet. We therefore need to handle them as
+ * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
+ * [CastExpression] or [ConstructExpression], if the [CallExpression.callee] refers to name of a
+ * [Type] / [RecordDeclaration] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)
-class ReplaceCallPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+@RequiresLanguageTrait(HasCallExpressionAmbiguity::class)
+class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private lateinit var walker: SubgraphWalker.ScopedWalker
 
     override fun accept(tu: TranslationUnitDeclaration) {
@@ -83,7 +86,7 @@ class ReplaceCallPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
         // Check, if this is cast is really a construct expression (if the language supports
         // functional-constructs)
-        if (language is HasFunctionalConstructs) {
+        if (language is HasFunctionStyleConstruction) {
             // Make sure, we do not accidentally "construct" primitive types
             if (language.builtInTypes.contains(callee.name.toString()) == true) {
                 return
@@ -109,7 +112,7 @@ class ReplaceCallPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // We need to check, whether the "callee" refers to a type and if yes, convert it into a
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
-        if (language is HasFunctionalCasts && call.arguments.size == 1) {
+        if (language is HasFunctionStyleCasts && call.arguments.size == 1) {
             var pointer = false
             // If the argument is a UnaryOperator, unwrap them
             if (callee is UnaryOperator && callee.operatorCode == "*") {
