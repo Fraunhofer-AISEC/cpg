@@ -40,7 +40,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ArgumentsHandlerTest {
 
     companion object {
@@ -65,12 +67,12 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testPosOnlyArguments() {
-        var func = result.functions["pos_only_and_args"]
+        val func = result.functions["pos_only_and_args"]
         assertNotNull(func)
 
         val list = mapOf("a" to true, "b" to true, "c" to false)
         list.keys.forEachIndexed { idx, name ->
-            var param = func.parameterEdges.firstOrNull { it.end.name.localName == name }
+            val param = func.parameterEdges.firstOrNull { it.end.name.localName == name }
             assertNotNull(param, "$name should not be empty")
             if (list[name] == true) {
                 assertContains(
@@ -84,33 +86,34 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testVarargsArguments() {
-        var func = result.functions["test_varargs"]
+        val func = result.functions["test_varargs"]
         assertNotNull(func, "Function 'test_varargs' should be found")
 
-        var variadicArg = func.parameters["args"]
+        val variadicArg = func.parameters["args"]
         assertNotNull(variadicArg, "Failed to find variadic args")
         assertEquals(true, variadicArg.isVariadic)
     }
 
     @Test
     fun testKwOnlyArguments() {
-        var func = result.functions["kwd_only_arg"]
+        val func = result.functions["kwd_only_arg"]
         assertNotNull(func, "Function 'kwd_only_arg' should be found")
 
-        var kwOnlyArg = func.parameters["arg"]
+        val kwOnlyArg = func.parameters["arg"]
         assertNotNull(kwOnlyArg, "Failed to find keyword only args")
         assertContains(kwOnlyArg.modifiers, PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT)
     }
 
     @Test
     fun testKwDefaultArguments() {
-        var func = result.functions["kw_defaults"]
+        val func = result.functions["kw_defaults"]
         assertNotNull(func, "Function 'kw_defaults' should be found")
 
-        var kwOnlyParams = mapOf("c" to 2, "d" to null, "e" to 3)
+        assertEquals(4, func.parameters.size)
+        val kwOnlyParams = mapOf("c" to 2, "d" to null, "e" to 3)
 
         for ((paramName, expectedDefaultValue) in kwOnlyParams) {
-            var param = func.parameters[paramName]
+            val param = func.parameters[paramName]
             assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
 
             assertContains(param.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
@@ -130,12 +133,13 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testDefaultsArguments() {
-        var func = result.functions["defaults"]
+        val func = result.functions["defaults"]
         assertNotNull(func, "Function 'defaults' should be found")
 
-        var defaults = mapOf("b" to 1, "c" to 2)
+        assertEquals(4, func.parameters.size)
+        val defaults = mapOf("b" to 1, "c" to 2)
         for ((paramName, expectedDefaultValue) in defaults) {
-            var param = func.parameters[paramName]
+            val param = func.parameters[paramName]
             assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
 
             assertContains(param.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
@@ -151,12 +155,13 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testNonAndDefaultArguments() {
-        var func = result.functions["foo"]
+        val func = result.functions["foo"]
         assertNotNull(func, "Function 'foo' should be found")
 
-        var defaults = mapOf("a" to null, "b" to null, "c" to 3, "d" to 4)
+        assertEquals(4, func.parameters.size)
+        val defaults = mapOf("a" to null, "b" to null, "c" to 3, "d" to 4)
         for ((paramName, expectedDefaultValue) in defaults) {
-            var param = func.parameters[paramName]
+            val param = func.parameters[paramName]
             assertNotNull(param, "Failed to find argument '$paramName'")
 
             expectedDefaultValue?.let {
@@ -173,12 +178,13 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testDefaultsArgumentsWithReceiver() {
-        var func = result.functions["bar"]
+        val func = result.functions["bar"]
         assertNotNull(func, "Function 'bar' should be found")
 
-        var defaults = mapOf("b" to 1, "c" to 2)
+        assertEquals(4, func.parameters.size)
+        val defaults = mapOf("b" to 1, "c" to 2)
         for ((paramName, expectedDefaultValue) in defaults) {
-            var param = func.parameters[paramName]
+            val param = func.parameters[paramName]
             assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
 
             assertNotNull(param.default, "Parameter '$paramName' should have a default value")
@@ -192,10 +198,10 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testKwArguments() {
-        var func = result.functions["kw_args"]
+        val func = result.functions["kw_args"]
         assertNotNull(func, "Function 'kw_args' should be found")
 
-        var kwArgs = func.parameters["kwargs"]
+        val kwArgs = func.parameters["kwargs"]
         assertNotNull(kwArgs, "Failed to find kw args")
         assertEquals(false, kwArgs.isVariadic)
     }

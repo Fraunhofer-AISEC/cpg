@@ -550,6 +550,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
+     * (like positional-only or keyword-only) and [defaultValue] if applicable.
+     */
     internal fun handleArgument(
         node: Python.AST.arg,
         isPosOnly: Boolean = false,
