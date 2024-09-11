@@ -479,7 +479,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(line2)
 
         assertEquals(1, line1.declarations.size)
-        val fooDecl = line1.declarations[0] as? VariableDeclaration
+        val fooDecl = line1.declarations[0]
         assertNotNull(fooDecl)
         assertLocalName("foo", fooDecl)
         assertFullName("class_ctor.Foo", fooDecl.type)

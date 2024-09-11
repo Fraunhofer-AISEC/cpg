@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ReplaceCallCastPass::class)
+@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
@@ -76,7 +76,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
-        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name.toString())) {
+        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name)) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
             //
@@ -92,9 +92,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * operator where some arguments are wrapped in parentheses. This function tries to resolve
      * this.
      *
-     * Note: This is done especially for the C++ frontend. [ReplaceCallCastPass.handleCall] handles
-     * the more general case (which also applies to C++), in which a cast and a call are
-     * indistinguishable and need to be resolved once all types are known.
+     * Note: This is done especially for the C++ frontend.
+     * [ResolveCallExpressionAmbiguityPass.handleCall] handles the more general case (which also
+     * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
+     * once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
         val fakeUnaryOp = binOp.lhs
@@ -107,7 +108,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             language != null &&
                 fakeUnaryOp is UnaryOperator &&
                 fakeUnaryOp.operatorCode == "()" &&
-                typeManager.typeExists(fakeUnaryOp.input.name.toString())
+                typeManager.typeExists(fakeUnaryOp.input.name)
         ) {
             // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
             // is really a cast and our binary operator is really a unary operator `&addr`.

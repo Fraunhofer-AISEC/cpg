@@ -50,7 +50,7 @@ open class CPPLanguage :
     HasStructs,
     HasClasses,
     HasUnknownType,
-    HasFunctionalCasts,
+    HasFunctionStyleCasts,
     HasFunctionOverloading,
     HasOperatorOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")

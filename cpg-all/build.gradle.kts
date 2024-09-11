@@ -16,6 +16,12 @@ publishing {
     }
 }
 
+repositories {
+    maven {
+        setUrl("https://jitpack.io")
+    }
+}
+
 dependencies {
     // this exposes all of our (published) modules as dependency
     api(projects.cpgConsole)

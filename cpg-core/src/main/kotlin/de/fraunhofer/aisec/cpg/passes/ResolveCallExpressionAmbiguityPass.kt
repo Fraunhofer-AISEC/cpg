@@ -27,12 +27,16 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HasFunctionalCasts
+import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleCasts
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -40,17 +44,17 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 
 /**
- * If a [Language] has the trait [HasFunctionalCasts], we cannot distinguish between a
- * [CallExpression] and a [CastExpression] during the initial translation. This stems from the fact
- * that we might not know all the types yet. We therefore need to handle them as regular call
- * expression in a [LanguageFrontend] or [Handler] and then later replace them with a
- * [CastExpression], if the [CallExpression.callee] refers to name of a [Type] rather than a
- * function.
+ * If a [Language] has the trait [HasCallExpressionAmbiguity], we cannot distinguish between
+ * [CallExpression], [CastExpression] or [ConstructExpression] during the initial translation. This
+ * stems from the fact that we might not know all the types yet. We therefore need to handle them as
+ * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
+ * [CastExpression] or [ConstructExpression], if the [CallExpression.callee] refers to name of a
+ * [Type] / [RecordDeclaration] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)
-@RequiresLanguageTrait(HasFunctionalCasts::class)
-class ReplaceCallCastPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+@RequiresLanguageTrait(HasCallExpressionAmbiguity::class)
+class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private lateinit var walker: SubgraphWalker.ScopedWalker
 
     override fun accept(tu: TranslationUnitDeclaration) {
@@ -71,13 +75,44 @@ class ReplaceCallCastPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             return
         }
 
+        // We really need a parent, otherwise we cannot replace the node
+        if (parent == null) {
+            return
+        }
+
+        // Some local copies for easier smart casting
+        var callee = call.callee
+        val language = callee.language
+
+        // Check, if this is cast is really a construct expression (if the language supports
+        // functional-constructs)
+        if (language is HasFunctionStyleConstruction) {
+            // Make sure, we do not accidentally "construct" primitive types
+            if (language.builtInTypes.contains(callee.name.toString()) == true) {
+                return
+            }
+
+            val fqn =
+                if (callee.name.parent == null) {
+                    scopeManager.currentNamespace.fqn(
+                        callee.name.localName,
+                        delimiter = callee.name.delimiter
+                    )
+                } else {
+                    callee.name
+                }
+
+            // Check for our type. We are only interested in object types
+            val type = typeManager.lookupResolvedType(fqn)
+            if (type is ObjectType) {
+                walker.replaceCallWithConstruct(type, parent, call)
+            }
+        }
+
         // We need to check, whether the "callee" refers to a type and if yes, convert it into a
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
-        var callee = call.callee
-        if (parent != null && call.arguments.size == 1) {
-            val language = parent.language
-
+        if (language is HasFunctionStyleCasts && call.arguments.size == 1) {
             var pointer = false
             // If the argument is a UnaryOperator, unwrap them
             if (callee is UnaryOperator && callee.operatorCode == "*") {
@@ -86,20 +121,25 @@ class ReplaceCallCastPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             }
 
             // First, check if this is a built-in type
-            if (language?.builtInTypes?.contains(callee.name.toString()) == true) {
-                walker.replaceCallWithCast(callee.name.toString(), parent, call, false)
+            var builtInType = language.getSimpleTypeOf(callee.name)
+            if (builtInType != null) {
+                walker.replaceCallWithCast(builtInType, parent, call, false)
             } else {
                 // If not, then this could still refer to an existing type. We need to make sure
                 // that we take the current namespace into account
                 val fqn =
                     if (callee.name.parent == null) {
-                        scopeManager.currentNamespace.fqn(callee.name.localName)
+                        scopeManager.currentNamespace.fqn(
+                            callee.name.localName,
+                            delimiter = callee.name.delimiter
+                        )
                     } else {
                         callee.name
                     }
 
-                if (typeManager.typeExists(fqn.toString())) {
-                    walker.replaceCallWithCast(fqn, parent, call, pointer)
+                val type = typeManager.lookupResolvedType(fqn)
+                if (type != null) {
+                    walker.replaceCallWithCast(type, parent, call, pointer)
                 }
             }
         }
@@ -112,7 +152,7 @@ class ReplaceCallCastPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
 context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
-    typeName: CharSequence,
+    type: Type,
     parent: Node,
     call: CallExpression,
     pointer: Boolean,
@@ -123,14 +163,32 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     cast.location = call.location
     cast.castType =
         if (pointer) {
-            call.objectType(typeName).pointer()
+            type.pointer()
         } else {
-            call.objectType(typeName)
+            type
         }
     cast.expression = call.arguments.single()
     cast.name = cast.castType.name
 
     replaceArgument(parent, call, cast)
+}
+
+context(ContextProvider)
+fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
+    type: ObjectType,
+    parent: Node,
+    call: CallExpression
+) {
+    val construct = newConstructExpression()
+    construct.code = call.code
+    construct.language = call.language
+    construct.location = call.location
+    construct.callee = call.callee
+    (construct.callee as? Reference)?.resolutionHelper = construct
+    construct.arguments = call.arguments
+    construct.type = type
+
+    replaceArgument(parent, call, construct)
 }
 
 context(ContextProvider)

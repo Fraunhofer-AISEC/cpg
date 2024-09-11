@@ -194,12 +194,31 @@ interface HasAnonymousIdentifier : LanguageTrait {
 interface HasGlobalVariables : LanguageTrait
 
 /**
+ * A common super-class for all language traits that arise because they are an ambiguity of a
+ * function call, e.g., function-style casts. This means that we cannot differentiate between a
+ * [CallExpression] and other expressions during the frontend and we need to invoke the
+ * [ResolveCallExpressionAmbiguityPass] to resolve this.
+ */
+sealed interface HasCallExpressionAmbiguity : LanguageTrait
+
+/**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
  * [CallExpression] and a [CastExpression], we need to employ an additional pass
- * ([ReplaceCallCastPass]) after the initial language frontends are done.
+ * ([ResolveCallExpressionAmbiguityPass]) after the initial language frontends are done.
  */
-interface HasFunctionalCasts : LanguageTrait
+interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
+
+/**
+ * A language trait, that specifies that the language has functional style (object) construction,
+ * meaning that constructor calls look like regular call expressions (usually meaning that the
+ * language has no dedicated `new` keyword).
+ *
+ * Since we can therefore not distinguish between a [CallExpression] and a [ConstructExpression] in
+ * the frontend, we need to employ an additional pass ([ResolveCallExpressionAmbiguityPass]) after
+ * the initial language frontends are done.
+ */
+interface HasFunctionStyleConstruction : HasCallExpressionAmbiguity
 
 /**
  * A language trait that specifies that this language allowed overloading functions, meaning that
