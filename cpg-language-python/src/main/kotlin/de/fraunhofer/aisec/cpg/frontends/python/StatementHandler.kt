@@ -355,13 +355,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         var positionalArguments = args.posonlyargs + args.args
 
         // Handle receiver if it exists
-        recordDeclaration?.let {
+        if (recordDeclaration != null) {
             handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
+            // Skip the receiver argument for further processing
+            positionalArguments = positionalArguments.drop(1)
         }
 
-        // Handle positional arguments (skip the receiver if it exists)
-        val startIdx = if (recordDeclaration != null) 1 else 0
-        handlePositionalArguments(positionalArguments, args, startIdx)
+        // Handle remaining arguments
+        handlePositionalArguments(positionalArguments, args)
 
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
         args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = false) }
@@ -417,17 +418,29 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * This method extracts the [positionalArguments] from the provided list and maps them to the
-     * corresponding function parameters.
+     * This method extracts the [positionalArguments] including those that may have default values.
+     *
+     * In Python only the arguments with default values are stored in `args.defaults`. For example:
+     *
+     * `def my_func(a, b=1, c=2): pass`
+     *
+     * In this case, `args.defaults` contains only the defaults for `b` and `c`, while `args.args`
+     * includes all arguments (`a`, `b` and `c`).
+     *
+     * The number of arguments without defaults is determined by subtracting the size of
+     * `args.defaults` from the total number of arguments. This matches each default to its
+     * corresponding argument.
+     *
+     * https://docs.python.org/3/library/ast.html#ast.arguments
      */
     private fun handlePositionalArguments(
         positionalArguments: List<Python.AST.arg>,
-        args: Python.AST.arguments,
-        startIdx: Int
+        args: Python.AST.arguments
     ) {
         val nonDefaultArgsCount = positionalArguments.size - args.defaults.size
 
-        for ((idx, arg) in positionalArguments.drop(startIdx).withIndex()) {
+        for (idx in positionalArguments.indices) {
+            val arg = positionalArguments[idx]
             val defaultIndex = idx - nonDefaultArgsCount
             val defaultValue =
                 if (defaultIndex >= 0) {

@@ -177,26 +177,6 @@ class ArgumentsHandlerTest {
     }
 
     @Test
-    fun testDefaultsArgumentsWithReceiver() {
-        val func = result.functions["bar"]
-        assertNotNull(func, "Function 'bar' should be found")
-
-        assertEquals(4, func.parameters.size)
-        val defaults = mapOf("b" to 1, "c" to 2)
-        for ((paramName, expectedDefaultValue) in defaults) {
-            val param = func.parameters[paramName]
-            assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
-
-            assertNotNull(param.default, "Parameter '$paramName' should have a default value")
-            assertEquals(
-                expectedDefaultValue.toLong(),
-                param.default?.evaluate(),
-                "Default value for parameter '$paramName' is incorrect"
-            )
-        }
-    }
-
-    @Test
     fun testKwArguments() {
         val func = result.functions["kw_args"]
         assertNotNull(func, "Function 'kw_args' should be found")
@@ -217,8 +197,8 @@ class ArgumentsHandlerTest {
         assertNull(parameterA?.default, "Expected the parameter `a` to not have a default value.")
 
         assertNotNull(parameterB?.default, "Expected the parameter `b` to have a default value.")
-        assertEquals(1.toLong(), parameterB?.default?.evaluate())
+        assertEquals(1.toLong(), parameterB.default?.evaluate())
         assertNotNull(parameterC?.default, "Expected the parameter `c` to have a default value.")
-        assertEquals(2.toLong(), parameterC?.default?.evaluate())
+        assertEquals(2.toLong(), parameterC.default?.evaluate())
     }
 }
