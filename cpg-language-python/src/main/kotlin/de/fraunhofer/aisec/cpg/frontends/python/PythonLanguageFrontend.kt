@@ -156,16 +156,16 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                         // TODO: This might create problem with nested classes
                         parseName(id)
                     } else {
-                        // If it is not, we want place it in the current namespace
-                        scopeManager.currentNamespace.fqn(id)
+                        // otherwise, we can just simply take the unqualified name and the type
+                        // resolver will take care of the rest
+                        id
                     }
 
                 objectType(name)
             }
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
-                // it, so we
-                // need to return the unknown type.
+                // it, so we need to return the unknown type.
                 unknownType()
             }
         }

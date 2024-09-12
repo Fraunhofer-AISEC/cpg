@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -235,6 +237,21 @@ interface HasOperatorOverloading : LanguageTrait {
      * the name of the function.
      */
     val overloadedOperatorNames: Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol>
+
+    /**
+     * Returns the matching operator code for [name] in [overloadedOperatorNames]. While
+     * [overloadedOperatorNames] can have multiple entries for a single operator code (e.g. to
+     * differentiate between unary and binary ops), we only ever allow one distinct operator code
+     * for a specific symbol. If non such distinct operator code is found, null is returned.
+     */
+    fun operatorCodeFor(name: Symbol): String? {
+        return overloadedOperatorNames
+            .filterValues { it == name }
+            .keys
+            .map { it.second }
+            .distinct()
+            .singleOrNull()
+    }
 }
 
 /**
@@ -246,3 +263,23 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 ): Pair<KClass<T>, String> {
     return Pair(T::class, operatorCode)
 }
+
+/** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
+context(LanguageProvider)
+val CharSequence.isKnownOperatorName: Boolean
+    get() {
+        val language = language
+        if (language !is HasOperatorOverloading) {
+            return false
+        }
+
+        // If this is a parsed name, we only are interested in the local name
+        val name =
+            if (this is Name) {
+                this.localName
+            } else {
+                this
+            }
+
+        return language.overloadedOperatorNames.containsValue(name)
+    }

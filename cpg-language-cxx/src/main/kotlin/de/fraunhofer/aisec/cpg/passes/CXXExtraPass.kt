@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
@@ -83,7 +84,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // In theory, we could just keep this meaningless unary expression, but it in order
             // to reduce nodes, we unwrap the reference and exchange it in the arguments of the
             // binary op
-            walker.replaceArgument(parent, node, node.input)
+            walker.replace(parent, node, node.input)
         }
     }
 
@@ -144,7 +145,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // * replace the binary operator with the cast expression in the parent argument
             //   holder
-            walker.replaceArgument(parent, binOp, cast)
+            walker.replace(parent, binOp, cast)
         }
     }
 
