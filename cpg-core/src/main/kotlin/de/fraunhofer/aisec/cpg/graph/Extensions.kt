@@ -504,6 +504,10 @@ val Node?.nodes: List<Node>
 val Node?.calls: List<CallExpression>
     get() = this.allChildren()
 
+/** Returns all [OperatorCallExpression] children in this graph, starting with this [Node]. */
+val Node?.operatorCalls: List<OperatorCallExpression>
+    get() = this.allChildren()
+
 /** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
 val Node?.mcalls: List<MemberCallExpression>
     get() = this.allChildren()

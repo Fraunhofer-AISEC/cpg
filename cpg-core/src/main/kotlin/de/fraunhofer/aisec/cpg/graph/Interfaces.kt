@@ -147,5 +147,5 @@ interface HasOverloadedOperation : HasOperatorCode {
      * The base expression this operator works on. The [Type] of this is also the source where the
      * [SymbolResolver] is looking for an overloaded [OperatorDeclaration].
      */
-    val operatorBase: HasType
+    val operatorBase: Expression
 }

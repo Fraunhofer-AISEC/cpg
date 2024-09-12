@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -194,12 +196,31 @@ interface HasAnonymousIdentifier : LanguageTrait {
 interface HasGlobalVariables : LanguageTrait
 
 /**
+ * A common super-class for all language traits that arise because they are an ambiguity of a
+ * function call, e.g., function-style casts. This means that we cannot differentiate between a
+ * [CallExpression] and other expressions during the frontend and we need to invoke the
+ * [ResolveCallExpressionAmbiguityPass] to resolve this.
+ */
+sealed interface HasCallExpressionAmbiguity : LanguageTrait
+
+/**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
  * [CallExpression] and a [CastExpression], we need to employ an additional pass
- * ([ReplaceCallCastPass]) after the initial language frontends are done.
+ * ([ResolveCallExpressionAmbiguityPass]) after the initial language frontends are done.
  */
-interface HasFunctionalCasts : LanguageTrait
+interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
+
+/**
+ * A language trait, that specifies that the language has functional style (object) construction,
+ * meaning that constructor calls look like regular call expressions (usually meaning that the
+ * language has no dedicated `new` keyword).
+ *
+ * Since we can therefore not distinguish between a [CallExpression] and a [ConstructExpression] in
+ * the frontend, we need to employ an additional pass ([ResolveCallExpressionAmbiguityPass]) after
+ * the initial language frontends are done.
+ */
+interface HasFunctionStyleConstruction : HasCallExpressionAmbiguity
 
 /**
  * A language trait that specifies that this language allowed overloading functions, meaning that
@@ -216,6 +237,21 @@ interface HasOperatorOverloading : LanguageTrait {
      * the name of the function.
      */
     val overloadedOperatorNames: Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol>
+
+    /**
+     * Returns the matching operator code for [name] in [overloadedOperatorNames]. While
+     * [overloadedOperatorNames] can have multiple entries for a single operator code (e.g. to
+     * differentiate between unary and binary ops), we only ever allow one distinct operator code
+     * for a specific symbol. If non such distinct operator code is found, null is returned.
+     */
+    fun operatorCodeFor(name: Symbol): String? {
+        return overloadedOperatorNames
+            .filterValues { it == name }
+            .keys
+            .map { it.second }
+            .distinct()
+            .singleOrNull()
+    }
 }
 
 /**
@@ -227,3 +263,23 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 ): Pair<KClass<T>, String> {
     return Pair(T::class, operatorCode)
 }
+
+/** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
+context(LanguageProvider)
+val CharSequence.isKnownOperatorName: Boolean
+    get() {
+        val language = language
+        if (language !is HasOperatorOverloading) {
+            return false
+        }
+
+        // If this is a parsed name, we only are interested in the local name
+        val name =
+            if (this is Name) {
+                this.localName
+            } else {
+                this
+            }
+
+        return language.overloadedOperatorNames.containsValue(name)
+    }

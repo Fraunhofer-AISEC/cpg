@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -41,7 +42,10 @@ import org.neo4j.ogm.annotation.Transient
 
 /** The Python language. */
 class PythonLanguage :
-    Language<PythonLanguageFrontend>(), HasShortCircuitOperators, HasOperatorOverloading {
+    Language<PythonLanguageFrontend>(),
+    HasShortCircuitOperators,
+    HasOperatorOverloading,
+    HasFunctionStyleConstruction {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient

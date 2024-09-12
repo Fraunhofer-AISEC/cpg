@@ -113,7 +113,7 @@ open class BinaryOperator :
         get() = listOf(rhs)
 
     /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
-    override val operatorBase: HasType
+    override val operatorBase: Expression
         get() = lhs
 
     override fun equals(other: Any?): Boolean {

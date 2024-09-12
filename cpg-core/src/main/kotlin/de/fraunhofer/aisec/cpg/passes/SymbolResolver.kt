@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
@@ -343,7 +344,29 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return null
         }
         var member: ValueDeclaration? = null
-        val record = containingClass.recordDeclaration
+        var type = containingClass
+
+        // Check for a possible overloaded operator->
+        if (
+            reference.language is HasOperatorOverloading &&
+                reference is MemberExpression &&
+                reference.operatorCode == "->" &&
+                reference.base.type !is PointerType
+        ) {
+            val result = resolveOperator(reference)
+            val op = result?.bestViable?.singleOrNull()
+            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
+                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
+
+                // We need to insert a new operator call expression in between
+                val call = operatorCallFromDeclaration(op, reference)
+
+                // Make the call our new base
+                reference.base = call
+            }
+        }
+
+        val record = type.recordDeclaration
         if (record != null) {
             member =
                 record.fields
@@ -353,8 +376,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         if (member == null) {
             member =
-                (containingClass.recordDeclaration?.superTypeDeclarations?.flatMap { it.fields }
-                        ?: listOf())
+                type.superTypes
+                    .flatMap { it.recordDeclaration?.fields ?: listOf() }
                     .filter { it.name.localName == reference.name.localName }
                     .map { it.definition }
                     .firstOrNull()
@@ -448,6 +471,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             is Reference -> handleReference(currClass, node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(node)
+            is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
     }
 
@@ -726,6 +750,44 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    private fun handleOverloadedOperator(op: HasOverloadedOperation) {
+        val result = resolveOperator(op)
+        val decl = result?.bestViable?.singleOrNull() ?: return
+
+        // If the result was successful, we can replace the node
+        if (result.success == SUCCESSFUL && decl is OperatorDeclaration && op is Expression) {
+            val call = operatorCallFromDeclaration(decl, op)
+            walker.replace(op.astParent, op, call)
+        }
+    }
+
+    private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult? {
+        val language = op.language
+        val base = op.operatorBase
+        if (language !is HasOperatorOverloading || language.isPrimitive(base.type)) {
+            return null
+        }
+
+        val symbol = language.overloadedOperatorNames[Pair(op::class, op.operatorCode)]
+        if (symbol == null) {
+            log.warn(
+                "Could not resolve operator overloading for unknown operatorCode ${op.operatorCode}"
+            )
+            return null
+        }
+
+        val possibleTypes = mutableSetOf<Type>()
+        possibleTypes.add(op.operatorBase.type)
+        possibleTypes.addAll(op.operatorBase.assignedTypes)
+
+        val candidates =
+            resolveMemberByName(symbol, possibleTypes)
+                .filterIsInstance<OperatorDeclaration>()
+                .toSet()
+
+        return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
+    }
+
     /**
      * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
      * returns a [Pair], where the first element is the set of types and the second is our best
@@ -932,7 +994,7 @@ fun TranslationContext.tryRecordInference(
         // At this point, we need to check whether we have any type reference to our parent
         // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
         // have a high chance that this is actually a parent record and not a namespace
-        var parentType = typeManager.typeExists(parentName)
+        var parentType = typeManager.lookupResolvedType(parentName)
         holder =
             if (parentType != null) {
                 tryRecordInference(parentType, locationHint = locationHint)

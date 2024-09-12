@@ -507,7 +507,7 @@ private constructor(
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
-            registerPass<ReplaceCallCastPass>()
+            registerPass<ResolveCallExpressionAmbiguityPass>()
             useDefaultPasses = true
             return this
         }

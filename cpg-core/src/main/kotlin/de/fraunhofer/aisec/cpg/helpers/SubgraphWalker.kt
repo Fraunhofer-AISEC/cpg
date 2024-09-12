@@ -27,10 +27,15 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
@@ -339,4 +344,56 @@ object SubgraphWalker {
             handler.accept(scopeManager.currentRecord, parent, current)
         }
     }
+}
+
+/**
+ * Tries to replace the [old] expression with a [new] one, given the [parent].
+ *
+ * There are two things to consider:
+ * - First, this only works if [parent] is either an [ArgumentHolder] or [StatementHolder].
+ *   Otherwise, we cannot instruct the parent to exchange the node
+ * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
+ *   only support a replacement very early in the pass system. To be specific, we only allow
+ *   replacement before any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
+ *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
+ */
+context(ContextProvider)
+fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
+    // We do not allow to replace nodes where the DFG (or other dependent nodes, such as PDG have
+    // been set). The reason for that is that these edges contain a lot of information on the edges
+    // themselves and replacing this edge would be very complicated.
+    if (old.prevDFG.isNotEmpty() || old.nextDFG.isNotEmpty()) {
+        return false
+    }
+
+    val success =
+        when (parent) {
+            is ArgumentHolder -> parent.replace(old, new)
+            is StatementHolder -> parent.replace(old, new)
+            else -> {
+                Pass.log.error(
+                    "Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."
+                )
+                return false
+            }
+        }
+    if (!success) {
+        Pass.log.error(
+            "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
+        )
+    } else {
+        // Store any eventual EOG/DFG nodes and disconnect old node
+        val oldPrevEOG = old.prevEOG.toMutableList()
+        val oldNextEOG = old.nextEOG.toMutableList()
+        old.disconnectFromGraph()
+
+        // Put the stored EOG nodes to the new node
+        new.prevEOG = oldPrevEOG
+        new.nextEOG = oldNextEOG
+
+        // Make sure to inform the walker about our change
+        this.registerReplacement(old, new)
+    }
+
+    return success
 }

@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -350,20 +348,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             if (callee is MemberExpression) {
                 newMemberCallExpression(callee, rawNode = node)
             } else {
-                // try to resolve -> [ConstructExpression]
-                val currentScope = frontend.scopeManager.currentScope
-                val record =
-                    currentScope?.let { frontend.scopeManager.getRecordForName(callee.name) }
-
-                if (record != null) {
-                    // construct expression
-                    val constructExpr =
-                        newConstructExpression((node.func as? Python.AST.Name)?.id, rawNode = node)
-                    constructExpr.type = record.toType()
-                    constructExpr
-                } else {
-                    newCallExpression(callee, rawNode = node)
-                }
+                newCallExpression(callee, rawNode = node)
             }
 
         for (arg in node.args) {

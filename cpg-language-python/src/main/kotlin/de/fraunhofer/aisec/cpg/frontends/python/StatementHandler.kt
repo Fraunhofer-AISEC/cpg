@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
+import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
@@ -38,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -289,6 +292,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         s: Python.AST.NormalOrAsyncFunctionDef,
         recordDeclaration: RecordDeclaration? = null
     ): DeclarationStatement {
+        val language = language
         val result =
             if (recordDeclaration != null) {
                 if (s.name == "__init__") {
@@ -297,6 +301,23 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         recordDeclaration = recordDeclaration,
                         rawNode = s
                     )
+                } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
+                    var decl =
+                        newOperatorDeclaration(
+                            name = s.name,
+                            recordDeclaration = recordDeclaration,
+                            operatorCode = language.operatorCodeFor(s.name) ?: "",
+                            rawNode = s
+                        )
+                    if (decl.operatorCode == "") {
+                        Util.warnWithFileLocation(
+                            decl,
+                            log,
+                            "Could not find operator code for operator {}. This will most likely result in a failure",
+                            s.name
+                        )
+                    }
+                    decl
                 } else {
                     newMethodDeclaration(
                         name = s.name,

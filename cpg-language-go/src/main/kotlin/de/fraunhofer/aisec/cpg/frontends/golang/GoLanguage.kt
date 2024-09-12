@@ -42,7 +42,7 @@ class GoLanguage :
     HasStructs,
     HasFirstClassFunctions,
     HasAnonymousIdentifier,
-    HasFunctionalCasts {
+    HasFunctionStyleCasts {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
-import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
+import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -171,7 +171,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 // Check if it's an operator
                 name.isKnownOperatorName -> {
                     // retrieve the operator code
-                    var operatorCode = name.localName.drop("operator".length)
+                    val operatorCode = name.localName.drop("operator".length)
                     newOperatorDeclaration(name, operatorCode, rawNode = ctx)
                 }
                 // Check, if it's a constructor. This is the case if the local names of the function
@@ -509,17 +509,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             frontend.declarationHandler.handle(member)
         }
     }
-
-    /** Checks whether the [Name] for a function is a known operator name. */
-    val Name.isKnownOperatorName: Boolean
-        get() {
-            var language = language
-            if (language !is HasOperatorOverloading) {
-                return false
-            }
-
-            return language.overloadedOperatorNames.containsValue(this.localName)
-        }
 }
 
 /**

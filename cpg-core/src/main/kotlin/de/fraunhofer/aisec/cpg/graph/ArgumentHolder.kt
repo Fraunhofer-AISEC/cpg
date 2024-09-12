@@ -53,6 +53,10 @@ interface ArgumentHolder : Holder<Expression> {
         return false
     }
 
+    override fun replace(old: Expression, new: Expression): Boolean {
+        return replaceArgument(old, new)
+    }
+
     /**
      * Replaces the existing argument specified in [old] with the one in [new]. Implementation how
      * to do that might be specific to the argument holder.

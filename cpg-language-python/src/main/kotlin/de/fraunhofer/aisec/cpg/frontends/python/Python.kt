@@ -59,8 +59,8 @@ interface Python {
     interface AST {
 
         /**
-         * `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have extra location
-         * properties as implemented here.
+         * Some nodes, such as `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have
+         * extra location properties as implemented here.
          */
         interface WithLocation { // TODO make the fields accessible `by lazy`
             val pyObject: PyObject
@@ -1130,7 +1130,7 @@ interface Python {
          *  |  | MatchOr(pattern* patterns)
          * ```
          */
-        abstract class BasePattern(pyObject: PyObject) : AST(pyObject)
+        abstract class BasePattern(pyObject: PyObject) : AST(pyObject), WithLocation
 
         /**
          * ```
@@ -1266,7 +1266,7 @@ interface Python {
          *  |  alias(identifier name, identifier? asname)
          * ```
          */
-        class alias(pyObject: PyObject) : AST(pyObject) {
+        class alias(pyObject: PyObject) : AST(pyObject), WithLocation {
             val name: String by lazy { "name" of pyObject }
             val asname: String? by lazy { "asname" of pyObject }
         }
@@ -1320,7 +1320,7 @@ interface Python {
          *
          * TODO: excepthandler <-> ExceptHandler
          */
-        class excepthandler(pyObject: PyObject) : AST(pyObject) {
+        class excepthandler(pyObject: PyObject) : AST(pyObject), WithLocation {
             val type: BaseExpr by lazy { "type" of pyObject }
             val name: String by lazy { "name" of pyObject }
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
@@ -1332,7 +1332,7 @@ interface Python {
          *  |  keyword(identifier? arg, expr value)
          * ```
          */
-        class keyword(pyObject: PyObject) : AST(pyObject) {
+        class keyword(pyObject: PyObject) : AST(pyObject), WithLocation {
             val arg: String? by lazy { "arg" of pyObject }
             val value: BaseExpr by lazy { "value" of pyObject }
         }

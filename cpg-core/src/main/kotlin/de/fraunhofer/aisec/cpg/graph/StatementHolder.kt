@@ -50,6 +50,10 @@ interface StatementHolder : Holder<Statement> {
      */
     var statements: MutableList<Statement>
 
+    override fun replace(old: Statement, new: Statement): Boolean {
+        return statementEdges.replace(old, new)
+    }
+
     override operator fun plusAssign(node: Statement) {
         statementEdges += node
     }
