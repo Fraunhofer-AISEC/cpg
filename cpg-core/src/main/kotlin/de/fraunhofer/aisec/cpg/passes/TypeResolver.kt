@@ -122,7 +122,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun handleNode(node: Node?) {
         if (node is RecordDeclaration) {
-            for (t in typeManager.firstOrderTypes) {
+            for (t in typeManager.firstOrderTypes.values.flatten()) {
                 if (t.name == node.name && t is ObjectType) {
                     // The node is the class of the type t
                     t.recordDeclaration = node
@@ -136,7 +136,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     fun resolveFirstOrderTypes() {
-        for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
+        for (type in typeManager.firstOrderTypes.values.flatten().sortedBy { it.name }) {
             if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
                 resolveType(type)
             }
