@@ -441,18 +441,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     /**
      * This method extracts the [positionalArguments] including those that may have default values.
      *
-     * In Python only the arguments with default values are stored in `args.defaults`. For example:
+     * In Python only the arguments with default values are stored in `args.defaults`.
+     * https://docs.python.org/3/library/ast.html#ast.arguments
      *
-     * `def my_func(a, b=1, c=2): pass`
+     * For example: `def my_func(a, b=1, c=2): pass`
      *
      * In this case, `args.defaults` contains only the defaults for `b` and `c`, while `args.args`
-     * includes all arguments (`a`, `b` and `c`).
-     *
-     * The number of arguments without defaults is determined by subtracting the size of
-     * `args.defaults` from the total number of arguments. This matches each default to its
-     * corresponding argument.
-     *
-     * https://docs.python.org/3/library/ast.html#ast.arguments
+     * includes all arguments (`a`, `b` and `c`). The number of arguments without defaults is
+     * determined by subtracting the size of `args.defaults` from the total number of arguments.
+     * This matches each default to its corresponding argument.
      */
     private fun handlePositionalArguments(
         positionalArguments: List<Python.AST.arg>,
@@ -471,12 +468,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 } else {
                     null
                 }
-            handleArgument(
-                arg,
-                isPosOnly = arg in args.posonlyargs,
-                isKwoOnly = defaultValue != null,
-                defaultValue = defaultValue
-            )
+            handleArgument(arg, isPosOnly = arg in args.posonlyargs, defaultValue = defaultValue)
         }
     }
 

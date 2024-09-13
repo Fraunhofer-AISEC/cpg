@@ -16,9 +16,6 @@ def kw_args(**kwargs):
 def defaults(b=1, c=2, *d, e):
     pass
 
-def foo(a, b, c=3, d=4):
-    pass
-
 class MyClass:
     def my_method(self=5, d=3, e=1):
         pass

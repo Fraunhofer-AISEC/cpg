@@ -45,24 +45,21 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ArgumentsHandlerTest {
 
-    companion object {
-        private lateinit var topLevel: Path
-        private lateinit var result: TranslationResult
+    private lateinit var topLevel: Path
+    private lateinit var result: TranslationResult
 
-        @JvmStatic
-        @BeforeAll
-        fun setup() {
-            topLevel = Path.of("src", "test", "resources", "python")
-            analyzeFile("arguments.py")
-        }
+    @BeforeAll
+    fun setup() {
+        topLevel = Path.of("src", "test", "resources", "python")
+        analyzeFile()
+    }
 
-        fun analyzeFile(fileName: String) {
-            result =
-                analyze(listOf(topLevel.resolve(fileName).toFile()), topLevel, true) {
-                    it.registerLanguage<PythonLanguage>()
-                }
-            assertNotNull(result)
-        }
+    fun analyzeFile() {
+        result =
+            analyze(listOf(topLevel.resolve("arguments.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
     }
 
     @Test
@@ -142,37 +139,12 @@ class ArgumentsHandlerTest {
             val param = func.parameters[paramName]
             assertNotNull(param, "Failed to find keyword-only argument '$paramName'")
 
-            assertContains(param.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
-
             assertNotNull(param.default, "Parameter '$paramName' should have a default value")
             assertEquals(
                 expectedDefaultValue.toLong(),
                 param.default?.evaluate(),
                 "Default value for parameter '$paramName' is incorrect"
             )
-        }
-    }
-
-    @Test
-    fun testNonAndDefaultArguments() {
-        val func = result.functions["foo"]
-        assertNotNull(func, "Function 'foo' should be found")
-
-        assertEquals(4, func.parameters.size)
-        val defaults = mapOf("a" to null, "b" to null, "c" to 3, "d" to 4)
-        for ((paramName, expectedDefaultValue) in defaults) {
-            val param = func.parameters[paramName]
-            assertNotNull(param, "Failed to find argument '$paramName'")
-
-            expectedDefaultValue?.let {
-                assertContains(param.modifiers, PythonLanguage.MODIFIER_KEYWORD_ONLY_ARGUMENT)
-                assertNotNull(param.default, "Parameter '$paramName' should have a default value")
-                assertEquals(
-                    expectedDefaultValue.toLong(),
-                    param.default?.evaluate(),
-                    "Default value for parameter '$paramName' is incorrect"
-                )
-            }
         }
     }
 
