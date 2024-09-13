@@ -54,7 +54,7 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    val firstOrderTypes = ConcurrentHashMap<String, MutableList<Type>>()
     val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
 
     /**
@@ -197,9 +197,10 @@ class TypeManager {
         }
 
         if (t.isFirstOrderType) {
+            var types = firstOrderTypes.computeIfAbsent(t.name.toString()) { mutableListOf() }
             // Make sure we only ever return one unique object per type
-            if (!firstOrderTypes.add(t)) {
-                return firstOrderTypes.first { it == t && it is T } as T
+            if (!types.add(t)) {
+                return types.first { it == t && it is T } as T
             } else {
                 log.trace(
                     "Registering unique first order type {}{}",
@@ -224,7 +225,7 @@ class TypeManager {
 
     /** Checks, whether a [Type] with the given [name] exists. */
     fun typeExists(name: CharSequence): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name == name }
+        return firstOrderTypes.values.flatten().any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -247,7 +248,7 @@ class TypeManager {
             return primitiveType
         }
 
-        return firstOrderTypes.firstOrNull {
+        return firstOrderTypes[fqn.toString()]?.firstOrNull {
             (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
                 it.root.name == fqn &&
                 if (generics != null) {

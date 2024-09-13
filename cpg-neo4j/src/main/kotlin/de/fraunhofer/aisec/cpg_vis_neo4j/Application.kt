@@ -616,6 +616,8 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
+        translationResult.benchmarkResults.print()
+
         exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
             pushToNeo4j(translationResult)
