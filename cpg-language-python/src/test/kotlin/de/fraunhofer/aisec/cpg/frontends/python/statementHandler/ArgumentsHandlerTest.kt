@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.parameters
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.collections.component1
@@ -146,6 +147,23 @@ class ArgumentsHandlerTest {
                 "Default value for parameter '$paramName' is incorrect"
             )
         }
+    }
+
+    @Test
+    fun testReceiverWithDefault() {
+        val func = result.functions["my_method"]
+        assertNotNull(func, "Function 'my_method' should be found")
+
+        assertEquals(2, func.parameters.size)
+        assertNotNull(func.methods[0].receiver)
+
+        val parameterD = func.parameters["d"]
+        assertNotNull(parameterD?.default, "Expected the parameter `d` to have a default value.")
+        assertEquals(3.toLong(), parameterD.default?.evaluate())
+
+        val parameterE = func.parameters["e"]
+        assertNotNull(parameterE?.default, "Expected the parameter `e` to have a default value.")
+        assertEquals(1.toLong(), parameterE.default?.evaluate())
     }
 
     @Test

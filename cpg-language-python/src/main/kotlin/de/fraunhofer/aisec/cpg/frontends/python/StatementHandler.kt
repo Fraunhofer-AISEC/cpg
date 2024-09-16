@@ -410,8 +410,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             result.additionalProblems += newProblemExpression("Expected a receiver", rawNode = args)
         } else {
             val tpe = recordDeclaration.toType()
-            val defaultValue =
-                args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
             val recvNode =
                 newVariableDeclaration(
                     name = recvPythonNode.arg,
@@ -419,11 +417,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     implicitInitializerAllowed = false,
                     rawNode = recvPythonNode
                 )
-            if (defaultValue != null) {
-                frontend.scopeManager.addDeclaration(recvNode)
-                result.additionalProblems +=
-                    newProblemExpression("Receiver with default value", rawNode = args)
+
+            // If the number of defaults equals the number of positional arguments, the receiver has
+            // a default value
+            if (args.defaults.size == positionalArguments.size) {
+                val defaultValue =
+                    args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
+                defaultValue?.let {
+                    frontend.scopeManager.addDeclaration(recvNode)
+                    result.additionalProblems +=
+                        newProblemExpression("Receiver with default value", rawNode = args)
+                }
             }
+
             when (result) {
                 is ConstructorDeclaration -> result.receiver = recvNode
                 is MethodDeclaration -> result.receiver = recvNode
