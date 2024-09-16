@@ -85,11 +85,12 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python (Named
-     * Expression)[https://docs.python.org/3/library/ast.html#ast.NamedExpr] into a [Expression].
+     * Expression)[https://docs.python.org/3/library/ast.html#ast.NamedExpr] into an
+     * [AssignExpression].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
-    private fun handleNamedExpr(node: Python.AST.NamedExpr): Expression {
+    private fun handleNamedExpr(node: Python.AST.NamedExpr): AssignExpression {
         val assignExpression =
             newAssignExpression(
                 operatorCode = ":=",

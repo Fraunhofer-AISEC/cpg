@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -83,13 +84,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python (https://docs.python.org/3/library/ast.html#ast.Assert] into a
-     * [Statement].
+     * [AssertStatement].
      */
-    private fun handleAssert(node: Python.AST.Assert): Statement {
+    private fun handleAssert(node: Python.AST.Assert): AssertStatement {
         val assertStatement = newAssertStatement(rawNode = node)
         val testExpression = frontend.expressionHandler.handle(node.test)
         assertStatement.condition = testExpression
         node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
+
         return assertStatement
     }
 
