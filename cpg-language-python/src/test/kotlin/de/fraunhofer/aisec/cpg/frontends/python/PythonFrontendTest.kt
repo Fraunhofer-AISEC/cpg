@@ -1331,6 +1331,7 @@ class PythonFrontendTest : BaseTest() {
         val assignExpression = result.statements[1] as? AssignExpression
         assertNotNull(assignExpression)
         assertEquals(":=", assignExpression.operatorCode)
+        assertEquals(true, assignExpression.usedAsExpression)
 
         val lhs = assignExpression.lhs.firstOrNull() as? Reference
         assertNotNull(lhs)

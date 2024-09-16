@@ -37,26 +37,25 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StatementHandlerTest {
 
-    companion object {
-        private lateinit var topLevel: Path
-        private lateinit var result: TranslationResult
+    private lateinit var topLevel: Path
+    private lateinit var result: TranslationResult
 
-        @JvmStatic
-        @BeforeAll
-        fun setup() {
-            topLevel = Path.of("src", "test", "resources", "python")
-        }
+    @BeforeAll
+    fun setup() {
+        topLevel = Path.of("src", "test", "resources", "python")
+    }
 
-        fun analyzeFile(fileName: String) {
-            result =
-                analyze(listOf(topLevel.resolve(fileName).toFile()), topLevel, true) {
-                    it.registerLanguage<PythonLanguage>()
-                }
-            assertNotNull(result)
-        }
+    fun analyzeFile(fileName: String) {
+        result =
+            analyze(listOf(topLevel.resolve(fileName).toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
     }
 
     @Test

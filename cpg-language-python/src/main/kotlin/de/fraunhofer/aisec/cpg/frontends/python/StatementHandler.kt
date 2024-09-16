@@ -81,6 +81,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a Python (https://docs.python.org/3/library/ast.html#ast.Assert] into a
+     * [Statement].
+     */
     private fun handleAssert(node: Python.AST.Assert): Statement {
         val assertStatement = newAssertStatement(rawNode = node)
         val testExpression = frontend.expressionHandler.handle(node.test)
