@@ -68,7 +68,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.FormattedValue -> handleFormattedValue(node)
             is Python.AST.JoinedStr -> handleJoinedStr(node)
             is Python.AST.Starred -> handleStarred(node)
-            is Python.AST.NamedExpr,
+            is Python.AST.NamedExpr -> handleNamedExpr(node)
             is Python.AST.GeneratorExp,
             is Python.AST.ListComp,
             is Python.AST.SetComp,
@@ -81,6 +81,25 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python (Named
+     * Expression)[https://docs.python.org/3/library/ast.html#ast.NamedExpr] into an
+     * [AssignExpression].
+     *
+     * As opposed to the Assign node, both target and value must be single nodes.
+     */
+    private fun handleNamedExpr(node: Python.AST.NamedExpr): AssignExpression {
+        val assignExpression =
+            newAssignExpression(
+                operatorCode = ":=",
+                lhs = listOf(handle(node.target)),
+                rhs = listOf(handle(node.value)),
+                rawNode = node
+            )
+        assignExpression.usedAsExpression = true
+        return assignExpression
     }
 
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
