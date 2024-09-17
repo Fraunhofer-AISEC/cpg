@@ -25,8 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
@@ -34,12 +37,30 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StatementHandlerTest {
+
+    private lateinit var topLevel: Path
+    private lateinit var result: TranslationResult
+
+    @BeforeAll
+    fun setup() {
+        topLevel = Path.of("src", "test", "resources", "python")
+    }
+
+    fun analyzeFile(fileName: String) {
+        result =
+            analyze(listOf(topLevel.resolve(fileName).toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+    }
 
     @Test
     fun testAsync() {
-        val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("async.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
@@ -57,11 +78,7 @@ class StatementHandlerTest {
 
     @Test
     fun testOperatorOverload() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val file = topLevel.resolve("operator.py").toFile()
-
-        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
-        assertNotNull(result)
+        analyzeFile("operator.py")
 
         with(result) {
             val numberType = assertResolvedType("operator.Number")
@@ -85,5 +102,25 @@ class StatementHandlerTest {
             assertNotNull(pos)
             assertEquals(pos, opCall.invokes.singleOrNull())
         }
+    }
+
+    @Test
+    fun testAssert() {
+        analyzeFile("assert.py")
+
+        val func = result.functions["test_assert"]
+        assertNotNull(func, "Function 'test_assert' should be found")
+
+        val assertStatement =
+            func.body.statements.firstOrNull { it is AssertStatement } as? AssertStatement
+        assertNotNull(assertStatement, "Assert statement should be found")
+
+        val condition = assertStatement.condition
+        assertNotNull(condition, "Assert statement should have a condition")
+        assertEquals("1 == 1", condition.code, "The condition is incorrect")
+
+        val message = assertStatement.message as? Literal<*>
+        assertNotNull(message, "Assert statement should have a message")
+        assertEquals("Test message", message.value, "The assert message is incorrect")
     }
 }
