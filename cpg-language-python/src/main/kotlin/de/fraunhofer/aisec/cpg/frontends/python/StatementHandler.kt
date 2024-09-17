@@ -431,7 +431,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
 
             when (result) {
-                is ConstructorDeclaration -> result.receiver = recvNode
+                is ConstructorDeclaration,
                 is MethodDeclaration -> result.receiver = recvNode
                 else ->
                     result.additionalProblems +=
@@ -456,6 +456,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * includes all arguments (`a`, `b` and `c`). The number of arguments without defaults is
      * determined by subtracting the size of `args.defaults` from the total number of arguments.
      * This matches each default to its corresponding argument.
+     *
+     * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
      */
     private fun handlePositionalArguments(
         positionalArguments: List<Python.AST.arg>,
