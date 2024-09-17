@@ -184,7 +184,10 @@ class ArgumentsHandlerTest {
         val parameterA = func.parameters["a"]
         val parameterB = func.parameters["b"]
         val parameterC = func.parameters["c"]
-        assertNull(parameterA?.default, "Expected the parameter `a` to not have a default value.")
+        assertNotNull(
+            parameterA
+        ) // otherwise, the next assertNull test could have an unexpected result
+        assertNull(parameterA.default, "Expected the parameter `a` to not have a default value.")
 
         assertNotNull(parameterB?.default, "Expected the parameter `b` to have a default value.")
         assertEquals(1.toLong(), parameterB.default?.evaluate())
