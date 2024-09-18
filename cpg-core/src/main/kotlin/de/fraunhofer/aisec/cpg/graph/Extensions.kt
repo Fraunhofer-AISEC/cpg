@@ -612,6 +612,27 @@ val Node?.assigns: List<AssignExpression>
 val Node?.problems: List<ProblemNode>
     get() = this.allChildren()
 
+/**
+ * Returns all [Node] children in this graph, where the [Node.additionalProblems] field is not
+ * empty.
+ */
+val Node?.additionalProblemsNotEmpty: List<Node>
+    get() = this.allChildren<Node> { node -> node.additionalProblems.isNotEmpty() }
+
+/**
+ * Returns all [ProblemNode] children - stored in a [Node.additionalProblems] field - in this graph,
+ * starting with this [Node].
+ */
+val Node?.additionalProblemsUnpacked: List<ProblemNode>
+    get() = this.additionalProblemsNotEmpty.flatMap { it.additionalProblems }
+
+/**
+ * Return all [ProblemNode] children in this graph (either stored directly or in
+ * [Node.additionalProblems]), starting with this [Node].
+ */
+val Node?.allProblems: List<ProblemNode>
+    get() = problems + additionalProblemsUnpacked
+
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
     get() {
