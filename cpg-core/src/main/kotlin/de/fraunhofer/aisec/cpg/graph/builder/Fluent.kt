@@ -383,6 +383,27 @@ fun LanguageFrontend<*, *>.variable(
 }
 
 /**
+ * Creates a new [ProblemDeclaration] in the Fluent Node DSL and adds it to the
+ * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(DeclarationStatement)
+fun LanguageFrontend<*, *>.problemDecl(
+    description: String,
+    type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
+    init: (ProblemDeclaration.() -> Unit)? = null
+): ProblemDeclaration {
+    val node = newProblemDeclaration(problem = description, problemType = type)
+    if (init != null) init(node)
+
+    declarationEdges += node
+
+    scopeManager.addDeclaration(node)
+
+    return node
+}
+
+/**
  * Creates a new [CallExpression] (or [MemberCallExpression]) in the Fluent Node DSL with the given
  * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
  * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
