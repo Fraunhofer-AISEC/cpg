@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
+import kotlin.reflect.typeOf
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
@@ -199,6 +200,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
         // TODO: annotations
         val lhs = frontend.expressionHandler.handle(node.target)
+        val annassign =
+            newAssignExpression(
+                lhs = listOf(lhs),
+                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
+                rawNode = node
+            )
+        val type = frontend.typeOf(node.annotation)
+        annassign.lhs.firstOrNull()?.type = type
         return if (node.value != null) {
             newAssignExpression(
                 lhs = listOf(lhs),
@@ -250,6 +259,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     },
                 rawNode = node
             )
+        node.type_comment?.let { typeComment ->
+            lhs.forEach { it.type = frontend.typeOf(typeComment) }
+        }
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 

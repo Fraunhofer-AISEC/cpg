@@ -72,6 +72,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (node) {
             is AssignExpression -> handleAssignExpression(node)
             is ForEachStatement -> handleForEach(node)
+            is Reference -> handleReference(node)
             else -> {
                 // Nothing to do for all other types of nodes
             }

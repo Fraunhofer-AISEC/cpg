@@ -146,22 +146,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             is Python.AST.Name -> {
                 // We have some kind of name here; let's quickly check, if this is a primitive type
                 val id = type.id
-                if (id in language.primitiveTypeNames) {
-                    return primitiveType(id)
-                }
-
-                // Otherwise, this could already be a fully qualified type
-                val name =
-                    if (language.namespaceDelimiter in id) {
-                        // TODO: This might create problem with nested classes
-                        parseName(id)
-                    } else {
-                        // otherwise, we can just simply take the unqualified name and the type
-                        // resolver will take care of the rest
-                        id
-                    }
-
-                objectType(name)
+                this.typeOf(id)
             }
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
@@ -169,6 +154,21 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 unknownType()
             }
         }
+    }
+
+    fun typeOf(typeId: String): Type {
+        // Otherwise, this could already be a fully qualified type
+        val name =
+            if (language.namespaceDelimiter in typeId) {
+                // TODO: This might create problem with nested classes
+                parseName(typeId)
+            } else {
+                // otherwise, we can just simply take the unqualified name and the type
+                // resolver will take care of the rest
+                typeId
+            }
+
+        return objectType(name)
     }
 
     /**

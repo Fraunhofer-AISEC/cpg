@@ -123,4 +123,20 @@ class StatementHandlerTest {
         assertNotNull(message, "Assert statement should have a message")
         assertEquals("Test message", message.value, "The assert message is incorrect")
     }
+
+    @Test
+    fun testTypeComment() {
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("type_comments.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val p = tu.namespaces["type_comments"]
+        assertNotNull(p)
+    }
 }
