@@ -608,7 +608,12 @@ val Node?.returns: List<ReturnStatement>
 val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
-/** Returns all [ProblemNode] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ProblemNode] children in this graph, starting with this [Node].
+ *
+ * Warning: this only yields [ProblemNode]s stored directly in the AST (i.e. no
+ * [Node.additionalProblems] nodes are included). Use [problems] to receive all problems.
+ */
 private val Node?.problemNodes: List<ProblemNode>
     get() = this.allChildren()
 
