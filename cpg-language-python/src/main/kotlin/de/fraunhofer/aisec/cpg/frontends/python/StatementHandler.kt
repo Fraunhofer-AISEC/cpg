@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -387,87 +388,126 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
         // both in positional and keyword style.
         var positionalArguments = args.posonlyargs + args.args
-        // Handle arguments
+
+        // Handle receiver if it exists
         if (recordDeclaration != null) {
-            // first argument is the `receiver`
-            val recvPythonNode = positionalArguments.firstOrNull()
-            if (recvPythonNode == null) {
-                result.additionalProblems +=
-                    newProblemExpression("Expected a receiver", rawNode = args)
-            } else {
-                val tpe = recordDeclaration.toType()
-                val recvNode =
-                    newVariableDeclaration(
-                        name = recvPythonNode.arg,
-                        type = tpe,
-                        implicitInitializerAllowed = false,
-                        rawNode = recvPythonNode
-                    )
-                frontend.scopeManager.addDeclaration(recvNode)
-                when (result) {
-                    is ConstructorDeclaration -> result.receiver = recvNode
-                    is MethodDeclaration -> result.receiver = recvNode
-                    else ->
-                        result.additionalProblems +=
-                            newProblemExpression(
-                                problem =
-                                    "Expected a constructor or method declaration. Got something else.",
-                                rawNode = result
-                            )
-                }
-            }
+            handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
+            // Skip the receiver argument for further processing
+            positionalArguments = positionalArguments.drop(1)
         }
 
-        if (recordDeclaration != null) {
-            if (
-                positionalArguments.size > 1 // more arguments than only a receiver
-            ) { // first argument is the receiver
-                for (arg in positionalArguments.subList(1, positionalArguments.size)) {
-                    handleArgument(arg, arg in args.posonlyargs)
-                }
-            }
-        } else {
-            for (arg in positionalArguments) {
-                handleArgument(arg, arg in args.posonlyargs)
-            }
-        }
+        // Handle remaining arguments
+        handlePositionalArguments(positionalArguments, args)
 
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
+        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = false) }
 
-        if (args.kwonlyargs.isNotEmpty()) {
-            result.additionalProblems +=
-                newProblemDeclaration(
-                    "`kwonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
+        handleKeywordOnlyArguments(args)
+    }
+
+    /**
+     * This method retrieves the first argument of the [positionalArguments], which is typically the
+     * receiver object.
+     *
+     * A receiver can also have a default value. However, this case is not handled and is therefore
+     * passed with a problem expression.
+     */
+    private fun handleReceiverArgument(
+        positionalArguments: List<Python.AST.arg>,
+        args: Python.AST.arguments,
+        result: FunctionDeclaration,
+        recordDeclaration: RecordDeclaration
+    ) {
+        // first argument is the receiver
+        val recvPythonNode = positionalArguments.firstOrNull()
+        if (recvPythonNode == null) {
+            result.additionalProblems += newProblemExpression("Expected a receiver", rawNode = args)
+        } else {
+            val tpe = recordDeclaration.toType()
+            val recvNode =
+                newVariableDeclaration(
+                    name = recvPythonNode.arg,
+                    type = tpe,
+                    implicitInitializerAllowed = false,
+                    rawNode = recvPythonNode
                 )
+
+            // If the number of defaults equals the number of positional arguments, the receiver has
+            // a default value
+            if (args.defaults.size == positionalArguments.size) {
+                val defaultValue =
+                    args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
+                defaultValue?.let {
+                    frontend.scopeManager.addDeclaration(recvNode)
+                    result.additionalProblems +=
+                        newProblemExpression("Receiver with default value", rawNode = args)
+                }
+            }
+
+            when (result) {
+                is ConstructorDeclaration,
+                is MethodDeclaration -> result.receiver = recvNode
+                else ->
+                    result.additionalProblems +=
+                        newProblemExpression(
+                            problem =
+                                "Expected a constructor or method declaration. Got something else.",
+                            rawNode = result
+                        )
+            }
         }
+    }
 
-        if (args.kw_defaults.isNotEmpty()) {
-            result.additionalProblems +=
-                newProblemDeclaration(
-                    "`kw_defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
+    /**
+     * This method extracts the [positionalArguments] including those that may have default values.
+     *
+     * In Python only the arguments with default values are stored in `args.defaults`.
+     * https://docs.python.org/3/library/ast.html#ast.arguments
+     *
+     * For example: `def my_func(a, b=1, c=2): pass`
+     *
+     * In this case, `args.defaults` contains only the defaults for `b` and `c`, while `args.args`
+     * includes all arguments (`a`, `b` and `c`). The number of arguments without defaults is
+     * determined by subtracting the size of `args.defaults` from the total number of arguments.
+     * This matches each default to its corresponding argument.
+     *
+     * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
+     */
+    private fun handlePositionalArguments(
+        positionalArguments: List<Python.AST.arg>,
+        args: Python.AST.arguments
+    ) {
+        val nonDefaultArgsCount = positionalArguments.size - args.defaults.size
+
+        for (idx in positionalArguments.indices) {
+            val arg = positionalArguments[idx]
+            val defaultIndex = idx - nonDefaultArgsCount
+            val defaultValue =
+                if (defaultIndex >= 0) {
+                    args.defaults.getOrNull(defaultIndex)?.let {
+                        frontend.expressionHandler.handle(it)
+                    }
+                } else {
+                    null
+                }
+            handleArgument(arg, isPosOnly = arg in args.posonlyargs, defaultValue = defaultValue)
         }
+    }
 
-        args.kwarg?.let {
-            result.additionalProblems +=
-                newProblemDeclaration(
-                    "`kwarg` is not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = it
-                )
-        }
-
-        if (args.defaults.isNotEmpty()) {
-            result.additionalProblems +=
-                newProblemDeclaration(
-                    "`defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
+    /**
+     * This method extracts the keyword-only arguments from [args] and maps them to the
+     * corresponding function parameters.
+     */
+    private fun handleKeywordOnlyArguments(args: Python.AST.arguments) {
+        for (idx in args.kwonlyargs.indices) {
+            val arg = args.kwonlyargs[idx]
+            val default = args.kw_defaults.getOrNull(idx)
+            handleArgument(
+                arg,
+                isPosOnly = false,
+                isKwoOnly = true,
+                defaultValue = default?.let { frontend.expressionHandler.handle(it) }
+            )
         }
     }
 
@@ -558,10 +598,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
+     * (like positional-only or keyword-only) and [defaultValue] if applicable.
+     */
     internal fun handleArgument(
         node: Python.AST.arg,
         isPosOnly: Boolean = false,
-        isVariadic: Boolean = false
+        isVariadic: Boolean = false,
+        isKwoOnly: Boolean = false,
+        defaultValue: Expression? = null
     ) {
         val type = frontend.typeOf(node.annotation)
         val arg =
@@ -571,8 +617,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 variadic = isVariadic,
                 rawNode = node
             )
+        defaultValue?.let { arg.default = it }
         if (isPosOnly) {
             arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        }
+
+        if (isKwoOnly) {
+            arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
         }
 
         frontend.scopeManager.addDeclaration(arg)

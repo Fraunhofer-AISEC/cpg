@@ -23,15 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.python.StatementHandler
+package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,6 +57,51 @@ class StatementHandlerTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
+    }
+
+    @Test
+    fun testAsync() {
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("async.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val myFunc = tu.functions["my_func"]
+        assertNotNull(myFunc)
+        assertEquals(1, myFunc.parameters.size)
+
+        val myOtherFunc = tu.functions["my_other_func"]
+        assertNotNull(myOtherFunc)
+        assertEquals(1, myOtherFunc.parameters.size)
+    }
+
+    @Test
+    fun testOperatorOverload() {
+        analyzeFile("operator.py")
+
+        with(result) {
+            val numberType = assertResolvedType("operator.Number")
+            val strType = assertResolvedType("str")
+
+            // we should have an operator call to __add__ (+) now
+            var opCall = result.operatorCalls("+").getOrNull(0)
+            assertNotNull(opCall)
+            assertEquals(numberType, opCall.type)
+
+            val add = result.operators["__add__"]
+            assertNotNull(add)
+            assertEquals(add, opCall.invokes.singleOrNull())
+
+            // ... and one to __pos__ (+)
+            opCall = result.operatorCalls("+").getOrNull(1)
+            assertNotNull(opCall)
+            assertEquals(strType, opCall.type)
+
+            val pos = result.operators["__pos__"]
+            assertNotNull(pos)
+            assertEquals(pos, opCall.invokes.singleOrNull())
+        }
     }
 
     @Test
