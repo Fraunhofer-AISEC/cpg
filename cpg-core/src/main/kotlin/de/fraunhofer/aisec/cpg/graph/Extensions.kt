@@ -608,9 +608,28 @@ val Node?.returns: List<ReturnStatement>
 val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
-/** Returns all [ProblemNode] children in this graph, starting with this [Node]. */
+/**
+ * Return all [ProblemNode] children in this graph (either stored directly or in
+ * [Node.additionalProblems]), starting with this [Node].
+ */
 val Node?.problems: List<ProblemNode>
-    get() = this.allChildren()
+    get() {
+        val relevantNodes =
+            this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
+
+        val result = mutableListOf<ProblemNode>()
+
+        relevantNodes.forEach {
+            if (it.additionalProblems.isNotEmpty()) {
+                result += it.additionalProblems
+            }
+            if (it is ProblemNode) {
+                result += it
+            }
+        }
+
+        return result
+    }
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
