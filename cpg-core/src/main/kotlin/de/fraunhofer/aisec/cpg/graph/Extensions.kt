@@ -609,29 +609,27 @@ val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
- * Returns all [ProblemNode] children in this graph, starting with this [Node].
- *
- * Warning: this only yields [ProblemNode]s stored directly in the AST (i.e. no
- * [Node.additionalProblems] nodes are included). Use [problems] to receive all problems.
- */
-private val Node?.problemNodes: List<ProblemNode>
-    get() = this.allChildren()
-
-/**
- * Returns all [ProblemNode] children - stored in a [Node.additionalProblems] field - in this graph,
- * starting with this [Node].
- */
-private val Node?.additionalProblemNodes: List<ProblemNode>
-    get() =
-        this.allChildren<Node> { node -> node.additionalProblems.isNotEmpty() }
-            .flatMap { it.additionalProblems }
-
-/**
  * Return all [ProblemNode] children in this graph (either stored directly or in
  * [Node.additionalProblems]), starting with this [Node].
  */
 val Node?.problems: List<ProblemNode>
-    get() = problemNodes + additionalProblemNodes
+    get() {
+        val relevantNodes =
+            this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
+
+        val result = mutableListOf<ProblemNode>()
+
+        relevantNodes.forEach {
+            if (it.additionalProblems.isNotEmpty()) {
+                result += it.additionalProblems
+            }
+            if (it is ProblemNode) {
+                result += it
+            }
+        }
+
+        return result
+    }
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
