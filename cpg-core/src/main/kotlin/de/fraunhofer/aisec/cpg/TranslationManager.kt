@@ -26,6 +26,10 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -43,8 +47,14 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+<<<<<<< HEAD
 import kotlin.io.path.name
+=======
+import kotlin.io.path.absolute
+import kotlin.io.path.readText
+>>>>>>> d3dbeb03950 (Changing function signature of `parse` to accept the file content instead of a file)
 import kotlin.reflect.full.findAnnotation
+import kotlin.time.DurationUnit
 import org.slf4j.LoggerFactory
 
 /** Main entry point for all source code translation for all language front-ends. */
@@ -110,6 +120,15 @@ private constructor(
                 executedFrontends.forEach { it.cleanup() }
             }
         }
+
+        log.info(
+            "Translated {} LoC in total ({} / LoC)",
+            result.stats.totalLinesOfCode,
+            (outerBench.duration / result.stats.totalLinesOfCode).toString(
+                DurationUnit.MILLISECONDS,
+                decimals = 3
+            )
+        )
 
         return result
     }
@@ -375,7 +394,7 @@ private constructor(
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(component, ctx, globalCtx, sourceLocation)
+                        return@supplyAsync parse(component, result, ctx, globalCtx, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -431,7 +450,7 @@ private constructor(
 
         for (sourceLocation in sourceLocations) {
             ctx.currentComponent = component
-            val f = parse(component, ctx, ctx, sourceLocation)
+            val f = parse(component, result, ctx, ctx,sourceLocation)
             if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
@@ -459,6 +478,7 @@ private constructor(
     @Throws(TranslationException::class)
     private fun parse(
         component: Component,
+        result: TranslationResult,
         ctx: TranslationContext,
         globalCtx: TranslationContext,
         sourceLocation: File,
@@ -479,7 +499,30 @@ private constructor(
                 }
                 return null
             }
-            component.addTranslationUnit(frontend.parse(sourceLocation))
+
+            // Check, if the frontend supports the new API
+            var tu =
+                if (frontend is SupportsNewParse) {
+                    // Read the file contents and supply it to the frontend. This gives us a chance
+                    // to do some statistics here, for example on the lines of code. For now, we
+                    // just print it, in a future PR we will gather this information and consolidate
+                    // it.
+                    var path = sourceLocation.toPath().absolute()
+                    var content = path.readText()
+                    var linesOfCode = content.linesOfCode
+
+                    log.info("{} has {} LoC", path, linesOfCode)
+
+                    var tu = frontend.parse(content, path)
+
+                    // Add the LoC. This needs to be synchronized on the stats object, because of
+                    // parallel parsing
+                    synchronized(result.stats) { result.stats.totalLinesOfCode += linesOfCode }
+                    tu
+                } else {
+                    frontend.parse(sourceLocation)
+                }
+            component.addTranslationUnit(tu)
         } catch (ex: TranslationException) {
             log.error("An error occurred during parsing of ${sourceLocation.name}: ${ex.message}")
             if (config.failOnError) {
@@ -580,3 +623,12 @@ private fun MutableList<Type>.updateGlobalScope(newGlobalScope: GlobalScope?) {
         type.secondOrderTypes.updateGlobalScope(newGlobalScope)
     }
 }
+
+/**
+ * This returns a VERY trivial count of the lines of code (mainly just the line count). This can be
+ * extended to a real LoC algorithm at some point.
+ */
+val String.linesOfCode: Int
+    get() {
+        return this.count { it == '\n' }
+    }

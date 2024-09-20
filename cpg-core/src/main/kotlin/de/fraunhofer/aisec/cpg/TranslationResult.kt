@@ -101,6 +101,8 @@ class TranslationResult(
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
 
+    var stats = TranslationStats()
+
     /**
      * Checks if only a single software component has been analyzed and returns its translation
      * units. For multiple software components, it aggregates the results.
