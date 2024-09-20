@@ -192,9 +192,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.AST.And -> "and"
                 is Python.AST.Or -> "or"
             }
-        return when (node.values.size) {
-            0,
-            1 ->
+        return when {
+            node.values.size <= 1 ->
                 newProblemExpression(
                     "handleBoolOp: Expected at least two expressions but got " + node.values.size,
                     rawNode = node
@@ -207,9 +206,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 // For all iterations until the last one: set the lhs to handle the current idx and
                 // create a new nested [BinaryOperator] for the rhs. Then slide the window by one.
                 while (idx < node.values.size - 2) {
+                    // handle the current lhs
                     currentInnerNode.lhs = handle(node.values[idx])
-                    currentInnerNode.rhs = newBinaryOperator(operatorCode = op, rawNode = node)
-                    currentInnerNode = currentInnerNode.rhs as BinaryOperator
+
+                    // create a new [BinaryOperator] for the current rhs
+                    val nestedBinOp = newBinaryOperator(operatorCode = op, rawNode = node)
+                    currentInnerNode.rhs = nestedBinOp
+                    currentInnerNode = nestedBinOp
                     idx++
                 }
 
