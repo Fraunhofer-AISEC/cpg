@@ -26,22 +26,18 @@
 package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.frontends.python.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.test.analyze
-import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.test.assertResolvedType
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class StatementHandlerTest {
+class StatementHandlerTest : BaseTest() {
 
     private lateinit var topLevel: Path
     private lateinit var result: TranslationResult
@@ -125,18 +121,17 @@ class StatementHandlerTest {
     }
 
     @Test
-    fun testTypeComment() {
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("type_comments.py").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        assertNotNull(tu)
+    fun testTypeHints() {
+        analyzeFile("type_hints.py")
 
-        val p = tu.namespaces["type_comments"]
-        assertNotNull(p)
+        // type comments
+        val a = result.refs["a"]
+        assertNotNull(a)
+        assertEquals(result.assertResolvedType("int"), a.type)
+
+        // type annotation
+        val b = result.refs["b"]
+        assertNotNull(b)
+        assertEquals(result.assertResolvedType("str"), b.type)
     }
 }

@@ -198,22 +198,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
-        // TODO: annotations
         val lhs = frontend.expressionHandler.handle(node.target)
-        val annassign =
-            newAssignExpression(
-                lhs = listOf(lhs),
-                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
-                rawNode = node
-            )
-        val type = frontend.typeOf(node.annotation)
-        annassign.lhs.firstOrNull()?.type = type
+        lhs.type = frontend.typeOf(node.annotation)
+        val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
+        val annAssign = newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
         return if (node.value != null) {
-            newAssignExpression(
-                lhs = listOf(lhs),
-                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
-                rawNode = node
-            )
+            annAssign
         } else {
             lhs
         }
@@ -245,6 +235,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleAssign(node: Python.AST.Assign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+        node.type_comment?.let { typeComment ->
+            lhs.forEach { it.type = frontend.typeOf(typeComment) }
+        }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
             newAssignExpression(
@@ -259,9 +252,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     },
                 rawNode = node
             )
-        node.type_comment?.let { typeComment ->
-            lhs.forEach { it.type = frontend.typeOf(typeComment) }
-        }
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
