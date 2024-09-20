@@ -158,6 +158,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     /**
      * Resolves a [Type] based on its string identifier.
+     * test hook
      */
     fun typeOf(typeId: String): Type {
         // Check if the typeId contains a namespace delimiter for qualified types
