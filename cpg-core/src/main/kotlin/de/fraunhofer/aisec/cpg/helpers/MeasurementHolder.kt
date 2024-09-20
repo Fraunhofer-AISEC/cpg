@@ -153,7 +153,7 @@ constructor(
     }
 
     /** Stops the time and computes the difference between */
-    override fun addMeasurement(measurementKey: String?, measurementValue: String?): Any? {
+    override fun addMeasurement(measurementKey: String?, measurementValue: Any?): Any? {
         val duration = Duration.between(start, Instant.now()).toMillis()
         measurements["${caller}: $message"] = "$duration ms"
 
@@ -192,7 +192,7 @@ constructor(
     val caller: String
 
     /** Stores the values measured by the benchmark */
-    var measurements: MutableMap<String, String> = mutableMapOf()
+    var measurements: MutableMap<String, Any> = mutableMapOf()
 
     /**
      * Returns a list of strings which summarize the insights gained by the benchmark. The first
@@ -200,7 +200,7 @@ constructor(
      */
     val benchmarkedValues: List<String>
         get() {
-            return measurements.flatMap { listOf(it.key, it.value) }
+            return measurements.flatMap { listOf(it.key, it.value.toString()) }
         }
 
     fun logDebugMsg(msg: String) {
@@ -213,13 +213,10 @@ constructor(
 
     /** Adds a measurement for the respective benchmark and saves it to the map. */
     @JvmOverloads
-    open fun addMeasurement(
-        measurementKey: String? = null,
-        measurementValue: String? = null
-    ): Any? {
+    open fun addMeasurement(measurementKey: String? = null, measurementValue: Any? = null): Any? {
         if (measurementKey == null || measurementValue == null) return null
 
-        measurements["Measurement: $measurementKey"] = measurementValue
+        measurements[measurementKey] = measurementValue
         logDebugMsg("$caller $measurementKey: result is $measurementValue")
 
         // update our holder, if we have any

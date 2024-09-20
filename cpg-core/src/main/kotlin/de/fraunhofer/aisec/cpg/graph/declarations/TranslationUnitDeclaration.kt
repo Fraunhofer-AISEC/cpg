@@ -57,6 +57,12 @@ class TranslationUnitDeclaration :
     override var statementEdges = astEdgesOf<Statement>()
     override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
 
+    /**
+     * The lines of codes in the file that was parsed into this translation unit. This might not be
+     * available in all language frontends (yet).
+     */
+    var linesOfCode: Long? = null
+
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is IncludeDeclaration) {
             addIfNotContains(includeEdges, declaration)

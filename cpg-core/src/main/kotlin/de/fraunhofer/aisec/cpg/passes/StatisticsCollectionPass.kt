@@ -27,37 +27,32 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.problems
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
 /**
  * A [Pass] collecting statistics for the graph. Currently, it collects the number of nodes and the
  * number of problem nodes (i.e., nodes where the translation failed for some reason).
  */
+@ExecuteLate
 class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+
+    companion object {
+        const val MEASUREMENT_TOTAL_GRAPH_NODES = "Total graph nodes"
+        const val MEASUREMENT_TOTAL_PROBLEM_NODES = "Total problem nodes"
+
+        const val MEASUREMENT_HOLDER_MEASURING_NODES = "Measuring Nodes"
+    }
 
     /** Iterates the nodes of the [result] to collect statistics. */
     override fun accept(result: TranslationResult) {
-        var problemNodes = 0
-        var nodes = 0
-        val walker = ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
-            nodes++
-            if (currNode is ProblemNode) {
-                problemNodes++
-            }
-        }
+        val nodeMeasurement =
+            MeasurementHolder(this.javaClass, MEASUREMENT_HOLDER_MEASURING_NODES, false, result)
 
-        for (tu in result.components.flatMap { it.translationUnits }) {
-            walker.iterate(tu)
-        }
-
-        val nodeMeasurement = MeasurementHolder(this.javaClass, "Measuring Nodes", false, result)
-        nodeMeasurement.addMeasurement("Total graph nodes", nodes.toString())
-        nodeMeasurement.addMeasurement("Problem nodes", problemNodes.toString())
+        nodeMeasurement.addMeasurement(MEASUREMENT_TOTAL_GRAPH_NODES, result.nodes.size)
+        nodeMeasurement.addMeasurement(MEASUREMENT_TOTAL_PROBLEM_NODES, result.problems.size)
     }
 
     override fun cleanup() {
