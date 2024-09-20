@@ -11,3 +11,15 @@ def tryAll(a):
         print("All good, got " + b)
     finally:
         print("It's over")
+
+def tryOnlyFinally(a):
+    try:
+        b = a+2
+    finally:
+        print("It's over")
+
+def tryOnlyExcept(a):
+    try:
+        b = a+2
+    except:
+        print("Fail")

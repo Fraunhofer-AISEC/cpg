@@ -81,6 +81,27 @@ class StatementHandlerTest {
 
         assertEquals(1, tryAll.elseBlock?.statements?.size)
         assertEquals(1, tryAll.finallyBlock?.statements?.size)
+
+        val tryOnlyFinally = tu.functions["tryOnlyFinally"]?.trys?.singleOrNull()
+        assertNotNull(tryOnlyFinally)
+
+        assertEquals(1, tryOnlyFinally.tryBlock?.statements?.size)
+
+        assertEquals(0, tryOnlyFinally.catchClauses.size)
+
+        assertNull(tryOnlyFinally.elseBlock)
+        assertEquals(1, tryOnlyFinally.finallyBlock?.statements?.size)
+
+        val tryOnlyExcept = tu.functions["tryOnlyExcept"]?.trys?.singleOrNull()
+        assertNotNull(tryOnlyExcept)
+
+        assertEquals(1, tryOnlyExcept.tryBlock?.statements?.size)
+
+        assertEquals(1, tryOnlyExcept.catchClauses.size)
+        assertNull(tryOnlyExcept.catchClauses.single().parameter)
+
+        assertNull(tryOnlyExcept.elseBlock)
+        assertNull(tryOnlyExcept.finallyBlock)
     }
 
     @Test
