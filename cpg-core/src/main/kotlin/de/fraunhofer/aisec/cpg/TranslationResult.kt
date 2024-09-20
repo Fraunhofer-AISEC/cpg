@@ -85,6 +85,8 @@ class TranslationResult(
             return finalCtx
         }
 
+    var stats = TranslationStats()
+
     /**
      * Checks if only a single software component has been analyzed and returns its translation
      * units. For multiple software components, it aggregates the results.
