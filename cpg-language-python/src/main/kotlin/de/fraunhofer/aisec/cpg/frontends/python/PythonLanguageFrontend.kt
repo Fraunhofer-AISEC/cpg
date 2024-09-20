@@ -435,6 +435,7 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.arg" -> Python.AST.arg(pyObject)
             "ast.arguments" -> Python.AST.arguments(pyObject)
             "ast.comprehension" -> Python.AST.comprehension(pyObject)
+            "ast.ExceptHandler",
             "ast.excepthandler" -> Python.AST.excepthandler(pyObject)
             "ast.keyword" -> Python.AST.keyword(pyObject)
             "ast.match_case" -> Python.AST.match_case(pyObject)

@@ -435,7 +435,7 @@ interface Python {
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
             val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
             val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
-            val stmt: kotlin.collections.List<BaseStmt> by lazy { "StmtBase" of pyObject }
+            val finalbody: kotlin.collections.List<BaseStmt> by lazy { "finalbody" of pyObject }
         }
 
         /**
@@ -1321,8 +1321,8 @@ interface Python {
          * TODO: excepthandler <-> ExceptHandler
          */
         class excepthandler(pyObject: PyObject) : AST(pyObject), WithLocation {
-            val type: BaseExpr by lazy { "type" of pyObject }
-            val name: String by lazy { "name" of pyObject }
+            val type: BaseExpr? by lazy { "type" of pyObject }
+            val name: String? by lazy { "name" of pyObject }
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
         }
 

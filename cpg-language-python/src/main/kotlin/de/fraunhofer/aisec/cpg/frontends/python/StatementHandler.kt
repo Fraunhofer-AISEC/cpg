@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.HasAnonymousIdentifier
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
@@ -33,9 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -67,12 +66,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
+            is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete,
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
             is Python.AST.Raise,
-            is Python.AST.Try,
             is Python.AST.TryStar,
             is Python.AST.With,
             is Python.AST.AsyncWith ->
@@ -84,7 +83,56 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python (https://docs.python.org/3/library/ast.html#ast.Assert] into a
+     * Translates an [`ExceptHandler`](https://docs.python.org/3/library/ast.html#ast.ExceptHandler)
+     * to a [CatchClause].
+     *
+     * It adds all the statements to the body and will set a parameter if it exists. For the
+     * catch-all clause, we do not set the [CatchClause.parameter].
+     */
+    private fun handleExcepthandler(excepthandler: Python.AST.excepthandler): CatchClause {
+        val catchClause = newCatchClause(excepthandler)
+        catchClause.body = newBlock(excepthandler)
+        catchClause.body?.statements?.addAll(excepthandler.body.map(::handle))
+        // The parameter can have a type but if the type is None/null, it's the "catch-all" clause.
+        // In this case, it also cannot have a name, so we can skip the variable declaration.
+        if (excepthandler.type != null) {
+            // the parameter can have a name, or we use the anonymous identifier _
+            catchClause.parameter =
+                newVariableDeclaration(
+                    excepthandler.name
+                        ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
+                    type = frontend.typeOf(excepthandler.type),
+                    rawNode = excepthandler
+                )
+        }
+        return catchClause
+    }
+
+    /**
+     * Translates a Python [`Try`](https://docs.python.org/3/library/ast.html#ast.Try) into a
+     * [TryStatement].
+     */
+    private fun handleTryStatement(node: Python.AST.Try): TryStatement {
+        val tryStatement = newTryStatement(rawNode = node)
+        tryStatement.tryBlock = newBlock()
+        tryStatement.tryBlock?.statements?.addAll(node.body.map(::handle))
+
+        tryStatement.catchClauses.addAll(node.handlers.map { handleExcepthandler(it) })
+
+        if (node.orelse.isNotEmpty()) {
+            tryStatement.elseBlock = newBlock()
+            tryStatement.elseBlock?.statements?.addAll(node.orelse.map(::handle))
+        }
+
+        if (node.finalbody.isNotEmpty()) {
+            tryStatement.finallyBlock = newBlock()
+            tryStatement.finallyBlock?.statements?.addAll(node.finalbody.map(::handle))
+        }
+
+        return tryStatement
+    }
+    /**
+     * Translates a Python [`Assert`](https://docs.python.org/3/library/ast.html#ast.Assert) into a
      * [AssertStatement].
      */
     private fun handleAssert(node: Python.AST.Assert): AssertStatement {

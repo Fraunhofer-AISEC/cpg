@@ -32,11 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -57,6 +59,28 @@ class StatementHandlerTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
+    }
+
+    @Test
+    fun testTry() {
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("try.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val tryAll = tu.functions["tryAll"]?.trys?.singleOrNull()
+        assertNotNull(tryAll)
+
+        assertEquals(1, tryAll.tryBlock?.statements?.size)
+
+        assertEquals(3, tryAll.catchClauses.size)
+        assertLocalName("_", tryAll.catchClauses[0].parameter)
+        assertLocalName("e", tryAll.catchClauses[1].parameter)
+        assertNull(tryAll.catchClauses[2].parameter)
+
+        assertEquals(1, tryAll.elseBlock?.statements?.size)
+        assertEquals(1, tryAll.finallyBlock?.statements?.size)
     }
 
     @Test
