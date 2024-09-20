@@ -181,43 +181,43 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return subscriptExpression
     }
 
+    /**
+     * Handles a [Python.AST.BoolOp]. This can be either a chain of `and` or `or` expressions. We
+     * model this as [BinaryOperator]s with nesting. Thus, `a and b and c` becomes `(a and b) and c`
+     * (same for `or`).
+     */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
             when (node.op) {
                 is Python.AST.And -> "and"
                 is Python.AST.Or -> "or"
             }
-        return handleBoolOpRecursively(node.values, op, node)
-    }
+        return when (node.values.size) {
+            0,
+            1 ->
+                newProblemExpression(
+                    "handleBoolOp: Expected at least two expressions but got " + node.values.size,
+                    rawNode = node
+                )
+            else -> {
+                val result = newBinaryOperator(operatorCode = op, rawNode = node)
+                var idx = 0
+                var currentInnerNode: BinaryOperator = result
 
-    /**
-     * Recursively generates a (potentially nested) [BinaryOperator] from a `BoolOp`. [values]
-     * contains the list of operands to consider in this step. If only two operands exist, a simple
-     * [BinaryOperator] will be generated. Less than two operands don't make sense and will generate
-     * a [ProblemExpression]. More than two operands will lead to a nested [BinaryOperator] and we
-     * will call this method recursively to handle all but the first operand in the nested
-     * [BinaryOperator] used in the `rhs`.
-     */
-    private fun handleBoolOpRecursively(
-        values: List<Python.AST.BaseExpr>,
-        op: String,
-        node: Python.AST.BoolOp
-    ): Expression {
-        return if (values.size < 2) {
-            newProblemExpression(
-                "Expected exactly two expressions but got " + node.values.size,
-                rawNode = node
-            )
-        } else if (values.size == 2) {
-            val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-            ret.lhs = handle(values[0])
-            ret.rhs = handle(values[1])
-            ret
-        } else {
-            val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-            ret.lhs = handle(values[0])
-            ret.rhs = handleBoolOpRecursively(values.subList(1, values.size), op, node)
-            ret
+                // For all iterations until the last one: set the lhs to handle the current idx and
+                // create a new nested [BinaryOperator] for the rhs. Then slide the window by one.
+                while (idx < node.values.size - 2) {
+                    currentInnerNode.lhs = handle(node.values[idx])
+                    currentInnerNode.rhs = newBinaryOperator(operatorCode = op, rawNode = node)
+                    currentInnerNode = currentInnerNode.rhs as BinaryOperator
+                    idx++
+                }
+
+                // Final run: set lhs and rhs without creating a new nested [BinaryOperator]
+                currentInnerNode.lhs = handle(node.values[idx]) // second last entry
+                currentInnerNode.rhs = handle(node.values[idx + 1]) // last entry
+                result
+            }
         }
     }
 
