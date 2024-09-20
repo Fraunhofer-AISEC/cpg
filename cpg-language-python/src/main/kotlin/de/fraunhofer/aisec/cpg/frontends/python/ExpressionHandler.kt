@@ -187,16 +187,38 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.AST.And -> "and"
                 is Python.AST.Or -> "or"
             }
-        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-        if (node.values.size != 2) {
-            return newProblemExpression(
+        return handleBoolOpRecursively(node.values, op, node)
+    }
+
+    /**
+     * Recursively generates a (potentially nested) [BinaryOperator] from a `BoolOp`. [values]
+     * contains the list of operands to consider in this step. If only two operands exist, a simple
+     * [BinaryOperator] will be generated. Less than two operands don't make sense and will generate
+     * a [ProblemExpression]. More than two operands will lead to a nested [BinaryOperator] and we
+     * will call this method recursively to handle all but the first operand in the nested
+     * [BinaryOperator] used in the `rhs`.
+     */
+    private fun handleBoolOpRecursively(
+        values: List<Python.AST.BaseExpr>,
+        op: String,
+        node: Python.AST.BoolOp
+    ): Expression {
+        return if (values.size < 2) {
+            newProblemExpression(
                 "Expected exactly two expressions but got " + node.values.size,
                 rawNode = node
             )
+        } else if (values.size == 2) {
+            val ret = newBinaryOperator(operatorCode = op, rawNode = node)
+            ret.lhs = handle(values[0])
+            ret.rhs = handle(values[1])
+            ret
+        } else {
+            val ret = newBinaryOperator(operatorCode = op, rawNode = node)
+            ret.lhs = handle(values[0])
+            ret.rhs = handleBoolOpRecursively(values.subList(1, values.size), op, node)
+            ret
         }
-        ret.lhs = handle(node.values[0])
-        ret.rhs = handle(node.values[1])
-        return ret
     }
 
     private fun handleList(node: Python.AST.List): Expression {
