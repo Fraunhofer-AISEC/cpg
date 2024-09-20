@@ -181,43 +181,39 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return subscriptExpression
     }
 
+    /**
+     * This method handles the python
+     * [`BoolOp` expression](https://docs.python.org/3/library/ast.html#ast.BoolOp).
+     *
+     * Generates a (potentially nested) [BinaryOperator] from a `BoolOp`. Less than two operands in
+     * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only
+     * two operands exist, a simple [BinaryOperator] will be generated. More than two operands will
+     * lead to a nested [BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators
+     * `[a, b, c]`, the result will be `a OP (b OP c)`.
+     */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
             when (node.op) {
                 is Python.AST.And -> "and"
                 is Python.AST.Or -> "or"
             }
-        return handleBoolOpRecursively(node.values, op, node)
-    }
 
-    /**
-     * Recursively generates a (potentially nested) [BinaryOperator] from a `BoolOp`. [values]
-     * contains the list of operands to consider in this step. If only two operands exist, a simple
-     * [BinaryOperator] will be generated. Less than two operands don't make sense and will generate
-     * a [ProblemExpression]. More than two operands will lead to a nested [BinaryOperator] and we
-     * will call this method recursively to handle all but the first operand in the nested
-     * [BinaryOperator] used in the `rhs`.
-     */
-    private fun handleBoolOpRecursively(
-        values: List<Python.AST.BaseExpr>,
-        op: String,
-        node: Python.AST.BoolOp
-    ): Expression {
-        return if (values.size < 2) {
+        return if (node.values.size <= 1) {
             newProblemExpression(
-                "Expected exactly two expressions but got " + node.values.size,
+                "Expected exactly two expressions but got ${node.values.size}",
                 rawNode = node
             )
-        } else if (values.size == 2) {
-            val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-            ret.lhs = handle(values[0])
-            ret.rhs = handle(values[1])
-            ret
         } else {
-            val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-            ret.lhs = handle(values[0])
-            ret.rhs = handleBoolOpRecursively(values.subList(1, values.size), op, node)
-            ret
+            val lastTwo = newBinaryOperator(op, rawNode = node)
+            lastTwo.rhs = handle(node.values.last())
+            lastTwo.lhs = handle(node.values[node.values.size - 2])
+            return node.values.subList(0, node.values.size - 2).foldRight(lastTwo) { newVal, start
+                ->
+                val nextValue = newBinaryOperator(op, rawNode = node)
+                nextValue.rhs = start
+                nextValue.lhs = handle(newVal)
+                nextValue
+            }
         }
     }
 
