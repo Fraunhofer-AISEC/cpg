@@ -17,7 +17,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [linux, x64]
     steps:
       - uses: actions/checkout@v4
         with:
