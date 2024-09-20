@@ -143,11 +143,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // No type information -> we return an autoType to infer things magically
                 autoType()
             }
+
             is Python.AST.Name -> {
-                // We have some kind of name here; let's quickly check, if this is a primitive type
-                val id = type.id
-                this.typeOf(id)
+                this.typeOf(type.id)
             }
+
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we need to return the unknown type.
@@ -156,15 +156,17 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         }
     }
 
+    /**
+     * Resolves a [Type] based on its string identifier.
+     */
     fun typeOf(typeId: String): Type {
-        // Otherwise, this could already be a fully qualified type
+        // Check if the typeId contains a namespace delimiter for qualified types
         val name =
             if (language.namespaceDelimiter in typeId) {
                 // TODO: This might create problem with nested classes
                 parseName(typeId)
             } else {
-                // otherwise, we can just simply take the unqualified name and the type
-                // resolver will take care of the rest
+                // Unqualified name, resolved by the type resolver
                 typeId
             }
 
