@@ -204,6 +204,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 rawNode = node
             )
         } else {
+            // Start with the last two operands, then keep prepending the previous ones until the
+            // list is finished.
             val lastTwo = newBinaryOperator(op, rawNode = node)
             lastTwo.rhs = handle(node.values.last())
             lastTwo.lhs = handle(node.values[node.values.size - 2])
