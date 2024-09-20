@@ -182,9 +182,15 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
+     * This method handles the python
+     * [`BoolOp` expression](https://docs.python.org/3/library/ast.html#ast.BoolOp).
+     *
      * Handles a [Python.AST.BoolOp]. This can either be a chain of `and` or `or` expressions. We
      * model this as [BinaryOperator]s with nesting. Thus, `a and b and c` becomes `a and (b and c)`
      * (same for `or`).
+     * 
+     * Less than two operands in [Python.AST.BoolOp.values] don't make sense and will result in a
+     * [ProblemExpression].
      */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
