@@ -143,11 +143,9 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // No type information -> we return an autoType to infer things magically
                 autoType()
             }
-
             is Python.AST.Name -> {
                 this.typeOf(type.id)
             }
-
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we need to return the unknown type.
@@ -156,10 +154,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         }
     }
 
-    /**
-     * Resolves a [Type] based on its string identifier.
-     * test hook
-     */
+    /** Resolves a [Type] based on its string identifier. */
     fun typeOf(typeId: String): Type {
         // Check if the typeId contains a namespace delimiter for qualified types
         val name =
