@@ -198,8 +198,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python [AnnAssign](https://docs.python.org/3/library/ast.html#ast.AnnAssign] into a
-     * [Statement].
+     * Translates a Python [AnnAssign](https://docs.python.org/3/library/ast.html#ast.AnnAssign]
+     * into a [Statement].
      */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
         val lhs = frontend.expressionHandler.handle(node.target)
