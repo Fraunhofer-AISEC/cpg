@@ -85,7 +85,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python (https://docs.python.org/3/library/ast.html#ast.Assert] into a
+     * Translates a Python [Assert](https://docs.python.org/3/library/ast.html#ast.Assert) into a
      * [AssertStatement].
      */
     private fun handleAssert(node: Python.AST.Assert): AssertStatement {
@@ -197,6 +197,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return frontend.expressionHandler.handle(node.value)
     }
 
+    /**
+     * Translates a Python [AnnAssign](https://docs.python.org/3/library/ast.html#ast.AnnAssign] into a
+     * [Statement].
+     */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
         val lhs = frontend.expressionHandler.handle(node.target)
         lhs.type = frontend.typeOf(node.annotation)
@@ -233,6 +237,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
+    /**
+     * Translates a Python [Assign](https://docs.python.org/3/library/ast.html#ast.Assign] into a
+     * [Statement].
+     */
     private fun handleAssign(node: Python.AST.Assign): Statement {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
