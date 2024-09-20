@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -1343,6 +1347,32 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(rhs)
 
         assertEquals(4.toLong(), rhs.evaluate())
+    }
+
+    @Test
+    fun testParseContent() {
+        var frontend =
+            PythonLanguageFrontend(
+                language = PythonLanguage(),
+                ctx =
+                    TranslationContext(
+                        TranslationConfiguration.builder().build(),
+                        ScopeManager(),
+                        TypeManager()
+                    )
+            )
+
+        val tu = frontend.parse("a = 4\nprint(a)")
+        assertNotNull(tu)
+
+        val unknown = tu.namespaces["unknown"]
+        assertNotNull(unknown)
+
+        val refNames = tu.refs.map { it.name.localName }
+        assertEquals(listOf("a", "a", "print"), refNames)
+
+        val call = tu.calls["print"]
+        assertNotNull(call)
     }
 
     class PythonValueEvaluator : ValueEvaluator() {

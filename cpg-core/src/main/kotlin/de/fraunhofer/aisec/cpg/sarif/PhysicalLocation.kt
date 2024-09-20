@@ -29,11 +29,15 @@ import java.net.URI
 import java.util.*
 
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
-class PhysicalLocation(uri: URI, region: Region) {
-    class ArtifactLocation(val uri: URI) {
+class PhysicalLocation(uri: URI?, region: Region) {
+    class ArtifactLocation(val uri: URI?) {
 
         override fun toString(): String {
-            return uri.path.substring(uri.path.lastIndexOf('/') + 1)
+            return if (uri != null) {
+                uri.path
+            } else {
+                "unknown"
+            }
         }
 
         override fun equals(other: Any?): Boolean {
@@ -45,7 +49,7 @@ class PhysicalLocation(uri: URI, region: Region) {
         override fun hashCode() = Objects.hashCode(uri)
     }
 
-    val artifactLocation: ArtifactLocation
+    var artifactLocation: ArtifactLocation
     var region: Region
 
     init {
@@ -68,11 +72,7 @@ class PhysicalLocation(uri: URI, region: Region) {
     companion object {
         fun locationLink(location: PhysicalLocation?): String {
             return if (location != null) {
-                (location.artifactLocation.uri.path +
-                    ":" +
-                    location.region.startLine +
-                    ":" +
-                    location.region.startColumn)
+                "${location.artifactLocation}:${location.region.startLine}:${location.region.startColumn}"
             } else "unknown"
         }
     }

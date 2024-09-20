@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -39,15 +40,16 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.net.URI
+import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.Path
+import kotlin.io.path.absolute
+import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 import kotlin.math.min
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
+    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx), SupportsNewParse {
     private val lineSeparator = '\n' // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
@@ -62,21 +64,27 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
      * new [PythonLanguageFrontend] instance per file.
      */
     private lateinit var fileContent: String
-    private lateinit var uri: URI
+    private var filePath: Path? = null
 
-    @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
-        fileContent = file.readText(Charsets.UTF_8)
-        uri = file.toURI()
+    override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
+        this.fileContent = content
+        this.filePath = path
 
         jep.getInterp().use {
-            it.set("content", fileContent)
-            it.set("filename", file.absolutePath)
+            it.set("content", content)
+            it.set(
+                "filename",
+                if (path != null) {
+                    path.absolute().toString()
+                } else {
+                    "<unknown>"
+                }
+            )
             it.exec("import ast")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
-            val tud = pythonASTtoCPG(pyAST, file.name)
+            val tud = pythonASTtoCPG(pyAST, path)
 
             if (config.matchCommentsToNodes) {
                 it.exec("import tokenize")
@@ -95,6 +103,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             }
             return tud
         }
+    }
+
+    @Throws(TranslationException::class)
+    override fun parse(file: File): TranslationUnitDeclaration {
+        return parse(file.readText(Charsets.UTF_8), file.toPath())
     }
 
     private fun addCommentsToCPG(
@@ -236,7 +249,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     override fun locationOf(astNode: Python.AST.AST): PhysicalLocation? {
         return if (astNode is Python.AST.WithLocation) {
             PhysicalLocation(
-                uri,
+                filePath?.toUri(),
                 Region(
                     startLine = astNode.lineno,
                     endLine = astNode.end_lineno,
@@ -253,17 +266,22 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         // will be invoked by native function
     }
 
-    private fun pythonASTtoCPG(pyAST: PyObject, path: String): TranslationUnitDeclaration {
+    private fun pythonASTtoCPG(pyAST: PyObject, path: Path?): TranslationUnitDeclaration {
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
                 ?: TODO(
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
                 ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
+        val tud = newTranslationUnitDeclaration(path?.name, rawNode = pythonASTModule)
         scopeManager.resetToGlobal(tud)
 
-        val nsdName = Path(path).nameWithoutExtension
+        val nsdName =
+            if (path != null) {
+                path.nameWithoutExtension
+            } else {
+                "unknown"
+            }
         val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
         tud.addDeclaration(nsd)
 
