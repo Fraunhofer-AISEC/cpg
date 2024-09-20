@@ -182,8 +182,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Handles a [Python.AST.BoolOp]. This can be either a chain of `and` or `or` expressions. We
-     * model this as [BinaryOperator]s with nesting. Thus, `a and b and c` becomes `(a and b) and c`
+     * Handles a [Python.AST.BoolOp]. This can either be a chain of `and` or `or` expressions. We
+     * model this as [BinaryOperator]s with nesting. Thus, `a and b and c` becomes `a and (b and c)`
      * (same for `or`).
      */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
