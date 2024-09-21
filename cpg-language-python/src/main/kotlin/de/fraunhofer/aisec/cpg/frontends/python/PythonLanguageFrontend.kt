@@ -66,6 +66,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private lateinit var fileContent: String
     private var filePath: Path? = null
 
+    @Throws(TranslationException::class)
+    override fun parse(file: File): TranslationUnitDeclaration {
+        return parse(file.readText(Charsets.UTF_8), file.toPath())
+    }
+
     override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
         this.fileContent = content
         this.filePath = path
@@ -103,11 +108,6 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             }
             return tud
         }
-    }
-
-    @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
-        return parse(file.readText(Charsets.UTF_8), file.toPath())
     }
 
     private fun addCommentsToCPG(
