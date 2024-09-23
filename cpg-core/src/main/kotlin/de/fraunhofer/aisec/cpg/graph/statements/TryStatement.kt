@@ -86,9 +86,10 @@ class TryStatement : Statement() {
             tryBlock == other.tryBlock &&
             finallyBlock == other.finallyBlock &&
             catchClauses == other.catchClauses &&
+            elseBlock == other.elseBlock &&
             propertyEqualsList(catchClauseEdges, other.catchClauseEdges))
     }
 
     override fun hashCode() =
-        Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses)
+        Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses, elseBlock)
 }
