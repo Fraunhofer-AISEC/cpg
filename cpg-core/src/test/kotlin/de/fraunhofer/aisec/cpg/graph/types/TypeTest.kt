@@ -147,4 +147,48 @@ class TypeTest {
         assertEquals(ref1, ref2)
         assertEquals(ref2, ref1)
     }
+
+    @Test
+    fun testTypeReferencePointer() {
+        val globalScope = GlobalScope()
+        val scopeA = NameScope(null)
+        scopeA.name = Name("A")
+
+        val record = RecordDeclaration()
+        record.scope = globalScope
+        record.name = Name("MyClass")
+
+        val type = DeclaredType(record)
+        assertFullName("MyClass", type)
+
+        val ref = TypeReference("MyClass")
+        ref.scope = globalScope
+        ref.refersTo = type
+
+        val ptrRef = ref.reference(PointerType.PointerOrigin.POINTER)
+        var ptrDeclared = type.reference(PointerType.PointerOrigin.POINTER)
+        assertEquals(ptrRef, ptrDeclared)
+    }
+
+    @Test
+    fun testHasType() {
+        with(TestLanguageFrontend()) {
+            val myClass = newRecordDeclaration("MyClass", "class")
+
+            // TODO: provide node builder for this
+            val type = DeclaredType(myClass)
+            type.scope = ctx.scopeManager.globalScope
+            assertFullName("MyClass", type)
+
+            val ref = TypeReference("MyClass")
+            ref.refersTo = type
+            ref.scope = ctx.scopeManager.globalScope
+
+            val lhs = newReference("a", type = autoType())
+            val rhs = newReference("b", type = ref)
+
+            val assign = newAssignExpression(lhs = listOf(lhs), rhs = listOf(rhs))
+            print(lhs.type)
+        }
+    }
 }

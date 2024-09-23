@@ -323,7 +323,7 @@ class TypeReference(typeName: String?) : Type(typeName) {
         set(_) {}
 
     override fun reference(pointer: PointerOrigin?): Type {
-        TODO("Not yet implemented")
+        return PointerType(this, pointer)
     }
 
     override fun dereference(): Type {
