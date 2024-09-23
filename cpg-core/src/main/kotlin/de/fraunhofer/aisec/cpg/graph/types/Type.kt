@@ -308,3 +308,63 @@ interface DeclaresType {
 
     val declaredType: Type
 }
+
+class TypeReference(typeName: String?) : Type(typeName) {
+
+    var refersTo: DeclaredType? = null
+
+    override var typeOrigin: Origin?
+        get() =
+            if (refersTo != null) {
+                Origin.RESOLVED
+            } else {
+                Origin.UNRESOLVED
+            }
+        set(_) {}
+
+    override fun reference(pointer: PointerOrigin?): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun dereference(): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+
+        // We need to differentiate between the resolved and unresolved state
+        return if (typeOrigin == Origin.UNRESOLVED) {
+            return other is TypeReference &&
+                name == other.name &&
+                scope === other.scope &&
+                language == other.language
+        } else {
+            return refersTo == other
+        }
+    }
+}
+
+/** A type declared by some kind of [Declaration]. */
+class DeclaredType(val declaration: Declaration) : Type() {
+
+    init {
+        this.name = declaration.name
+    }
+
+    override fun reference(pointer: PointerOrigin?): Type {
+        return PointerType(this, pointer)
+    }
+
+    override fun dereference(): Type {
+        throw UnsupportedOperationException("A declared type cannot be de-referenced")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return if (other is TypeReference) {
+            return this == other.refersTo
+        } else {
+            super.equals(other)
+        }
+    }
+}
