@@ -123,4 +123,11 @@ class StatementHandlerTest {
         assertNotNull(message, "Assert statement should have a message")
         assertEquals("Test message", message.value, "The assert message is incorrect")
     }
+
+    @Test
+    fun testDelete() {
+        analyzeFile("delete.py")
+
+        val test = result
+    }
 }

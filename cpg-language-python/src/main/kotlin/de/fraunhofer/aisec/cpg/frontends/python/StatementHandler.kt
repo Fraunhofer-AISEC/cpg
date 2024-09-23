@@ -67,7 +67,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
-            is Python.AST.Delete,
+            is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
@@ -81,6 +81,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    private fun handleDelete(node: Python.AST.Delete): Statement {
+        val deleteStmt = newDeleteExpression(node)
+        deleteStmt.targets =
+            node.targets.map { frontend.expressionHandler.handle(it) }.toMutableList()
+        return deleteStmt
     }
 
     /**
