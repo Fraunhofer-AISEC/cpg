@@ -123,6 +123,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
+                    val granularity =
+                        if (key is PointerReference && it is VariableDeclaration)
+                            PointerDataflowGranularity()
+                        else default()
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
                     } else if (
@@ -131,12 +135,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     ) {
                         key.addPrevDFG(
                             it,
+                            granularity,
                             callingContext =
                                 (edgePropertiesMap[Triple(it, key, true)] as? CallingContext)
                         )
                     } else {
-                        val granularity =
-                            if (it is PointerReference) PointerDataflowGranularity() else default()
                         key.addPrevDFG(it, granularity)
                     }
                 }
@@ -646,7 +649,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
         fun pushToDeclarationsState(
-            newNode: Declaration,
+            newNode: de.fraunhofer.aisec.cpg.graph.Node,
             newLatticeElement: LatticeElement<V>?
         ): Boolean {
             return declarationsState.push(newNode, newLatticeElement)

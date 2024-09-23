@@ -138,11 +138,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target ->
-                    val granularity =
-                        if (it is PointerReference) PointerDataflowGranularity() else default()
-                    it.addNextDFG(target, granularity)
-                }
+                targets.forEach { target -> it.addNextDFG(target) }
             }
         }
 
@@ -193,11 +189,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected open fun handleVariableDeclaration(node: VariableDeclaration) {
-        node.initializer?.let {
-            val granularity =
-                if (it is PointerReference) PointerDataflowGranularity() else default()
-            node.addPrevDFG(it, granularity)
-        }
+        node.initializer?.let { node.addPrevDFG(it) }
     }
 
     /**
@@ -388,12 +380,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleReference(node: Reference) {
         node.refersTo?.let {
+            val granularity =
+                if (node is PointerReference) PointerDataflowGranularity() else default()
             when (node.access) {
                 AccessValues.WRITE -> node.addNextDFG(it)
-                AccessValues.READ -> node.addPrevDFG(it)
+                AccessValues.READ -> node.addPrevDFG(it, granularity)
                 else -> {
                     node.addNextDFG(it)
-                    node.addPrevDFG(it)
+                    node.addPrevDFG(it, granularity)
                 }
             }
         }
