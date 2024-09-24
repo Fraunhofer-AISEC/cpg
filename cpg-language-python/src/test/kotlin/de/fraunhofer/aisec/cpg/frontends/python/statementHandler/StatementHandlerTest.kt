@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
@@ -37,6 +39,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -125,9 +128,32 @@ class StatementHandlerTest {
     }
 
     @Test
-    fun testDelete() {
+    fun testDeleteStatements() {
         analyzeFile("delete.py")
 
-        val test = result
+        val deleteExpressions = result.statements.filterIsInstance<DeleteExpression>()
+        assertEquals(4, deleteExpressions.size)
+
+        // Test for `del a`
+        val deleteStmt1 = deleteExpressions[0]
+        assertEquals(0, deleteStmt1.targets.size)
+        assertEquals(1, deleteStmt1.additionalProblems.size)
+
+        // Test for `del my_list[2]`
+        val deleteStmt2 = deleteExpressions[1]
+        assertEquals(1, deleteStmt2.targets.size)
+        assertTrue(deleteStmt2.targets.first() is SubscriptExpression)
+        assertTrue(deleteStmt2.additionalProblems.isEmpty())
+
+        // Test for `del my_dict['b']`
+        val deleteStmt3 = deleteExpressions[2]
+        assertEquals(1, deleteStmt3.targets.size)
+        assertTrue(deleteStmt3.targets.first() is SubscriptExpression)
+        assertTrue(deleteStmt3.additionalProblems.isEmpty())
+
+        // Test for `del obj.d`
+        val deleteStmt4 = deleteExpressions[3]
+        assertEquals(0, deleteStmt4.targets.size)
+        assertEquals(1, deleteStmt4.additionalProblems.size)
     }
 }

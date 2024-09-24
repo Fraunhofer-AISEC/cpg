@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -83,11 +84,24 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
-    private fun handleDelete(node: Python.AST.Delete): Statement {
-        val deleteStmt = newDeleteExpression(node)
-        deleteStmt.targets =
-            node.targets.map { frontend.expressionHandler.handle(it) }.toMutableList()
-        return deleteStmt
+    /**
+     * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete] into a
+     * [DeleteExpression].
+     */
+    private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
+        val delete = newDeleteExpression(node)
+        node.targets.forEach { target ->
+            if (target is Python.AST.Subscript) {
+                delete.targets.add(frontend.expressionHandler.handle(target))
+            } else {
+                delete.additionalProblems +=
+                    newProblemExpression(
+                        problem = "Delete is only supported for Subscript targets.",
+                        rawNode = target
+                    )
+            }
+        }
+        return delete
     }
 
     /**
