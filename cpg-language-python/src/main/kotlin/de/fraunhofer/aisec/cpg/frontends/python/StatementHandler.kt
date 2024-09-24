@@ -90,8 +90,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * catch-all clause, we do not set the [CatchClause.parameter].
      */
     private fun handleExcepthandler(excepthandler: Python.AST.excepthandler): CatchClause {
-        val catchClause = newCatchClause(excepthandler)
-        catchClause.body = newBlock(excepthandler)
+        val catchClause = newCatchClause(rawNode = excepthandler)
+        catchClause.body = newBlock(rawNode = excepthandler)
         catchClause.body?.statements?.addAll(excepthandler.body.map(::handle))
         // The parameter can have a type but if the type is None/null, it's the "catch-all" clause.
         // In this case, it also cannot have a name, so we can skip the variable declaration.
@@ -99,8 +99,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // the parameter can have a name, or we use the anonymous identifier _
             catchClause.parameter =
                 newVariableDeclaration(
-                    excepthandler.name
-                        ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
+                    name =
+                        excepthandler.name
+                            ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
                     type = frontend.typeOf(excepthandler.type),
                     rawNode = excepthandler
                 )
