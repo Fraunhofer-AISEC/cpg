@@ -85,11 +85,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete] into a
+     * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete) into a
      * [DeleteExpression].
      */
     private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
-        val delete = newDeleteExpression(node)
+        val delete = newDeleteExpression(rawNode = node)
         node.targets.forEach { target ->
             if (target is Python.AST.Subscript) {
                 delete.targets.add(frontend.expressionHandler.handle(target))
