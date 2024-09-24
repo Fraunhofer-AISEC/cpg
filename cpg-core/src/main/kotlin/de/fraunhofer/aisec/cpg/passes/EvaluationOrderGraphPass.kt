@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
+import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
 
 /**
@@ -599,6 +600,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         createEOG(node.tryBlock)
         val tmpEOGNodes = ArrayList(currentPredecessors)
+        val catchEnds = ArrayList<Node>()
         val catchesOrRelays = tryScope?.catchesOrRelays
         for (catchClause in node.catchClauses) {
             currentPredecessors.clear()
@@ -617,8 +619,21 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             toRemove.forEach { catchesOrRelays?.remove(it) }
             pushToEOG(catchClause)
             createEOG(catchClause.body)
+            catchEnds.addAll(currentPredecessors)
+        }
+
+        // We need to handle the else block after the catch clauses, as the else could contain a
+        // throw itself
+        // that should not be caught be the catch clauses.
+        if (node.elseBlock != null) {
+            currentPredecessors.clear()
+            currentPredecessors.addAll(tmpEOGNodes)
+            createEOG(node.elseBlock)
+            // All valid try ends got through the else block.
+            tmpEOGNodes.clear()
             tmpEOGNodes.addAll(currentPredecessors)
         }
+        tmpEOGNodes.addAll(catchEnds)
 
         val canTerminateExceptionfree = tmpEOGNodes.any { reachableFromValidEOGRoot(it) }
         currentPredecessors.clear()

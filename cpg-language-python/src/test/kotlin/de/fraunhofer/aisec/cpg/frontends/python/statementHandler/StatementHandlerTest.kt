@@ -30,15 +30,13 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -102,6 +100,26 @@ class StatementHandlerTest {
 
         assertNull(tryOnlyExcept.elseBlock)
         assertNull(tryOnlyExcept.finallyBlock)
+
+        // Test EOG integrity with else block
+
+        // All entries to the else block must come from the try block
+        assertTrue(
+            Util.eogConnect(
+                n = tryAll.elseBlock,
+                en = Util.Edge.ENTRIES,
+                refs = listOf(tryAll.tryBlock)
+            )
+        )
+
+        // All exits from the else block must go to the entries of the non-empty finals block
+        assertTrue(
+            Util.eogConnect(
+                n = tryAll.elseBlock,
+                en = Util.Edge.EXITS,
+                refs = listOf(tryAll.finallyBlock)
+            )
+        )
     }
 
     @Test
