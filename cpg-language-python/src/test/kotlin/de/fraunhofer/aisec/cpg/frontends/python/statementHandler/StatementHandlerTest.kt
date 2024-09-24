@@ -127,11 +127,11 @@ class StatementHandlerTest : BaseTest() {
         // type comments
         val a = result.refs["a"]
         assertNotNull(a)
-        assertEquals(result.assertResolvedType("int"), a.type)
+        assertEquals(with(result) { assertResolvedType("int") }, a.type)
 
         // type annotation
         val b = result.refs["b"]
         assertNotNull(b)
-        assertEquals(result.assertResolvedType("str"), b.type)
+        assertEquals(with(result) { assertResolvedType("str") }, b.type)
     }
 }

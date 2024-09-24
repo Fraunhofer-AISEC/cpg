@@ -199,7 +199,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`AnnAssign`](https://docs.python.org/3/library/ast.html#ast.AnnAssign)
-     * into a [Statement].
+     * into an [AssignExpression].
      */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
@@ -233,8 +233,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python [`Assign`](https://docs.python.org/3/library/ast.html#ast.Assign) into a
-     * [Statement].
+     * Translates a Python [`Assign`](https://docs.python.org/3/library/ast.html#ast.Assign) into an
+     * [AssignExpression].
      */
     private fun handleAssign(node: Python.AST.Assign): AssignExpression {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
