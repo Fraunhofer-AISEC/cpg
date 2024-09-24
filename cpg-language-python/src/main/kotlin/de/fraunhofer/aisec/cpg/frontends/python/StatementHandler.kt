@@ -89,20 +89,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * It adds all the statements to the body and will set a parameter if it exists. For the
      * catch-all clause, we do not set the [CatchClause.parameter].
      */
-    private fun handleExcepthandler(excepthandler: Python.AST.excepthandler): CatchClause {
-        val catchClause = newCatchClause(excepthandler)
-        catchClause.body = newBlock(excepthandler)
-        catchClause.body?.statements?.addAll(excepthandler.body.map(::handle))
+    private fun handleExcepthandler(node: Python.AST.excepthandler): CatchClause {
+        val catchClause = newCatchClause(rawNode = node)
+        catchClause.body = makeBlock(node.body, node)
         // The parameter can have a type but if the type is None/null, it's the "catch-all" clause.
         // In this case, it also cannot have a name, so we can skip the variable declaration.
-        if (excepthandler.type != null) {
+        if (node.type != null) {
             // the parameter can have a name, or we use the anonymous identifier _
             catchClause.parameter =
                 newVariableDeclaration(
-                    excepthandler.name
-                        ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
-                    type = frontend.typeOf(excepthandler.type),
-                    rawNode = excepthandler
+                    name = node.name ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
+                    type = frontend.typeOf(node.type),
+                    rawNode = node
                 )
         }
         return catchClause
@@ -114,19 +112,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleTryStatement(node: Python.AST.Try): TryStatement {
         val tryStatement = newTryStatement(rawNode = node)
-        tryStatement.tryBlock = newBlock()
-        tryStatement.tryBlock?.statements?.addAll(node.body.map(::handle))
+        tryStatement.tryBlock = makeBlock(node.body, node)
 
         tryStatement.catchClauses.addAll(node.handlers.map { handleExcepthandler(it) })
 
         if (node.orelse.isNotEmpty()) {
-            tryStatement.elseBlock = newBlock()
-            tryStatement.elseBlock?.statements?.addAll(node.orelse.map(::handle))
+            tryStatement.elseBlock = makeBlock(node.orelse, node)
         }
 
         if (node.finalbody.isNotEmpty()) {
-            tryStatement.finallyBlock = newBlock()
-            tryStatement.finallyBlock?.statements?.addAll(node.finalbody.map(::handle))
+            tryStatement.finallyBlock = makeBlock(node.finalbody, node)
         }
 
         return tryStatement
