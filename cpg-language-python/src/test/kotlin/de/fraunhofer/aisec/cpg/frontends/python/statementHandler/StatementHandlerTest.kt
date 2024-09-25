@@ -161,15 +161,16 @@ class StatementHandlerTest : BaseTest() {
     @Test
     fun testTypeHints() {
         analyzeFile("type_hints.py")
+        with(result) {
+            // type comments
+            val a = result.refs["a"]
+            assertNotNull(a)
+            assertEquals(assertResolvedType("int"), a.type)
 
-        // type comments
-        val a = result.refs["a"]
-        assertNotNull(a)
-        assertEquals(with(result) { assertResolvedType("int") }, a.type)
-
-        // type annotation
-        val b = result.refs["b"]
-        assertNotNull(b)
-        assertEquals(with(result) { assertResolvedType("str") }, b.type)
+            // type annotation
+            val b = result.refs["b"]
+            assertNotNull(b)
+            assertEquals(assertResolvedType("str"), b.type)
+        }
     }
 }
