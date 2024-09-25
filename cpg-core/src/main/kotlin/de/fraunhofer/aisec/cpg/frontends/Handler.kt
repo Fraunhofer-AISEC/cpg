@@ -168,7 +168,6 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
     }
 
     /** Creates a random name starting with a prefix plus a random UUID (version 4). */
-    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
     fun getRandomTempName(): Name {
         val prefix = "TEMP-RANDOM-NAME"
         val randomPart = Uuid.random().toString()
