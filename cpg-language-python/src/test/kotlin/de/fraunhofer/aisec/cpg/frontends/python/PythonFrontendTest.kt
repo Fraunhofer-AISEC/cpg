@@ -820,7 +820,10 @@ class PythonFrontendTest : BaseTest() {
             5,
             p.variables.size
         ) // including one dummy variable introduced for the loop var
-        assertEquals(4, p.variables.filter { !it.name.localName.contains("TEMP-RANDOM-NAME") }.size)
+        assertEquals(
+            4,
+            p.variables.filter { !it.name.localName.contains("loopMultiVarHelperVar") }.size
+        )
         assertEquals(2, p.statements.size)
 
         // test = [(1, 2, 3)]
