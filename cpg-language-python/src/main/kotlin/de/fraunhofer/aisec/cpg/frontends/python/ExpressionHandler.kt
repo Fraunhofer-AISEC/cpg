@@ -84,9 +84,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python (Named
-     * Expression)[https://docs.python.org/3/library/ast.html#ast.NamedExpr] into an
-     * [AssignExpression].
+     * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
+     * into an [AssignExpression].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
@@ -183,7 +182,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * This method handles the python
-     * [`BoolOp` expression](https://docs.python.org/3/library/ast.html#ast.BoolOp).
+     * [`BoolOp`](https://docs.python.org/3/library/ast.html#ast.BoolOp).
      *
      * Generates a (potentially nested) [BinaryOperator] from a `BoolOp`. Less than two operands in
      * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only

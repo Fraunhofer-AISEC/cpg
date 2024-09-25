@@ -84,7 +84,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python (https://docs.python.org/3/library/ast.html#ast.Assert] into a
+     * Translates a Python [`Assert`](https://docs.python.org/3/library/ast.html#ast.Assert) into a
      * [AssertStatement].
      */
     private fun handleAssert(node: Python.AST.Assert): AssertStatement {
