@@ -80,27 +80,36 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates an [`ExceptHandler`](https://docs.python.org/3/library/ast.html#ast.ExceptHandler)
-     * to a [CatchClause].
+     * Translates an [`excepthandler`] which can only be a
+     * [`ExceptHandler`](https://docs.python.org/3/library/ast.html#ast.ExceptHandler) to a
+     * [CatchClause].
      *
      * It adds all the statements to the body and will set a parameter if it exists. For the
      * catch-all clause, we do not set the [CatchClause.parameter].
      */
-    private fun handleExceptHandler(node: Python.AST.ExceptHandler): CatchClause {
-        val catchClause = newCatchClause(rawNode = node)
-        catchClause.body = makeBlock(node.body, node)
-        // The parameter can have a type but if the type is None/null, it's the "catch-all" clause.
-        // In this case, it also cannot have a name, so we can skip the variable declaration.
-        if (node.type != null) {
-            // the parameter can have a name, or we use the anonymous identifier _
-            catchClause.parameter =
-                newVariableDeclaration(
-                    name = node.name ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
-                    type = frontend.typeOf(node.type),
-                    rawNode = node
-                )
+    private fun handleBaseExcepthandler(node: Python.AST.BaseExcepthandler): CatchClause {
+        return when (node) {
+            is Python.AST.ExceptHandler -> {
+                val catchClause = newCatchClause(rawNode = node)
+                catchClause.body = makeBlock(node.body, node)
+                // The parameter can have a type but if the type is None/null, it's the "catch-all"
+                // clause.
+                // In this case, it also cannot have a name, so we can skip the variable
+                // declaration.
+                if (node.type != null) {
+                    // the parameter can have a name, or we use the anonymous identifier _
+                    catchClause.parameter =
+                        newVariableDeclaration(
+                            name =
+                                node.name
+                                    ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
+                            type = frontend.typeOf(node.type),
+                            rawNode = node
+                        )
+                }
+                catchClause
+            }
         }
-        return catchClause
     }
 
     /**
@@ -110,11 +119,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleTryStatement(node: Python.AST.Try): TryStatement {
         val tryStatement = newTryStatement(rawNode = node)
         tryStatement.tryBlock = makeBlock(node.body, node)
-        tryStatement.catchClauses.addAll(
-            node.handlers.filterIsInstance<Python.AST.ExceptHandler>().map {
-                handleExceptHandler(it)
-            }
-        )
+        tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
 
         if (node.orelse.isNotEmpty()) {
             tryStatement.elseBlock = makeBlock(node.orelse, node)
