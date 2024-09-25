@@ -51,10 +51,14 @@ class Name(
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
     companion object {
-        /** Creates a random name starting with a prefix plus a random UUID (version 4). */
-        fun getRandomTempName(prefix: String = "TEMP-RANDOM-NAME"): Name {
-            val randomPart = Uuid.random().toString().replace("-", "_")
-            return Name(localName = prefix + "_" + randomPart)
+        /**
+         * Creates a random name starting with a prefix plus a random UUID (version 4). The Name is
+         * prefixed by [prefix], followed by a separator character [separatorChar] and finalized by
+         * a random UUID ("-" separators also replaced with [separatorChar]).
+         */
+        fun getRandomTempName(prefix: String, separatorChar: Char = '_'): Name {
+            val randomPart = Uuid.random().toString().replace('-', separatorChar)
+            return Name(localName = prefix + separatorChar + randomPart)
         }
     }
 
