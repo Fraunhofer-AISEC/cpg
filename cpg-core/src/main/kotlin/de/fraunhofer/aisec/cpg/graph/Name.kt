@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
+import kotlin.uuid.Uuid
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
@@ -48,6 +49,14 @@ class Name(
         parent: Name? = null,
         language: Language<*>?
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
+
+    companion object {
+        /** Creates a random name starting with a prefix plus a random UUID (version 4). */
+        fun getRandomTempName(prefix: String = "TEMP-RANDOM-NAME"): Name {
+            val randomPart = Uuid.random().toString().replace("-", "_")
+            return Name(localName = prefix + "_" + randomPart)
+        }
+    }
 
     /**
      * The full string representation of this name. Since [localName] and [parent] are immutable,
