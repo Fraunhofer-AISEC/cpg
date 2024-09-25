@@ -433,7 +433,9 @@ interface Python {
          */
         class Try(pyObject: PyObject) : BaseStmt(pyObject) {
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
+            val handlers: kotlin.collections.List<BaseExcepthandler> by lazy {
+                "handlers" of pyObject
+            }
             val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
             val stmt: kotlin.collections.List<BaseStmt> by lazy { "StmtBase" of pyObject }
         }
@@ -446,7 +448,9 @@ interface Python {
          */
         class TryStar(pyObject: PyObject) : BaseStmt(pyObject) {
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
+            val handlers: kotlin.collections.List<BaseExcepthandler> by lazy {
+                "handlers" of pyObject
+            }
             val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
             val finalbody: kotlin.collections.List<BaseStmt> by lazy { "finalbody" of pyObject }
         }
@@ -1317,12 +1321,16 @@ interface Python {
          * ast.excepthandler = class excepthandler(AST)
          *  |  excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body)
          * ```
-         *
-         * TODO: excepthandler <-> ExceptHandler
          */
-        class excepthandler(pyObject: PyObject) : AST(pyObject), WithLocation {
-            val type: BaseExpr by lazy { "type" of pyObject }
-            val name: String by lazy { "name" of pyObject }
+        sealed class BaseExcepthandler(python: PyObject) : AST(python), WithLocation
+
+        /**
+         * ast.ExceptHandler = class ExceptHandler(excepthandler) | ExceptHandler(expr? type,
+         * identifier? name, stmt* body)
+         */
+        class ExceptHandler(pyObject: PyObject) : BaseExcepthandler(pyObject) {
+            val type: BaseExpr? by lazy { "type" of pyObject }
+            val name: String? by lazy { "name" of pyObject }
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
         }
 
