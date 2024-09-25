@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
-import kotlin.collections.ArrayList
 import org.slf4j.LoggerFactory
 
 /**
@@ -451,7 +450,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 // existing function and the EOG handler for handling function declarations will
                 // reset the
                 // stack
-                val oldEOG = ArrayList(currentPredecessors)
+                val oldEOG = currentPredecessors.toMutableList()
 
                 // analyze the defaults
                 createEOG(declaration)
@@ -560,9 +559,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val throwType = input.type
         pushToEOG(node)
         if (catchingScope is TryScope) {
-            catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
         } else if (catchingScope is FunctionScope) {
-            catchingScope.catchesOrRelays[throwType] = ArrayList(currentPredecessors)
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
         }
         currentPredecessors.clear()
     }
@@ -582,7 +581,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     protected fun handleAssertStatement(node: AssertStatement) {
         createEOG(node.condition)
-        val openConditionEOGs = ArrayList(currentPredecessors)
+        val openConditionEOGs = currentPredecessors.toMutableList()
         createEOG(node.message)
         setCurrentEOGs(openConditionEOGs)
         pushToEOG(node)
@@ -599,8 +598,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         node.resources.forEach { createEOG(it) }
 
         createEOG(node.tryBlock)
-        val tmpEOGNodes = ArrayList(currentPredecessors)
-        val catchEnds = ArrayList<Node>()
+        val tmpEOGNodes = currentPredecessors.toMutableList()
+        val catchEnds = mutableListOf<Node>()
         val catchesOrRelays = tryScope?.catchesOrRelays
         for (catchClause in node.catchClauses) {
             currentPredecessors.clear()
@@ -665,7 +664,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 if (outerScope is TryScope) outerScope.catchesOrRelays
                 else (outerScope as FunctionScope).catchesOrRelays
             for ((key, value) in catchesOrRelays ?: mapOf()) {
-                val catches = outerCatchesOrRelays[key] ?: ArrayList()
+                val catches = outerCatchesOrRelays[key] ?: mutableListOf<Node>()
                 catches.addAll(value)
                 outerCatchesOrRelays[key] = catches
             }
@@ -793,7 +792,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     fun setCurrentEOGs(nodes: List<Node>) {
         LOGGER.trace("Setting {} to EOGs", nodes)
-        currentPredecessors = ArrayList(nodes)
+        currentPredecessors = nodes.toMutableList()
     }
 
     /**
@@ -806,7 +805,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
         // context is destroyed
         currentPredecessors.addAll(loopScope.breakStatements)
-        val continues = ArrayList(loopScope.continueStatements)
+        val continues = loopScope.continueStatements.toMutableList()
         if (continues.isNotEmpty()) {
             val conditions =
                 loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
@@ -858,7 +857,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.condition)
         // To have semantic information after the condition evaluation
         pushToEOG(node)
-        val openConditionEOGs = ArrayList(currentPredecessors)
+        val openConditionEOGs = currentPredecessors.toMutableList()
         nextEdgeBranch = true
         createEOG(node.thenExpression)
         openBranchNodes.addAll(currentPredecessors)
@@ -895,7 +894,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         node.variable?.let { node.prevDFGEdges += it }
         pushToEOG(node) // To have semantic information after the variable declaration
         nextEdgeBranch = true
-        val tmpEOGNodes = ArrayList(currentPredecessors)
+        val tmpEOGNodes = currentPredecessors.toMutableList()
         createEOG(node.statement)
         connectCurrentToLoopStart()
         currentPredecessors.clear()
@@ -917,7 +916,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         pushToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
-        val tmpEOGNodes = ArrayList(currentPredecessors)
+        val tmpEOGNodes = currentPredecessors.toMutableList()
 
         createEOG(node.statement)
         createEOG(node.iterationStatement)
@@ -942,7 +941,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
-        val openConditionEOGs = ArrayList(currentPredecessors)
+        val openConditionEOGs = currentPredecessors.toMutableList()
         nextEdgeBranch = true
         createEOG(node.thenStatement)
         openBranchNodes.addAll(currentPredecessors)
@@ -964,7 +963,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.selectorDeclaration)
         createEOG(node.selector)
         pushToEOG(node) // To have semantic information after the condition evaluation
-        val tmp = ArrayList(currentPredecessors)
+        val tmp = currentPredecessors.toMutableList()
         val compound =
             if (node.statement is DoStatement) {
                 createEOG(node.statement)
@@ -972,7 +971,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             } else {
                 node.statement as Block
             }
-        currentPredecessors = ArrayList()
+        currentPredecessors = mutableListOf()
         for (subStatement in compound.statements) {
             if (subStatement is CaseStatement || subStatement is DefaultStatement) {
                 currentPredecessors.addAll(tmp)
@@ -1002,7 +1001,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
-        val tmpEOGNodes = ArrayList(currentPredecessors)
+        val tmpEOGNodes = currentPredecessors.toMutableList()
         createEOG(node.statement)
         connectCurrentToLoopStart()
 
@@ -1033,7 +1032,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
          */
         protected fun reachableFromValidEOGRoot(node: Node): Boolean {
             val passedBy = mutableSetOf<Node>()
-            val workList = ArrayList(node.prevEOG)
+            val workList = node.prevEOG.toMutableList()
             while (workList.isNotEmpty()) {
                 val toProcess = workList[0]
                 workList.remove(toProcess)
