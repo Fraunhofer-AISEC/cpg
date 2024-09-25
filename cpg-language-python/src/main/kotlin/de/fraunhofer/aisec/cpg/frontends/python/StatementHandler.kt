@@ -92,11 +92,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val delete = newDeleteExpression(rawNode = node)
         node.targets.forEach { target ->
             if (target is Python.AST.Subscript) {
-                delete.targets.add(frontend.expressionHandler.handle(target))
+                delete.operands.add(frontend.expressionHandler.handle(target))
             } else {
                 delete.additionalProblems +=
                     newProblemExpression(
-                        problem = "Delete is only supported for Subscript targets.",
+                        problem =
+                            "'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
                         rawNode = target
                     )
             }

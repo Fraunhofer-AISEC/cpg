@@ -136,24 +136,24 @@ class StatementHandlerTest {
 
         // Test for `del a`
         val deleteStmt1 = deleteExpressions[0]
-        assertEquals(0, deleteStmt1.targets.size)
+        assertEquals(0, deleteStmt1.operands.size)
         assertEquals(1, deleteStmt1.additionalProblems.size)
 
         // Test for `del my_list[2]`
         val deleteStmt2 = deleteExpressions[1]
-        assertEquals(1, deleteStmt2.targets.size)
-        assertTrue(deleteStmt2.targets.first() is SubscriptExpression)
+        assertEquals(1, deleteStmt2.operands.size)
+        assertTrue(deleteStmt2.operands.first() is SubscriptExpression)
         assertTrue(deleteStmt2.additionalProblems.isEmpty())
 
         // Test for `del my_dict['b']`
         val deleteStmt3 = deleteExpressions[2]
-        assertEquals(1, deleteStmt3.targets.size)
-        assertTrue(deleteStmt3.targets.first() is SubscriptExpression)
+        assertEquals(1, deleteStmt3.operands.size)
+        assertTrue(deleteStmt3.operands.first() is SubscriptExpression)
         assertTrue(deleteStmt3.additionalProblems.isEmpty())
 
         // Test for `del obj.d`
         val deleteStmt4 = deleteExpressions[3]
-        assertEquals(0, deleteStmt4.targets.size)
+        assertEquals(0, deleteStmt4.operands.size)
         assertEquals(1, deleteStmt4.additionalProblems.size)
     }
 }
