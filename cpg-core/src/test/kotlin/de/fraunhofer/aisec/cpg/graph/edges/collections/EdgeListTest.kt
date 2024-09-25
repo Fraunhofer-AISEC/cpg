@@ -51,7 +51,8 @@ class EdgeListTest {
                 assertEquals(i, edge.index, "index mismatch $i != ${edge.index}")
             }
 
-            // insert something at position 1, this should shift the existing two entries + 1
+            // insert something at position 1, this should shift the existing entries (after the
+            // position) + 1
             list.add(1, AstEdge(node1, node4))
             assertEquals(3, list.size)
 

@@ -459,7 +459,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
         // CallExpression with the invokes edges to the called functions)
-        call.prevDFG.forEach { it.nextDFGEdges.removeIf { edge -> edge.end == call } }
         call.prevDFGEdges.clear()
 
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
