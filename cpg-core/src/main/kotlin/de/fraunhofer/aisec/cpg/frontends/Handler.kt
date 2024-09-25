@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.function.Supplier
+import kotlin.uuid.Uuid
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -164,6 +165,14 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
             return getBaseClass(type.rawType)
         }
         return null
+    }
+
+    /** Creates a random name starting with a prefix plus a random UUID (version 4). */
+    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+    fun getRandomTempName(): Name {
+        val prefix = "TEMP-RANDOM-NAME"
+        val randomPart = Uuid.random().toString()
+        return newName(name = prefix + "-" + randomPart)
     }
 
     companion object {
