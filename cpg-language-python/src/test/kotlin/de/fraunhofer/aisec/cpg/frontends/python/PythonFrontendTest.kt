@@ -805,8 +805,6 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
-    @Ignore // TODO fix & re-enable this test once there is proper support for multiple variables in
-    // a loop
     fun testIssue615() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
@@ -818,17 +816,19 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["issue615"]
         assertNotNull(p)
 
-        assertEquals(1, p.declarations.size)
+        assertEquals(
+            5,
+            p.variables.size
+        ) // including one dummy variable introduced for the loop var
+        assertEquals(4, p.variables.filter { !it.name.localName.contains("TEMP-RANDOM-NAME") }.size)
         assertEquals(2, p.statements.size)
 
         // test = [(1, 2, 3)]
         val testDeclaration = p.variables[0]
         assertNotNull(testDeclaration)
         assertLocalName("test", testDeclaration)
-        val testDeclStmt = p.statements[0] as? DeclarationStatement
+        val testDeclStmt = p.statements[0] as? AssignExpression
         assertNotNull(testDeclStmt)
-        assertEquals(1, testDeclStmt.declarations.size)
-        assertEquals(testDeclaration, testDeclStmt.variables[0])
 
         /* for loop:
         for t1, t2, t3 in test:
@@ -837,16 +837,11 @@ class PythonFrontendTest : BaseTest() {
         val forStmt = p.statements[1] as? ForEachStatement
         assertNotNull(forStmt)
 
-        val forVariable = forStmt.variable as? InitializerListExpression
+        val forVariable = forStmt.variable as? Reference
         assertNotNull(forVariable)
-        assertEquals(3, forVariable.initializers.size)
-        val t1Decl = forVariable.initializers[0] as? Reference
-        val t2Decl = forVariable.initializers[1] as? Reference
-        val t3Decl = forVariable.initializers[2] as? Reference
-        assertNotNull(t1Decl)
-        assertNotNull(t2Decl)
-        assertNotNull(t3Decl)
-        // TODO no refersTo
+        val forVarDecl = forVariable.declarations.first()
+        assertEquals(1, forVariable.declarations.size)
+        assertEquals(forVarDecl, forVariable.refersTo)
 
         val iter = forStmt.iterable as? Reference
         assertNotNull(iter)
@@ -854,10 +849,41 @@ class PythonFrontendTest : BaseTest() {
 
         val forBody = forStmt.statement as? Block
         assertNotNull(forBody)
-        assertEquals(1, forBody.statements.size)
+        assertEquals(2, forBody.statements.size) // loop var assign and print stmt
+
+        /*
+        We model the 3 loop variables
+
+        ```
+        for t1, t2, t3 in ...
+        ```
+
+        implicitly as follows:
+
+        ```
+        for tempVar in ...:
+          t1, t2, t3 = tempVar
+          rest of the loop
+        ```
+         */
+        val forVariableImplicitStmt = forBody.statements.first() as? AssignExpression
+        assertNotNull(forVariableImplicitStmt)
+        assertEquals("=", forVariableImplicitStmt.operatorCode)
+        assertEquals(forStmt.variable, forVariableImplicitStmt.rhs.first())
+        val (t1Decl, t2Decl, t3Decl) = forVariableImplicitStmt.declarations
+        val (t1RefAssign, t2RefAssign, t3RefAssign) = forVariableImplicitStmt.lhs
+        assertNotNull(t1Decl)
+        assertNotNull(t2Decl)
+        assertNotNull(t3Decl)
+        assertNotNull(t1RefAssign as? Reference)
+        assertNotNull(t2RefAssign as? Reference)
+        assertNotNull(t3RefAssign as? Reference)
+        assertEquals(t1Decl, t1RefAssign.refersTo)
+        assertEquals(t2Decl, t2RefAssign.refersTo)
+        assertEquals(t3Decl, t3RefAssign.refersTo)
 
         // print("bug ... {} {} {}".format(t1, t2, t3))
-        val forBodyStmt = forBody.statements[0] as? CallExpression
+        val forBodyStmt = forBody.statements[1] as? CallExpression
         assertNotNull(forBodyStmt)
         assertLocalName("print", forBodyStmt)
 
@@ -865,11 +891,13 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(printArg)
         val formatArgT1 = printArg.arguments[0] as? Reference
         assertNotNull(formatArgT1)
+        assertEquals(t1Decl, formatArgT1.refersTo)
         val formatArgT2 = printArg.arguments[1] as? Reference
         assertNotNull(formatArgT2)
+        assertEquals(t2Decl, formatArgT2.refersTo)
         val formatArgT3 = printArg.arguments[2] as? Reference
         assertNotNull(formatArgT3)
-        // TODO check refersTo
+        assertEquals(t3Decl, formatArgT3.refersTo)
     }
 
     @Test

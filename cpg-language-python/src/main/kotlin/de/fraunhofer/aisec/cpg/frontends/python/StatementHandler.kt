@@ -36,10 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
@@ -180,16 +183,54 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body, parentNode = node)
+        val loopVar = frontend.expressionHandler.handle(node.target)
+
+        when (loopVar) {
+            is InitializerListExpression -> {
+
+                val (dummyVarRef, dummyAssign) = getDummyAssign(loopVar)
+
+                ret.variable = dummyVarRef
+                val body = makeBlock(node.body, parentNode = node)
+
+                body.statements.add(0, dummyAssign)
+
+                ret.statement = body
+            }
+            is Reference -> {
+                ret.variable = loopVar
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+            else -> {
+                TODO()
+            }
+        }
+
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblemExpression(
-                    problem = "Cannot handle \"orelse\" in for loops.",
+                    problem = "handleFor: Cannot handle \"orelse\" in for loops.",
                     rawNode = node
                 )
         }
         return ret
+    }
+
+    /** TODO */
+    private fun getDummyAssign(
+        loopVar: InitializerListExpression
+    ): Pair<Reference, AssignExpression> {
+        val tempVarName = getRandomTempName()
+        val tempRef = newReference(name = tempVarName)
+        tempRef.isImplicit = true
+        val assign =
+            newAssignExpression(
+                operatorCode = "=",
+                lhs = (loopVar).initializers,
+                rhs = listOf(tempRef)
+            )
+        assign.isImplicit = true
+        return Pair(tempRef, assign)
     }
 
     private fun handleExpressionStatement(node: Python.AST.Expr): Statement {

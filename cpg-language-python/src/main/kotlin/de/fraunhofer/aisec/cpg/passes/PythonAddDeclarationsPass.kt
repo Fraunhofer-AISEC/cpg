@@ -161,12 +161,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     // TODO document why this is necessary and implement for other possible places
     private fun handleForEach(node: ForEachStatement) {
-        when (node.variable) {
+        when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleReference(node.variable as Reference)
-                if (handled is Declaration) {
-                    handled.let { node.addDeclaration(it) }
-                }
+                val handled = handleReference(forVar)
+                (handled as? Declaration)?.let { forVar.addDeclaration(it) }
             }
         }
     }
