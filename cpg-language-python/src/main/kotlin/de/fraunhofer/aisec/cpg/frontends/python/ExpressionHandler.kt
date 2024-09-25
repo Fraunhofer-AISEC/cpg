@@ -84,9 +84,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python (Named
-     * Expression)[https://docs.python.org/3/library/ast.html#ast.NamedExpr] into an
-     * [AssignExpression].
+     * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
+     * into an [AssignExpression].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
@@ -181,22 +180,42 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return subscriptExpression
     }
 
+    /**
+     * This method handles the python
+     * [`BoolOp`](https://docs.python.org/3/library/ast.html#ast.BoolOp).
+     *
+     * Generates a (potentially nested) [BinaryOperator] from a `BoolOp`. Less than two operands in
+     * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only
+     * two operands exist, a simple [BinaryOperator] will be generated. More than two operands will
+     * lead to a nested [BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators
+     * `[a, b, c]`, the result will be `a OP (b OP c)`.
+     */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
             when (node.op) {
                 is Python.AST.And -> "and"
                 is Python.AST.Or -> "or"
             }
-        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-        if (node.values.size != 2) {
-            return newProblemExpression(
-                "Expected exactly two expressions but got " + node.values.size,
+
+        return if (node.values.size <= 1) {
+            newProblemExpression(
+                "Expected exactly two expressions but got ${node.values.size}",
                 rawNode = node
             )
+        } else {
+            // Start with the last two operands, then keep prepending the previous ones until the
+            // list is finished.
+            val lastTwo = newBinaryOperator(op, rawNode = node)
+            lastTwo.rhs = handle(node.values.last())
+            lastTwo.lhs = handle(node.values[node.values.size - 2])
+            return node.values.subList(0, node.values.size - 2).foldRight(lastTwo) { newVal, start
+                ->
+                val nextValue = newBinaryOperator(op, rawNode = node)
+                nextValue.rhs = start
+                nextValue.lhs = handle(newVal)
+                nextValue
+            }
         }
-        ret.lhs = handle(node.values[0])
-        ret.rhs = handle(node.values[1])
-        return ret
     }
 
     private fun handleList(node: Python.AST.List): Expression {

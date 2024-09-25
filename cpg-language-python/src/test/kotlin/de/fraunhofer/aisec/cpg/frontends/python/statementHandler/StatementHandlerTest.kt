@@ -26,25 +26,26 @@
 package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.frontends.python.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class StatementHandlerTest {
+class StatementHandlerTest : BaseTest() {
 
     private lateinit var topLevel: Path
     private lateinit var result: TranslationResult
@@ -155,5 +156,20 @@ class StatementHandlerTest {
         val deleteStmt4 = deleteExpressions[3]
         assertEquals(0, deleteStmt4.operands.size)
         assertEquals(1, deleteStmt4.additionalProblems.size)
+    }
+
+    @Test
+    fun testTypeHints() {
+        analyzeFile("type_hints.py")
+
+        // type comments
+        val a = result.refs["a"]
+        assertNotNull(a)
+        assertEquals(with(result) { assertResolvedType("int") }, a.type)
+
+        // type annotation
+        val b = result.refs["b"]
+        assertNotNull(b)
+        assertEquals(with(result) { assertResolvedType("str") }, b.type)
     }
 }

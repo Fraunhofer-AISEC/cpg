@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -106,7 +107,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python (https://docs.python.org/3/library/ast.html#ast.Assert] into a
+     * Translates a Python [`Assert`](https://docs.python.org/3/library/ast.html#ast.Assert) into a
      * [AssertStatement].
      */
     private fun handleAssert(node: Python.AST.Assert): AssertStatement {
@@ -218,18 +219,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return frontend.expressionHandler.handle(node.value)
     }
 
-    private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
-        // TODO: annotations
+    /**
+     * Translates a Python [`AnnAssign`](https://docs.python.org/3/library/ast.html#ast.AnnAssign)
+     * into an [AssignExpression].
+     */
+    private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
-        return if (node.value != null) {
-            newAssignExpression(
-                lhs = listOf(lhs),
-                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
-                rawNode = node
-            )
-        } else {
-            lhs
-        }
+        lhs.type = frontend.typeOf(node.annotation)
+        val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
+        return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
 
     private fun handleIf(node: Python.AST.If): Statement {
@@ -256,8 +254,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleAssign(node: Python.AST.Assign): Statement {
+    /**
+     * Translates a Python [`Assign`](https://docs.python.org/3/library/ast.html#ast.Assign) into an
+     * [AssignExpression].
+     */
+    private fun handleAssign(node: Python.AST.Assign): AssignExpression {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+        node.type_comment?.let { typeComment ->
+            val tpe = frontend.typeOf(typeComment)
+            lhs.forEach { it.type = tpe }
+        }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
             newAssignExpression(
