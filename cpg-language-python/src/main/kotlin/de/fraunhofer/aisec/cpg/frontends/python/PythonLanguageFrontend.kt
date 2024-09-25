@@ -318,7 +318,7 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
         return when (objectname) {
             "ast.Module" -> Python.AST.Module(pyObject)
 
-            // statements
+            // `ast.stmt`
             "ast.FunctionDef" -> Python.AST.FunctionDef(pyObject)
             "ast.AsyncFunctionDef" -> Python.AST.AsyncFunctionDef(pyObject)
             "ast.ClassDef" -> Python.AST.ClassDef(pyObject)
@@ -347,7 +347,7 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.Break" -> Python.AST.Break(pyObject)
             "ast.Continue" -> Python.AST.Continue(pyObject)
 
-            // `"ast.expr`
+            // `ast.expr`
             "ast.BoolOp" -> Python.AST.BoolOp(pyObject)
             "ast.NamedExpr" -> Python.AST.NamedExpr(pyObject)
             "ast.BinOp" -> Python.AST.BinOp(pyObject)
@@ -376,11 +376,11 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.Tuple" -> Python.AST.Tuple(pyObject)
             "ast.Slice" -> Python.AST.Slice(pyObject)
 
-            // `"ast.boolop`
+            // `ast.boolop`
             "ast.And" -> Python.AST.And(pyObject)
             "ast.Or" -> Python.AST.Or(pyObject)
 
-            // `"ast.cmpop`
+            // `ast.cmpop`
             "ast.Eq" -> Python.AST.Eq(pyObject)
             "ast.NotEq" -> Python.AST.NotEq(pyObject)
             "ast.Lt" -> Python.AST.Lt(pyObject)
@@ -392,12 +392,12 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.In" -> Python.AST.In(pyObject)
             "ast.NotIn" -> Python.AST.NotIn(pyObject)
 
-            // `"ast.expr_context`
+            // `ast.expr_context`
             "ast.Load" -> Python.AST.Load(pyObject)
             "ast.Store" -> Python.AST.Store(pyObject)
             "ast.Del" -> Python.AST.Del(pyObject)
 
-            // `"ast.operator`
+            // `ast.operator`
             "ast.Add" -> Python.AST.Add(pyObject)
             "ast.Sub" -> Python.AST.Sub(pyObject)
             "ast.Mult" -> Python.AST.Mult(pyObject)
@@ -412,7 +412,7 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.BitAnd" -> Python.AST.BitAnd(pyObject)
             "ast.FloorDiv" -> Python.AST.FloorDiv(pyObject)
 
-            // `"ast.pattern`
+            // `ast.pattern`
             "ast.MatchValue" -> Python.AST.MatchValue(pyObject)
             "ast.MatchSingleton" -> Python.AST.MatchSingleton(pyObject)
             "ast.MatchSequence" -> Python.AST.MatchSequence(pyObject)
@@ -422,19 +422,20 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.MatchAs" -> Python.AST.MatchAs(pyObject)
             "ast.MatchOr" -> Python.AST.MatchOr(pyObject)
 
-            // `"ast.unaryop`
+            // `ast.unaryop`
             "ast.Invert" -> Python.AST.Invert(pyObject)
             "ast.Not" -> Python.AST.Not(pyObject)
             "ast.UAdd" -> Python.AST.UAdd(pyObject)
             "ast.USub" -> Python.AST.USub(pyObject)
+
+            // `ast.excepthandler`
+            "ast.ExceptHandler" -> Python.AST.ExceptHandler(pyObject)
 
             // misc
             "ast.alias" -> Python.AST.alias(pyObject)
             "ast.arg" -> Python.AST.arg(pyObject)
             "ast.arguments" -> Python.AST.arguments(pyObject)
             "ast.comprehension" -> Python.AST.comprehension(pyObject)
-            "ast.ExceptHandler",
-            "ast.excepthandler" -> Python.AST.excepthandler(pyObject)
             "ast.keyword" -> Python.AST.keyword(pyObject)
             "ast.match_case" -> Python.AST.match_case(pyObject)
             "ast.type_ignore" -> Python.AST.type_ignore(pyObject)

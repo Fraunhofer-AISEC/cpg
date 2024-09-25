@@ -86,7 +86,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * It adds all the statements to the body and will set a parameter if it exists. For the
      * catch-all clause, we do not set the [CatchClause.parameter].
      */
-    private fun handleExcepthandler(node: Python.AST.excepthandler): CatchClause {
+    private fun handleExceptHandler(node: Python.AST.ExceptHandler): CatchClause {
         val catchClause = newCatchClause(rawNode = node)
         catchClause.body = makeBlock(node.body, node)
         // The parameter can have a type but if the type is None/null, it's the "catch-all" clause.
@@ -110,8 +110,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleTryStatement(node: Python.AST.Try): TryStatement {
         val tryStatement = newTryStatement(rawNode = node)
         tryStatement.tryBlock = makeBlock(node.body, node)
-
-        tryStatement.catchClauses.addAll(node.handlers.map { handleExcepthandler(it) })
+        tryStatement.catchClauses.addAll(
+            node.handlers.filterIsInstance<Python.AST.ExceptHandler>().map {
+                handleExceptHandler(it)
+            }
+        )
 
         if (node.orelse.isNotEmpty()) {
             tryStatement.elseBlock = makeBlock(node.orelse, node)
