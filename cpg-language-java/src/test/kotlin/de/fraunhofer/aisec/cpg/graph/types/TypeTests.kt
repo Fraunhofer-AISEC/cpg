@@ -111,19 +111,21 @@ internal class TypeTests : BaseTest() {
     fun testCommonTypeTestJava() {
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
         val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-        val root = assertNotNull(result.records["multistep.Root"]).toType()
-        val level0 = assertNotNull(result.records["multistep.Level0"]).toType()
-        val level1 = assertNotNull(result.records["multistep.Level1"]).toType()
-        val level1b = assertNotNull(result.records["multistep.Level1B"]).toType()
-        val level2 = assertNotNull(result.records["multistep.Level2"]).toType()
-        val unrelated = assertNotNull(result.records["multistep.Unrelated"]).toType()
-        println(
-            result.finalCtx.typeManager.firstOrderTypesMap.values
-                .flatten()
-                .filter { it.typeName == "multistep.Root" }
-                .map { it.superTypes }
-        )
-        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+        with(result) {
+            val root = assertResolvedType("multistep.Root")
+            val level0 = assertResolvedType("multistep.Level0")
+            val level1 = assertResolvedType("multistep.Level1")
+            val level1b = assertResolvedType("multistep.Level1B")
+            val level2 = assertResolvedType("multistep.Level2")
+            val unrelated = assertResolvedType("multistep.Unrelated")
+            println(
+                result.finalCtx.typeManager.firstOrderTypesMap.values
+                    .flatten()
+                    .filter { it.typeName == "multistep.Root" }
+                    .map { it.superTypes }
+            )
+            getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+        }
     }
 
     private fun getCommonTypeTestGeneral(

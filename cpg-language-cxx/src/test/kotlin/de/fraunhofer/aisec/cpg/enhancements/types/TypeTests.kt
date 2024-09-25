@@ -178,13 +178,15 @@ internal class TypeTests : BaseTest() {
                 analyze("simple_inheritance.cpp", topLevel, true) {
                     it.registerLanguage<CPPLanguage>()
                 }
-            val root = assertNotNull(result.records["Root"]).toType()
-            val level0 = assertNotNull(result.records["Level0"]).toType()
-            val level1 = assertNotNull(result.records["Level1"]).toType()
-            val level1b = assertNotNull(result.records["Level1B"]).toType()
-            val level2 = assertNotNull(result.records["Level2"]).toType()
-            val unrelated = assertNotNull(result.records["Unrelated"]).toType()
-            getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+            with(result) {
+                val root = assertResolvedType("Root")
+                val level0 = assertResolvedType("Level0")
+                val level1 = assertResolvedType("Level1")
+                val level1b = assertResolvedType("Level1B")
+                val level2 = assertResolvedType("Level2")
+                val unrelated = assertResolvedType("Unrelated")
+                getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+            }
         }
     }
 
