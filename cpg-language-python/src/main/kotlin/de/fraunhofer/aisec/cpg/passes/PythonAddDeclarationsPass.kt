@@ -164,7 +164,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleReference(forVar)
-                (handled as? Declaration)?.let { forVar.addDeclaration(it) }
+                (handled as? Declaration)?.let { scopeManager.addDeclaration(it) }
             }
         }
     }

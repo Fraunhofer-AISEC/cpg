@@ -842,8 +842,11 @@ class PythonFrontendTest : BaseTest() {
 
         val forVariable = forStmt.variable as? Reference
         assertNotNull(forVariable)
-        val forVarDecl = forVariable.declarations.first()
-        assertEquals(1, forVariable.declarations.size)
+        val forVarDecl =
+            p.declarations.firstOrNull {
+                it.name.localName.contains((PythonHandler.LOOP_VAR_PREFIX))
+            }
+        assertNotNull(forVarDecl)
         assertEquals(forVarDecl, forVariable.refersTo)
 
         val iter = forStmt.iterable as? Reference
