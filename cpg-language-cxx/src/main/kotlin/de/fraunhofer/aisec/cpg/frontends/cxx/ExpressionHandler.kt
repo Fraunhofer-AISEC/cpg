@@ -321,7 +321,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (name in ctx.implicitDestructorNames) {
             log.debug("Implicit constructor name {}", name)
         }
-        deleteExpression.operand = handle(ctx.operand)
+        handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
         return deleteExpression
     }
 

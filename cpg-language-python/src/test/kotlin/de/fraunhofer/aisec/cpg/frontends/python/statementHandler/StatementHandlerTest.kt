@@ -28,11 +28,19 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.test.*
+import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -121,17 +129,48 @@ class StatementHandlerTest : BaseTest() {
     }
 
     @Test
+    fun testDeleteStatements() {
+        analyzeFile("delete.py")
+
+        val deleteExpressions = result.statements.filterIsInstance<DeleteExpression>()
+        assertEquals(4, deleteExpressions.size)
+
+        // Test for `del a`
+        val deleteStmt1 = deleteExpressions[0]
+        assertEquals(0, deleteStmt1.operands.size)
+        assertEquals(1, deleteStmt1.additionalProblems.size)
+
+        // Test for `del my_list[2]`
+        val deleteStmt2 = deleteExpressions[1]
+        assertEquals(1, deleteStmt2.operands.size)
+        assertTrue(deleteStmt2.operands.first() is SubscriptExpression)
+        assertTrue(deleteStmt2.additionalProblems.isEmpty())
+
+        // Test for `del my_dict['b']`
+        val deleteStmt3 = deleteExpressions[2]
+        assertEquals(1, deleteStmt3.operands.size)
+        assertTrue(deleteStmt3.operands.first() is SubscriptExpression)
+        assertTrue(deleteStmt3.additionalProblems.isEmpty())
+
+        // Test for `del obj.d`
+        val deleteStmt4 = deleteExpressions[3]
+        assertEquals(0, deleteStmt4.operands.size)
+        assertEquals(1, deleteStmt4.additionalProblems.size)
+    }
+
+    @Test
     fun testTypeHints() {
         analyzeFile("type_hints.py")
+        with(result) {
+            // type comments
+            val a = result.refs["a"]
+            assertNotNull(a)
+            assertEquals(assertResolvedType("int"), a.type)
 
-        // type comments
-        val a = result.refs["a"]
-        assertNotNull(a)
-        assertEquals(with(result) { assertResolvedType("int") }, a.type)
-
-        // type annotation
-        val b = result.refs["b"]
-        assertNotNull(b)
-        assertEquals(with(result) { assertResolvedType("str") }, b.type)
+            // type annotation
+            val b = result.refs["b"]
+            assertNotNull(b)
+            assertEquals(assertResolvedType("str"), b.type)
+        }
     }
 }

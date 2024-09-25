@@ -670,7 +670,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleDeleteExpression(node: DeleteExpression) {
-        createEOG(node.operand)
+        for (operand in node.operands) {
+            createEOG(operand)
+        }
         pushToEOG(node)
     }
 

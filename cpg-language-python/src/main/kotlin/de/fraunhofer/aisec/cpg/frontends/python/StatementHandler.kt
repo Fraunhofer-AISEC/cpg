@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -71,7 +72,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
-            is Python.AST.Delete,
+            is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
@@ -85,6 +86,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete) into a
+     * [DeleteExpression].
+     */
+    private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
+        val delete = newDeleteExpression(rawNode = node)
+        node.targets.forEach { target ->
+            if (target is Python.AST.Subscript) {
+                delete.operands.add(frontend.expressionHandler.handle(target))
+            } else {
+                delete.additionalProblems +=
+                    newProblemExpression(
+                        problem =
+                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                        rawNode = target
+                    )
+            }
+        }
+        return delete
     }
 
     /**
