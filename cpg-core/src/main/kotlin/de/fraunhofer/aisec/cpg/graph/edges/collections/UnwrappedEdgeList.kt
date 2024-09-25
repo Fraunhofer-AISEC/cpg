@@ -40,7 +40,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 ) : UnwrappedEdgeCollection<NodeType, EdgeType>(list), MutableList<NodeType> {
 
     override fun add(index: Int, element: NodeType) {
-        TODO("Not yet implemented")
+        return list.add(index, element)
     }
 
     override fun addAll(index: Int, elements: Collection<NodeType>): Boolean {
