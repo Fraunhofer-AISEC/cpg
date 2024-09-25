@@ -118,7 +118,8 @@ internal class TypeTests : BaseTest() {
         val level2 = assertNotNull(result.records["multistep.Level2"]).toType()
         val unrelated = assertNotNull(result.records["multistep.Unrelated"]).toType()
         println(
-            result.finalCtx.typeManager.firstOrderTypes
+            result.finalCtx.typeManager.firstOrderTypesMap.values
+                .flatten()
                 .filter { it.typeName == "multistep.Root" }
                 .map { it.superTypes }
         )

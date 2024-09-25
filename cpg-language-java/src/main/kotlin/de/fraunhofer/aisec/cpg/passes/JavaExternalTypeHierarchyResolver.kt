@@ -71,7 +71,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         }
 
         // Iterate over all known types and add their (direct) supertypes.
-        for (t in typeManager.firstOrderTypes.values.flatten()) {
+        for (t in typeManager.firstOrderTypesMap.values.flatten()) {
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {
                 try {
