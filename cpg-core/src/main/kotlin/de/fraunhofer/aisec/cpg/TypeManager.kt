@@ -209,7 +209,10 @@ class TypeManager {
         }
 
         if (t.isFirstOrderType) {
-            var types = firstOrderTypesMap.computeIfAbsent(t.name.toString()) { mutableListOf() }
+            var types =
+                firstOrderTypesMap.computeIfAbsent(t.name.toString()) {
+                    Collections.synchronizedList(mutableListOf())
+                }
             // Make sure we only ever return one unique object per type
             if (!types.add(t)) {
                 return types.first { it == t && it is T } as T
