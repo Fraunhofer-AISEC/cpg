@@ -98,7 +98,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                            "'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
                         rawNode = target
                     )
             }
