@@ -100,6 +100,16 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         edges.forEach { handleOnRemove(it) }
     }
 
+    /**
+     * This function creates a new edge (of [EdgeType]) to/from the specified node [target]
+     * (depending on [outgoing]) and adds it to the specified index in the list.
+     */
+    fun add(index: Int, target: NodeType) {
+        val edge = createEdge(target, init, this.outgoing)
+
+        return add(index, edge)
+    }
+
     override fun add(index: Int, element: EdgeType) {
         // Make sure, the index is always set
         element.index = this.size
