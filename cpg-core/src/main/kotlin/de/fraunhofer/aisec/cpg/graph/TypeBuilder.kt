@@ -115,10 +115,10 @@ fun LanguageProvider.objectType(
 
     val scope = c.scopeManager.currentScope
 
-    synchronized(c.typeManager.firstOrderTypesMap) {
-        // We can try to look up the type by its name and return it, if it already exists.
+    var list = c.typeManager.firstOrderTypesMap[name.toString()]
+    if (list != null) {
         var type =
-            c.typeManager.firstOrderTypesMap[name.toString()]?.firstOrNull {
+            list.firstOrNull {
                 it is ObjectType &&
                     it.name == name &&
                     it.scope == scope &&
@@ -128,19 +128,19 @@ fun LanguageProvider.objectType(
         if (type != null) {
             return type
         }
-
-        // Otherwise, we either need to create the type because of the generics or because we do not
-        // know the type yet.
-        type = ObjectType(name, generics, false, language)
-        // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
-        // to refer by the local name because we will treat types as sort of references when
-        // creating them and resolve them later.
-        type.applyMetadata(this, name, rawNode = rawNode, localNameOnly = true)
-
-        // Piping it through register type will ensure that in any case we return the one unique
-        // type object (per scope) for it.
-        return c.typeManager.registerType(type)
     }
+
+    // Otherwise, we either need to create the type because of the generics or because we do not
+    // know the type yet.
+    var type = ObjectType(name, generics, false, language)
+    // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
+    // to refer by the local name because we will treat types as sort of references when
+    // creating them and resolve them later.
+    type.applyMetadata(this, name, rawNode = rawNode, localNameOnly = true)
+
+    // Piping it through register type will ensure that in any case we return the one unique
+    // type object (per scope) for it.
+    return c.typeManager.registerType(type)
 }
 
 /**
