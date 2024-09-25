@@ -79,7 +79,11 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Check for a possible typedef
             var target = ctx?.scopeManager?.typedefFor(type.name, type.scope)
             if (target != null) {
-                if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
+                if (
+                    target.typeOrigin == Type.Origin.UNRESOLVED &&
+                        type != target &&
+                        target is ObjectType
+                ) {
                     // Make sure our typedef target is resolved
                     resolveType(target)
                 }
@@ -98,8 +102,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             // If we found the "real" declared type, we can normalize the name of our scoped type
-            // and
-            // set the name to the declared type.
+            // and set the name to the declared type.
             if (declares != null) {
                 var declaredType = declares.declaredType
                 log.debug(
@@ -122,7 +125,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun handleNode(node: Node?) {
         if (node is RecordDeclaration) {
-            for (t in typeManager.firstOrderTypes.values.flatten()) {
+            for (t in typeManager.firstOrderTypesMap.values.flatten()) {
                 if (t.name == node.name && t is ObjectType) {
                     // The node is the class of the type t
                     t.recordDeclaration = node
@@ -136,7 +139,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     fun resolveFirstOrderTypes() {
-        for (type in typeManager.firstOrderTypes.values.flatten().sortedBy { it.name }) {
+        for (type in typeManager.firstOrderTypesMap.values.flatten().sortedBy { it.name }) {
             if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
                 resolveType(type)
             }

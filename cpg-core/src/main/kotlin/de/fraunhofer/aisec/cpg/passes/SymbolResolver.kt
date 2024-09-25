@@ -285,7 +285,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
             val parentName = (current.name.parent ?: current.name).toString()
             var type = current.objectType(parentName)
-            TypeResolver.resolveType(type)
+            if (type is ObjectType) {
+                TypeResolver.resolveType(type)
+            }
             type
         } else {
             current.unknownType()
@@ -426,10 +428,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         var record = base.recordDeclaration
-        if (record == null) {
+        if (base !is UnknownType && base !is AutoType && record == null) {
             // We access an unknown field of an unknown record. so we need to handle that along the
             // way as well
-            record = ctx.tryRecordInference(base, locationHint = ref)
+            record = ctx.tryRecordInference(base, locationHint = ref, updateType = true)
         }
 
         if (record == null) {
@@ -699,7 +701,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (records.isEmpty()) {
             records =
                 listOfNotNull(
-                    ctx.tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
+                    ctx.tryRecordInference(
+                        bestGuess?.root ?: unknownType(),
+                        locationHint = call,
+                        updateType = true
+                    )
                 )
         }
         records = records.distinct()
@@ -967,10 +973,14 @@ fun TranslationContext.tryNamespaceInference(
 /**
  * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
  * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ *
+ * If [updateType] is set to true, also the [ObjectType.recordDeclaration] is adjusted. This is only
+ * needed if we call this function in the [SymbolResolver] (and not in the [TypeResolver]).
  */
 fun TranslationContext.tryRecordInference(
     type: Type,
-    locationHint: Node? = null
+    locationHint: Node? = null,
+    updateType: Boolean = false,
 ): RecordDeclaration? {
     val kind =
         if (type.language is HasStructs) {
@@ -1010,11 +1020,10 @@ fun TranslationContext.tryRecordInference(
 
     // update the type's record. Because types are only unique per scope, we potentially need to
     // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
-    if (record != null) {
-        typeManager.firstOrderTypes.values
-            .flatten()
-            .filter { it.name == record.name }
-            .forEach { it.recordDeclaration = record }
+    if (updateType && record != null) {
+        typeManager.firstOrderTypesMap[record.name.toString()]?.forEach {
+            it.recordDeclaration = record
+        }
     }
 
     return record

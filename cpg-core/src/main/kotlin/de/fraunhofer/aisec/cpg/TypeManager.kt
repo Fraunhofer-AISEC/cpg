@@ -54,7 +54,19 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes = ConcurrentHashMap<String, MutableList<Type>>()
+    /**
+     * A map that contains all first order types organized by their type name as key. This is
+     * extremely helpful for retrieving all possibly types for a given type name, which is done
+     * often during frontend parsing and symbol resolving.
+     */
+    val firstOrderTypesMap = ConcurrentHashMap<String, MutableList<Type>>()
+
+    /** Retrieves the list of all *unique* first order types. */
+    val firstOrderTypes: Set<Type>
+        get() {
+            return synchronized(firstOrderTypesMap) { firstOrderTypesMap.values.flatten().toSet() }
+        }
+
     val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
 
     /**
@@ -197,7 +209,7 @@ class TypeManager {
         }
 
         if (t.isFirstOrderType) {
-            var types = firstOrderTypes.computeIfAbsent(t.name.toString()) { mutableListOf() }
+            var types = firstOrderTypesMap.computeIfAbsent(t.name.toString()) { mutableListOf() }
             // Make sure we only ever return one unique object per type
             if (!types.add(t)) {
                 return types.first { it == t && it is T } as T
@@ -225,7 +237,7 @@ class TypeManager {
 
     /** Checks, whether a [Type] with the given [name] exists. */
     fun typeExists(name: CharSequence): Boolean {
-        return firstOrderTypes.values.flatten().any { type: Type -> type.root.name == name }
+        return firstOrderTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -248,7 +260,7 @@ class TypeManager {
             return primitiveType
         }
 
-        return firstOrderTypes[fqn.toString()]?.firstOrNull {
+        return firstOrderTypesMap[fqn.toString()]?.firstOrNull {
             (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
                 it.root.name == fqn &&
                 if (generics != null) {

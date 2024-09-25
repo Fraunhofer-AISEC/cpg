@@ -115,10 +115,10 @@ fun LanguageProvider.objectType(
 
     val scope = c.scopeManager.currentScope
 
-    synchronized(c.typeManager.firstOrderTypes) {
+    synchronized(c.typeManager.firstOrderTypesMap) {
         // We can try to look up the type by its name and return it, if it already exists.
         var type =
-            c.typeManager.firstOrderTypes[name.toString()]?.firstOrNull {
+            c.typeManager.firstOrderTypesMap[name.toString()]?.firstOrNull {
                 it is ObjectType &&
                     it.name == name &&
                     it.scope == scope &&
