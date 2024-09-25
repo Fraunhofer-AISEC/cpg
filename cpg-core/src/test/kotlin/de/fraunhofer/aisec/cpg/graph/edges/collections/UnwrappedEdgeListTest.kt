@@ -26,6 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,6 +53,39 @@ class UnwrappedEdgeListTest {
             assertEquals(1, node2.prevEOGEdges.size)
             assertEquals(1, node3.prevEOGEdges.size)
             assertEquals(1, node3.prevEOG.size)
+        }
+    }
+
+    @Test
+    fun testAddIndex() {
+        with(TestLanguageFrontend()) {
+            var node1 = newLiteral(1)
+            var node2 = newLiteral(2)
+            var node3 = newLiteral(3)
+            var node4 = newLiteral(4)
+
+            var list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
+            list += node2
+            list += node3
+
+            assertEquals(2, list.size)
+            list.forEachIndexed { i, edge ->
+                assertEquals(i, edge.index, "index mismatch $i != ${edge.index}")
+            }
+
+            // insert something at position 1 (using the unwrapped list), this should shift the
+            // existing entries (after the position) + 1
+            var unwrapped = list.unwrap()
+            unwrapped.add(1, node4)
+            assertEquals(3, list.size)
+
+            // indices should still be in sync afterward
+            list.forEachIndexed { i, edge ->
+                assertEquals(i, edge.index, "index mismatch $i != ${edge.index}")
+            }
+
+            // the order should be node2, node4, node3
+            assertEquals<List<Node>>(listOf(node2, node4, node3), unwrapped)
         }
     }
 
