@@ -56,7 +56,7 @@ class Name(
          * prefixed by [prefix], followed by a separator character [separatorChar] and finalized by
          * a random UUID ("-" separators also replaced with [separatorChar]).
          */
-        fun getRandomTempName(prefix: String, separatorChar: Char = '_'): Name {
+        fun random(prefix: String, separatorChar: Char = '_'): Name {
             val randomPart = Uuid.random().toString().replace('-', separatorChar)
             return Name(localName = prefix + separatorChar + randomPart)
         }

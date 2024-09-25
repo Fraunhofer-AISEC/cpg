@@ -220,7 +220,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun getDummyAssign(
         loopVar: InitializerListExpression
     ): Pair<Reference, AssignExpression> {
-        val tempVarName = Name.getRandomTempName(prefix = "loopMultiVarHelperVar")
+        val tempVarName = Name.random(prefix = "loopMultiVarHelperVar")
         val tempRef = newReference(name = tempVarName)
         tempRef.isImplicit = true
         val assign =
