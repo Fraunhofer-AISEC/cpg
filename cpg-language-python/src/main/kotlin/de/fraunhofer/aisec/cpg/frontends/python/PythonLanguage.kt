@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
-import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
-import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.of
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
