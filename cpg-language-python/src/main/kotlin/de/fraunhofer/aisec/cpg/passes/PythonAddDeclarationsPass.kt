@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReferenceScopeModifierStatement
@@ -116,7 +117,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 ) {
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
-                    scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                    scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
                         newFieldDeclaration(node.name)
                     }
                 } else if (node is MemberExpression) {
@@ -129,9 +130,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             } else if (scopeManager.isInRecord) {
                 // We end up here for fields declared directly in the class body. These are class
                 // attributes; more or less static fields.
-                scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                    newFieldDeclaration(node.name)
-                }
+                newFieldDeclaration(node.name)
             } else {
                 null
             }
@@ -163,18 +162,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             decl.scope
         )
 
-        if (decl is FieldDeclaration) {
-            scopeManager.currentRecord?.addField(decl)
-            scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                scopeManager.addDeclaration(decl)
-            }
-        } else {
-            if (targetScope != null) {
-                scopeManager.withScope(targetScope) { scopeManager.addDeclaration(decl) }
-            } else {
-                scopeManager.addDeclaration(decl)
-            }
-        }
+        // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
+        // creation time
+        scopeManager.withScope(decl.scope) { scopeManager.addDeclaration(decl) }
+
         return decl
     }
 
