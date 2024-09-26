@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -64,7 +65,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
-            is Python.AST.Global,
+            is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Match,
             is Python.AST.Nonlocal,
             is Python.AST.Raise,
@@ -524,6 +525,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.addDeclaration(result)
 
         return wrapDeclarationToStatement(result)
+    }
+
+    private fun handleGlobal(global: Python.AST.Global): ReferenceScopeModifierStatement {
+        // Technically, our global scope is not identical to the python "global" scope. The reason
+        // behind that is that we wrap each file in a namespace (as defined in the python spec). So
+        // the "global" scope is actually our current namespace scope.
+        var pythonGlobalScope =
+            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
+
+        var stmt = newReferenceScopeModifierStatement(pythonGlobalScope, rawNode = global)
+        stmt.references = global.names.map { newReference(it) }.toMutableList()
+        return stmt
     }
 
     /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */

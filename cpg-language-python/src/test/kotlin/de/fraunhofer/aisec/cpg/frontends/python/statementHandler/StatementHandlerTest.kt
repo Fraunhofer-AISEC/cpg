@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.*
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -231,5 +232,21 @@ class StatementHandlerTest : BaseTest() {
             assertNotNull(b)
             assertEquals(assertResolvedType("str"), b.type)
         }
+    }
+
+    @Test
+    fun testGlobal() {
+        val result =
+            analyze(listOf(topLevel.resolve("global.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        // There should be two variable declarations, one local and one global
+        var cVariables = result.variables("c")
+        assertEquals(2, cVariables.size)
+
+        var globalC = cVariables.firstOrNull { it.scope is NameScope }
+        assertNotNull(globalC)
     }
 }

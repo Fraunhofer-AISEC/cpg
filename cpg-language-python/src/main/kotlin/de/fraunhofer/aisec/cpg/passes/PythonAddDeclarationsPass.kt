@@ -32,7 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReferenceScopeModifierStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -81,17 +83,33 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     /*
      * Return null when not creating a new decl
      */
-    private fun handleReference(node: Reference): VariableDeclaration? {
+    private fun handleReference(node: Reference, parentNode: Node): VariableDeclaration? {
         if (node.resolutionHelper is CallExpression) {
             return null
         }
 
-        // TODO(oxisto): Actually the logic here is far more complex in reality, taking into account
-        //  local and global variables, but for now we just resolve it using the scope manager
-        val resolved = scopeManager.resolveReference(node)
+        // Look for a potential scope modifier for this reference
+        var targetScope = scopeManager.currentScope?.lookForScopeModifier(node.name)
+
+        // There are a couple of things to consider now
+        // - If this a WRITE access, we need
+        //   - to look for a local variable, unless
+        //   - a global keyword is present for this variable and scope
+        var symbol =
+            if (node.access == AccessValues.WRITE) {
+                if (targetScope != null) {
+                    scopeManager.findSymbols(node.name, node.location, targetScope)
+                } else {
+                    scopeManager.findSymbols(node.name, node.location) {
+                        it.scope == scopeManager.currentScope
+                    }
+                }
+            } else {
+                listOf()
+            }
 
         // Nothing to create
-        if (resolved != null) return null
+        if (symbol.isNotEmpty()) return null
 
         val decl =
             if (scopeManager.isInRecord) {
@@ -113,6 +131,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         v
                     }
                 } else {
+                    // TODO(oxisto): Does this make sense?
                     val field =
                         scopeManager.withScope(scopeManager.currentRecord?.scope) {
                             newFieldDeclaration(node.name)
@@ -120,12 +139,28 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     field
                 }
             } else {
-                newVariableDeclaration(node.name)
+                if (targetScope != null) {
+                    scopeManager.withScope(targetScope) { newVariableDeclaration(node.name) }
+                } else {
+                    newVariableDeclaration(node.name)
+                }
             }
 
         decl.code = node.code
         decl.location = node.location
         decl.isImplicit = true
+
+        // TODO: trace?
+        log.debug(
+            "Creating dynamic {} {} in {}",
+            if (decl is FieldDeclaration) {
+                "field"
+            } else {
+                "variable"
+            },
+            decl.name,
+            decl.scope
+        )
 
         if (decl is FieldDeclaration) {
             scopeManager.currentRecord?.addField(decl)
@@ -133,7 +168,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 scopeManager.addDeclaration(decl)
             }
         } else {
-            scopeManager.addDeclaration(decl)
+            if (targetScope != null) {
+                scopeManager.withScope(targetScope) { scopeManager.addDeclaration(decl) }
+            } else {
+                scopeManager.addDeclaration(decl)
+            }
         }
         return decl
     }
@@ -141,7 +180,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
             (target as? Reference)?.let {
-                val handled = handleReference(target)
+                val handled = handleReference(target, assignExpression)
                 if (handled is Declaration) {
                     // We cannot assign an initializer here because this will lead to duplicate
                     // DFG edges, but we need to propagate the type information from our value
@@ -163,9 +202,20 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleForEach(node: ForEachStatement) {
         when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleReference(forVar)
-                (handled as? Declaration)?.let { scopeManager.addDeclaration(it) }
+                val handled = handleReference(node.variable as Reference, node)
+                if (handled is Declaration) {
+                    handled.let { node.addDeclaration(it) }
+                }
             }
         }
     }
+}
+
+private fun Scope.lookForScopeModifier(name: Name): Scope? {
+    // Really not the best way to do that
+    var modifierNode =
+        this.astNode.allChildren<ReferenceScopeModifierStatement>().firstOrNull {
+            it.references.any { it.name == name }
+        }
+    return modifierNode?.targetScope
 }
