@@ -41,8 +41,7 @@ class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
-    HasFunctionStyleConstruction,
-    HasAnonymousIdentifier {
+    HasFunctionStyleConstruction {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient

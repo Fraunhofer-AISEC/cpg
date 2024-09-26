@@ -70,7 +70,7 @@ class StatementHandlerTest : BaseTest() {
         assertEquals(1, tryAll.tryBlock?.statements?.size)
 
         assertEquals(3, tryAll.catchClauses.size)
-        assertLocalName("_", tryAll.catchClauses[0].parameter)
+        assertLocalName("", tryAll.catchClauses[0].parameter)
         assertLocalName("e", tryAll.catchClauses[1].parameter)
         assertNull(tryAll.catchClauses[2].parameter)
 

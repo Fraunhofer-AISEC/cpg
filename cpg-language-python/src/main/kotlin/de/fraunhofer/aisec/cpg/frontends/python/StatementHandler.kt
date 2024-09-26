@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.frontends.HasAnonymousIdentifier
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
@@ -100,9 +99,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // the parameter can have a name, or we use the anonymous identifier _
                     catchClause.parameter =
                         newVariableDeclaration(
-                            name =
-                                node.name
-                                    ?: (language as? HasAnonymousIdentifier)?.anonymousIdentifier,
+                            name = node.name ?: "",
                             type = frontend.typeOf(node.type),
                             rawNode = node
                         )
