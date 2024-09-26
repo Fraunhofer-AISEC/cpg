@@ -36,9 +36,9 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StatementHandlerTest : BaseTest() {
