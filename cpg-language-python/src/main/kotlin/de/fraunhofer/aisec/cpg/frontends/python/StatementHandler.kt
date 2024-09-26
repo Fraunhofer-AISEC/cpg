@@ -278,14 +278,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ): Pair<Reference, AssignExpression> {
         val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
-        tempRef.isImplicit = true
         val assign =
             newAssignExpression(
-                operatorCode = "=",
-                lhs = (loopVar).initializers,
-                rhs = listOf(tempRef)
-            )
-        assign.isImplicit = true
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef)
+                )
+                .implicit()
+                .codeAndLocationFrom(loopVar)
         return Pair(tempRef, assign)
     }
 
