@@ -246,7 +246,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             else -> {
                 ret.variable =
                     newProblemExpression(
-                        problem = "handleFor: cannot handle loop variable.",
+                        problem = "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
                         rawNode = node.target
                     )
                 ret.statement = makeBlock(node.body, parentNode = node)
