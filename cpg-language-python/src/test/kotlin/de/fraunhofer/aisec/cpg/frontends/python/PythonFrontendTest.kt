@@ -152,7 +152,7 @@ class PythonFrontendTest : BaseTest() {
         val stmt = compStmt.statements[1] as? AssignExpression
         assertNotNull(stmt)
 
-        val a = stmt.declarations.firstOrNull() as? VariableDeclaration
+        val a = stmt.declarations.firstOrNull()
         assertNotNull(a)
 
         assertLocalName("a", a)
@@ -253,12 +253,12 @@ class PythonFrontendTest : BaseTest() {
         val s2 = body.statements[1] as? MemberCallExpression
         assertNotNull(s2)
 
-        val c1 = s1.declarations.firstOrNull() as? VariableDeclaration
+        val c1 = s1.declarations.firstOrNull()
         assertNotNull(c1)
         assertLocalName("c1", c1)
         val ctor = c1.firstAssignment as? ConstructExpression
         assertNotNull(ctor)
-        assertEquals(ctor.constructor, cls.constructors.firstOrNull() as? ConstructorDeclaration)
+        assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
 
         assertEquals(c1, (s2.base as? Reference)?.refersTo)
@@ -284,7 +284,7 @@ class PythonFrontendTest : BaseTest() {
         val assignExpr = (main.body as? Block)?.statements?.firstOrNull() as? AssignExpression
         assertNotNull(assignExpr)
 
-        val foo = assignExpr.declarations.firstOrNull() as? VariableDeclaration
+        val foo = assignExpr.declarations.firstOrNull()
         assertNotNull(foo)
         assertLocalName("foo", foo)
         assertEquals(tu.primitiveType("int"), foo.type)
@@ -490,9 +490,9 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(1, recordFoo.methods.size)
         assertEquals(1, recordFoo.constructors.size)
-        val fooCtor = recordFoo.constructors[0] as? ConstructorDeclaration
+        val fooCtor = recordFoo.constructors[0]
         assertNotNull(fooCtor)
-        val foobar = recordFoo.methods[0] as? MethodDeclaration
+        val foobar = recordFoo.methods[0]
         assertNotNull(foobar)
 
         assertLocalName("__init__", fooCtor)
@@ -788,7 +788,7 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val mainBody = (main as? FunctionDeclaration)?.body as? Block
+        val mainBody = main.body as? Block
         assertNotNull(mainBody)
 
         val whlStmt = mainBody.statements[3] as? WhileStatement
@@ -998,8 +998,8 @@ class PythonFrontendTest : BaseTest() {
 
         val kvs = commentedNodes.filterIsInstance<KeyValueExpression>()
         assertEquals(2, kvs.size)
-        assertEquals("# a entry", kvs.first { it.code?.contains("a") ?: false }.comment)
-        assertEquals("# b entry", kvs.first { it.code?.contains("b") ?: false }.comment)
+        assertEquals("# a entry", kvs.first { it.code?.contains("a") == true }.comment)
+        assertEquals("# b entry", kvs.first { it.code?.contains("b") == true }.comment)
     }
 
     @Test
