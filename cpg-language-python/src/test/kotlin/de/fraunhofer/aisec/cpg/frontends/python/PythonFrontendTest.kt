@@ -872,10 +872,10 @@ class PythonFrontendTest : BaseTest() {
           rest of the loop
         ```
          */
-        val forVariableImplicitStmt = forBody.statements.first() as? AssignExpression
+        val forVariableImplicitStmt = forBody.statements.firstOrNull() as? AssignExpression
         assertNotNull(forVariableImplicitStmt)
         assertEquals("=", forVariableImplicitStmt.operatorCode)
-        assertEquals(forStmt.variable, forVariableImplicitStmt.rhs.first())
+        assertEquals(forStmt.variable, forVariableImplicitStmt.rhs.firstOrNull())
         val (t1Decl, t2Decl, t3Decl) = forVariableImplicitStmt.declarations
         val (t1RefAssign, t2RefAssign, t3RefAssign) = forVariableImplicitStmt.lhs
         assertNotNull(t1Decl)
@@ -971,7 +971,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(1, functions.size)
         assertEquals(
             "# a function",
-            functions.firstOrNull()?.comment,
+            functions.first()?.comment,
         )
 
         val literals = commentedNodes.filterIsInstance<Literal<String>>()
