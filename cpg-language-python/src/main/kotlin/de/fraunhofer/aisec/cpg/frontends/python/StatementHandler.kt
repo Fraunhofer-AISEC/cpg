@@ -276,7 +276,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         loopVar: InitializerListExpression
     ): Pair<Reference, AssignExpression> {
         val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
-        val tempRef = newReference(name = tempVarName)
+        val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
         tempRef.isImplicit = true
         val assign =
             newAssignExpression(
