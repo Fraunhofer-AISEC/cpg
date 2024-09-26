@@ -329,3 +329,18 @@ fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): DefaultStatement
     log(node)
     return node
 }
+
+/**
+ * Creates a new [RaiseStatement]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newRaiseStatement(rawNode: Any? = null): RaiseStatement {
+    val node = RaiseStatement()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    log(node)
+    return node
+}

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.RaiseStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -70,10 +71,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Delete -> handleDelete(node)
+            is Python.AST.Raise -> handleRaise(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
-            is Python.AST.Raise,
             is Python.AST.Try,
             is Python.AST.TryStar,
             is Python.AST.With,
@@ -83,6 +84,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
+     * [RaiseStatement].
+     */
+    private fun handleRaise(raise: Python.AST.Raise): RaiseStatement {
+        val ret = newRaiseStatement(rawNode = raise)
+
+        raise.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
+        raise.cause?.let { ret.cause = frontend.expressionHandler.handle(it) }
+
+        return ret
     }
 
     /**
