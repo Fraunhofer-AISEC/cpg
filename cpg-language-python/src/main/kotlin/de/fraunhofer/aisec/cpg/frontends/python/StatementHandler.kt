@@ -33,18 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
@@ -72,12 +62,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
+            is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
             is Python.AST.Raise,
-            is Python.AST.Try,
             is Python.AST.TryStar,
             is Python.AST.With,
             is Python.AST.AsyncWith ->
@@ -86,6 +76,57 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates an [`excepthandler`] which can only be a
+     * [`ExceptHandler`](https://docs.python.org/3/library/ast.html#ast.ExceptHandler) to a
+     * [CatchClause].
+     *
+     * It adds all the statements to the body and will set a parameter if it exists. For the
+     * catch-all clause, we do not set the [CatchClause.parameter].
+     */
+    private fun handleBaseExcepthandler(node: Python.AST.BaseExcepthandler): CatchClause {
+        return when (node) {
+            is Python.AST.ExceptHandler -> {
+                val catchClause = newCatchClause(rawNode = node)
+                catchClause.body = makeBlock(node.body, node)
+                // The parameter can have a type but if the type is None/null, it's the "catch-all"
+                // clause.
+                // In this case, it also cannot have a name, so we can skip the variable
+                // declaration.
+                if (node.type != null) {
+                    // the parameter can have a name, or we use the anonymous identifier _
+                    catchClause.parameter =
+                        newVariableDeclaration(
+                            name = node.name ?: "",
+                            type = frontend.typeOf(node.type),
+                            rawNode = node
+                        )
+                }
+                catchClause
+            }
+        }
+    }
+
+    /**
+     * Translates a Python [`Try`](https://docs.python.org/3/library/ast.html#ast.Try) into a
+     * [TryStatement].
+     */
+    private fun handleTryStatement(node: Python.AST.Try): TryStatement {
+        val tryStatement = newTryStatement(rawNode = node)
+        tryStatement.tryBlock = makeBlock(node.body, node)
+        tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
+
+        if (node.orelse.isNotEmpty()) {
+            tryStatement.elseBlock = makeBlock(node.orelse, node)
+        }
+
+        if (node.finalbody.isNotEmpty()) {
+            tryStatement.finallyBlock = makeBlock(node.finalbody, node)
+        }
+
+        return tryStatement
     }
 
     /**
