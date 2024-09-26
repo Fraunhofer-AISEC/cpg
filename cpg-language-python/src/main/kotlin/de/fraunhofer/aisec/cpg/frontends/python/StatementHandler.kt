@@ -535,7 +535,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
 
         var stmt = newReferenceScopeModifierStatement(pythonGlobalScope, rawNode = global)
-        stmt.references = global.names.map { newReference(it) }.toMutableList()
+        stmt.references = global.names.map { newReference(it, rawNode = global) }.toMutableList()
         return stmt
     }
 

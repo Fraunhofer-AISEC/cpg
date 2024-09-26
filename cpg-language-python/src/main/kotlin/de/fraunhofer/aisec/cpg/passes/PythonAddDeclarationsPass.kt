@@ -83,7 +83,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     /*
      * Return null when not creating a new decl
      */
-    private fun handleReference(node: Reference, parentNode: Node): VariableDeclaration? {
+    private fun handleReference(node: Reference): VariableDeclaration? {
         if (node.resolutionHelper is CallExpression) {
             return null
         }
@@ -92,20 +92,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         var targetScope = scopeManager.currentScope?.lookForScopeModifier(node.name)
 
         // There are a couple of things to consider now
-        // - If this a WRITE access, we need
-        //   - to look for a local variable, unless
-        //   - a global keyword is present for this variable and scope
         var symbol =
-            if (node.access == AccessValues.WRITE) {
-                if (targetScope != null) {
-                    scopeManager.findSymbols(node.name, node.location, targetScope)
-                } else {
-                    scopeManager.findSymbols(node.name, node.location) {
-                        it.scope == scopeManager.currentScope
-                    }
-                }
+            // Since this is a WRITE access, we need
+            //   - to look for a local variable, unless
+            //   - a global keyword is present for this variable and scope
+            if (targetScope != null) {
+                scopeManager.findSymbols(node.name, node.location, targetScope)
             } else {
-                listOf()
+                scopeManager.findSymbols(node.name, node.location) {
+                    it.scope == scopeManager.currentScope
+                }
             }
 
         // Nothing to create
@@ -180,7 +176,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
             (target as? Reference)?.let {
-                val handled = handleReference(target, assignExpression)
+                val handled = handleReference(target)
                 if (handled is Declaration) {
                     // We cannot assign an initializer here because this will lead to duplicate
                     // DFG edges, but we need to propagate the type information from our value
@@ -202,7 +198,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleForEach(node: ForEachStatement) {
         when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleReference(node.variable as Reference, node)
+                val handled = handleReference(node.variable as Reference)
                 if (handled is Declaration) {
                     handled.let { node.addDeclaration(it) }
                 }
