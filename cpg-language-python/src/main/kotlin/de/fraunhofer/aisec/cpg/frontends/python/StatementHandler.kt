@@ -63,7 +63,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
-            is Python.AST.Delete,
+            is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
@@ -127,6 +127,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         return tryStatement
+    }
+
+    /**
+     * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete) into a
+     * [DeleteExpression].
+     */
+    private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
+        val delete = newDeleteExpression(rawNode = node)
+        node.targets.forEach { target ->
+            if (target is Python.AST.Subscript) {
+                delete.operands.add(frontend.expressionHandler.handle(target))
+            } else {
+                delete.additionalProblems +=
+                    newProblemExpression(
+                        problem =
+                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                        rawNode = target
+                    )
+            }
+        }
+        return delete
     }
 
     /**
@@ -420,7 +441,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body, parentNode = s)
+            // Make sure we open a new (block) scope for the function body. This is not a 1:1
+            // mapping to python scopes, since python only has a "function scope", but in the CPG
+            // the function scope only comprises the function arguments, and we need a block scope
+            // to
+            // hold all local variables within the function body.
+            result.body = makeBlock(s.body, parentNode = s, enterScope = true)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -626,14 +652,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
+     *
+     * Optionally, a new scope will be opened when [enterScope] is specified. This should be done
+     * VERY carefully, as Python has a very limited set of scopes and is most likely only to be used
+     * by [handleFunctionDef].
      */
     private fun makeBlock(
         stmts: List<Python.AST.BaseStmt>,
-        parentNode: Python.AST.WithLocation
+        parentNode: Python.AST.WithLocation,
+        enterScope: Boolean = false,
     ): Block {
         val result = newBlock()
+        if (enterScope) {
+            frontend.scopeManager.enterScope(result)
+        }
+
         for (stmt in stmts) {
             result.statements += handle(stmt)
+        }
+
+        if (enterScope) {
+            frontend.scopeManager.leaveScope(result)
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt
