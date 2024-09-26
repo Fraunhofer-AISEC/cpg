@@ -889,7 +889,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(t3Decl, t3RefAssign.refersTo)
 
         // print("bug ... {} {} {}".format(t1, t2, t3))
-        val forBodyStmt = forBody.statements[1] as? CallExpression
+        val forBodyStmt = forBody.statements<CallExpression>(1)
         assertNotNull(forBodyStmt)
         assertLocalName("print", forBodyStmt)
 
