@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
@@ -107,39 +106,45 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Nothing to create
         if (symbol.isNotEmpty()) return null
 
-        val decl =
-            if (scopeManager.isInRecord) {
-                if (scopeManager.isInFunction) {
-                    if (
-                        node is MemberExpression &&
-                            node.base.name ==
-                                (scopeManager.currentFunction as? MethodDeclaration)?.receiver?.name
-                    ) {
-                        // We need to temporarily jump into the scope of the current record to
-                        // add the field
-                        val field =
-                            scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                                newFieldDeclaration(node.name)
-                            }
-                        field
-                    } else {
-                        val v = newVariableDeclaration(node.name)
-                        v
+        // First, check if we need to create a field
+        var field: FieldDeclaration? =
+            if (scopeManager.isInRecord && scopeManager.isInFunction) {
+                // Check, whether we are referring to a "self.X", which would create a field
+                if (
+                    node is MemberExpression &&
+                        node.base.name == scopeManager.currentMethod?.receiver?.name
+                ) {
+                    // We need to temporarily jump into the scope of the current record to
+                    // add the field. These are instance attributes
+                    scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                        newFieldDeclaration(node.name)
                     }
+                } else if (node is MemberExpression) {
+                    // If this is any other member expression, we are usually not interested in
+                    // creating fields, except if this is a receiver
+                    return null
                 } else {
-                    // TODO(oxisto): Does this make sense?
-                    val field =
-                        scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                            newFieldDeclaration(node.name)
-                        }
-                    field
+                    null
+                }
+            } else if (scopeManager.isInRecord) {
+                // We end up here for fields declared directly in the class body. These are class
+                // attributes; more or less static fields.
+                scopeManager.withScope(scopeManager.currentRecord?.scope) {
+                    newFieldDeclaration(node.name)
                 }
             } else {
-                if (targetScope != null) {
-                    scopeManager.withScope(targetScope) { newVariableDeclaration(node.name) }
-                } else {
-                    newVariableDeclaration(node.name)
-                }
+                null
+            }
+
+        // If we didn't create any field up to this point and if we are still have not returned, we
+        // can create a normal variable. We need to take scope modifications into account.
+        var decl =
+            if (field == null && targetScope != null) {
+                scopeManager.withScope(targetScope) { newVariableDeclaration(node.name) }
+            } else if (field == null) {
+                newVariableDeclaration(node.name)
+            } else {
+                field
             }
 
         decl.code = node.code

@@ -649,10 +649,16 @@ class PythonFrontendTest : BaseTest() {
 
         val classFieldDeclaredInFunction = clsFoo.fields["classFieldDeclaredInFunction"]
         assertNotNull(classFieldDeclaredInFunction)
-        // assertEquals(3, clsFoo.fields.size) // TODO should "self" be considered a field here?
-
         assertNull(classFieldNoInitializer.initializer)
-        assertNotNull(classFieldWithInit)
+
+        val localClassFieldNoInitializer = methBar.variables["classFieldNoInitializer"]
+        assertNotNull(localClassFieldNoInitializer)
+
+        val localClassFieldWithInit = methBar.variables["classFieldWithInit"]
+        assertNotNull(localClassFieldNoInitializer)
+
+        val localClassFieldDeclaredInFunction = methBar.variables["classFieldDeclaredInFunction"]
+        assertNotNull(localClassFieldNoInitializer)
 
         // classFieldNoInitializer = classFieldWithInit
         val assignClsFieldOutsideFunc = clsFoo.statements[2] as? AssignExpression
@@ -675,35 +681,35 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
-        val barStmt1 = barBody.statements[1] as? AssignExpression
+        val barStmt1 = barBody.statements<AssignExpression>(1)
         assertNotNull(barStmt1)
         assertEquals(classFieldNoInitializer, (barStmt1.lhs<MemberExpression>())?.refersTo)
 
         // self.classFieldWithInit = 12
-        val barStmt2 = barBody.statements[2] as? AssignExpression
+        val barStmt2 = barBody.statements<AssignExpression>(2)
         assertNotNull(barStmt2)
         assertEquals(classFieldWithInit, (barStmt2.lhs<MemberExpression>())?.refersTo)
 
         // classFieldNoInitializer = "shadowed"
-        val barStmt3 = barBody.statements[3] as? AssignExpression
+        val barStmt3 = barBody.statements<AssignExpression>(3)
         assertNotNull(barStmt3)
         assertEquals("=", barStmt3.operatorCode)
-        assertEquals(classFieldNoInitializer, (barStmt3.lhs<Reference>())?.refersTo)
-        assertEquals("shadowed", (barStmt3.rhs<Literal<*>>())?.value)
+        assertRefersTo(barStmt3.lhs<Reference>(), localClassFieldNoInitializer)
+        assertLiteralValue("shadowed", barStmt3.rhs<Literal<String>>())
 
         // classFieldWithInit = "shadowed"
-        val barStmt4 = barBody.statements[4] as? AssignExpression
+        val barStmt4 = barBody.statements<AssignExpression>(4)
         assertNotNull(barStmt4)
         assertEquals("=", barStmt4.operatorCode)
-        assertEquals(classFieldWithInit, (barStmt4.lhs<Reference>())?.refersTo)
-        assertEquals("shadowed", (barStmt4.rhs<Literal<*>>())?.value)
+        assertRefersTo(barStmt4.lhs<Reference>(), localClassFieldWithInit)
+        assertLiteralValue("shadowed", barStmt4.rhs<Literal<String>>())
 
         // classFieldDeclaredInFunction = "shadowed"
-        val barStmt5 = barBody.statements[5] as? AssignExpression
+        val barStmt5 = barBody.statements<AssignExpression>(5)
         assertNotNull(barStmt5)
         assertEquals("=", barStmt5.operatorCode)
-        assertEquals(classFieldDeclaredInFunction, (barStmt5.lhs<Reference>())?.refersTo)
-        assertEquals("shadowed", (barStmt5.rhs<Literal<*>>())?.value)
+        assertRefersTo(barStmt5.lhs<Reference>(), localClassFieldDeclaredInFunction)
+        assertLiteralValue("shadowed", barStmt5.rhs<Literal<String>>())
 
         /* TODO:
         foo = Foo()
