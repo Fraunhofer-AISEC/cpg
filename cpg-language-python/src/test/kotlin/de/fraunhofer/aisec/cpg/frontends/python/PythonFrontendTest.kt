@@ -971,7 +971,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(1, functions.size)
         assertEquals(
             "# a function",
-            functions.first()?.comment,
+            functions.first().comment,
         )
 
         val literals = commentedNodes.filterIsInstance<Literal<String>>()
