@@ -179,6 +179,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             )
         }
 
+        newReference("a").implicit().codeAndLocationFrom(loopVar)
+
         ret.iterable = frontend.expressionHandler.handle(node.iter)
         ret.variable = frontend.expressionHandler.handle(node.target)
         ret.statement = makeBlock(node.body, parentNode = node)

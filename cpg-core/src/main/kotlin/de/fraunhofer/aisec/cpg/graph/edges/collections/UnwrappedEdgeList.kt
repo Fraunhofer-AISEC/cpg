@@ -103,6 +103,11 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return -1
     }
 
+    override fun toString(): String {
+        var items = this.iterator().asSequence().toList()
+        return items.toString()
+    }
+
     inner class ListIterator(
         var edgeIterator: MutableListIterator<EdgeType>,
     ) : MutableListIterator<NodeType> {
