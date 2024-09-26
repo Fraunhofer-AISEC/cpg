@@ -198,7 +198,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * Translates a Python [`For`](https://docs.python.org/3/library/ast.html#ast.For) into an
      * [ForEachStatement].
      *
-     * PPython supports implicit unpacking of multiple loop variables. To map this to CPG node, we
+     * Python supports implicit unpacking of multiple loop variables. To map this to CPG node, we
      * translate the following implicit unpacking of code like this:
      * ```python
      * for a, b, c in someNestedList:
@@ -246,7 +246,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             else -> {
                 ret.variable =
                     newProblemExpression(
-                        problem = "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                        problem =
+                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
                         rawNode = node.target
                     )
                 ret.statement = makeBlock(node.body, parentNode = node)
