@@ -34,9 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
@@ -329,14 +331,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ): Pair<Reference, AssignExpression> {
         val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
-        tempRef.isImplicit = true
         val assign =
             newAssignExpression(
-                operatorCode = "=",
-                lhs = (loopVar).initializers,
-                rhs = listOf(tempRef)
-            )
-        assign.isImplicit = true
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef)
+                )
+                .implicit()
+                .codeAndLocationFrom(loopVar)
         return Pair(tempRef, assign)
     }
 
