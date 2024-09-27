@@ -855,7 +855,7 @@ class PythonFrontendTest : BaseTest() {
 
         val iter = forStmt.iterable as? Reference
         assertNotNull(iter)
-        assertEquals(testDeclaration, iter.refersTo)
+        assertRefersTo(iter, testDeclaration)
 
         val forBody = forStmt.statement
         assertIs<Block>(forBody)
