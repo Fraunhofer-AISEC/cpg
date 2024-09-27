@@ -174,16 +174,15 @@ class StatementHandlerTest : BaseTest() {
         val func = result.functions["test_assert"]
         assertNotNull(func, "Function 'test_assert' should be found")
 
-        val assertStatement =
-            func.body.statements.firstOrNull { it is AssertStatement } as? AssertStatement
-        assertNotNull(assertStatement, "Assert statement should be found")
+        val assertStatement = func.body.statements.firstOrNull { it is AssertStatement }
+        assertIs<AssertStatement>(assertStatement, "Assert statement should be found")
 
         val condition = assertStatement.condition
         assertNotNull(condition, "Assert statement should have a condition")
         assertEquals("1 == 1", condition.code, "The condition is incorrect")
 
-        val message = assertStatement.message as? Literal<*>
-        assertNotNull(message, "Assert statement should have a message")
+        val message = assertStatement.message
+        assertIs<Literal<*>>(message, "Assert statement should have a message")
         assertEquals("Test message", message.value, "The assert message is incorrect")
     }
 

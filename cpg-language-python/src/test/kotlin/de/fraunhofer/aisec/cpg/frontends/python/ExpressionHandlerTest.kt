@@ -43,9 +43,8 @@ class ExpressionHandlerTest {
             }
         assertNotNull(result)
 
-        val twoBoolOpCondition =
-            result.functions["twoBoolOp"]?.ifs?.singleOrNull()?.condition as? BinaryOperator
-        assertNotNull(twoBoolOpCondition)
+        val twoBoolOpCondition = result.functions["twoBoolOp"]?.ifs?.singleOrNull()?.condition
+        assertIs<BinaryOperator>(twoBoolOpCondition)
         assertEquals("and", twoBoolOpCondition.operatorCode)
         assertLocalName("a", twoBoolOpCondition.lhs)
         assertLiteralValue(true, twoBoolOpCondition.rhs)
@@ -53,24 +52,23 @@ class ExpressionHandlerTest {
         // We expect that lhs comes first in the EOG and then the rhs.
         assertContains(twoBoolOpCondition.lhs.nextEOG, twoBoolOpCondition.rhs)
 
-        val threeBoolOpCondition =
-            result.functions["threeBoolOp"]?.ifs?.singleOrNull()?.condition as? BinaryOperator
-        assertNotNull(threeBoolOpCondition)
+        val threeBoolOpCondition = result.functions["threeBoolOp"]?.ifs?.singleOrNull()?.condition
+        assertIs<BinaryOperator>(threeBoolOpCondition)
         assertEquals("and", threeBoolOpCondition.operatorCode)
         assertLocalName("a", threeBoolOpCondition.lhs)
-        val threeBoolOpConditionRhs = threeBoolOpCondition.rhs as? BinaryOperator
-        assertNotNull(threeBoolOpConditionRhs)
+        val threeBoolOpConditionRhs = threeBoolOpCondition.rhs
+        assertIs<BinaryOperator>(threeBoolOpConditionRhs)
         assertEquals("and", threeBoolOpConditionRhs.operatorCode)
         assertLiteralValue(true, threeBoolOpConditionRhs.lhs)
         assertLocalName("b", threeBoolOpConditionRhs.rhs)
 
         val threeBoolOpNoBoolCondition =
-            result.functions["threeBoolOpNoBool"]?.ifs?.singleOrNull()?.condition as? BinaryOperator
-        assertNotNull(threeBoolOpNoBoolCondition)
+            result.functions["threeBoolOpNoBool"]?.ifs?.singleOrNull()?.condition
+        assertIs<BinaryOperator>(threeBoolOpNoBoolCondition)
         assertEquals("and", threeBoolOpNoBoolCondition.operatorCode)
         assertLocalName("a", threeBoolOpNoBoolCondition.lhs)
-        val threeBoolOpNoBoolConditionRhs = threeBoolOpNoBoolCondition.rhs as? BinaryOperator
-        assertNotNull(threeBoolOpNoBoolConditionRhs)
+        val threeBoolOpNoBoolConditionRhs = threeBoolOpNoBoolCondition.rhs
+        assertIs<BinaryOperator>(threeBoolOpNoBoolConditionRhs)
         assertEquals("and", threeBoolOpNoBoolConditionRhs.operatorCode)
         assertLiteralValue(true, threeBoolOpNoBoolConditionRhs.lhs)
         assertLiteralValue("foo", threeBoolOpNoBoolConditionRhs.rhs)
@@ -82,12 +80,12 @@ class ExpressionHandlerTest {
 
         val nestedBoolOpDifferentOp =
             result.functions["nestedBoolOpDifferentOp"]?.ifs?.singleOrNull()?.condition
-                as? BinaryOperator
-        assertNotNull(nestedBoolOpDifferentOp)
+
+        assertIs<BinaryOperator>(nestedBoolOpDifferentOp)
         assertEquals("or", nestedBoolOpDifferentOp.operatorCode)
         assertLocalName("b", nestedBoolOpDifferentOp.rhs)
-        val nestedBoolOpDifferentOpLhs = nestedBoolOpDifferentOp.lhs as? BinaryOperator
-        assertNotNull(nestedBoolOpDifferentOpLhs)
+        val nestedBoolOpDifferentOpLhs = nestedBoolOpDifferentOp.lhs
+        assertIs<BinaryOperator>(nestedBoolOpDifferentOpLhs)
         assertEquals("and", nestedBoolOpDifferentOpLhs.operatorCode)
         assertLiteralValue(true, nestedBoolOpDifferentOpLhs.rhs)
         assertLocalName("a", nestedBoolOpDifferentOpLhs.lhs)
@@ -100,12 +98,11 @@ class ExpressionHandlerTest {
 
         val nestedBoolOpDifferentOp2 =
             result.functions["nestedBoolOpDifferentOp2"]?.ifs?.singleOrNull()?.condition
-                as? BinaryOperator
-        assertNotNull(nestedBoolOpDifferentOp2)
+        assertIs<BinaryOperator>(nestedBoolOpDifferentOp2)
         assertEquals("or", nestedBoolOpDifferentOp2.operatorCode)
         assertLocalName("a", nestedBoolOpDifferentOp2.lhs)
-        val nestedBoolOpDifferentOp2Rhs = nestedBoolOpDifferentOp2.rhs as? BinaryOperator
-        assertNotNull(nestedBoolOpDifferentOp2Rhs)
+        val nestedBoolOpDifferentOp2Rhs = nestedBoolOpDifferentOp2.rhs
+        assertIs<BinaryOperator>(nestedBoolOpDifferentOp2Rhs)
         assertEquals("and", nestedBoolOpDifferentOp2Rhs.operatorCode)
         assertLiteralValue(true, nestedBoolOpDifferentOp2Rhs.lhs)
         assertLocalName("b", nestedBoolOpDifferentOp2Rhs.rhs)

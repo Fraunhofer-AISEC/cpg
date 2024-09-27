@@ -104,15 +104,17 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["function"]
         assertNotNull(p)
 
-        val foo = p.declarations.firstOrNull() as? FunctionDeclaration
-        assertNotNull(foo)
+        val foo = p.declarations.firstOrNull()
+        assertIs<FunctionDeclaration>(foo)
 
-        val bar = p.declarations[1] as? FunctionDeclaration
-        assertNotNull(bar)
+        val bar = p.declarations[1]
+        assertIs<FunctionDeclaration>(bar)
         assertEquals(2, bar.parameters.size)
 
-        var callExpression = (foo.body as? Block)?.statements?.get(0) as? CallExpression
-        assertNotNull(callExpression)
+        val fooBody = foo.body
+        assertIs<Block>(fooBody)
+        var callExpression = fooBody.statements[0]
+        assertIs<CallExpression>(callExpression)
 
         assertLocalName("bar", callExpression)
         assertEquals(bar, callExpression.invokes.firstOrNull())
@@ -128,52 +130,52 @@ class PythonFrontendTest : BaseTest() {
 
         assertLocalName("bar", bar)
 
-        val compStmt = bar.body as? Block
-        assertNotNull(compStmt)
+        val compStmt = bar.body
+        assertIs<Block>(compStmt)
         assertNotNull(compStmt.statements)
 
-        callExpression = compStmt.statements[0] as? CallExpression
-        assertNotNull(callExpression)
+        callExpression = compStmt.statements[0]
+        assertIs<CallExpression>(callExpression)
 
         assertFullName("print", callExpression)
 
-        val literal = callExpression.arguments.firstOrNull() as? Literal<*>
-        assertNotNull(literal)
+        val literal = callExpression.arguments.firstOrNull()
+        assertIs<Literal<*>>(literal)
 
         assertEquals("bar(s) here: ", literal.value)
         assertEquals(tu.primitiveType("str"), literal.type)
 
-        val ref = callExpression.arguments[1] as? Reference
-        assertNotNull(ref)
+        val ref = callExpression.arguments[1]
+        assertIs<Reference>(ref)
 
         assertLocalName("s", ref)
         assertEquals(s, ref.refersTo)
 
-        val stmt = compStmt.statements[1] as? AssignExpression
-        assertNotNull(stmt)
+        val stmt = compStmt.statements[1]
+        assertIs<AssignExpression>(stmt)
 
         val a = stmt.declarations.firstOrNull()
         assertNotNull(a)
 
         assertLocalName("a", a)
 
-        val op = a.firstAssignment as? BinaryOperator
-        assertNotNull(op)
+        val op = a.firstAssignment
+        assertIs<BinaryOperator>(op)
 
         assertEquals("+", op.operatorCode)
 
-        val lhs = op.lhs as? Literal<*>
-        assertNotNull(lhs)
+        val lhs = op.lhs
+        assertIs<Literal<*>>(lhs)
 
         assertEquals(1, (lhs.value as? Long)?.toInt())
 
-        val rhs = op.rhs as? Literal<*>
-        assertNotNull(rhs)
+        val rhs = op.rhs
+        assertIs<Literal<*>>(rhs)
 
         assertEquals(2, (rhs.value as? Long)?.toInt())
 
-        val r = compStmt.statements[3] as? ReturnStatement
-        assertNotNull(r)
+        val r = compStmt.statements[3]
+        assertIs<ReturnStatement>(r)
 
         val s3 = tu.variables["s3"]
         assertNotNull(s3)
@@ -197,21 +199,21 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["foo"]
         assertNotNull(main)
 
-        val body = main.body as? Block
-        assertNotNull(body)
+        val body = main.body
+        assertIs<Block>(body)
 
         val sel = (body.statements.firstOrNull() as? AssignExpression)?.declarations?.firstOrNull()
         assertNotNull(sel)
         assertLocalName("sel", sel)
         assertEquals(tu.primitiveType("bool"), sel.type)
 
-        val firstAssignment = sel.firstAssignment as? Literal<*>
-        assertNotNull(firstAssignment)
+        val firstAssignment = sel.firstAssignment
+        assertIs<Literal<*>>(firstAssignment)
         assertEquals(tu.primitiveType("bool"), firstAssignment.type)
         assertEquals("True", firstAssignment.code)
 
-        val `if` = body.statements[1] as? IfStatement
-        assertNotNull(`if`)
+        val `if` = body.statements[1]
+        assertIs<IfStatement>(`if`)
     }
 
     @Test
@@ -243,21 +245,21 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("someFunc", clsfunc)
 
         assertLocalName("foo", foo)
-        val body = foo.body as? Block
-        assertNotNull(body)
+        val body = foo.body
+        assertIs<Block>(body)
         assertNotNull(body.statements)
         assertEquals(2, body.statements.size)
 
-        val s1 = body.statements[0] as? AssignExpression
-        assertNotNull(s1)
-        val s2 = body.statements[1] as? MemberCallExpression
-        assertNotNull(s2)
+        val s1 = body.statements[0]
+        assertIs<AssignExpression>(s1)
+        val s2 = body.statements[1]
+        assertIs<MemberCallExpression>(s2)
 
         val c1 = s1.declarations.firstOrNull()
         assertNotNull(c1)
         assertLocalName("c1", c1)
-        val ctor = c1.firstAssignment as? ConstructExpression
-        assertNotNull(ctor)
+        val ctor = c1.firstAssignment
+        assertIs<ConstructExpression>(ctor)
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
 
@@ -281,24 +283,24 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["foo"]
         assertNotNull(main)
 
-        val assignExpr = (main.body as? Block)?.statements?.firstOrNull() as? AssignExpression
-        assertNotNull(assignExpr)
+        val assignExpr = (main.body as? Block)?.statements?.firstOrNull()
+        assertIs<AssignExpression>(assignExpr)
 
         val foo = assignExpr.declarations.firstOrNull()
         assertNotNull(foo)
         assertLocalName("foo", foo)
         assertEquals(tu.primitiveType("int"), foo.type)
 
-        val initializer = foo.firstAssignment as? ConditionalExpression
-        assertNotNull(initializer)
+        val initializer = foo.firstAssignment
+        assertIs<ConditionalExpression>(initializer)
         assertEquals(tu.primitiveType("int"), initializer.type)
 
-        val ifCond = initializer.condition as? Literal<*>
-        assertNotNull(ifCond)
-        val thenExpr = initializer.thenExpression as? Literal<*>
-        assertNotNull(thenExpr)
-        val elseExpr = initializer.elseExpression as? Literal<*>
-        assertNotNull(elseExpr)
+        val ifCond = initializer.condition
+        assertIs<Literal<*>>(ifCond)
+        val thenExpr = initializer.thenExpression
+        assertIs<Literal<*>>(thenExpr)
+        val elseExpr = initializer.elseExpression
+        assertIs<Literal<*>>(elseExpr)
 
         assertEquals(tu.primitiveType("bool"), ifCond.type)
         assertEquals(false, ifCond.value)
@@ -360,14 +362,14 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(methBar)
         assertLocalName("bar", methBar)
 
-        val barZ = (methBar.body as? Block)?.statements?.get(0) as? MemberExpression
-        assertNotNull(barZ)
+        val barZ = (methBar.body as? Block)?.statements?.get(0)
+        assertIs<MemberExpression>(barZ)
         assertEquals(fieldZ, barZ.refersTo)
 
-        val barBaz = (methBar.body as? Block)?.statements?.get(1) as? AssignExpression
-        assertNotNull(barBaz)
-        val barBazInner = barBaz.declarations[0] as? FieldDeclaration
-        assertNotNull(barBazInner)
+        val barBaz = (methBar.body as? Block)?.statements?.get(1)
+        assertIs<AssignExpression>(barBaz)
+        val barBazInner = barBaz.declarations[0]
+        assertIs<FieldDeclaration>(barBazInner)
         assertLocalName("baz", barBazInner)
         assertNotNull(barBazInner.firstAssignment)
     }
@@ -421,16 +423,16 @@ class PythonFrontendTest : BaseTest() {
         val someVarDeclaration =
             ((bar.body as? Block)?.statements?.get(0) as? AssignExpression)
                 ?.declarations
-                ?.firstOrNull() as? FieldDeclaration
-        assertNotNull(someVarDeclaration)
+                ?.firstOrNull()
+        assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertEquals(i, (someVarDeclaration.firstAssignment as? Reference)?.refersTo)
 
-        val fooMemCall = (foo.body as? Block)?.statements?.get(0) as? MemberCallExpression
-        assertNotNull(fooMemCall)
+        val fooMemCall = (foo.body as? Block)?.statements?.get(0)
+        assertIs<MemberCallExpression>(fooMemCall)
 
-        val mem = fooMemCall.callee as? MemberExpression
-        assertNotNull(mem)
+        val mem = fooMemCall.callee
+        assertIs<MemberExpression>(mem)
         assertLocalName("bar", mem)
         assertEquals(".", fooMemCall.operatorCode)
         assertFullName("class_self.Foo.bar", fooMemCall)
@@ -503,10 +505,10 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("bar", bar)
 
         assertEquals(2, (bar.body as? Block)?.statements?.size)
-        val line1 = (bar.body as? Block)?.statements?.get(0) as? AssignExpression
-        assertNotNull(line1)
-        val line2 = (bar.body as? Block)?.statements?.get(1) as? MemberCallExpression
-        assertNotNull(line2)
+        val line1 = (bar.body as? Block)?.statements?.get(0)
+        assertIs<AssignExpression>(line1)
+        val line2 = (bar.body as? Block)?.statements?.get(1)
+        assertIs<MemberCallExpression>(line2)
 
         assertEquals(1, line1.declarations.size)
         val fooDecl = line1.declarations[0]
@@ -554,20 +556,20 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(countParam)
         assertLocalName("c", countParam)
 
-        val countStmt = (methCount.body as? Block)?.statements?.get(0) as? IfStatement
-        assertNotNull(countStmt)
+        val countStmt = (methCount.body as? Block)?.statements?.get(0)
+        assertIs<IfStatement>(countStmt)
 
-        val ifCond = countStmt.condition as? BinaryOperator
-        assertNotNull(ifCond)
+        val ifCond = countStmt.condition
+        assertIs<BinaryOperator>(ifCond)
 
-        val lhs = ifCond.lhs as? MemberCallExpression
-        assertNotNull(lhs)
+        val lhs = ifCond.lhs
+        assertIs<MemberCallExpression>(lhs)
         assertEquals(countParam, (lhs.base as? Reference)?.refersTo)
         assertLocalName("inc", lhs)
         assertEquals(0, lhs.arguments.size)
 
-        val ifThen = (countStmt.thenStatement as? Block)?.statements?.get(0) as? CallExpression
-        assertNotNull(ifThen)
+        val ifThen = (countStmt.thenStatement as? Block)?.statements?.get(0)
+        assertIs<CallExpression>(ifThen)
         assertEquals(methCount, ifThen.invokes.firstOrNull())
         assertEquals(countParam, (ifThen.arguments.firstOrNull() as? Reference)?.refersTo)
         assertNull(countStmt.elseStatement)
@@ -596,11 +598,11 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("self", selfReceiver)
         assertEquals(0, meth.parameters.size) // self is receiver and not a parameter
 
-        val methBody = meth.body as? Block
-        assertNotNull(methBody)
+        val methBody = meth.body
+        assertIs<Block>(methBody)
 
-        val assign = methBody.statements[0] as? AssignExpression
-        assertNotNull(assign)
+        val assign = methBody.statements[0]
+        assertIs<AssignExpression>(assign)
 
         val assignLhs = assign.lhs<MemberExpression>()
         val assignRhs = assign.rhs<BinaryOperator>()
@@ -616,8 +618,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(assignRhsLhs)
         assertEquals(selfReceiver, (assignRhsLhs.base as? Reference)?.refersTo)
 
-        val r = methBody.statements[1] as? ReturnStatement
-        assertNotNull(r)
+        val r = methBody.statements[1]
+        assertIs<ReturnStatement>(r)
         assertEquals(
             selfReceiver,
             ((r.returnValue as? MemberExpression)?.base as? Reference)?.refersTo
@@ -659,8 +661,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(classFieldWithInit)
 
         // classFieldNoInitializer = classFieldWithInit
-        val assignClsFieldOutsideFunc = clsFoo.statements[2] as? AssignExpression
-        assertNotNull(assignClsFieldOutsideFunc)
+        val assignClsFieldOutsideFunc = clsFoo.statements[2]
+        assertIs<AssignExpression>(assignClsFieldOutsideFunc)
         assertEquals(
             classFieldNoInitializer,
             (assignClsFieldOutsideFunc.lhs<Reference>())?.refersTo
@@ -668,43 +670,44 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(classFieldWithInit, (assignClsFieldOutsideFunc.rhs<Reference>())?.refersTo)
         assertEquals("=", assignClsFieldOutsideFunc.operatorCode)
 
-        val barBody = methBar.body as? Block
-        assertNotNull(barBody)
+        val barBody = methBar.body
+        assertIs<Block>(barBody)
 
         // self.classFieldDeclaredInFunction = 456
-        val barStmt0 = barBody.statements[0] as? AssignExpression
-        val decl0 = barStmt0?.declarations?.get(0) as? FieldDeclaration
-        assertNotNull(decl0)
+        val barStmt0 = barBody.statements[0]
+        assertIs<AssignExpression>(barStmt0)
+        val decl0 = barStmt0.declarations[0]
+        assertIs<FieldDeclaration>(decl0)
         assertLocalName("classFieldDeclaredInFunction", decl0)
         assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
-        val barStmt1 = barBody.statements[1] as? AssignExpression
-        assertNotNull(barStmt1)
+        val barStmt1 = barBody.statements[1]
+        assertIs<AssignExpression>(barStmt1)
         assertEquals(classFieldNoInitializer, (barStmt1.lhs<MemberExpression>())?.refersTo)
 
         // self.classFieldWithInit = 12
-        val barStmt2 = barBody.statements[2] as? AssignExpression
-        assertNotNull(barStmt2)
+        val barStmt2 = barBody.statements[2]
+        assertIs<AssignExpression>(barStmt2)
         assertEquals(classFieldWithInit, (barStmt2.lhs<MemberExpression>())?.refersTo)
 
         // classFieldNoInitializer = "shadowed"
-        val barStmt3 = barBody.statements[3] as? AssignExpression
-        assertNotNull(barStmt3)
+        val barStmt3 = barBody.statements[3]
+        assertIs<AssignExpression>(barStmt3)
         assertEquals("=", barStmt3.operatorCode)
         assertEquals(classFieldNoInitializer, (barStmt3.lhs<Reference>())?.refersTo)
         assertEquals("shadowed", (barStmt3.rhs<Literal<*>>())?.value)
 
         // classFieldWithInit = "shadowed"
-        val barStmt4 = barBody.statements[4] as? AssignExpression
-        assertNotNull(barStmt4)
+        val barStmt4 = barBody.statements[4]
+        assertIs<AssignExpression>(barStmt4)
         assertEquals("=", barStmt4.operatorCode)
         assertEquals(classFieldWithInit, (barStmt4.lhs<Reference>())?.refersTo)
         assertEquals("shadowed", (barStmt4.rhs<Literal<*>>())?.value)
 
         // classFieldDeclaredInFunction = "shadowed"
-        val barStmt5 = barBody.statements[5] as? AssignExpression
-        assertNotNull(barStmt5)
+        val barStmt5 = barBody.statements[5]
+        assertIs<AssignExpression>(barStmt5)
         assertEquals("=", barStmt5.operatorCode)
         assertEquals(classFieldDeclaredInFunction, (barStmt5.lhs<Reference>())?.refersTo)
         assertEquals("shadowed", (barStmt5.rhs<Literal<*>>())?.value)
@@ -757,19 +760,19 @@ class PythonFrontendTest : BaseTest() {
         val foo = p.variables["foo"]
         assertNotNull(foo)
 
-        val firstAssignment = foo.firstAssignment as? MemberCallExpression
-        assertNotNull(firstAssignment)
+        val firstAssignment = foo.firstAssignment
+        assertIs<MemberCallExpression>(firstAssignment)
 
         assertLocalName("zzz", firstAssignment)
-        val base = firstAssignment.base as? MemberExpression
-        assertNotNull(base)
+        val base = firstAssignment.base
+        assertIs<MemberExpression>(base)
         assertLocalName("baz", base)
-        val baseBase = base.base as? Reference
-        assertNotNull(baseBase)
+        val baseBase = base.base
+        assertIs<Reference>(baseBase)
         assertLocalName("bar", baseBase)
 
-        val memberExpression = firstAssignment.callee as? MemberExpression
-        assertNotNull(memberExpression)
+        val memberExpression = firstAssignment.callee
+        assertIs<MemberExpression>(memberExpression)
         assertLocalName("zzz", memberExpression)
     }
 
@@ -788,24 +791,24 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["main"]
         assertNotNull(main)
 
-        val mainBody = main.body as? Block
-        assertNotNull(mainBody)
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
 
-        val whlStmt = mainBody.statements[3] as? WhileStatement
-        assertNotNull(whlStmt)
+        val whlStmt = mainBody.statements[3]
+        assertIs<WhileStatement>(whlStmt)
 
-        val whlBody = whlStmt.statement as? Block
-        assertNotNull(whlBody)
+        val whlBody = whlStmt.statement
+        assertIs<Block>(whlBody)
 
-        val xDeclaration = whlBody.statements[0] as? AssignExpression
-        assertNotNull(xDeclaration)
+        val xDeclaration = whlBody.statements[0]
+        assertIs<AssignExpression>(xDeclaration)
 
-        val ifStatement = whlBody.statements[1] as? IfStatement
-        assertNotNull(ifStatement)
+        val ifStatement = whlBody.statements[1]
+        assertIs<IfStatement>(ifStatement)
 
-        val brk = ifStatement.elseStatement as? Block
-        assertNotNull(brk)
-        brk.statements[0] as? BreakStatement
+        val brk = ifStatement.elseStatement
+        assertIs<Block>(brk)
+        assertIs<BreakStatement>(brk.statements[0])
     }
 
     @Test
@@ -922,14 +925,14 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["issue473"]
         assertNotNull(p)
 
-        val ifStatement = p.statements[0] as? IfStatement
-        assertNotNull(ifStatement)
-        val ifCond = ifStatement.condition as? BinaryOperator
-        assertNotNull(ifCond)
-        val ifThen = ifStatement.thenStatement as? Block
-        assertNotNull(ifThen)
-        val ifElse = ifStatement.elseStatement as? Block
-        assertNotNull(ifElse)
+        val ifStatement = p.statements[0]
+        assertIs<IfStatement>(ifStatement)
+        val ifCond = ifStatement.condition
+        assertIs<BinaryOperator>(ifCond)
+        val ifThen = ifStatement.thenStatement
+        assertIs<Block>(ifThen)
+        val ifElse = ifStatement.elseStatement
+        assertIs<Block>(ifElse)
 
         // sys.version_info.minor > 9
         assertEquals(">", ifCond.operatorCode)
@@ -940,8 +943,8 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(phrDeclaration)
         assertLocalName("phr", phrDeclaration)
-        val phrInitializer = phrDeclaration.firstAssignment as? BinaryOperator
-        assertNotNull(phrInitializer)
+        val phrInitializer = phrDeclaration.firstAssignment
+        assertIs<BinaryOperator>(phrInitializer)
         assertEquals("|", phrInitializer.operatorCode)
         assertEquals(true, phrInitializer.lhs is InitializerListExpression)
 
@@ -1038,20 +1041,20 @@ class PythonFrontendTest : BaseTest() {
         val varDefinedInLoop = forloopFunc.variables["varDefinedInLoop"]
         assertNotNull(varDefinedInLoop)
 
-        val functionBody = forloopFunc.body as? Block
-        assertNotNull(functionBody)
+        val functionBody = forloopFunc.body
+        assertIs<Block>(functionBody)
 
-        val firstLoop = functionBody.statements[1] as? ForEachStatement
-        assertNotNull(firstLoop)
+        val firstLoop = functionBody.statements[1]
+        assertIs<ForEachStatement>(firstLoop)
 
-        val secondLoop = functionBody.statements[2] as? ForEachStatement
-        assertNotNull(secondLoop)
+        val secondLoop = functionBody.statements[2]
+        assertIs<ForEachStatement>(secondLoop)
 
-        val fooCall = functionBody.statements[3] as? CallExpression
-        assertNotNull(fooCall)
+        val fooCall = functionBody.statements[3]
+        assertIs<CallExpression>(fooCall)
 
-        val barCall = functionBody.statements[4] as? CallExpression
-        assertNotNull(barCall)
+        val barCall = functionBody.statements[4]
+        assertIs<CallExpression>(barCall)
 
         val varDefinedBeforeLoopRef =
             (functionBody.statements.firstOrNull() as? AssignExpression)?.lhs?.firstOrNull()
@@ -1060,8 +1063,8 @@ class PythonFrontendTest : BaseTest() {
         assert((firstLoop.variable?.prevDFG?.contains(varDefinedBeforeLoopRef) == false))
 
         // dataflow from range call to loop variable
-        val firstLoopIterable = firstLoop.iterable as? CallExpression
-        assertNotNull(firstLoopIterable)
+        val firstLoopIterable = firstLoop.iterable
+        assertIs<CallExpression>(firstLoopIterable)
         assert((firstLoop.variable?.prevDFG?.contains((firstLoopIterable)) == true))
 
         // dataflow from var declaration to loop iterable call
@@ -1071,16 +1074,16 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // dataflow from first loop to foo call
-        val loopVar = firstLoop.variable as? Reference
-        assertNotNull(loopVar)
+        val loopVar = firstLoop.variable
+        assertIs<Reference>(loopVar)
         assertTrue(fooCall.arguments.firstOrNull()?.prevDFG?.contains(loopVar) == true)
 
         // dataflow from var declaration to foo call (in case for loop is not executed)
         assert(fooCall.arguments.firstOrNull()?.prevDFG?.contains(varDefinedBeforeLoopRef) == true)
 
         // dataflow from range call to loop variable
-        val secondLoopIterable = secondLoop.iterable as? CallExpression
-        assertNotNull(secondLoopIterable)
+        val secondLoopIterable = secondLoop.iterable
+        assertIs<CallExpression>(secondLoopIterable)
         assert(
             ((secondLoop.variable as? Reference)?.prevDFG?.contains((secondLoopIterable)) == true)
         )
@@ -1122,8 +1125,8 @@ class PythonFrontendTest : BaseTest() {
             tu.allChildren<AssignExpression>()
                 .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "c" }
                 ?.rhs
-                ?.singleOrNull() as? BinaryOperator
-        assertNotNull(cAssign)
+                ?.singleOrNull()
+        assertIs<BinaryOperator>(cAssign)
         assertEquals("or", cAssign.operatorCode)
         assertEquals(true, (cAssign.rhs as? Literal<*>)?.value)
         assertEquals("and", (cAssign.lhs as? BinaryOperator)?.operatorCode)
@@ -1139,8 +1142,8 @@ class PythonFrontendTest : BaseTest() {
             tu.allChildren<AssignExpression>()
                 .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "d" }
                 ?.rhs
-                ?.singleOrNull() as? BinaryOperator
-        assertNotNull(dAssign)
+                ?.singleOrNull()
+        assertIs<BinaryOperator>(dAssign)
         assertEquals("^", dAssign.operatorCode)
         assertEquals(0xffffL, (dAssign.rhs as? Literal<*>)?.value)
         assertEquals("|", (dAssign.lhs as? BinaryOperator)?.operatorCode)
@@ -1160,8 +1163,8 @@ class PythonFrontendTest : BaseTest() {
                     ?.input as? Literal<*>)
                 ?.value
         )
-        val dAssignLhsOfOr = (dAssign.lhs as? BinaryOperator)?.lhs as? BinaryOperator
-        assertNotNull(dAssignLhsOfOr)
+        val dAssignLhsOfOr = (dAssign.lhs as? BinaryOperator)?.lhs
+        assertIs<BinaryOperator>(dAssignLhsOfOr)
         assertEquals("&", dAssignLhsOfOr.operatorCode)
         assertEquals("~", (dAssignLhsOfOr.rhs as? UnaryOperator)?.operatorCode)
         assertEquals(7L, ((dAssignLhsOfOr.rhs as? UnaryOperator)?.input as? Literal<*>)?.value)
@@ -1192,34 +1195,33 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
         val namespace = tu.namespaces.singleOrNull()
         assertNotNull(namespace)
-        val aStmt = namespace.statements[0] as? AssignExpression
-        assertNotNull(aStmt)
+        val aStmt = namespace.statements[0]
+        assertIs<AssignExpression>(aStmt)
         assertEquals(
             "list",
             (aStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
         )
-        val bStmt = namespace.statements[1] as? AssignExpression
-        assertNotNull(bStmt)
+        val bStmt = namespace.statements[1]
+        assertIs<AssignExpression>(bStmt)
         assertEquals(
             "set",
             (bStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
         )
-        val cStmt = namespace.statements[2] as? AssignExpression
-        assertNotNull(cStmt)
+        val cStmt = namespace.statements[2]
+        assertIs<AssignExpression>(cStmt)
         assertEquals(
             "tuple",
             (cStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
         )
-        val dStmt = namespace.statements[3] as? AssignExpression
-        assertNotNull(dStmt)
+        val dStmt = namespace.statements[3]
+        assertIs<AssignExpression>(dStmt)
         assertEquals(
             "dict",
             (dStmt.rhs.singleOrNull() as? InitializerListExpression)?.type?.name?.localName
         )
 
-        val eStmtRhs =
-            (namespace.statements[4] as? AssignExpression)?.rhs?.singleOrNull() as? BinaryOperator
-        assertNotNull(eStmtRhs)
+        val eStmtRhs = (namespace.statements[4] as? AssignExpression)?.rhs?.singleOrNull()
+        assertIs<BinaryOperator>(eStmtRhs)
         assertEquals("Values of a: ", (eStmtRhs.lhs as? Literal<*>)?.value)
         val eStmtRhsRhs = (eStmtRhs.rhs as? BinaryOperator)
         assertNotNull(eStmtRhsRhs)
@@ -1231,10 +1233,9 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("str", bCall?.name?.localName)
         assertEquals("b", bCall?.arguments?.singleOrNull()?.name?.localName)
 
-        val fStmtRhs =
-            (namespace.statements[5] as? AssignExpression)?.rhs?.singleOrNull()
-                as? SubscriptExpression
-        assertNotNull(fStmtRhs)
+        val fStmtRhs = (namespace.statements[5] as? AssignExpression)?.rhs?.singleOrNull()
+
+        assertIs<SubscriptExpression>(fStmtRhs)
         assertEquals("a", fStmtRhs.arrayExpression.name.localName)
         assertTrue(fStmtRhs.subscriptExpression is RangeExpression)
         assertEquals(
@@ -1366,19 +1367,19 @@ class PythonFrontendTest : BaseTest() {
         val namedExpression = result.functions["named_expression"]
         assertNotNull(namedExpression)
 
-        val assignExpression = result.statements[1] as? AssignExpression
-        assertNotNull(assignExpression)
+        val assignExpression = result.statements[1]
+        assertIs<AssignExpression>(assignExpression)
         assertEquals(":=", assignExpression.operatorCode)
         assertEquals(true, assignExpression.usedAsExpression)
 
-        val lhs = assignExpression.lhs.firstOrNull() as? Reference
-        assertNotNull(lhs)
+        val lhs = assignExpression.lhs.firstOrNull()
+        assertIs<Reference>(lhs)
 
         val lhsVariable = lhs.refersTo as? VariableDeclaration
         assertLocalName("x", lhsVariable)
 
-        val rhs = assignExpression.rhs.firstOrNull() as? Literal<*>
-        assertNotNull(rhs)
+        val rhs = assignExpression.rhs.firstOrNull()
+        assertIs<Literal<*>>(rhs)
 
         assertEquals(4.toLong(), rhs.evaluate())
     }
