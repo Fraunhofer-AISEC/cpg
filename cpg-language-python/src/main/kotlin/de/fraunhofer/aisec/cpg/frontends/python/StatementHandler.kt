@@ -528,19 +528,21 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return wrapDeclarationToStatement(result)
     }
 
-    private fun handleGlobal(global: Python.AST.Global): ReferenceScopeModifierStatement {
+    private fun handleGlobal(global: Python.AST.Global): LookupScopeStatement {
         // Technically, our global scope is not identical to the python "global" scope. The reason
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
         // the "global" scope is actually our current namespace scope.
         var pythonGlobalScope =
             frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
 
-        var stmt = newReferenceScopeModifierStatement(pythonGlobalScope, rawNode = global)
-        stmt.references = global.names.map { newReference(it, rawNode = global) }.toMutableList()
-        return stmt
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            pythonGlobalScope,
+            rawNode = global
+        )
     }
 
-    private fun handleNonLocal(global: Python.AST.Nonlocal): ReferenceScopeModifierStatement {
+    private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
         // We need to find the first outer function scope, or rather the block scope belonging to
         // the function
         var outerFunctionScope =
@@ -548,9 +550,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 it is BlockScope && it != frontend.scopeManager.currentScope
             }
 
-        var stmt = newReferenceScopeModifierStatement(outerFunctionScope, rawNode = global)
-        stmt.references = global.names.map { newReference(it, rawNode = global) }.toMutableList()
-        return stmt
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            outerFunctionScope,
+            rawNode = global
+        )
     }
 
     /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */

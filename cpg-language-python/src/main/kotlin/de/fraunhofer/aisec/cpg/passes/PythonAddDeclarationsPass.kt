@@ -32,9 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReferenceScopeModifierStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -90,13 +88,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // Look for a potential scope modifier for this reference
-        var targetScope = scopeManager.currentScope?.lookForScopeModifier(ref.name)
+        // lookupScope
+        var targetScope =
+            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // There are a couple of things to consider now
         var symbol =
             // Since this is a WRITE access, we need
-            //   - to look for a local variable, unless
-            //   - a global keyword is present for this variable and scope
+            //   - to look for a local symbol, unless
+            //   - a global keyword is present for this symbol and scope
             if (targetScope != null) {
                 scopeManager.findSymbols(ref.name, ref.location, targetScope)
             } else {
@@ -195,20 +195,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleForEach(node: ForEachStatement) {
         when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleWriteToReference(node.variable as Reference)
+                val handled = handleWriteToReference(forVar)
                 if (handled is Declaration) {
                     handled.let { node.addDeclaration(it) }
                 }
             }
         }
     }
-}
-
-private fun Scope.lookForScopeModifier(name: Name): Scope? {
-    // Really not the best way to do that
-    var modifierNode =
-        this.astNode.allChildren<ReferenceScopeModifierStatement>().firstOrNull {
-            it.references.any { it.name == name }
-        }
-    return modifierNode?.targetScope
 }
