@@ -1406,6 +1406,11 @@ infix fun Expression.raise(init: (RaiseStatement.() -> Unit)?): RaiseStatement {
     val node = (this@LanguageFrontend).newRaiseStatement()
     if (init != null) init(node)
 
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
     return node
 }
 

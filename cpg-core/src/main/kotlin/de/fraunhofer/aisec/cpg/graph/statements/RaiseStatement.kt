@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -32,7 +33,7 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a `throw` or `raise` statement. */
-class RaiseStatement : Statement() {
+class RaiseStatement : Statement(), ArgumentHolder {
 
     /** The exception object to be raised. */
     @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()
@@ -46,6 +47,35 @@ class RaiseStatement : Statement() {
      */
     @Relationship(value = "CAUSE") var causeEdge = astOptionalEdgeOf<Expression>()
     var cause by unwrapping(RaiseStatement::causeEdge)
+
+    override fun addArgument(expression: Expression) {
+        when {
+            exception == null -> exception = expression
+            cause == null -> cause = expression
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        return when {
+            exception == old -> {
+                exception = new
+                true
+            }
+            cause == old -> {
+                cause = new
+                true
+            }
+            else -> false
+        }
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return when {
+            exception == expression -> true
+            cause == expression -> true
+            else -> false
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
