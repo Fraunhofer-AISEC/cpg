@@ -119,7 +119,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<CallExpression>(callExpression)
 
         assertLocalName("bar", callExpression)
-        assertEquals(bar, callExpression.invokes.firstOrNull())
+        assertInvokes(callExpression, bar)
 
         val edge = callExpression.argumentEdges[1]
         assertNotNull(edge)
@@ -267,7 +267,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertRefersTo((s2.base as? Reference), c1)
         assertEquals(1, s2.invokes.size)
-        assertEquals(clsfunc, s2.invokes.firstOrNull())
+        assertInvokes(s2, clsfunc)
 
         // member
     }
@@ -439,7 +439,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(".", fooMemCall.operatorCode)
         assertFullName("class_self.Foo.bar", fooMemCall)
         assertEquals(1, fooMemCall.invokes.size)
-        assertEquals(bar, fooMemCall.invokes[0])
+        assertInvokes(fooMemCall, bar)
         assertLocalName("self", fooMemCall.base)
     }
 
@@ -526,7 +526,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(fooCtor, initializer.constructor)
 
         assertRefersTo(line2.base, fooDecl)
-        assertEquals(foobar, line2.invokes[0])
+        assertInvokes(line2, foobar)
     }
 
     @Test
@@ -582,7 +582,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(ifThenBody)
         val ifThenFirstStmt = ifThenBody.statements[0]
         assertIs<CallExpression>(ifThenFirstStmt)
-        assertEquals(methCount, ifThenFirstStmt.invokes.firstOrNull())
+        assertInvokes(ifThenFirstStmt, methCount)
         assertRefersTo(ifThenFirstStmt.arguments.firstOrNull(), countParam)
         assertNull(countStmt.elseStatement)
 
