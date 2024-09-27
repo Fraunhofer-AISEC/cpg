@@ -830,18 +830,18 @@ class PythonFrontendTest : BaseTest() {
         val testDeclaration = p.variables[0]
         assertNotNull(testDeclaration)
         assertLocalName("test", testDeclaration)
-        val testDeclStmt = p.statements[0] as? AssignExpression
-        assertNotNull(testDeclStmt)
+        val testDeclStmt = p.statements[0]
+        assertIs<AssignExpression>(testDeclStmt)
 
         /* for loop:
         for t1, t2, t3 in test:
             print("bug ... {} {} {}".format(t1, t2, t3))
          */
-        val forStmt = p.statements[1] as? ForEachStatement
-        assertNotNull(forStmt)
+        val forStmt = p.statements[1]
+        assertIs<ForEachStatement>(forStmt)
 
-        val forVariable = forStmt.variable as? Reference
-        assertNotNull(forVariable)
+        val forVariable = forStmt.variable
+        assertIs<Reference>(forVariable)
         val forVarDecl =
             p.declarations.firstOrNull {
                 it.name.localName.contains((PythonHandler.LOOP_VAR_PREFIX))
@@ -849,12 +849,12 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(forVarDecl)
         assertEquals(forVarDecl, forVariable.refersTo)
 
-        val iter = forStmt.iterable as? Reference
-        assertNotNull(iter)
+        val iter = forStmt.iterable
+        assertIs<Reference>(iter)
         assertEquals(testDeclaration, iter.refersTo)
 
-        val forBody = forStmt.statement as? Block
-        assertNotNull(forBody)
+        val forBody = forStmt.statement
+        assertIs<Block>(forBody)
         assertEquals(2, forBody.statements.size) // loop var assign and print stmt
 
         /*
@@ -872,8 +872,8 @@ class PythonFrontendTest : BaseTest() {
           rest of the loop
         ```
          */
-        val forVariableImplicitStmt = forBody.statements.firstOrNull() as? AssignExpression
-        assertNotNull(forVariableImplicitStmt)
+        val forVariableImplicitStmt = forBody.statements.firstOrNull()
+        assertIs<AssignExpression>(forVariableImplicitStmt)
         assertEquals("=", forVariableImplicitStmt.operatorCode)
         assertEquals(forStmt.variable, forVariableImplicitStmt.rhs.firstOrNull())
         val (t1Decl, t2Decl, t3Decl) = forVariableImplicitStmt.declarations
@@ -882,8 +882,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(t2Decl)
         assertNotNull(t3Decl)
         assertIs<Reference>(t1RefAssign)
-        assertNotNull(t2RefAssign as? Reference)
-        assertNotNull(t3RefAssign as? Reference)
+        assertIs<Reference>(t2RefAssign)
+        assertIs<Reference>(t3RefAssign)
         assertRefersTo(t1RefAssign, t1Decl)
         assertRefersTo(t2RefAssign, t2Decl)
         assertRefersTo(t3RefAssign, t3Decl)
@@ -893,16 +893,16 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(forBodyStmt)
         assertLocalName("print", forBodyStmt)
 
-        val printArg = forBodyStmt.arguments[0] as? MemberCallExpression
-        assertNotNull(printArg)
-        val formatArgT1 = printArg.arguments[0] as? Reference
-        assertNotNull(formatArgT1)
+        val printArg = forBodyStmt.arguments[0]
+        assertIs<MemberCallExpression>(printArg)
+        val formatArgT1 = printArg.arguments[0]
+        assertIs<Reference>(formatArgT1)
         assertRefersTo(formatArgT1, t1Decl)
-        val formatArgT2 = printArg.arguments[1] as? Reference
-        assertNotNull(formatArgT2)
+        val formatArgT2 = printArg.arguments[1]
+        assertIs<Reference>(formatArgT2)
         assertRefersTo(formatArgT2, t2Decl)
-        val formatArgT3 = printArg.arguments[2] as? Reference
-        assertNotNull(formatArgT3)
+        val formatArgT3 = printArg.arguments[2]
+        assertIs<Reference>(formatArgT3)
         assertRefersTo(formatArgT3, t3Decl)
     }
 
