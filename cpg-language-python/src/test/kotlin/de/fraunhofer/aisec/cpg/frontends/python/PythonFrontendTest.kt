@@ -979,7 +979,8 @@ class PythonFrontendTest : BaseTest() {
         val phrInitializer = phrDeclaration.firstAssignment
         assertIs<BinaryOperator>(phrInitializer)
         assertEquals("|", phrInitializer.operatorCode)
-        assertEquals(true, phrInitializer.lhs is InitializerListExpression)
+        val phrInitializerLhs = phrInitializer.lhs
+        assertIs<InitializerListExpression>(phrInitializerLhs)
 
         // z = {"user_id": user_id}
         val elseFirstStmt = ifElse.statements.firstOrNull()
