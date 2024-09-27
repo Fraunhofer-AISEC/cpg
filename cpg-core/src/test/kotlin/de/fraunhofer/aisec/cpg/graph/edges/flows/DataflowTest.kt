@@ -26,12 +26,28 @@
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.builder.body
+import de.fraunhofer.aisec.cpg.graph.builder.call
+import de.fraunhofer.aisec.cpg.graph.builder.declare
+import de.fraunhofer.aisec.cpg.graph.builder.function
+import de.fraunhofer.aisec.cpg.graph.builder.literal
+import de.fraunhofer.aisec.cpg.graph.builder.raise
+import de.fraunhofer.aisec.cpg.graph.builder.t
+import de.fraunhofer.aisec.cpg.graph.builder.translationResult
+import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
+import de.fraunhofer.aisec.cpg.graph.builder.variable
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.statements.RaiseStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.collections.firstOrNull
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
 class DataflowTest {
@@ -100,5 +116,36 @@ class DataflowTest {
             // should contain 0 prevDFG edge now
             assertEquals(0, node2.prevDFGEdges.size)
         }
+    }
+
+    @Test
+    fun testRaise() {
+        val result =
+            TestLanguageFrontend().build {
+                translationResult {
+                    translationUnit("some.file") {
+                        function("foo", t("void")) {
+                            body {
+                                declare { variable("a", t("short")) { literal(42) } }
+                                raise { call("SomeError") { /* TODO parameter a */} }
+                            }
+                        }
+                    }
+                }
+            }
+
+        // Let's assert that we did this correctly
+        val main = result.functions["foo"]
+        assertNotNull(main)
+        val body = main.body
+        assertIs<Block>(body)
+
+        val throwStmt = body.statements.getOrNull(0)
+        assertIs<RaiseStatement>(throwStmt)
+        assertNotNull(throwStmt.exception)
+        val throwCall = throwStmt.exception
+        assertIs<CallExpression>(throwCall)
+
+        // TODO dataflow var to call
     }
 }
