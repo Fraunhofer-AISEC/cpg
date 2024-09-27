@@ -847,11 +847,11 @@ class PythonFrontendTest : BaseTest() {
                 it.name.localName.contains((PythonHandler.LOOP_VAR_PREFIX))
             }
         assertNotNull(forVarDecl)
-        assertEquals(forVarDecl, forVariable.refersTo)
+        assertRefersTo(forVariable, forVarDecl)
 
         val iter = forStmt.iterable
         assertIs<Reference>(iter)
-        assertEquals(testDeclaration, iter.refersTo)
+        assertRefersTo(iter, testDeclaration)
 
         val forBody = forStmt.statement
         assertIs<Block>(forBody)
