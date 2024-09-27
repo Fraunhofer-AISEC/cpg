@@ -65,13 +65,17 @@ class PythonFrontendTest : BaseTest() {
             assertNotNull(i)
             assertLocalName("i", i)
             assertEquals(assertResolvedType("int"), i.type)
-            assertEquals(42L, (i.firstAssignment as? Literal<*>)?.value)
+            val iFirstAssignment = i.firstAssignment
+            assertIs<Literal<*>>(iFirstAssignment)
+            assertEquals(42L, iFirstAssignment.value)
 
             val f = p.variables["f"]
             assertNotNull(f)
             assertLocalName("f", f)
             assertEquals(assertResolvedType("float"), f.type)
-            assertEquals(1.0, (f.firstAssignment as? Literal<*>)?.value)
+            val fFirstAssignment = f.firstAssignment
+            assertIs<Literal<*>>(fFirstAssignment)
+            assertEquals(1.0, fFirstAssignment.value)
 
             val c = p.variables["c"]
             assertNotNull(c)
@@ -84,13 +88,17 @@ class PythonFrontendTest : BaseTest() {
             assertNotNull(t)
             assertLocalName("t", t)
             assertEquals(assertResolvedType("str"), t.type)
-            assertEquals("Hello", (t.firstAssignment as? Literal<*>)?.value)
+            val tAssignment = t.firstAssignment
+            assertIs<Literal<*>>(tAssignment)
+            assertEquals("Hello", tAssignment.value)
 
             val n = p.variables["n"]
             assertNotNull(n)
             assertLocalName("n", n)
             assertEquals(assertResolvedType("None"), n.type)
-            assertEquals(null, (n.firstAssignment as? Literal<*>)?.value)
+            val nAssignment = n.firstAssignment
+            assertIs<Literal<*>>(nAssignment)
+            assertEquals(null, nAssignment.value)
         }
     }
 
@@ -169,12 +177,16 @@ class PythonFrontendTest : BaseTest() {
         val lhs = op.lhs
         assertIs<Literal<*>>(lhs)
 
-        assertEquals(1, (lhs.value as? Long)?.toInt())
+        val lhsValue = lhs.value
+        assertIs<Long>(lhsValue)
+        assertEquals(1, lhsValue.toInt())
 
         val rhs = op.rhs
         assertIs<Literal<*>>(rhs)
 
-        assertEquals(2, (rhs.value as? Long)?.toInt())
+        val rhsValue = rhs.value
+        assertIs<Long>(rhsValue)
+        assertEquals(2, rhsValue.toInt())
 
         val r = compStmt.statements[3]
         assertIs<ReturnStatement>(r)
@@ -204,7 +216,9 @@ class PythonFrontendTest : BaseTest() {
         val body = main.body
         assertIs<Block>(body)
 
-        val sel = (body.statements.firstOrNull() as? AssignExpression)?.declarations?.firstOrNull()
+        val bodyFirstStmt = body.statements.firstOrNull()
+        assertIs<AssignExpression>(bodyFirstStmt)
+        val sel = bodyFirstStmt.declarations.firstOrNull()
         assertNotNull(sel)
         assertLocalName("sel", sel)
         assertEquals(tu.primitiveType("bool"), sel.type)
@@ -265,7 +279,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
 
-        assertRefersTo((s2.base as? Reference), c1)
+        assertRefersTo(s2.base, c1)
         assertEquals(1, s2.invokes.size)
         assertInvokes(s2, clsfunc)
 
@@ -285,7 +299,9 @@ class PythonFrontendTest : BaseTest() {
         val main = p.functions["foo"]
         assertNotNull(main)
 
-        val assignExpr = (main.body as? Block)?.statements?.firstOrNull()
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val assignExpr = mainBody.statements.firstOrNull()
         assertIs<AssignExpression>(assignExpr)
 
         val foo = assignExpr.declarations.firstOrNull()
@@ -308,10 +324,14 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(false, ifCond.value)
 
         assertEquals(tu.primitiveType("int"), thenExpr.type)
-        assertEquals(21, (thenExpr.value as? Long)?.toInt())
+        val thenValue = thenExpr.value
+        assertIs<Long>(thenValue)
+        assertEquals(21, thenValue.toInt())
 
+        val elseValue = elseExpr.value
+        assertIs<Long>(elseValue)
         assertEquals(tu.primitiveType("int"), elseExpr.type)
-        assertEquals(42, (elseExpr.value as? Long)?.toInt())
+        assertEquals(42, elseValue.toInt())
     }
 
     @Test
@@ -364,11 +384,13 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(methBar)
         assertLocalName("bar", methBar)
 
-        val barZ = (methBar.body as? Block)?.statements?.get(0)
+        val methBarBody = methBar.body
+        assertIs<Block>(methBarBody)
+        val barZ = methBarBody.statements[0]
         assertIs<MemberExpression>(barZ)
         assertRefersTo(barZ, fieldZ)
 
-        val barBaz = (methBar.body as? Block)?.statements?.get(1)
+        val barBaz = methBarBody.statements[1]
         assertIs<AssignExpression>(barBaz)
         val barBazInner = barBaz.declarations[0]
         assertIs<FieldDeclaration>(barBazInner)
@@ -422,15 +444,18 @@ class PythonFrontendTest : BaseTest() {
         // assertEquals(tu.primitiveType("int"), i.type)
 
         // self.somevar = i
-        val someVarDeclaration =
-            ((bar.body as? Block)?.statements?.get(0) as? AssignExpression)
-                ?.declarations
-                ?.firstOrNull()
+        val barBody = bar.body
+        assertIs<Block>(barBody)
+        val barBodyFirstStmt = barBody.statements[0]
+        assertIs<AssignExpression>(barBodyFirstStmt)
+        val someVarDeclaration = barBodyFirstStmt.declarations.firstOrNull()
         assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
-        assertRefersTo((someVarDeclaration.firstAssignment as? Reference), i)
+        assertRefersTo(someVarDeclaration.firstAssignment, i)
 
-        val fooMemCall = (foo.body as? Block)?.statements?.get(0)
+        val fooBody = foo.body
+        assertIs<Block>(fooBody)
+        val fooMemCall = fooBody.statements[0]
         assertIs<MemberCallExpression>(fooMemCall)
 
         val mem = fooMemCall.callee
@@ -510,10 +535,10 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(barBody)
 
         assertEquals(2, barBody.statements.size)
-        val line1 = barBody.statements.get(0)
+        val line1 = barBody.statements[0]
         assertIs<AssignExpression>(line1)
 
-        val line2 = barBody.statements.get(1)
+        val line2 = barBody.statements[1]
         assertIs<MemberCallExpression>(line2)
 
         assertEquals(1, line1.declarations.size)
@@ -588,10 +613,9 @@ class PythonFrontendTest : BaseTest() {
 
         // class c1(counter)
         assertLocalName("c1", clsC1)
-        assertEquals(
-            clsCounter,
-            (clsC1.superClasses.firstOrNull() as? ObjectType)?.recordDeclaration
-        )
+        val cls1Super = clsC1.superClasses.firstOrNull()
+        assertIs<ObjectType>(cls1Super)
+        assertEquals(clsCounter, cls1Super.recordDeclaration)
         assertEquals(1, clsC1.fields.size)
 
         val field = clsC1.fields[0]
@@ -621,7 +645,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("=", assign.operatorCode)
         assertNotNull(assignLhs)
         assertNotNull(assignRhs)
-        assertRefersTo((assignLhs.base as? Reference), selfReceiver)
+        assertRefersTo(assignLhs.base, selfReceiver)
         assertEquals("+", assignRhs.operatorCode)
 
         val assignRhsLhs = assignRhs.lhs // the second "self.total" in "self.total = self.total + 1"
@@ -1123,73 +1147,96 @@ class PythonFrontendTest : BaseTest() {
 
         val bAugAssign =
             tu.allChildren<AssignExpression>().singleOrNull {
-                (it.lhs.singleOrNull() as? Reference)?.name?.localName == "b" &&
-                    it.location?.region?.startLine == 4
+                val itLhs = it.lhs.singleOrNull()
+                assertIs<Reference>(itLhs)
+                itLhs.name.localName == "b" && it.location?.region?.startLine == 4
             }
         assertNotNull(bAugAssign)
         assertEquals("*=", bAugAssign.operatorCode)
         assertEquals("b", bAugAssign.lhs.singleOrNull()?.name?.localName)
-        assertEquals(2L, (bAugAssign.rhs.singleOrNull() as? Literal<*>)?.value)
+        val bAugAssignRhs = bAugAssign.rhs.singleOrNull()
+        assertIs<Literal<*>>(bAugAssignRhs)
+        assertEquals(2L, bAugAssignRhs.value)
 
         // c = (not True and False) or True
         val cAssign =
             tu.allChildren<AssignExpression>()
-                .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "c" }
+                .singleOrNull {
+                    val itLhs = it.lhs.singleOrNull()
+                    assertIs<Reference>(itLhs)
+                    itLhs.name.localName == "c"
+                }
                 ?.rhs
                 ?.singleOrNull()
         assertIs<BinaryOperator>(cAssign)
         assertEquals("or", cAssign.operatorCode)
-        assertEquals(true, (cAssign.rhs as? Literal<*>)?.value)
-        assertEquals("and", (cAssign.lhs as? BinaryOperator)?.operatorCode)
-        assertEquals(false, ((cAssign.lhs as? BinaryOperator)?.rhs as? Literal<*>)?.value)
-        assertEquals("not", ((cAssign.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.operatorCode)
-        assertEquals(
-            true,
-            (((cAssign.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.input as? Literal<*>)?.value
-        )
+        val cAssignRhs = cAssign.rhs
+        assertIs<Literal<*>>(cAssignRhs)
+        assertEquals(true, cAssignRhs.value)
+        val cAssignLhs = cAssign.lhs
+        assertIs<BinaryOperator>(cAssignLhs)
+        assertEquals("and", cAssignLhs.operatorCode)
+        val cAssignLhsRhs = cAssignLhs.rhs
+        assertIs<Literal<*>>(cAssignLhsRhs)
+        assertEquals(false, cAssignLhsRhs.value)
+        val cAssignLhsLhs = cAssignLhs.lhs
+        assertIs<UnaryOperator>(cAssignLhsLhs)
+        assertEquals("not", cAssignLhsLhs.operatorCode)
+        val cAssignLhsLhsInput = cAssignLhsLhs.input
+        assertIs<Literal<*>>(cAssignLhsLhsInput)
+        assertEquals(true, cAssignLhsLhsInput.value)
 
         // d = ((-5 >> 2) & ~7 | (+4 << 1)) ^ 0xffff
         val dAssign =
             tu.allChildren<AssignExpression>()
-                .singleOrNull { (it.lhs.singleOrNull() as? Reference)?.name?.localName == "d" }
+                .singleOrNull {
+                    val itLhs = it.lhs.singleOrNull()
+                    assertIs<Reference>(itLhs)
+                    itLhs.name.localName == "d"
+                }
                 ?.rhs
                 ?.singleOrNull()
         assertIs<BinaryOperator>(dAssign)
         assertEquals("^", dAssign.operatorCode)
-        assertEquals(0xffffL, (dAssign.rhs as? Literal<*>)?.value)
-        assertEquals("|", (dAssign.lhs as? BinaryOperator)?.operatorCode)
-        assertEquals("<<", ((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.operatorCode)
-        assertEquals(
-            1L,
-            (((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.rhs as? Literal<*>)?.value
-        )
-        assertEquals(
-            "+",
-            (((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.lhs as? UnaryOperator)
-                ?.operatorCode
-        )
-        assertEquals(
-            4L,
-            ((((dAssign.lhs as? BinaryOperator)?.rhs as? BinaryOperator)?.lhs as? UnaryOperator)
-                    ?.input as? Literal<*>)
-                ?.value
-        )
-        val dAssignLhsOfOr = (dAssign.lhs as? BinaryOperator)?.lhs
+        val dAssignRhs = dAssign.rhs
+        assertIs<Literal<*>>(dAssignRhs)
+        assertEquals(0xffffL, dAssignRhs.value)
+        val dAssignLhs = dAssign.lhs
+        assertIs<BinaryOperator>(dAssignLhs)
+        assertEquals("|", dAssignLhs.operatorCode)
+        val dAssignLhsRhs = dAssignLhs.rhs
+        assertIs<BinaryOperator>(dAssignLhsRhs)
+        assertEquals("<<", dAssignLhsRhs.operatorCode)
+        val dAssignLhsRhsRhs = dAssignLhsRhs.rhs
+        assertIs<Literal<*>>(dAssignLhsRhsRhs)
+        assertEquals(1L, dAssignLhsRhsRhs.value)
+        val dAssignLhsRhsLhs = dAssignLhsRhs.lhs
+        assertIs<UnaryOperator>(dAssignLhsRhsLhs)
+        assertEquals("+", dAssignLhsRhsLhs.operatorCode)
+        val dAssignLhsRhsLhsInput = dAssignLhsRhsLhs.input
+        assertIs<Literal<*>>(dAssignLhsRhsLhsInput)
+        assertEquals(4L, dAssignLhsRhsLhsInput.value)
+        val dAssignLhsOfOr = dAssignLhs.lhs
         assertIs<BinaryOperator>(dAssignLhsOfOr)
         assertEquals("&", dAssignLhsOfOr.operatorCode)
-        assertEquals("~", (dAssignLhsOfOr.rhs as? UnaryOperator)?.operatorCode)
-        assertEquals(7L, ((dAssignLhsOfOr.rhs as? UnaryOperator)?.input as? Literal<*>)?.value)
-        assertEquals(">>", (dAssignLhsOfOr.lhs as? BinaryOperator)?.operatorCode)
-        assertEquals(2L, ((dAssignLhsOfOr.lhs as? BinaryOperator)?.rhs as? Literal<*>)?.value)
-        assertEquals(
-            "-",
-            ((dAssignLhsOfOr.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.operatorCode
-        )
-        assertEquals(
-            5L,
-            (((dAssignLhsOfOr.lhs as? BinaryOperator)?.lhs as? UnaryOperator)?.input as? Literal<*>)
-                ?.value
-        )
+        val dAssignLhsOfOrRhs = dAssignLhsOfOr.rhs
+        assertIs<UnaryOperator>(dAssignLhsOfOrRhs)
+        assertEquals("~", dAssignLhsOfOrRhs.operatorCode)
+        val dAssignLhsOfOrRhsInput = dAssignLhsOfOrRhs.input
+        assertIs<Literal<*>>(dAssignLhsOfOrRhsInput)
+        assertEquals(7L, dAssignLhsOfOrRhsInput.value)
+        val dAssignLhsOfOrLhs = dAssignLhsOfOr.lhs
+        assertIs<BinaryOperator>(dAssignLhsOfOrLhs)
+        assertEquals(">>", dAssignLhsOfOrLhs.operatorCode)
+        val dAssignLhsOfOrLhsRhs = dAssignLhsOfOrLhs.rhs
+        assertIs<Literal<*>>(dAssignLhsOfOrLhsRhs)
+        assertEquals(2L, dAssignLhsOfOrLhsRhs.value)
+        val dAssignLhsOfOrLhsLhs = dAssignLhsOfOrLhs.lhs
+        assertIs<UnaryOperator>(dAssignLhsOfOrLhsLhs)
+        assertEquals("-", dAssignLhsOfOrLhsLhs.operatorCode)
+        val dAssignLhsOfOrLhsLhsInput = dAssignLhsOfOrLhsLhs.input
+        assertIs<Literal<*>>(dAssignLhsOfOrLhsLhsInput)
+        assertEquals(5L, dAssignLhsOfOrLhsLhsInput.value)
     }
 
     @Test
@@ -1231,36 +1278,45 @@ class PythonFrontendTest : BaseTest() {
         assertIs<InitializerListExpression>(dStmtRhs)
         assertEquals("dict", dStmtRhs.type.name.localName)
 
-        val eStmtRhs = (namespace.statements[4] as? AssignExpression)?.rhs?.singleOrNull()
+        val fourthStmt = namespace.statements[4]
+        assertIs<AssignExpression>(fourthStmt)
+        val eStmtRhs = fourthStmt.rhs.singleOrNull()
         assertIs<BinaryOperator>(eStmtRhs)
-        assertEquals("Values of a: ", (eStmtRhs.lhs as? Literal<*>)?.value)
-        val eStmtRhsRhs = (eStmtRhs.rhs as? BinaryOperator)
+        val eStmtRhsLhs = eStmtRhs.lhs
+        assertIs<Literal<*>>(eStmtRhsLhs)
+        assertEquals("Values of a: ", eStmtRhsLhs.value)
+        val eStmtRhsRhs = eStmtRhs.rhs
+        assertIs<BinaryOperator>(eStmtRhsRhs)
         assertNotNull(eStmtRhsRhs)
-        val aRef = eStmtRhsRhs.lhs as? Reference
-        assertEquals("a", aRef?.name?.localName)
-        val eStmtRhsRhsRhs = (eStmtRhsRhs.rhs as? BinaryOperator)
-        assertEquals(" and b: ", (eStmtRhsRhsRhs?.lhs as? Literal<*>)?.value)
-        val bCall = eStmtRhsRhsRhs?.rhs as? CallExpression
-        assertEquals("str", bCall?.name?.localName)
-        assertEquals("b", bCall?.arguments?.singleOrNull()?.name?.localName)
+        val aRef = eStmtRhsRhs.lhs
+        assertEquals("a", aRef.name.localName)
+        val eStmtRhsRhsRhs = eStmtRhsRhs.rhs
+        assertIs<BinaryOperator>(eStmtRhsRhsRhs)
+        val eStmtRhsRhsRhsLhs = eStmtRhsRhsRhs.lhs
+        assertIs<Literal<*>>(eStmtRhsRhsRhsLhs)
+        assertEquals(" and b: ", eStmtRhsRhsRhsLhs.value)
+        val bCall = eStmtRhsRhsRhs.rhs
+        assertIs<CallExpression>(bCall)
+        assertEquals("str", bCall.name.localName)
+        assertEquals("b", bCall.arguments.singleOrNull()?.name?.localName)
 
-        val fStmtRhs = (namespace.statements[5] as? AssignExpression)?.rhs?.singleOrNull()
+        val fifthStmt = namespace.statements[5]
+        assertIs<AssignExpression>(fifthStmt)
+        val fStmtRhs = fifthStmt.rhs.singleOrNull()
 
         assertIs<SubscriptExpression>(fStmtRhs)
         assertEquals("a", fStmtRhs.arrayExpression.name.localName)
-        assertTrue(fStmtRhs.subscriptExpression is RangeExpression)
-        assertEquals(
-            1L,
-            ((fStmtRhs.subscriptExpression as RangeExpression).floor as? Literal<*>)?.value
-        )
-        assertEquals(
-            3L,
-            ((fStmtRhs.subscriptExpression as RangeExpression).ceiling as? Literal<*>)?.value
-        )
-        assertEquals(
-            2L,
-            ((fStmtRhs.subscriptExpression as RangeExpression).third as? Literal<*>)?.value
-        )
+        val subscriptExpression = fStmtRhs.subscriptExpression
+        assertIs<RangeExpression>(subscriptExpression)
+        val fStmtRhsFloor = subscriptExpression.floor
+        assertIs<Literal<*>>(fStmtRhsFloor)
+        assertEquals(1L, fStmtRhsFloor.value)
+        val fStmtRhsCeiling = subscriptExpression.ceiling
+        assertIs<Literal<*>>(fStmtRhsCeiling)
+        assertEquals(3L, fStmtRhsCeiling.value)
+        val fStmtRhsThird = subscriptExpression.third
+        assertIs<Literal<*>>(fStmtRhsThird)
+        assertEquals(2L, fStmtRhsThird.value)
     }
 
     @Test
