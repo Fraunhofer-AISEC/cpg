@@ -881,7 +881,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(t1Decl)
         assertNotNull(t2Decl)
         assertNotNull(t3Decl)
-        assertNotNull(t1RefAssign as? Reference)
+        assertIs<Reference>(t1RefAssign)
         assertNotNull(t2RefAssign as? Reference)
         assertNotNull(t3RefAssign as? Reference)
         assertRefersTo(t1RefAssign, t1Decl)
