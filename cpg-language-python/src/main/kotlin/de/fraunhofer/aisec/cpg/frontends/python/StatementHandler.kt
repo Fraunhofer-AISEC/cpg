@@ -235,7 +235,26 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleFor(node: Python.AST.NormalOrAsyncFor): Statement {
+    /**
+     * Translates a Python [`For`](https://docs.python.org/3/library/ast.html#ast.For) into an
+     * [ForEachStatement].
+     *
+     * Python supports implicit unpacking of multiple loop variables. To map this to CPG node, we
+     * translate the following implicit unpacking of code like this:
+     * ```python
+     * for a, b, c in someNestedList:
+     *     pass
+     * ```
+     *
+     * to have only one loop variable and add the unpacking statement to the top of the loop body
+     * like this:
+     * ```python
+     * for tempVar in someNestedList:
+     *     a, b, c = tempVar
+     *     pass
+     * ```
+     */
+    private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEachStatement {
         val ret = newForEachStatement(rawNode = node)
         if (node is IsAsync) {
             ret.addDeclaration(
@@ -247,16 +266,68 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body, parentNode = node)
+
+        when (val loopVar = frontend.expressionHandler.handle(node.target)) {
+            is InitializerListExpression -> { // unpacking
+                val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
+
+                ret.variable = tempVarRef
+
+                val body = makeBlock(node.body, parentNode = node)
+                body.statements.add(
+                    0,
+                    unpackingAssignment
+                ) // add the unpacking instruction to the top of the loop body
+                ret.statement = body
+            }
+            is Reference -> { // only one var
+                ret.variable = loopVar
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+            else -> {
+                ret.variable =
+                    newProblemExpression(
+                        problem =
+                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                        rawNode = node.target
+                    )
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+        }
+
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblemExpression(
-                    problem = "Cannot handle \"orelse\" in for loops.",
+                    problem = "handleFor: Cannot handle \"orelse\" in for loops.",
                     rawNode = node
                 )
         }
         return ret
+    }
+
+    /**
+     * This function creates two things:
+     * - A [Reference] to a variable with a random [Name]
+     * - An [AssignExpression] assigning the reference above to the [loopVar] input
+     *
+     * This is used in [handleFor] when loops have multiple loop variables to iterate over with
+     * automatic unpacking. We translate this implicit unpacking to multiple CPG nodes, as the CPG
+     * does not support automatic unpacking.
+     */
+    private fun getUnpackingNodes(
+        loopVar: InitializerListExpression
+    ): Pair<Reference, AssignExpression> {
+        val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
+        val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
+        val assign =
+            newAssignExpression(
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef)
+                )
+                .implicit()
+                .codeAndLocationFrom(loopVar)
+        return Pair(tempRef, assign)
     }
 
     private fun handleExpressionStatement(node: Python.AST.Expr): Statement {

@@ -159,14 +159,12 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    // TODO document why this is necessary and implement for other possible places
+    // New variables can also be declared as `variable` in a [ForEachStatement]
     private fun handleForEach(node: ForEachStatement) {
-        when (node.variable) {
+        when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleReference(node.variable as Reference)
-                if (handled is Declaration) {
-                    handled.let { node.addDeclaration(it) }
-                }
+                val handled = handleReference(forVar)
+                (handled as? Declaration)?.let { scopeManager.addDeclaration(it) }
             }
         }
     }
