@@ -154,7 +154,7 @@ class StatementHandlerTest : BaseTest() {
 
             val add = result.operators["__add__"]
             assertNotNull(add)
-            assertEquals(add, opCall.invokes.singleOrNull())
+            assertInvokes(opCall, add)
 
             // ... and one to __pos__ (+)
             opCall = result.operatorCalls("+").getOrNull(1)
@@ -163,7 +163,7 @@ class StatementHandlerTest : BaseTest() {
 
             val pos = result.operators["__pos__"]
             assertNotNull(pos)
-            assertEquals(pos, opCall.invokes.singleOrNull())
+            assertInvokes(opCall, pos)
         }
     }
 
