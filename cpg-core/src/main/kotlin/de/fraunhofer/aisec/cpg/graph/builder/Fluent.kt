@@ -1382,6 +1382,7 @@ infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
 
     return node
 }
+
 /**
  * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
  * DSL and adds it to the nearest enclosing [StatementHolder].
@@ -1392,6 +1393,18 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
     rhs(node)
 
     node.usedAsExpression = true
+
+    return node
+}
+
+/**
+ * Creates a new [RaiseStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.raise(init: (RaiseStatement.() -> Unit)?): RaiseStatement {
+    val node = (this@LanguageFrontend).newRaiseStatement()
+    if (init != null) init(node)
 
     return node
 }
