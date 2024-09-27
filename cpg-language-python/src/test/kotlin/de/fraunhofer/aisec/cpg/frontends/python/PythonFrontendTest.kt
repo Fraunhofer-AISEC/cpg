@@ -149,7 +149,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Reference>(ref)
 
         assertLocalName("s", ref)
-        assertEquals(s, ref.refersTo)
+        assertRefersTo(ref, s)
 
         val stmt = compStmt.statements[1]
         assertIs<AssignExpression>(stmt)
@@ -263,7 +263,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
 
-        assertEquals(c1, (s2.base as? Reference)?.refersTo)
+        assertRefersTo((s2.base as? Reference), c1)
         assertEquals(1, s2.invokes.size)
         assertEquals(clsfunc, s2.invokes.firstOrNull())
 
@@ -364,7 +364,7 @@ class PythonFrontendTest : BaseTest() {
 
         val barZ = (methBar.body as? Block)?.statements?.get(0)
         assertIs<MemberExpression>(barZ)
-        assertEquals(fieldZ, barZ.refersTo)
+        assertRefersTo(barZ, fieldZ)
 
         val barBaz = (methBar.body as? Block)?.statements?.get(1)
         assertIs<AssignExpression>(barBaz)
@@ -426,7 +426,7 @@ class PythonFrontendTest : BaseTest() {
                 ?.firstOrNull()
         assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
-        assertEquals(i, (someVarDeclaration.firstAssignment as? Reference)?.refersTo)
+        assertRefersTo((someVarDeclaration.firstAssignment as? Reference), i)
 
         val fooMemCall = (foo.body as? Block)?.statements?.get(0)
         assertIs<MemberCallExpression>(fooMemCall)
@@ -518,7 +518,7 @@ class PythonFrontendTest : BaseTest() {
         val initializer = fooDecl.firstAssignment as? ConstructExpression
         assertEquals(fooCtor, initializer?.constructor)
 
-        assertEquals(fooDecl, (line2.base as? Reference)?.refersTo)
+        assertRefersTo((line2.base as? Reference), fooDecl)
         assertEquals(foobar, line2.invokes[0])
     }
 
@@ -564,14 +564,14 @@ class PythonFrontendTest : BaseTest() {
 
         val lhs = ifCond.lhs
         assertIs<MemberCallExpression>(lhs)
-        assertEquals(countParam, (lhs.base as? Reference)?.refersTo)
+        assertRefersTo((lhs.base as? Reference), countParam)
         assertLocalName("inc", lhs)
         assertEquals(0, lhs.arguments.size)
 
         val ifThen = (countStmt.thenStatement as? Block)?.statements?.get(0)
         assertIs<CallExpression>(ifThen)
         assertEquals(methCount, ifThen.invokes.firstOrNull())
-        assertEquals(countParam, (ifThen.arguments.firstOrNull() as? Reference)?.refersTo)
+        assertRefersTo((ifThen.arguments.firstOrNull() as? Reference), countParam)
         assertNull(countStmt.elseStatement)
 
         // class c1(counter)
@@ -609,21 +609,18 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("=", assign.operatorCode)
         assertNotNull(assignLhs)
         assertNotNull(assignRhs)
-        assertEquals(selfReceiver, (assignLhs.base as? Reference)?.refersTo)
+        assertRefersTo((assignLhs.base as? Reference), selfReceiver)
         assertEquals("+", assignRhs.operatorCode)
 
         val assignRhsLhs =
             assignRhs.lhs
                 as? MemberExpression // the second "self.total" in "self.total = self.total + 1"
         assertNotNull(assignRhsLhs)
-        assertEquals(selfReceiver, (assignRhsLhs.base as? Reference)?.refersTo)
+        assertRefersTo((assignRhsLhs.base as? Reference), selfReceiver)
 
         val r = methBody.statements[1]
         assertIs<ReturnStatement>(r)
-        assertEquals(
-            selfReceiver,
-            ((r.returnValue as? MemberExpression)?.base as? Reference)?.refersTo
-        )
+        assertRefersTo((r.returnValue as? MemberExpression)?.base as? Reference, selfReceiver)
 
         // TODO last line "count(c1())"
     }
@@ -663,11 +660,8 @@ class PythonFrontendTest : BaseTest() {
         // classFieldNoInitializer = classFieldWithInit
         val assignClsFieldOutsideFunc = clsFoo.statements[2]
         assertIs<AssignExpression>(assignClsFieldOutsideFunc)
-        assertEquals(
-            classFieldNoInitializer,
-            (assignClsFieldOutsideFunc.lhs<Reference>())?.refersTo
-        )
-        assertEquals(classFieldWithInit, (assignClsFieldOutsideFunc.rhs<Reference>())?.refersTo)
+        assertRefersTo(assignClsFieldOutsideFunc.lhs<Reference>(), classFieldNoInitializer)
+        assertRefersTo((assignClsFieldOutsideFunc.rhs<Reference>()), classFieldWithInit)
         assertEquals("=", assignClsFieldOutsideFunc.operatorCode)
 
         val barBody = methBar.body
@@ -684,32 +678,32 @@ class PythonFrontendTest : BaseTest() {
         // self.classFieldNoInitializer = 789
         val barStmt1 = barBody.statements[1]
         assertIs<AssignExpression>(barStmt1)
-        assertEquals(classFieldNoInitializer, (barStmt1.lhs<MemberExpression>())?.refersTo)
+        assertRefersTo((barStmt1.lhs<MemberExpression>()), classFieldNoInitializer)
 
         // self.classFieldWithInit = 12
         val barStmt2 = barBody.statements[2]
         assertIs<AssignExpression>(barStmt2)
-        assertEquals(classFieldWithInit, (barStmt2.lhs<MemberExpression>())?.refersTo)
+        assertRefersTo((barStmt2.lhs<MemberExpression>()), classFieldWithInit)
 
         // classFieldNoInitializer = "shadowed"
         val barStmt3 = barBody.statements[3]
         assertIs<AssignExpression>(barStmt3)
         assertEquals("=", barStmt3.operatorCode)
-        assertEquals(classFieldNoInitializer, (barStmt3.lhs<Reference>())?.refersTo)
+        assertRefersTo((barStmt3.lhs<Reference>()), classFieldNoInitializer)
         assertEquals("shadowed", (barStmt3.rhs<Literal<*>>())?.value)
 
         // classFieldWithInit = "shadowed"
         val barStmt4 = barBody.statements[4]
         assertIs<AssignExpression>(barStmt4)
         assertEquals("=", barStmt4.operatorCode)
-        assertEquals(classFieldWithInit, (barStmt4.lhs<Reference>())?.refersTo)
+        assertRefersTo((barStmt4.lhs<Reference>()), classFieldWithInit)
         assertEquals("shadowed", (barStmt4.rhs<Literal<*>>())?.value)
 
         // classFieldDeclaredInFunction = "shadowed"
         val barStmt5 = barBody.statements[5]
         assertIs<AssignExpression>(barStmt5)
         assertEquals("=", barStmt5.operatorCode)
-        assertEquals(classFieldDeclaredInFunction, (barStmt5.lhs<Reference>())?.refersTo)
+        assertRefersTo((barStmt5.lhs<Reference>()), classFieldDeclaredInFunction)
         assertEquals("shadowed", (barStmt5.rhs<Literal<*>>())?.value)
 
         /* TODO:
@@ -1375,7 +1369,8 @@ class PythonFrontendTest : BaseTest() {
         val lhs = assignExpression.lhs.firstOrNull()
         assertIs<Reference>(lhs)
 
-        val lhsVariable = lhs.refersTo as? VariableDeclaration
+        val lhsVariable = lhs.refersTo
+        assertIs<VariableDeclaration>(lhsVariable)
         assertLocalName("x", lhsVariable)
 
         val rhs = assignExpression.rhs.firstOrNull()
