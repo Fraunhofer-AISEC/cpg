@@ -853,8 +853,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(forVarDecl)
         assertRefersTo(forVariable, forVarDecl)
 
-        val iter = forStmt.iterable as? Reference
-        assertNotNull(iter)
+        val iter = forStmt.iterable
+        assertIs<Reference>(iter)
         assertRefersTo(iter, testDeclaration)
 
         val forBody = forStmt.statement
