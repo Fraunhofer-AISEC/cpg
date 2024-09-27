@@ -331,14 +331,14 @@ fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): DefaultStatement
 }
 
 /**
- * Creates a new [RaiseStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ThrowStatement]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newRaiseStatement(rawNode: Any? = null): RaiseStatement {
-    val node = RaiseStatement()
+fun MetadataProvider.newRaiseStatement(rawNode: Any? = null): ThrowStatement {
+    val node = ThrowStatement()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)

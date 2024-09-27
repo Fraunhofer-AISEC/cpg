@@ -31,15 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.builder.call
 import de.fraunhofer.aisec.cpg.graph.builder.declare
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.literal
-import de.fraunhofer.aisec.cpg.graph.builder.raise
 import de.fraunhofer.aisec.cpg.graph.builder.t
+import de.fraunhofer.aisec.cpg.graph.builder.`throw`
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.builder.variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newReference
-import de.fraunhofer.aisec.cpg.graph.statements.RaiseStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ThrowStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.collections.firstOrNull
@@ -127,7 +127,7 @@ class DataflowTest {
                         function("foo", t("void")) {
                             body {
                                 declare { variable("a", t("short")) { literal(42) } }
-                                raise { call("SomeError") { /* TODO parameter a */} }
+                                `throw` { call("SomeError") { /* TODO parameter a */} }
                             }
                         }
                     }
@@ -135,13 +135,13 @@ class DataflowTest {
             }
 
         // Let's assert that we did this correctly
-        val main = result.functions["foo"]
+        val main = result.functions[0] // TODO: why can't I use "foo" like with the other tests?
         assertNotNull(main)
         val body = main.body
         assertIs<Block>(body)
 
         val throwStmt = body.statements.getOrNull(0)
-        assertIs<RaiseStatement>(throwStmt)
+        assertIs<ThrowStatement>(throwStmt)
         assertNotNull(throwStmt.exception)
         val throwCall = throwStmt.exception
         assertIs<CallExpression>(throwCall)

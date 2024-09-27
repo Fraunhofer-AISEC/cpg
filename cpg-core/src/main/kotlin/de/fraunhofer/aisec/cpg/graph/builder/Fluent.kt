@@ -1398,11 +1398,11 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
 }
 
 /**
- * Creates a new [RaiseStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * Creates a new [ThrowStatement] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
-infix fun Expression.raise(init: (RaiseStatement.() -> Unit)?): RaiseStatement {
+infix fun Expression.`throw`(init: (ThrowStatement.() -> Unit)?): ThrowStatement {
     val node = (this@LanguageFrontend).newRaiseStatement()
     if (init != null) init(node)
 

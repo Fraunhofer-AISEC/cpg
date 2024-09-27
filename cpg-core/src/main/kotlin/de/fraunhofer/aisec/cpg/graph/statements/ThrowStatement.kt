@@ -33,11 +33,11 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a `throw` or `raise` statement. */
-class RaiseStatement : Statement(), ArgumentHolder {
+class ThrowStatement : Statement(), ArgumentHolder {
 
     /** The exception object to be raised. */
     @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()
-    var exception by unwrapping(RaiseStatement::exceptionEdge)
+    var exception by unwrapping(ThrowStatement::exceptionEdge)
 
     /**
      * Some languages (Python) can add a cause to indicate that an exception was raised while
@@ -46,7 +46,7 @@ class RaiseStatement : Statement(), ArgumentHolder {
      * program behavior.
      */
     @Relationship(value = "CAUSE") var causeEdge = astOptionalEdgeOf<Expression>()
-    var cause by unwrapping(RaiseStatement::causeEdge)
+    var cause by unwrapping(ThrowStatement::causeEdge)
 
     override fun addArgument(expression: Expression) {
         when {
@@ -79,7 +79,7 @@ class RaiseStatement : Statement(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is RaiseStatement) return false
+        if (other !is ThrowStatement) return false
         return super.equals(other) && exception == other.exception && cause == other.cause
     }
 

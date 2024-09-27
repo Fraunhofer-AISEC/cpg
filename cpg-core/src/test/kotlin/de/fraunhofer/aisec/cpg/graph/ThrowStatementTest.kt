@@ -27,22 +27,22 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.statements.RaiseStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ThrowStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.test.*
 
-class RaiseStatementTest {
+class ThrowStatementTest {
     @Test
-    fun testRaise() {
+    fun testThrow() {
         val result =
             TestLanguageFrontend().build {
                 translationResult {
                     translationUnit("some.file") {
                         function("foo", t("void")) {
                             body {
-                                raise {}
-                                raise { call("SomeError") }
+                                `throw` {}
+                                `throw` { call("SomeError") }
                             }
                         }
                     }
@@ -55,14 +55,14 @@ class RaiseStatementTest {
         val body = main.body
         assertIs<Block>(body)
 
-        val emptyRaise = body.statements.getOrNull(0)
-        assertIs<RaiseStatement>(emptyRaise)
-        assertNull(emptyRaise.exception)
+        val emptyThrow = body.statements.getOrNull(0)
+        assertIs<ThrowStatement>(emptyThrow)
+        assertNull(emptyThrow.exception)
 
-        val raiseWithExc = body.statements.getOrNull(1)
-        assertIs<RaiseStatement>(raiseWithExc)
-        val raiseCall = raiseWithExc.exception
-        assertIs<CallExpression>(raiseCall)
-        assertEquals("SomeError", raiseCall.name.localName)
+        val throwWithExc = body.statements.getOrNull(1)
+        assertIs<ThrowStatement>(throwWithExc)
+        val throwCall = throwWithExc.exception
+        assertIs<CallExpression>(throwCall)
+        assertEquals("SomeError", throwCall.name.localName)
     }
 }

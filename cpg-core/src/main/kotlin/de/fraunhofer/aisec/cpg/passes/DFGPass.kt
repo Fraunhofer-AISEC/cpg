@@ -130,7 +130,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
-            is RaiseStatement -> handleRaiseStatement(node, inferDfgForUnresolvedSymbols)
+            is ThrowStatement -> handleRaiseStatement(node, inferDfgForUnresolvedSymbols)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
@@ -140,13 +140,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Handle a [RaiseStatement]. Currently, we support two types of [RaiseStatement.exception],
+     * Handle a [ThrowStatement]. Currently, we support two types of [ThrowStatement.exception],
      * which are then forwarded to the appropriate handlers:
      * - [CallExpression]
      * - [Reference]
      */
     protected fun handleRaiseStatement(
-        node: RaiseStatement,
+        node: ThrowStatement,
         inferDfgForUnresolvedSymbols: Boolean
     ) {
         node.exception?.let { exc ->
