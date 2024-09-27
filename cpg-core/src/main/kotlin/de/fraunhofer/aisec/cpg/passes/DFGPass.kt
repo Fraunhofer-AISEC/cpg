@@ -130,7 +130,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
-            is ThrowStatement -> handleRaiseStatement(node, inferDfgForUnresolvedSymbols)
+            is ThrowStatement -> handleThrowStatement(node, inferDfgForUnresolvedSymbols)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
@@ -145,7 +145,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - [CallExpression]
      * - [Reference]
      */
-    protected fun handleRaiseStatement(
+    protected fun handleThrowStatement(
         node: ThrowStatement,
         inferDfgForUnresolvedSymbols: Boolean
     ) {
@@ -159,7 +159,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
                 else -> {
                     log.warn(
-                        "handleRaiseStatement: Received unexpected exception Type: ${exc.javaClass.simpleName}"
+                        "handleThrowStatement: Received unexpected exception Type: ${exc.javaClass.simpleName}"
                     )
                 }
             }

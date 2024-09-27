@@ -157,7 +157,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
-        map[ThrowStatement::class.java] = { handleRaiseStatement(it as ThrowStatement) }
+        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
     protected fun doNothing() {
@@ -1020,7 +1020,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = false
     }
 
-    protected fun handleRaiseStatement(statement: ThrowStatement) {
+    protected fun handleThrowStatement(statement: ThrowStatement) {
         TODO("Needs implementing")
     }
 

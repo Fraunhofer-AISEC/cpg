@@ -119,7 +119,7 @@ class DataflowTest {
     }
 
     @Test
-    fun testRaise() {
+    fun testThrow() {
         val result =
             TestLanguageFrontend().build {
                 translationResult {

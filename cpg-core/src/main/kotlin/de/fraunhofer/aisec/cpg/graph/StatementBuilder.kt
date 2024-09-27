@@ -337,7 +337,7 @@ fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): DefaultStatement
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newRaiseStatement(rawNode: Any? = null): ThrowStatement {
+fun MetadataProvider.newThrowStatement(rawNode: Any? = null): ThrowStatement {
     val node = ThrowStatement()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
