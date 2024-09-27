@@ -40,7 +40,9 @@ class RaiseStatement : Statement() {
 
     /**
      * Some languages (Python) can add a cause to indicate that an exception was raised while
-     * handling another exception.
+     * handling another exception. This is stored in the graph, but has no further implications like
+     * EOG or DFG connections, as it is only of informational purpose, but it doesn't change the
+     * program behavior.
      */
     @Relationship(value = "CAUSE") var causeEdge = astOptionalEdgeOf<Expression>()
     var cause by unwrapping(RaiseStatement::causeEdge)
