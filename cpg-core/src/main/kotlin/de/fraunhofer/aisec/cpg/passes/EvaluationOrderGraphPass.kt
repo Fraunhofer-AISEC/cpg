@@ -157,6 +157,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
+        map[RaiseStatement::class.java] = { handleRaiseStatement(it as RaiseStatement) }
     }
 
     protected fun doNothing() {
@@ -1017,6 +1018,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
+    }
+
+    protected fun handleRaiseStatement(statement: RaiseStatement) {
+        TODO("Needs implementing")
     }
 
     companion object {

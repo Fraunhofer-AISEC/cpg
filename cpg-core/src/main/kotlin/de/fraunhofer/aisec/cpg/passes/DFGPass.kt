@@ -130,11 +130,39 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
+            is RaiseStatement -> handleRaiseStatement(node, inferDfgForUnresolvedSymbols)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
+        }
+    }
+
+    /**
+     * Handle a [RaiseStatement]. Currently, we support two types of [RaiseStatement.exception],
+     * which are then forwarded to the appropriate handlers:
+     * - [CallExpression]
+     * - [Reference]
+     */
+    protected fun handleRaiseStatement(
+        node: RaiseStatement,
+        inferDfgForUnresolvedSymbols: Boolean
+    ) {
+        node.exception?.let { exc ->
+            when (exc) {
+                is CallExpression -> {
+                    handleCallExpression(exc, inferDfgForUnresolvedSymbols)
+                }
+                is Reference -> {
+                    handleReference(exc)
+                }
+                else -> {
+                    log.warn(
+                        "handleRaiseStatement: Received unexpected exception Type: ${exc.javaClass.simpleName}"
+                    )
+                }
+            }
         }
     }
 
