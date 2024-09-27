@@ -180,6 +180,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // resolution, but in future this will also be used in resolving regular references.
         current.candidates = scopeManager.findSymbols(current.name, current.location).toSet()
 
+        // Preparation for a future without legacy call resolving. Taking the first candidate is not
+        // ideal since we are running into an issue with function pointers here (see workaround
+        // below).
+        var wouldResolveTo = current.candidates.singleOrNull()
+
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
         // property to actually resolve the function call. However, there is a special case that
@@ -189,21 +194,38 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // of this call expression back to its original variable declaration. In the future, we want
         // to extend this particular code to resolve all callee references to their declarations,
         // i.e., their function definitions and get rid of the separate CallResolver.
-        var wouldResolveTo: Declaration? = null
         if (current.resolutionHelper is CallExpression) {
             // Peek into the declaration, and if it is only one declaration and a variable, we can
             // proceed normally, as we are running into the special case explained above. Otherwise,
             // we abort here (for now).
-            wouldResolveTo = current.candidates.singleOrNull()
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
                 return
+            }
+        }
+
+        // Some stupid C++ workaround to use the legacy call resolver when we try to resolve targets
+        // for function pointers. At least we are only invoking the legacy resolver for a very small
+        // percentage of references now.
+        if (wouldResolveTo is FunctionDeclaration) {
+            // We need to invoke the legacy resolver, just to be sure
+            var legacy = scopeManager.resolveReference(current)
+
+            // This is just for us to catch these differences in symbol resolving in the future. The
+            // difference is pretty much only that the legacy system takes parameters of the
+            // function-pointer-type into account and the new system does not (yet), because it just
+            // takes the first match. This will be needed to solve in the future.
+            if (legacy != wouldResolveTo) {
+                log.warn(
+                    "The legacy symbol resolution and the new system produced different results here. This needs to be investigated in the future. For now, we take the legacy result."
+                )
+                wouldResolveTo = legacy
             }
         }
 
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
-        var refersTo = current.refersTo ?: wouldResolveTo ?: scopeManager.resolveReference(current)
+        var refersTo = current.refersTo ?: wouldResolveTo
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
