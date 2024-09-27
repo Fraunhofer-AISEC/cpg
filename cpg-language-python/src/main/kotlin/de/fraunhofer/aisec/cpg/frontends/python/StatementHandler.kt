@@ -33,15 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
@@ -69,12 +62,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
+            is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
             is Python.AST.Raise,
-            is Python.AST.Try,
             is Python.AST.TryStar,
             is Python.AST.With,
             is Python.AST.AsyncWith ->
@@ -83,6 +76,57 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates an [`excepthandler`] which can only be a
+     * [`ExceptHandler`](https://docs.python.org/3/library/ast.html#ast.ExceptHandler) to a
+     * [CatchClause].
+     *
+     * It adds all the statements to the body and will set a parameter if it exists. For the
+     * catch-all clause, we do not set the [CatchClause.parameter].
+     */
+    private fun handleBaseExcepthandler(node: Python.AST.BaseExcepthandler): CatchClause {
+        return when (node) {
+            is Python.AST.ExceptHandler -> {
+                val catchClause = newCatchClause(rawNode = node)
+                catchClause.body = makeBlock(node.body, node)
+                // The parameter can have a type but if the type is None/null, it's the "catch-all"
+                // clause.
+                // In this case, it also cannot have a name, so we can skip the variable
+                // declaration.
+                if (node.type != null) {
+                    // the parameter can have a name, or we use the anonymous identifier _
+                    catchClause.parameter =
+                        newVariableDeclaration(
+                            name = node.name ?: "",
+                            type = frontend.typeOf(node.type),
+                            rawNode = node
+                        )
+                }
+                catchClause
+            }
+        }
+    }
+
+    /**
+     * Translates a Python [`Try`](https://docs.python.org/3/library/ast.html#ast.Try) into a
+     * [TryStatement].
+     */
+    private fun handleTryStatement(node: Python.AST.Try): TryStatement {
+        val tryStatement = newTryStatement(rawNode = node)
+        tryStatement.tryBlock = makeBlock(node.body, node)
+        tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
+
+        if (node.orelse.isNotEmpty()) {
+            tryStatement.elseBlock = makeBlock(node.orelse, node)
+        }
+
+        if (node.finalbody.isNotEmpty()) {
+            tryStatement.finallyBlock = makeBlock(node.finalbody, node)
+        }
+
+        return tryStatement
     }
 
     /**
@@ -191,7 +235,26 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleFor(node: Python.AST.NormalOrAsyncFor): Statement {
+    /**
+     * Translates a Python [`For`](https://docs.python.org/3/library/ast.html#ast.For) into an
+     * [ForEachStatement].
+     *
+     * Python supports implicit unpacking of multiple loop variables. To map this to CPG node, we
+     * translate the following implicit unpacking of code like this:
+     * ```python
+     * for a, b, c in someNestedList:
+     *     pass
+     * ```
+     *
+     * to have only one loop variable and add the unpacking statement to the top of the loop body
+     * like this:
+     * ```python
+     * for tempVar in someNestedList:
+     *     a, b, c = tempVar
+     *     pass
+     * ```
+     */
+    private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEachStatement {
         val ret = newForEachStatement(rawNode = node)
         if (node is IsAsync) {
             ret.addDeclaration(
@@ -203,16 +266,68 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body, parentNode = node)
+
+        when (val loopVar = frontend.expressionHandler.handle(node.target)) {
+            is InitializerListExpression -> { // unpacking
+                val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
+
+                ret.variable = tempVarRef
+
+                val body = makeBlock(node.body, parentNode = node)
+                body.statements.add(
+                    0,
+                    unpackingAssignment
+                ) // add the unpacking instruction to the top of the loop body
+                ret.statement = body
+            }
+            is Reference -> { // only one var
+                ret.variable = loopVar
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+            else -> {
+                ret.variable =
+                    newProblemExpression(
+                        problem =
+                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                        rawNode = node.target
+                    )
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+        }
+
         if (node.orelse.isNotEmpty()) {
             ret.additionalProblems +=
                 newProblemExpression(
-                    problem = "Cannot handle \"orelse\" in for loops.",
+                    problem = "handleFor: Cannot handle \"orelse\" in for loops.",
                     rawNode = node
                 )
         }
         return ret
+    }
+
+    /**
+     * This function creates two things:
+     * - A [Reference] to a variable with a random [Name]
+     * - An [AssignExpression] assigning the reference above to the [loopVar] input
+     *
+     * This is used in [handleFor] when loops have multiple loop variables to iterate over with
+     * automatic unpacking. We translate this implicit unpacking to multiple CPG nodes, as the CPG
+     * does not support automatic unpacking.
+     */
+    private fun getUnpackingNodes(
+        loopVar: InitializerListExpression
+    ): Pair<Reference, AssignExpression> {
+        val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
+        val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
+        val assign =
+            newAssignExpression(
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef)
+                )
+                .implicit()
+                .codeAndLocationFrom(loopVar)
+        return Pair(tempRef, assign)
     }
 
     private fun handleExpressionStatement(node: Python.AST.Expr): Statement {
@@ -397,7 +512,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body, parentNode = s)
+            // Make sure we open a new (block) scope for the function body. This is not a 1:1
+            // mapping to python scopes, since python only has a "function scope", but in the CPG
+            // the function scope only comprises the function arguments, and we need a block scope
+            // to
+            // hold all local variables within the function body.
+            result.body = makeBlock(s.body, parentNode = s, enterScope = true)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -603,14 +723,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
+     *
+     * Optionally, a new scope will be opened when [enterScope] is specified. This should be done
+     * VERY carefully, as Python has a very limited set of scopes and is most likely only to be used
+     * by [handleFunctionDef].
      */
     private fun makeBlock(
         stmts: List<Python.AST.BaseStmt>,
-        parentNode: Python.AST.WithLocation
+        parentNode: Python.AST.WithLocation,
+        enterScope: Boolean = false,
     ): Block {
         val result = newBlock()
+        if (enterScope) {
+            frontend.scopeManager.enterScope(result)
+        }
+
         for (stmt in stmts) {
             result.statements += handle(stmt)
+        }
+
+        if (enterScope) {
+            frontend.scopeManager.leaveScope(result)
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt

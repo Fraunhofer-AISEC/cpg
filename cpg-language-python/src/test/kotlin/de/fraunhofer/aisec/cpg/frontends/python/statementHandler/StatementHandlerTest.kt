@@ -28,19 +28,15 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
@@ -61,6 +57,69 @@ class StatementHandlerTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
+    }
+
+    @Test
+    fun testTry() {
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("try.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val tryAll = tu.functions["tryAll"]?.trys?.singleOrNull()
+        assertNotNull(tryAll)
+
+        assertEquals(1, tryAll.tryBlock?.statements?.size)
+
+        assertEquals(3, tryAll.catchClauses.size)
+        assertLocalName("", tryAll.catchClauses[0].parameter)
+        assertLocalName("e", tryAll.catchClauses[1].parameter)
+        assertNull(tryAll.catchClauses[2].parameter)
+
+        assertEquals(1, tryAll.elseBlock?.statements?.size)
+        assertEquals(1, tryAll.finallyBlock?.statements?.size)
+
+        val tryOnlyFinally = tu.functions["tryOnlyFinally"]?.trys?.singleOrNull()
+        assertNotNull(tryOnlyFinally)
+
+        assertEquals(1, tryOnlyFinally.tryBlock?.statements?.size)
+
+        assertEquals(0, tryOnlyFinally.catchClauses.size)
+
+        assertNull(tryOnlyFinally.elseBlock)
+        assertEquals(1, tryOnlyFinally.finallyBlock?.statements?.size)
+
+        val tryOnlyExcept = tu.functions["tryOnlyExcept"]?.trys?.singleOrNull()
+        assertNotNull(tryOnlyExcept)
+
+        assertEquals(1, tryOnlyExcept.tryBlock?.statements?.size)
+
+        assertEquals(1, tryOnlyExcept.catchClauses.size)
+        assertNull(tryOnlyExcept.catchClauses.single().parameter)
+
+        assertNull(tryOnlyExcept.elseBlock)
+        assertNull(tryOnlyExcept.finallyBlock)
+
+        // Test EOG integrity with else block
+
+        // All entries to the else block must come from the try block
+        assertTrue(
+            Util.eogConnect(
+                n = tryAll.elseBlock,
+                en = Util.Edge.ENTRIES,
+                refs = listOf(tryAll.tryBlock)
+            )
+        )
+
+        // All exits from the else block must go to the entries of the non-empty finals block
+        assertTrue(
+            Util.eogConnect(
+                n = tryAll.elseBlock,
+                en = Util.Edge.EXITS,
+                refs = listOf(tryAll.finallyBlock)
+            )
+        )
     }
 
     @Test

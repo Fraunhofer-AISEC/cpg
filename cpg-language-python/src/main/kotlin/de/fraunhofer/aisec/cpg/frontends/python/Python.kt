@@ -437,7 +437,7 @@ interface Python {
                 "handlers" of pyObject
             }
             val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
-            val stmt: kotlin.collections.List<BaseStmt> by lazy { "StmtBase" of pyObject }
+            val finalbody: kotlin.collections.List<BaseStmt> by lazy { "finalbody" of pyObject }
         }
 
         /**
