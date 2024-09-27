@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -66,8 +67,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global -> handleGlobal(node)
+            is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Match,
-            is Python.AST.Nonlocal,
             is Python.AST.Raise,
             is Python.AST.TryStar,
             is Python.AST.With,
@@ -535,6 +536,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
 
         var stmt = newReferenceScopeModifierStatement(pythonGlobalScope, rawNode = global)
+        stmt.references = global.names.map { newReference(it, rawNode = global) }.toMutableList()
+        return stmt
+    }
+
+    private fun handleNonLocal(global: Python.AST.Nonlocal): ReferenceScopeModifierStatement {
+        // We need to find the first outer function scope, or rather the block scope belonging to
+        // the function
+        var outerFunctionScope =
+            frontend.scopeManager.firstScopeOrNull {
+                it is BlockScope && it != frontend.scopeManager.currentScope
+            }
+
+        var stmt = newReferenceScopeModifierStatement(outerFunctionScope, rawNode = global)
         stmt.references = global.names.map { newReference(it, rawNode = global) }.toMutableList()
         return stmt
     }

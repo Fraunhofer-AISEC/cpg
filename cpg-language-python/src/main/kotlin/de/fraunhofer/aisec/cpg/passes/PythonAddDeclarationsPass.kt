@@ -80,16 +80,17 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /*
-     * Return null when not creating a new decl
+    /**
+     * This function will create a new dynamic [VariableDeclaration] if there is a write access to
+     * the [ref].
      */
-    private fun handleReference(node: Reference): VariableDeclaration? {
-        if (node.resolutionHelper is CallExpression) {
+    private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
+        if (ref.resolutionHelper is CallExpression) {
             return null
         }
 
         // Look for a potential scope modifier for this reference
-        var targetScope = scopeManager.currentScope?.lookForScopeModifier(node.name)
+        var targetScope = scopeManager.currentScope?.lookForScopeModifier(ref.name)
 
         // There are a couple of things to consider now
         var symbol =
@@ -97,9 +98,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             //   - to look for a local variable, unless
             //   - a global keyword is present for this variable and scope
             if (targetScope != null) {
-                scopeManager.findSymbols(node.name, node.location, targetScope)
+                scopeManager.findSymbols(ref.name, ref.location, targetScope)
             } else {
-                scopeManager.findSymbols(node.name, node.location) {
+                scopeManager.findSymbols(ref.name, ref.location) {
                     it.scope == scopeManager.currentScope
                 }
             }
@@ -112,15 +113,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             if (scopeManager.isInRecord && scopeManager.isInFunction) {
                 // Check, whether we are referring to a "self.X", which would create a field
                 if (
-                    node is MemberExpression &&
-                        node.base.name == scopeManager.currentMethod?.receiver?.name
+                    ref is MemberExpression &&
+                        ref.base.name == scopeManager.currentMethod?.receiver?.name
                 ) {
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
                     scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
-                        newFieldDeclaration(node.name)
+                        newFieldDeclaration(ref.name)
                     }
-                } else if (node is MemberExpression) {
+                } else if (ref is MemberExpression) {
                     // If this is any other member expression, we are usually not interested in
                     // creating fields, except if this is a receiver
                     return null
@@ -130,7 +131,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             } else if (scopeManager.isInRecord) {
                 // We end up here for fields declared directly in the class body. These are class
                 // attributes; more or less static fields.
-                newFieldDeclaration(node.name)
+                newFieldDeclaration(ref.name)
             } else {
                 null
             }
@@ -139,15 +140,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // can create a normal variable. We need to take scope modifications into account.
         var decl =
             if (field == null && targetScope != null) {
-                scopeManager.withScope(targetScope) { newVariableDeclaration(node.name) }
+                scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
             } else if (field == null) {
-                newVariableDeclaration(node.name)
+                newVariableDeclaration(ref.name)
             } else {
                 field
             }
 
-        decl.code = node.code
-        decl.location = node.location
+        decl.code = ref.code
+        decl.location = ref.location
         decl.isImplicit = true
 
         // TODO: trace?
@@ -172,7 +173,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
             (target as? Reference)?.let {
-                val handled = handleReference(target)
+                val handled = handleWriteToReference(target)
                 if (handled is Declaration) {
                     // We cannot assign an initializer here because this will lead to duplicate
                     // DFG edges, but we need to propagate the type information from our value
@@ -194,7 +195,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleForEach(node: ForEachStatement) {
         when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleReference(node.variable as Reference)
+                val handled = handleWriteToReference(node.variable as Reference)
                 if (handled is Declaration) {
                     handled.let { node.addDeclaration(it) }
                 }

@@ -285,4 +285,17 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(cRefs)
         cRefs.forEach { assertRefersTo(it, localC2) }
     }
+
+    // TODO(oxisto): Re-renable this once we parse nested functions
+    @Ignore
+    @Test
+    fun testNonLocal() {
+        var file = topLevel.resolve("nonlocal.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        // There should be three variable declarations, two local and one global
+        var cVariables = result.variables("c")
+        assertEquals(3, cVariables.size)
+    }
 }
