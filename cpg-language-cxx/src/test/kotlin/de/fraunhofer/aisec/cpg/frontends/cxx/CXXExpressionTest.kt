@@ -42,9 +42,9 @@ class CXXExpressionTest {
             }
         assertNotNull(tu)
 
-        // We should have two calls (int and myint64)
+        // We should have two casts (int and myint64, which is a typedef for long long int)
         val casts = tu.casts
         assertEquals(2, casts.size)
-        assertEquals(listOf("int", "myint64"), casts.map { it.name.localName })
+        assertEquals(listOf("int", "long long int"), casts.map { it.name.localName })
     }
 }

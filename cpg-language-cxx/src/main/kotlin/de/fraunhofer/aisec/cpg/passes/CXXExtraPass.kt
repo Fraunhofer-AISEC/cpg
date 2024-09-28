@@ -79,11 +79,11 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
         if (
             node.operatorCode == "()" &&
-                !scopeManager.nameIsTypeForScope(
+                scopeManager.findTypeWithNameAndScope(
                     node.input.name,
                     node.input.language,
                     node.input.scope
-                )
+                ) == null
         ) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
@@ -116,11 +116,11 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             language != null &&
                 fakeUnaryOp is UnaryOperator &&
                 fakeUnaryOp.operatorCode == "()" &&
-                scopeManager.nameIsTypeForScope(
+                scopeManager.findTypeWithNameAndScope(
                     fakeUnaryOp.input.name,
                     fakeUnaryOp.input.language,
                     fakeUnaryOp.input.scope,
-                )
+                ) != null
         ) {
             // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
             // is really a cast and our binary operator is really a unary operator `&addr`.

@@ -88,23 +88,9 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // Check, if this is cast is really a construct expression (if the language supports
         // functional-constructs)
         if (language is HasFunctionStyleConstruction) {
-            // Make sure, we do not accidentally "construct" primitive types
-            if (language.builtInTypes.contains(callee.name.toString()) == true) {
-                return
-            }
-
-            val fqn =
-                if (callee.name.parent == null) {
-                    scopeManager.currentNamespace.fqn(
-                        callee.name.localName,
-                        delimiter = callee.name.delimiter
-                    )
-                } else {
-                    callee.name
-                }
-
             // Check for our type. We are only interested in object types
-            val type = typeManager.lookupResolvedType(fqn)
+            var type =
+                scopeManager.findTypeWithNameAndScope(callee.name, callee.language, callee.scope)
             if (type is ObjectType) {
                 walker.replaceCallWithConstruct(type, parent, call)
             }
@@ -121,27 +107,11 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
                 callee = callee.input
             }
 
-            // First, check if this is a built-in type
-            var builtInType = language.getSimpleTypeOf(callee.name)
-            if (builtInType != null) {
-                walker.replaceCallWithCast(builtInType, parent, call, false)
-            } else {
-                // If not, then this could still refer to an existing type. We need to make sure
-                // that we take the current namespace into account
-                val fqn =
-                    if (callee.name.parent == null) {
-                        scopeManager.currentNamespace.fqn(
-                            callee.name.localName,
-                            delimiter = callee.name.delimiter
-                        )
-                    } else {
-                        callee.name
-                    }
-
-                val type = typeManager.lookupResolvedType(fqn)
-                if (type != null) {
-                    walker.replaceCallWithCast(type, parent, call, pointer)
-                }
+            // Check if it is type and replace the call
+            var type =
+                scopeManager.findTypeWithNameAndScope(callee.name, callee.language, callee.scope)
+            if (type != null) {
+                walker.replaceCallWithCast(type, parent, call, false)
             }
         }
     }

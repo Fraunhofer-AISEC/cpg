@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
@@ -1011,37 +1012,49 @@ class ScopeManager : ScopeProvider {
      * returns a [DeclaresType] node, if this name resolved to something which declares a type.
      */
     fun findTypeDeclaration(name: Name, startScope: Scope?): DeclaresType? {
-        var symbols = findSymbols(name = name, startScope = startScope) { it is DeclaresType }
+        var symbols =
+            findSymbols(name = name, startScope = startScope) { it is DeclaresType }
+                .filterIsInstance<DeclaresType>()
 
-        // We need to have a single match, otherwise we have an ambiguous type and we cannot
+        // We need to have a single match, otherwise we have an ambiguous type, and we cannot
         // normalize it.
-        // TODO: Maybe we should have a warning in this case?
-        var declares = symbols.filterIsInstance<DeclaresType>().singleOrNull()
+        if (symbols.size > 1) {
+            LOGGER.warn(
+                "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
+                name
+            )
+        }
 
-        return declares
+        return symbols.singleOrNull()
     }
 
     /**
      * This function checks, whether there exists a [Type] for the given combination of a [name] and
-     * [scope].
+     * [scope] and returns it. It returns null, if no such type exists.
      *
      * This is needed in passes that need to replace potential identifiers with [Type] nodes,
-     * because of ambiguities.
+     * because of ambiguities (e.g. [ResolveCallExpressionAmbiguityPass]).
      */
-    fun nameIsTypeForScope(
+    fun findTypeWithNameAndScope(
         name: Name,
         language: Language<*>?,
         scope: Scope? = currentScope
-    ): Boolean {
+    ): Type? {
         // First, check if it is a simple type
         var type = language?.getSimpleTypeOf(name)
         if (type != null) {
-            return true
+            return type
+        }
+
+        // This could also be a typedef
+        type = typedefFor(name, scope)
+        if (type != null) {
+            return type
         }
 
         // Otherwise, try to find a type declaration with the given combination of symbol and name
         var declares = findTypeDeclaration(name, scope)
-        return declares?.declaredType != null
+        return declares?.declaredType
     }
 }
 
