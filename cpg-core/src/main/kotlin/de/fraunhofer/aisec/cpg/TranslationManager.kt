@@ -309,6 +309,8 @@ private constructor(
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
 
+        var b =
+            Benchmark(TranslationManager::class.java, "Updating global scopes in all types", true)
         // We also need to update all types that point to one of the "old" global scopes
         // TODO(oxisto): This is really messy and instead we should have ONE global scope
         //  and individual file scopes beneath it
@@ -322,6 +324,7 @@ private constructor(
                 it.scope = newGlobalScope
             }
         }
+        b.stop()
 
         log.info("Parallel parsing completed")
 
