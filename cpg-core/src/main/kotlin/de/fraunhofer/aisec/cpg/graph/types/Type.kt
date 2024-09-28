@@ -142,8 +142,6 @@ abstract class Type : Node {
      * @param pointer Reason for the reference (array of pointer)
      * @return Returns a reference to the current Type. E.g. when creating a pointer to an existing
      *   ObjectType
-     *
-     *
      */
     // TODO(oxisto): Make this internal, but some tests still use it
     /*internal*/ abstract fun reference(pointer: PointerOrigin?): Type

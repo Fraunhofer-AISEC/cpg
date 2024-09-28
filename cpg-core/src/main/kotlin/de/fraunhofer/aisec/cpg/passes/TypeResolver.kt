@@ -46,10 +46,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         resolveFirstOrderTypes()
         refreshNames()
-
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler(::legacyHandleNode)
-        walker.iterate(component)
     }
 
     private fun refreshNames() {
@@ -114,18 +110,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /** This piece of code is completely unnecessary, since we already set the */
-    private fun legacyHandleNode(node: Node?) {
-        if (node is RecordDeclaration) {
-            for (t in typeManager.firstOrderTypesMap.values.flatten()) {
-                if (t.name == node.name && t is ObjectType) {
-                    // The node is the class of the type t
-                    t.recordDeclaration = node
-                }
-            }
-        }
-    }
-
     override fun cleanup() {
         // Nothing to do
     }
@@ -135,7 +119,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         log.info("Resolving {} first order type objects", allTypes.size)
 
-        for (type in typeManager.firstOrderTypesMap.values.flatten().sortedBy { it.name }) {
+        for (type in allTypes) {
             if (
                 type is ObjectType && type.resolutionState == Type.ResolutionState.UNRESOLVED ||
                     type.resolutionState == Type.ResolutionState.GUESSED

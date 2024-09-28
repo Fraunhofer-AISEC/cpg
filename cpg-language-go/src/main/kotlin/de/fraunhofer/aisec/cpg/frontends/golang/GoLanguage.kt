@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -153,7 +152,9 @@ class GoLanguage :
         // This makes lambda expression works, as long as we have the dedicated a
         // FunctionPointerType
         if (type is FunctionPointerType && targetType.underlyingType is FunctionType) {
-            return if (type == targetType.underlyingType?.pointer()) {
+            return if (
+                type == targetType.underlyingType?.reference(PointerType.PointerOrigin.POINTER)
+            ) {
                 DirectMatch
             } else {
                 CastNotPossible
