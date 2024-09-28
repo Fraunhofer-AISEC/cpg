@@ -314,9 +314,9 @@ private constructor(
         //  and individual file scopes beneath it
         var newGlobalScope = globalCtx.scopeManager.globalScope
         var types =
-            globalCtx.typeManager.resolvedFirstOrderTypes.union(
-                globalCtx.typeManager.secondOrderTypes
-            )
+            globalCtx.typeManager.firstOrderTypesMap.values
+                .flatten()
+                .union(globalCtx.typeManager.secondOrderTypes)
         types.forEach {
             if (it.scope is GlobalScope) {
                 it.scope = newGlobalScope

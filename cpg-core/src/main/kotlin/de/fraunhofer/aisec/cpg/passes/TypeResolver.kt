@@ -142,8 +142,11 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         for (type in typeManager.firstOrderTypesMap.values.flatten().sortedBy { it.name }) {
             if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
                 resolveType(type)
-            } else if (type.typeOrigin == Type.Origin.RESOLVED) {
-                // This will most likely only affect built-in types. They are resolved by default,
+            } else if (
+                type.typeOrigin == Type.Origin.RESOLVED || type.typeOrigin == Type.Origin.GUESSED
+            ) {
+                // This will most likely only affect built-in types (and some left over from the
+                // Java legacy type stuff). They are resolved by default,
                 // and we want to make sure that they end up in the resolve first order list
                 ctx.typeManager.markAsResolved(type)
             }
