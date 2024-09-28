@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -1003,6 +1004,44 @@ class ScopeManager : ScopeProvider {
         }
 
         return list
+    }
+
+    /**
+     * This function tries to look up the symbol contained in [name] (using [findSymbols]) and
+     * returns a [DeclaresType] node, if this name resolved to something which declares a type.
+     */
+    fun findTypeDeclaration(name: Name, startScope: Scope?): DeclaresType? {
+        var symbols = findSymbols(name = name, startScope = startScope) { it is DeclaresType }
+
+        // We need to have a single match, otherwise we have an ambiguous type and we cannot
+        // normalize it.
+        // TODO: Maybe we should have a warning in this case?
+        var declares = symbols.filterIsInstance<DeclaresType>().singleOrNull()
+
+        return declares
+    }
+
+    /**
+     * This function checks, whether there exists a [Type] for the given combination of a [name] and
+     * [scope].
+     *
+     * This is needed in passes that need to replace potential identifiers with [Type] nodes,
+     * because of ambiguities.
+     */
+    fun nameIsTypeForScope(
+        name: Name,
+        language: Language<*>?,
+        scope: Scope? = currentScope
+    ): Boolean {
+        // First, check if it is a simple type
+        var type = language?.getSimpleTypeOf(name)
+        if (type != null) {
+            return true
+        }
+
+        // Otherwise, try to find a type declaration with the given combination of symbol and name
+        var declares = findTypeDeclaration(name, scope)
+        return declares?.declaredType != null
     }
 }
 

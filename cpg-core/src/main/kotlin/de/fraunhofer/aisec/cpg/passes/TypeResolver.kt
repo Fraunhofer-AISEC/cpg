@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -66,15 +65,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
             // constructor declarations and such with the same name. It seems this is ok since most
             // languages will prefer structs/classes over functions when resolving types.
-            var symbols =
-                ctx?.scopeManager?.findSymbols(type.name, startScope = type.scope) {
-                    it is DeclaresType
-                } ?: listOf()
-
-            // We need to have a single match, otherwise we have an ambiguous type and we cannot
-            // normalize it.
-            // TODO: Maybe we should have a warning in this case?
-            var declares = symbols.filterIsInstance<DeclaresType>().singleOrNull()
+            var declares = ctx?.scopeManager?.findTypeDeclaration(type.name, type.scope)
 
             // Check for a possible typedef
             var target = ctx?.scopeManager?.typedefFor(type.name, type.scope)

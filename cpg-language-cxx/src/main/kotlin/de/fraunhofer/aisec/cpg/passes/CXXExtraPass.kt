@@ -77,7 +77,14 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
-        if (node.operatorCode == "()" && !typeManager.resolvedTypeExists(node.input.name)) {
+        if (
+            node.operatorCode == "()" &&
+                !scopeManager.nameIsTypeForScope(
+                    node.input.name,
+                    node.input.language,
+                    node.input.scope
+                )
+        ) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
             //
@@ -109,7 +116,11 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             language != null &&
                 fakeUnaryOp is UnaryOperator &&
                 fakeUnaryOp.operatorCode == "()" &&
-                typeManager.resolvedTypeExists(fakeUnaryOp.input.name)
+                scopeManager.nameIsTypeForScope(
+                    fakeUnaryOp.input.name,
+                    fakeUnaryOp.input.language,
+                    fakeUnaryOp.input.scope,
+                )
         ) {
             // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
             // is really a cast and our binary operator is really a unary operator `&addr`.
