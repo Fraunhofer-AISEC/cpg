@@ -64,7 +64,7 @@ class UnknownType private constructor() : Type() {
         return "UNKNOWN"
     }
 
-    override var typeOrigin: Origin? = null
+    override var resolutionState: ResolutionState? = null
 
     companion object {
         /** A map of [UnknownType] and their respective [Language]. */

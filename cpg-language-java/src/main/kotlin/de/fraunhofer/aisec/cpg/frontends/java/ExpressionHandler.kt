@@ -590,7 +590,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 t = unknownType()
             } else {
                 t = this.objectType(typeString)
-                t.typeOrigin = Type.Origin.GUESSED
+                t.resolutionState = Type.ResolutionState.GUESSED
             }
             val declaredReferenceExpression = newReference(name, t, rawNode = nameExpr)
             val recordDeclaration = frontend.scopeManager.currentRecord

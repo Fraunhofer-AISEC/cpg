@@ -35,6 +35,6 @@ class StringType(
 
     init {
         // Built-in types are always resolved
-        this.typeOrigin = Origin.RESOLVED
+        this.resolutionState = ResolutionState.RESOLVED
     }
 }

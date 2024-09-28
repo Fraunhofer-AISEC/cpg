@@ -1690,13 +1690,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(result)
 
         // There should be no type "string" anymore, only "std::string"
-        assertFalse(result.finalCtx.typeManager.resolvedTypeExists("string"))
-        assertTrue(result.finalCtx.typeManager.resolvedTypeExists("std::string"))
+        assertFalse(result.finalCtx.typeManager.typeExists("string"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::string"))
 
         // the same applies to "inner::secret"
-        assertFalse(result.finalCtx.typeManager.resolvedTypeExists("secret"))
-        assertFalse(result.finalCtx.typeManager.resolvedTypeExists("inner::secret"))
-        assertTrue(result.finalCtx.typeManager.resolvedTypeExists("std::inner::secret"))
+        assertFalse(result.finalCtx.typeManager.typeExists("secret"))
+        assertFalse(result.finalCtx.typeManager.typeExists("inner::secret"))
+        assertTrue(result.finalCtx.typeManager.typeExists("std::inner::secret"))
     }
 
     @Test

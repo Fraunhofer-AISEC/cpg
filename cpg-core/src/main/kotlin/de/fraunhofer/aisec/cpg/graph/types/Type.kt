@@ -73,7 +73,7 @@ abstract class Type : Node {
     var isPrimitive = false
         protected set
 
-    open var typeOrigin: Origin? = null
+    open var resolutionState: ResolutionState? = null
 
     /**
      * This points to the [DeclaresType] node (most likely a [Declaration]), that declares this
@@ -87,12 +87,12 @@ abstract class Type : Node {
 
     constructor(typeName: String?) {
         name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
-        typeOrigin = Origin.UNRESOLVED
+        resolutionState = ResolutionState.UNRESOLVED
     }
 
     constructor(type: Type?) {
         type?.name?.let { name = it.clone() }
-        typeOrigin = type?.typeOrigin
+        resolutionState = type?.resolutionState
     }
 
     constructor(typeName: CharSequence, language: Language<*>?) {
@@ -103,20 +103,33 @@ abstract class Type : Node {
                 language.parseName(typeName)
             }
         this.language = language
-        typeOrigin = Origin.UNRESOLVED
+        resolutionState = ResolutionState.UNRESOLVED
     }
 
     constructor(fullTypeName: Name, language: Language<*>?) {
         name = fullTypeName.clone()
-        typeOrigin = Origin.UNRESOLVED
+        resolutionState = ResolutionState.UNRESOLVED
         this.language = language
     }
 
-    /** Type Origin describes where the Type information came from */
-    enum class Origin {
+    /** Information about the resolution state of this type. */
+    enum class ResolutionState {
+        /**
+         * The type is fully resolved and if it is an [ObjectType], the property
+         * [ObjectType.recordDeclaration] will have the information about where the type was
+         * declared.
+         */
         RESOLVED,
-        DATAFLOW,
-        GUESSED,
+
+        /**
+         * GUESSED is not really used anymore, except in the java frontend, which needs a more or
+         * less complete type-rewrite. Once that is done, we can remove the GUESSED state.
+         */
+        @Deprecated(message = "Use UNRESOLVED instead") GUESSED,
+
+        /**
+         * The type is not yet resolved. Therefore the type is only valid within the current scope.
+         */
         UNRESOLVED
     }
 
@@ -130,10 +143,10 @@ abstract class Type : Node {
      * @return Returns a reference to the current Type. E.g. when creating a pointer to an existing
      *   ObjectType
      *
-     * TODO(oxisto) Ideally, we would make this function "internal", but there is a bug in the Go
-     *   frontend, so that we still need this function :(
+     *
      */
-    abstract fun reference(pointer: PointerOrigin?): Type
+    // TODO(oxisto): Make this internal, but some tests still use it
+    /*internal*/ abstract fun reference(pointer: PointerOrigin?): Type
 
     /**
      * @return Dereferences the current Type by resolving the reference. E.g. when dereferencing a

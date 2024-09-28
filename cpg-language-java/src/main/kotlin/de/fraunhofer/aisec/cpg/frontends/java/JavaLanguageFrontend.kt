@@ -387,7 +387,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         if (!searchType.isClassOrInterfaceType || context == null) {
             log.warn("Unable to resolve type for {}", type.asString())
             val returnType = this.typeOf(type)
-            returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
+            returnType.resolutionState =
+                de.fraunhofer.aisec.cpg.graph.types.Type.ResolutionState.GUESSED
             return returnType
         }
         val clazz = searchType.asClassOrInterfaceType()
@@ -409,12 +410,14 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     parseName(o.get().nameAsString + language.namespaceDelimiter + returnType.name)
             }
 
-            returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
+            returnType.resolutionState =
+                de.fraunhofer.aisec.cpg.graph.types.Type.ResolutionState.GUESSED
             return returnType
         }
         log.warn("Unable to resolve type for {}", type.asString())
         val returnType = this.typeOf(type)
-        returnType.typeOrigin = de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED
+        returnType.resolutionState =
+            de.fraunhofer.aisec.cpg.graph.types.Type.ResolutionState.GUESSED
         return returnType
     }
 

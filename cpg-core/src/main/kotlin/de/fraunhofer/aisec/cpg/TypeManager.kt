@@ -248,7 +248,7 @@ class TypeManager {
 
     /**
      * This function returns the first (there should be only one) [Type] with the given [fqn] that
-     * is [Type.Origin.RESOLVED].
+     * is [Type.ResolutionState.RESOLVED].
      */
     fun lookupResolvedType(
         fqn: CharSequence,
@@ -271,12 +271,12 @@ class TypeManager {
     }
 
     /**
-     * This function marks a type as [Type.Origin.RESOLVED] and adds it to the
+     * This function marks a type as [Type.ResolutionState.RESOLVED] and adds it to the
      * [resolvedFirstOrderTypes].
      */
     fun markAsResolved(type: Type) {
         // Mark it as RESOLVED
-        type.typeOrigin = Type.Origin.RESOLVED
+        type.resolutionState = Type.ResolutionState.RESOLVED
 
         if (type.isFirstOrderType) {
             // Add it to our resolved first order type list

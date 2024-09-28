@@ -260,7 +260,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     type = frontend.typeOf(variable.type)
                 } else {
                     type = this.objectType(t)
-                    type.typeOrigin = Type.Origin.GUESSED
+                    type.resolutionState = Type.ResolutionState.GUESSED
                 }
             } catch (e: UnsupportedOperationException) {
                 val t = frontend.recoverTypeFromUnsolvedException(e)
@@ -269,7 +269,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     type = frontend.typeOf(variable.type)
                 } else {
                     type = this.objectType(t)
-                    type.typeOrigin = Type.Origin.GUESSED
+                    type.resolutionState = Type.ResolutionState.GUESSED
                 }
             } catch (e: IllegalArgumentException) {
                 val t = frontend.recoverTypeFromUnsolvedException(e)
@@ -278,7 +278,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     type = frontend.typeOf(variable.type)
                 } else {
                     type = this.objectType(t)
-                    type.typeOrigin = Type.Origin.GUESSED
+                    type.resolutionState = Type.ResolutionState.GUESSED
                 }
             }
             val fieldDeclaration =

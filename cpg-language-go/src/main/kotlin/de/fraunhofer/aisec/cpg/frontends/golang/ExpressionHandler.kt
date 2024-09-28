@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.math.BigInteger
 
@@ -280,7 +279,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val type = frontend.typeOf(callExpr.args[0])
 
         // new is a pointer, so need to reference the type with a pointer
-        n.type = type.reference(PointerType.PointerOrigin.POINTER)
+        n.type = type.pointer()
 
         // a new expression also needs an initializer, which is usually a ConstructExpression
         val construct = newConstructExpression(rawNode = callExpr)

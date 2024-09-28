@@ -89,7 +89,7 @@ class FunctionPointerType : Type {
             .appendSuper(super.toString())
             .append("parameters", parameters)
             .append("returnType", returnType)
-            .append("typeOrigin", typeOrigin)
+            .append("resolutionState", resolutionState)
             .toString()
     }
 }

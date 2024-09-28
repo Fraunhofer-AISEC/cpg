@@ -84,7 +84,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
                         // Otherwise, we can create this in the global scope
                         if (superType == null) {
                             superType = provider.objectType(anc.qualifiedName)
-                            superType.typeOrigin = Type.Origin.RESOLVED
+                            superType.resolutionState = Type.ResolutionState.RESOLVED
                         }
 
                         // Add all resolved supertypes to the type.

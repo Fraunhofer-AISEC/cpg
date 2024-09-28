@@ -526,7 +526,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             // we do not know which of the exceptions was actually thrown, so we assume this might
             // be any
             concreteType = this.objectType("java.lang.Throwable")
-            concreteType.typeOrigin = Type.Origin.GUESSED
+            concreteType.resolutionState = Type.ResolutionState.GUESSED
         } else {
             concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)
             possibleTypes.add(concreteType)

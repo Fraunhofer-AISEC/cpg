@@ -48,7 +48,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         refreshNames()
 
         walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler(::handleNode)
+        walker.registerHandler(::legacyHandleNode)
         walker.iterate(component)
     }
 
@@ -71,7 +71,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             var target = ctx?.scopeManager?.typedefFor(type.name, type.scope)
             if (target != null) {
                 if (
-                    target.typeOrigin == Type.Origin.UNRESOLVED &&
+                    target.resolutionState == Type.ResolutionState.UNRESOLVED &&
                         type != target &&
                         target is ObjectType
                 ) {
@@ -114,7 +114,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun handleNode(node: Node?) {
+    /** This piece of code is completely unnecessary, since we already set the */
+    private fun legacyHandleNode(node: Node?) {
         if (node is RecordDeclaration) {
             for (t in typeManager.firstOrderTypesMap.values.flatten()) {
                 if (t.name == node.name && t is ObjectType) {
@@ -130,14 +131,21 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     fun resolveFirstOrderTypes() {
+        var allTypes = typeManager.firstOrderTypesMap.values.flatten().sortedBy { it.name }
+
+        log.info("Resolving {} first order type objects", allTypes.size)
+
         for (type in typeManager.firstOrderTypesMap.values.flatten().sortedBy { it.name }) {
-            if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
-                resolveType(type)
-            } else if (
-                type.typeOrigin == Type.Origin.RESOLVED || type.typeOrigin == Type.Origin.GUESSED
+            if (
+                type is ObjectType && type.resolutionState == Type.ResolutionState.UNRESOLVED ||
+                    type.resolutionState == Type.ResolutionState.GUESSED
             ) {
-                // This will most likely only affect built-in types (and some left over from the
-                // Java legacy type stuff). They are resolved by default,
+                // Try to resolve all UNRESOLVED types. Also try to resolve GUESSED types. GUESSED
+                // is not really used anymore, except in the java frontend, which needs a more or
+                // less complete type-rewrite. Once that is done, we can remove the GUESSED state.
+                resolveType(type)
+            } else if (type.resolutionState == Type.ResolutionState.RESOLVED) {
+                // This will most likely only affect built-in types. They are resolved by default,
                 // and we want to make sure that they end up in the resolve first order list
                 ctx.typeManager.markAsResolved(type)
             }

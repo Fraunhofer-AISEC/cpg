@@ -81,7 +81,7 @@ class ReferenceType : Type, SecondOrderType {
             .appendSuper(super.toString())
             .append("elementType", elementType)
             .append("name", name)
-            .append("typeOrigin", typeOrigin)
+            .append("resolutionState", resolutionState)
             .toString()
     }
 }
