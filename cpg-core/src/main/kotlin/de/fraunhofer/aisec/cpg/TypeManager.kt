@@ -61,11 +61,8 @@ class TypeManager {
      */
     val firstOrderTypesMap = ConcurrentHashMap<String, MutableList<Type>>()
 
-    /** Retrieves the list of all *unique* first order types. */
-    val firstOrderTypes: Set<Type>
-        get() {
-            return synchronized(firstOrderTypesMap) { firstOrderTypesMap.values.flatten().toSet() }
-        }
+    /** Retrieves the list of all *resolved* first order types. */
+    val resolvedFirstOrderTypes: MutableSet<Type> = mutableSetOf()
 
     val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
 
@@ -239,8 +236,8 @@ class TypeManager {
     }
 
     /** Checks, whether a [Type] with the given [name] exists. */
-    fun typeExists(name: CharSequence): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name == name }
+    fun resolvedTypeExists(name: CharSequence): Boolean {
+        return resolvedFirstOrderTypes.any { type: Type -> type.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -263,14 +260,27 @@ class TypeManager {
             return primitiveType
         }
 
-        return firstOrderTypesMap[fqn.toString()]?.firstOrNull {
-            (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
-                it.root.name == fqn &&
+        return resolvedFirstOrderTypes.firstOrNull {
+            it.root.name == fqn &&
                 if (generics != null) {
                     (it as? ObjectType)?.generics == generics
                 } else {
                     true
                 }
+        }
+    }
+
+    /**
+     * This function marks a type as [Type.Origin.RESOLVED] and adds it to the
+     * [resolvedFirstOrderTypes].
+     */
+    fun markAsResolved(type: Type) {
+        // Mark it as RESOLVED
+        type.typeOrigin = Type.Origin.RESOLVED
+
+        if (type.isFirstOrderType) {
+            // Add it to our resolved first order type list
+            resolvedFirstOrderTypes += type
         }
     }
 }

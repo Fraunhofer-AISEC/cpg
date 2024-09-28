@@ -93,7 +93,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
                 type.declaredFrom = originDeclares
                 type.recordDeclaration = originDeclares
-                type.typeOrigin = Type.Origin.RESOLVED
+                ctx?.typeManager?.markAsResolved(type)
                 return true
             }
 
@@ -114,8 +114,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 type.name = declaredType.name
                 type.declaredFrom = declares
                 type.recordDeclaration = declares as? RecordDeclaration
-                type.typeOrigin = Type.Origin.RESOLVED
                 type.superTypes.addAll(declaredType.superTypes)
+                ctx?.typeManager?.markAsResolved(type)
                 return true
             }
 
@@ -142,6 +142,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         for (type in typeManager.firstOrderTypesMap.values.flatten().sortedBy { it.name }) {
             if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
                 resolveType(type)
+            } else if (type.typeOrigin == Type.Origin.RESOLVED) {
+                // This will most likely only affect built-in types. They are resolved by default,
+                // and we want to make sure that they end up in the resolve first order list
+                ctx.typeManager.markAsResolved(type)
             }
         }
     }
