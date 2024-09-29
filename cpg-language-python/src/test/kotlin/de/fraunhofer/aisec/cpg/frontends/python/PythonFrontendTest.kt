@@ -1055,8 +1055,10 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val annotations = tu.allChildren<Annotation>()
-        val route = annotations.firstOrNull()
-        assertFullName("app.route", route)
+        assertEquals(
+            listOf("app.route", "some.otherannotation", "annotations.other_func"),
+            annotations.map { it.name.toString() }
+        )
     }
 
     @Test

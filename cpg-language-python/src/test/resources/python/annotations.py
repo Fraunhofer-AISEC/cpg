@@ -2,13 +2,19 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
+
 @app.route("/data", methods=['POST'])
 def collect_data():
     return "OK", 200
 
 
 @some.otherannotation
-def other_func():
+def other_func(func):
+    pass
+
+
+@other_func
+def other_other_func():
     pass
 
 
