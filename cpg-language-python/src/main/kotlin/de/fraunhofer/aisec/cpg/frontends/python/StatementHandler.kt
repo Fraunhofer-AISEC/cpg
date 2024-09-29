@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -690,12 +691,23 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     }
                     is Python.AST.Attribute -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)
-                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        newAnnotation(name = name, rawNode = decorator)
                     }
                     is Python.AST.Call -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
-                        val annotation =
-                            newAnnotation(name = parsedDecorator.name, rawNode = decorator)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        val annotation = newAnnotation(name = name, rawNode = decorator)
                         for (arg in decorator.args) {
                             val argParsed = frontend.expressionHandler.handle(arg)
                             annotation.members +=
