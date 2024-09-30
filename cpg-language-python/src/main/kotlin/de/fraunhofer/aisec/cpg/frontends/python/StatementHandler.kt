@@ -527,8 +527,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Make sure we open a new (block) scope for the function body. This is not a 1:1
             // mapping to python scopes, since python only has a "function scope", but in the CPG
             // the function scope only comprises the function arguments, and we need a block scope
-            // to
-            // hold all local variables within the function body.
+            // to hold all local variables within the function body.
             result.body = makeBlock(s.body, parentNode = s, enterScope = true)
         }
 
@@ -759,16 +758,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt
-        var baseStmt = parentNode as? Python.AST.BaseStmt
-        return if (baseStmt != null) {
-            result.codeAndLocationFromChildren(baseStmt)
-        } else {
-            // Otherwise, continue without setting the location
-            log.warn(
-                "Could not set location on wrapped block because the parent node is not a python statement"
-            )
-            result
+        val ast = parentNode as? Python.AST.AST
+        if (ast != null) {
+            // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+            // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+            // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+            // other nodes that are not "statements", but also handled as part of this handler,
+            // e.g., the Python.AST.ExceptHandler.
+            with(frontend) { result.codeAndLocationFromChildren(ast) }
         }
+
+        return result
     }
 
     /**
