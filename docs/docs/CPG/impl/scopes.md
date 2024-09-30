@@ -1,6 +1,6 @@
 ---
-title: "Implementation and Concepts - Scopes"
-linkTitle: "Implementation and Concepts - Scopes"
+title: "Implementation and Concepts - Scopes and Symbols"
+linkTitle: "Implementation and Concepts - Scopes and Symbols"
 weight: 20
 no_list: false
 menu:
@@ -102,3 +102,5 @@ var name = parseName("std::string")
 // This will return all the 'string' symbols within the 'std' name scope
 var stringSymbols = scopeManager.findSymbols(name)
 ```
+
+Developers should avoid symbol lookup during frontend parsing, since often during parsing, only a limited view of all symbols is available. Instead, a dedicated pass that is run on the complete translation result is the preferred option. Apart from that, the main usage of this API is in the [SymbolResolver](symbol-resolver.md).
