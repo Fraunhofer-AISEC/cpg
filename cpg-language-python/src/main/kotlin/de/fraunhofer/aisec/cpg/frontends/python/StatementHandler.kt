@@ -170,7 +170,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                        "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
                         rawNode = target
                     )
             }
@@ -308,17 +308,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 ) // add the unpacking instruction to the top of the loop body
                 ret.statement = body
             }
-
             is Reference -> { // only one var
                 ret.variable = loopVar
                 ret.statement = makeBlock(node.body, parentNode = node)
             }
-
             else -> {
                 ret.variable =
                     newProblemExpression(
                         problem =
-                        "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
                         rawNode = node.target
                     )
                 ret.statement = makeBlock(node.body, parentNode = node)
@@ -351,10 +349,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
         val assign =
             newAssignExpression(
-                operatorCode = "=",
-                lhs = (loopVar).initializers,
-                rhs = listOf(tempRef)
-            )
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef)
+                )
                 .implicit()
                 .codeAndLocationFrom(loopVar)
         return Pair(tempRef, assign)
@@ -414,13 +412,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             newAssignExpression(
                 lhs = lhs,
                 rhs =
-                rhs.map {
-                    (it as? Expression)
-                        ?: newProblemExpression(
-                            "There was an issue with an argument.",
-                            rawNode = node
-                        )
-                },
+                    rhs.map {
+                        (it as? Expression)
+                            ?: newProblemExpression(
+                                "There was an issue with an argument.",
+                                rawNode = node
+                            )
+                    },
                 rawNode = node
             )
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
@@ -625,12 +623,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             when (result) {
                 is ConstructorDeclaration,
                 is MethodDeclaration -> result.receiver = recvNode
-
                 else ->
                     result.additionalProblems +=
                         newProblemExpression(
                             problem =
-                            "Expected a constructor or method declaration. Got something else.",
+                                "Expected a constructor or method declaration. Got something else.",
                             rawNode = result
                         )
             }
@@ -720,10 +717,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             val annotation =
                 newAnnotation(
                     name =
-                    Name(
-                        localName = decFuncParsed.name.localName,
-                        parent = decFuncParsed.base.name
-                    ),
+                        Name(
+                            localName = decFuncParsed.name.localName,
+                            parent = decFuncParsed.base.name
+                        ),
                     rawNode = node
                 )
             for (arg in decorator.args) {
