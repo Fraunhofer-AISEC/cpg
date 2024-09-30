@@ -20,8 +20,6 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - run: |
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v4
@@ -66,7 +64,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build ${{ env.version }}
         run: |
-          ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport performanceTest integrationTest
+          ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
           VERSION: ${{ env.version }}
