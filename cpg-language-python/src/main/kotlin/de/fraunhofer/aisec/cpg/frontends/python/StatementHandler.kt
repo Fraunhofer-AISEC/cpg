@@ -64,18 +64,46 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
+            is Python.AST.With -> handleWithStatement(node)
             is Python.AST.Global,
             is Python.AST.Match,
             is Python.AST.Nonlocal,
             is Python.AST.Raise,
             is Python.AST.TryStar,
-            is Python.AST.With,
             is Python.AST.AsyncWith ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python [`With`](https://docs.python.org/3/library/ast.html#ast.With) into a
+     * [TryStatement].
+     */
+    private fun handleWithStatement(node: Python.AST.With): TryStatement {
+        val tryStatement = newTryStatement(rawNode = node)
+
+        val contextExpressions = mutableListOf<Expression>()
+        val resources =
+            node.items.flatMap { item ->
+                val contextExpr = frontend.expressionHandler.handle(item.context_expr)
+                contextExpressions.add(contextExpr)
+                val optionalVars = item.optional_vars?.let { frontend.expressionHandler.handle(it) }
+                node.type_comment?.let { optionalVars?.type = frontend.typeOf(it) }
+                listOfNotNull(contextExpr, optionalVars)
+            }
+        tryStatement.resources.addAll(resources)
+
+        tryStatement.tryBlock = makeBlock(node.body, parentNode = node)
+
+        // The `with` statement can contain multiple `withitem` (e.g., `open('file1.txt') as f1,
+        // open('file2.txt') as f2`), but only one `__exit__()` method is called.
+        val finallyBlock = createFinallyBlockForWith(contextExpressions.first(), node)
+        tryStatement.finallyBlock = finallyBlock
+
+        return tryStatement
     }
 
     /**
@@ -142,7 +170,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                        "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
                         rawNode = target
                     )
             }
@@ -280,15 +308,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 ) // add the unpacking instruction to the top of the loop body
                 ret.statement = body
             }
+
             is Reference -> { // only one var
                 ret.variable = loopVar
                 ret.statement = makeBlock(node.body, parentNode = node)
             }
+
             else -> {
                 ret.variable =
                     newProblemExpression(
                         problem =
-                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                        "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
                         rawNode = node.target
                     )
                 ret.statement = makeBlock(node.body, parentNode = node)
@@ -321,10 +351,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
         val assign =
             newAssignExpression(
-                    operatorCode = "=",
-                    lhs = (loopVar).initializers,
-                    rhs = listOf(tempRef)
-                )
+                operatorCode = "=",
+                lhs = (loopVar).initializers,
+                rhs = listOf(tempRef)
+            )
                 .implicit()
                 .codeAndLocationFrom(loopVar)
         return Pair(tempRef, assign)
@@ -384,13 +414,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             newAssignExpression(
                 lhs = lhs,
                 rhs =
-                    rhs.map {
-                        (it as? Expression)
-                            ?: newProblemExpression(
-                                "There was an issue with an argument.",
-                                rawNode = node
-                            )
-                    },
+                rhs.map {
+                    (it as? Expression)
+                        ?: newProblemExpression(
+                            "There was an issue with an argument.",
+                            rawNode = node
+                        )
+                },
                 rawNode = node
             )
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
@@ -595,11 +625,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             when (result) {
                 is ConstructorDeclaration,
                 is MethodDeclaration -> result.receiver = recvNode
+
                 else ->
                     result.additionalProblems +=
                         newProblemExpression(
                             problem =
-                                "Expected a constructor or method declaration. Got something else.",
+                            "Expected a constructor or method declaration. Got something else.",
                             rawNode = result
                         )
             }
@@ -689,10 +720,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             val annotation =
                 newAnnotation(
                     name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
+                    Name(
+                        localName = decFuncParsed.name.localName,
+                        parent = decFuncParsed.base.name
+                    ),
                     rawNode = node
                 )
             for (arg in decorator.args) {
@@ -800,5 +831,21 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
         return declStmt
+    }
+
+    /**
+     * The `with` statement is functionally equivalent to a `try` ... `finally` block, where the
+     * `__exit__()` method of the context manager makes sure resources are closed, even if something
+     * goes wrong. [With-Statement](https://peps.python.org/pep-0343/)
+     */
+    private fun createFinallyBlockForWith(contextExpr: Expression, node: Python.AST.With): Block {
+        val finallyBlock = newBlock().implicit()
+        val exitCall =
+            newMemberCallExpression(
+                callee = newMemberExpression(name = "__exit__", base = contextExpr),
+                rawNode = node
+            )
+        finallyBlock.statements.add(exitCall)
+        return finallyBlock
     }
 }
