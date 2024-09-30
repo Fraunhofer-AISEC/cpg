@@ -682,47 +682,60 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            if (decorator !is Python.AST.Call) {
-                log.warn(
-                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
-            if (decFuncParsed !is MemberExpression) {
-                log.warn(
-                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val annotation =
-                newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
-                    )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
+            var annotation =
+                when (decorator) {
+                    is Python.AST.Name -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
+                    }
+                    is Python.AST.Attribute -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        newAnnotation(name = name, rawNode = decorator)
+                    }
+                    is Python.AST.Call -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        val annotation = newAnnotation(name = name, rawNode = decorator)
+                        for (arg in decorator.args) {
+                            val argParsed = frontend.expressionHandler.handle(arg)
+                            annotation.members +=
+                                newAnnotationMember(
+                                    "annotationArg" + decorator.args.indexOf(arg), // TODO
+                                    argParsed,
+                                    rawNode = arg
+                                )
+                        }
+                        for (keyword in decorator.keywords) {
+                            annotation.members +=
+                                newAnnotationMember(
+                                    name = keyword.arg,
+                                    value = frontend.expressionHandler.handle(keyword.value),
+                                    rawNode = keyword
+                                )
+                        }
+                        annotation
+                    }
+                    else -> {
+                        Util.warnWithFileLocation(
+                            frontend,
+                            decorator,
+                            log,
+                            "Decorator is of type ${decorator::class}, cannot handle this (yet)."
+                        )
+                        continue
+                    }
+                }
 
             annotations += annotation
         }
