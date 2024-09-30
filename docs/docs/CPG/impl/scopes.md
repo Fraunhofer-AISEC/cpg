@@ -13,7 +13,7 @@ description: >
 
 # Scopes and Symbols
 
-The concept of scopes and symbols are at the heart of every programming language and thus are also the core of static analysis. Both concepts consist in the CPG library through the types `Scope` and `Symbol` respectively. A `Symbol` is just a typealias for a string.
+The concept of scopes and symbols are at the heart of every programming language and thus are also the core of static analysis. Both concepts consist in the CPG library through the types `Scope` and `Symbol` respectively.
 
 A "symbol" can be seen as an identifier in most programming languages, referring to variables or functions. Symbols are often grouped in scopes, which defines the visibility of a symbol, e.g. a slice of a program that can "see" the symbol. Often this is also synonymous with the life-time of a variable, e.g., that its memory will be freed (or collected by a garbage collector) once it goes "out of scope".
 
@@ -31,7 +31,7 @@ int main() {
 
 Usually symbols declared in a local scope override the declaration of a symbol in a higher (e.g., global scope), which is also referred to as "shadowing". This needs to be taken into account when resolving symbols to their declarations.
 
-The `Scope` class holds all its symbols in the `Scope::symbols` property. More specifically, this property is a `SymbolMap`, which is a type alias to a map, whose key type is a `Symbol` and whose value type is a list of `Declaration` nodes. This is basically a symbol lookup table for all symbols in its scope. It is a map of a list because some programming languages have concepts like function overloading, which leads to the declaration of multiple `FunctionDeclaration` nodes under the same symbol in one scope.
+The `Scope` class holds all its symbols in the `Scope::symbols` property. More specifically, this property is a `SymbolMap`, which is a type alias to a map, whose key type is a `Symbol` and whose value type is a list of `Declaration` nodes. This is basically a symbol lookup table for all symbols in its scope. It is a map of a list because some programming languages have concepts like function overloading, which leads to the declaration of multiple `FunctionDeclaration` nodes under the same symbol in one scope. In the current implementation, a `Symbol` is just a typealias for a string, and it is always "local" to the scope, meaning that it MUST NOT contain any qualifier. If you want to refer to a fully qualified identifier, a `Name` must be used. In the future, we might consider merging the concepts of `Symbol` and `Name`. 
 
 For a frontend or pass developer, the main interaction point with scopes and symbols is through the `ScopeManager`. The scope manager is available to all nodes via the `TranslationContext` and also injected in frontend, handlers and passes.
 
@@ -81,3 +81,24 @@ Inside the scope, declarations can be added with `ScopeManager::addDeclaration`.
 
 
 ## Looking up Symbols
+
+During different analysis steps, e.g., in different passes, we want to find certain symbols or lookup the declaration(s) belonging to a particular symbol. There are two functions in order to do so - a "higher" level concept in the `ScopeManager` and a "lower" level function on the `Scope` itself.
+
+The lower level one is called `Scope::lookupSymbol` and can be used to retrieve a list of `Declaration` nodes that belong to a particular `Symbol` that is "visible" the scope. It does so by first looking through its own `Scope::symbols`. If no match was found, the scope is traversed upwards to its `Scope::parent`, until a match is found. Furthermore, additional logic is needed to resolve symbol that are pointing to another scope, e.g., because they represent an `ImportDeclaration`. 
+
+```Kotlin
+var scope = /* ... */
+var declarations = scope.lookupSymbol("a") {
+    // Some additional predicate if we want
+}
+```
+
+Additionally, the lookup can be fine-tuned by an additional predicate. However, this should be used carefully as it restricts the possible list of symbols very early. In most cases the list of symbols should be quite exhaustive at first to find all possible candidates and then selecting the best candidate in a second step (e.g., based on argument types for a function call).
+
+While the aforementioned API works great if we already have a specific start scope and local `Symbol`, we often start our resolution process with a `Name` -- which could potentially be qualified, such as `std::string`. Therefore, the "higher level" function `ScopeManager::findSymbols` can be used to retrieve a list of candidate declarations by a given `Name`. In a first step, the name is checked for a potential scope qualifier (`std` in this example). If present, it is extracted and the search scope is set to it. This is what is usually referred to as a "qualified lookup". Otherwise, the local part of the name is used to start the lookup, in what is called an "unqualified lookup". In both cases, the actual lookup is delegated to `ScopeManager::lookupSymbols`, but with different parameters.
+
+```Kotlin
+var name = parseName("std::string")
+// This will return all the 'string' symbols within the 'std' name scope
+var stringSymbols = scopeManager.findSymbols(name)
+```
