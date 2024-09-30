@@ -88,6 +88,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
+    /**
+     * A cache map of reference tags (computed with [Reference.referenceTag]) and their respective
+     * pair of original [Reference] and (un)resolved [Declaration]. This is used by
+     * [handleReference] as a caching mechanism.
+     */
+    private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, Declaration?>>()
+
     override fun accept(component: Component) {
         ctx.currentComponent = component
         walker = ScopedWalker(scopeManager)
@@ -162,23 +169,34 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return target
     }
 
-    protected fun handleReference(currentClass: RecordDeclaration?, current: Node?) {
-        val language = current?.language
-
-        if (current !is Reference || current is MemberExpression) return
+    protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
+        if (ref is MemberExpression) return
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
+        val language = ref.language
         if (
-            language is HasAnonymousIdentifier &&
-                current.name.localName == language.anonymousIdentifier
+            language is HasAnonymousIdentifier && ref.name.localName == language.anonymousIdentifier
         ) {
             return
         }
 
-        // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
-        // resolution, but in future this will also be used in resolving regular references.
-        current.candidates = scopeManager.findSymbols(current.name, current.location).toSet()
+        // Retrieve a unique tag for the particular reference based on the current scope
+        val tag = ref.referenceTag
+
+        // If we find a match in our symbol table, we can immediately refer to the declaration. We
+        // need to be careful about potential collisions in our tags, since they are based on the
+        // hash-code of the scope. We therefore take the extra precaution to compare the scope in
+        // case we get a hit. This should not take too much performance overhead.
+        val pair = symbolTable[tag]
+        if (pair != null && ref.scope == pair.first.scope) {
+            ref.candidates = setOfNotNull(pair.second)
+            ref.refersTo = pair.second
+            return
+        }
+
+        // Find a list of candidate symbols.
+        ref.candidates = scopeManager.findSymbols(ref.name, ref.location).toSet()
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -190,11 +208,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // to extend this particular code to resolve all callee references to their declarations,
         // i.e., their function definitions and get rid of the separate CallResolver.
         var wouldResolveTo: Declaration? = null
-        if (current.resolutionHelper is CallExpression) {
+        if (ref.resolutionHelper is CallExpression) {
             // Peek into the declaration, and if it is only one declaration and a variable, we can
             // proceed normally, as we are running into the special case explained above. Otherwise,
             // we abort here (for now).
-            wouldResolveTo = current.candidates.singleOrNull()
+            wouldResolveTo = ref.candidates.singleOrNull()
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
                 return
             }
@@ -203,27 +221,28 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
-        var refersTo = current.refersTo ?: wouldResolveTo ?: scopeManager.resolveReference(current)
+        // TODO(oxisto): emit warning, if multiple candidates match
+        var refersTo = ref.refersTo ?: wouldResolveTo ?: ref.candidates.firstOrNull()
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
             recordDeclType = currentClass.toType()
         }
 
-        val helperType = current.resolutionHelper?.type
+        val helperType = ref.resolutionHelper?.type
         if (helperType is FunctionPointerType && refersTo == null) {
-            refersTo = resolveMethodFunctionPointer(current, helperType)
+            refersTo = resolveMethodFunctionPointer(ref, helperType)
         }
 
         // only add new nodes for non-static unknown
         if (
             refersTo == null &&
-                !current.isStaticAccess &&
+                !ref.isStaticAccess &&
                 recordDeclType != null &&
                 recordDeclType.recordDeclaration != null
         ) {
             // Maybe we are referring to a field instead of a local var
-            val field = resolveMember(recordDeclType, current)
+            val field = resolveMember(recordDeclType, ref)
             if (field != null) {
                 refersTo = field
             }
@@ -231,9 +250,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // TODO: we need to do proper scoping (and merge it with the code above), but for now
         //  this just enables CXX static fields
-        if (refersTo == null && language != null && current.name.isQualified()) {
-            recordDeclType = getEnclosingTypeOf(current)
-            val field = resolveMember(recordDeclType, current)
+        if (refersTo == null && language != null && ref.name.isQualified()) {
+            recordDeclType = getEnclosingTypeOf(ref)
+            val field = resolveMember(recordDeclType, ref)
             if (field != null) {
                 refersTo = field
             }
@@ -241,18 +260,17 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         if (refersTo == null) {
             // We can try to infer a possible global variable, if the language supports this
-            refersTo = tryGlobalVariableInference(current)
+            refersTo = tryGlobalVariableInference(ref)
         }
 
         if (refersTo != null) {
-            current.refersTo = refersTo
+            ref.refersTo = refersTo
         } else {
-            Util.warnWithFileLocation(
-                current,
-                log,
-                "Did not find a declaration for ${current.name}"
-            )
+            Util.warnWithFileLocation(ref, log, "Did not find a declaration for ${ref.name}")
         }
+
+        // Update the symbol cache
+        symbolTable[tag] = Pair(ref, refersTo)
     }
 
     /**
