@@ -8,4 +8,5 @@ coverage:
     patch:
       default:
         target: 75%
-
+comment:
+    layout: "condensed_header, files, condensed_footer"
