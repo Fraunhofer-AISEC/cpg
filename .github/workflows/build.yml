@@ -69,21 +69,17 @@ jobs:
           fi
       - name: Build ${{ env.version }}
         run: |
-          if [ "$SONAR_TOKEN" != "" ]
-          then
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar sonar performanceTest integrationTest \
-            -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
-            -Dsonar.organization=fraunhofer-aisec \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=$SONAR_TOKEN
-          else
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar performanceTest integrationTest
-          fi
+          ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport performanceTest integrationTest
         id: build
         env:
           VERSION: ${{ env.version }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Code Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          files: ./cpg-all/build/reports/kover/report.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |
