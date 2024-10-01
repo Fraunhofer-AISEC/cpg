@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -92,30 +93,62 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`With`](https://docs.python.org/3/library/ast.html#ast.With) into a
-     * [TryStatement].
+     * [Block].
+     *
+     * We return a Block to handle the with statement, following
+     * [PEP 343](https://peps.python.org/pep-0343/#specification-the-with-statement). The context
+     * managers `__enter__()` runs before the try block and `__exit__()` is always called later in
+     * the `finally` block to clean up, whether an exception occurs or not.
      */
-    private fun handleWithStatement(node: Python.AST.With): TryStatement {
-        val tryStatement = newTryStatement(rawNode = node)
+    private fun handleWithStatement(node: Python.AST.With): Block {
+        val mainBlock = newBlock().implicit()
+        val exitStatements = mutableListOf<Statement>()
+        val tryBlock = newBlock().implicit()
 
-        val contextExpressions = mutableListOf<Expression>()
-        val resources =
-            node.items.flatMap { item ->
-                val contextExpr = frontend.expressionHandler.handle(item.context_expr)
-                contextExpressions.add(contextExpr)
-                val optionalVars = item.optional_vars?.let { frontend.expressionHandler.handle(it) }
-                node.type_comment?.let { optionalVars?.type = frontend.typeOf(it) }
-                listOfNotNull(contextExpr, optionalVars)
+        node.items.forEach { withItem ->
+            // Create a temporary reference for the context manager
+            val tempVarName = Name.random(prefix = CONTEXT_MANAGER)
+            val tempRef = newReference(name = tempVarName).implicit()
+
+            // Handle the 'context expression' (the part before 'as') and assign to tempRef
+            val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
+            mainBlock.statements.add(createImplicitAssignStatement(tempRef, contextExpr))
+
+            // Handle the __enter__() call and assign to optionalVars (if present)
+            val enterCall =
+                createImplicitMemberCallExpression(
+                    name = "__enter__",
+                    base = tempRef,
+                    item = withItem
+                )
+            val optionalVars = withItem.optional_vars?.let { frontend.expressionHandler.handle(it) }
+            node.type_comment?.let { optionalVars?.type = frontend.typeOf(it) }
+            if (optionalVars != null) {
+                // Assign the __enter__() to `optionalVars`
+                tryBlock.statements.add(createImplicitAssignStatement(optionalVars, enterCall))
+            } else {
+                tryBlock.statements.add(enterCall)
             }
-        tryStatement.resources.addAll(resources)
 
-        tryStatement.tryBlock = makeBlock(node.body, parentNode = node)
+            // Prepare the __exit__() call and store it for the finally block
+            val exitCall =
+                createImplicitMemberCallExpression(
+                    name = "__exit__",
+                    base = tempRef,
+                    item = withItem
+                )
+            exitStatements.add(exitCall)
+        }
 
-        // The `with` statement can contain multiple `withitem` (e.g., `open('file1.txt') as f1,
-        // open('file2.txt') as f2`), but only one `__exit__()` method is called.
-        val finallyBlock = createFinallyBlockForWith(contextExpressions.first(), node)
-        tryStatement.finallyBlock = finallyBlock
+        val tryStatement =
+            createTryStatementWithBody(
+                node = node,
+                tryBlock = tryBlock,
+                exitStatements = exitStatements
+            )
 
-        return tryStatement
+        mainBlock.statements.add(tryStatement)
+        return mainBlock
     }
 
     /**
@@ -855,19 +888,40 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    /**
-     * The `with` statement is functionally equivalent to a `try` ... `finally` block, where the
-     * `__exit__()` method of the context manager makes sure resources are closed, even if something
-     * goes wrong. [With-Statement](https://peps.python.org/pep-0343/)
-     */
-    private fun createFinallyBlockForWith(contextExpr: Expression, node: Python.AST.With): Block {
-        val finallyBlock = newBlock().implicit()
-        val exitCall =
-            newMemberCallExpression(
-                callee = newMemberExpression(name = "__exit__", base = contextExpr),
-                rawNode = node
+    /** Creates an implicit [AssignExpression]. */
+    private fun createImplicitAssignStatement(lhs: Expression, rhs: Expression): AssignExpression {
+        return newAssignExpression(operatorCode = "=", lhs = listOf(lhs), rhs = listOf(rhs))
+            .implicit()
+    }
+
+    /** Creates an implicit [MemberCallExpression] (e.g., `__enter__`, `__exit__`). */
+    private fun createImplicitMemberCallExpression(
+        name: String,
+        base: Expression,
+        item: Python.AST.withitem
+    ): MemberCallExpression {
+        return newMemberCallExpression(
+                callee = newMemberExpression(name = name, base = base),
+                rawNode = item
             )
-        finallyBlock.statements.add(exitCall)
-        return finallyBlock
+            .implicit()
+    }
+
+    /** Creates a [TryStatement]. */
+    private fun createTryStatementWithBody(
+        node: Python.AST.With,
+        tryBlock: Block,
+        exitStatements: List<Statement>
+    ): TryStatement {
+        // Create the block for the body of the with statement
+        val bodyBlock = makeBlock(node.body, parentNode = node)
+        tryBlock.statements.addAll(bodyBlock.statements)
+
+        // Create the try statement with __exit__ calls in the finally block
+        return newTryStatement(rawNode = node).apply {
+            this.tryBlock = tryBlock
+            this.finallyBlock =
+                newBlock().implicit().apply { this.statements.addAll(exitStatements) }
+        }
     }
 }
