@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -39,13 +38,15 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import tryFieldInference
+import tryGlobalVariableInference
+import tryRecordInference
 
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
@@ -171,8 +172,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // identifier in Go)
         if (
             language is HasAnonymousIdentifier &&
-            current.name.localName == language.anonymousIdentifier
+                current.name.localName == language.anonymousIdentifier
         ) {
+            return
+        }
+
+        // Ignore references to "super" if the language has super expressions, because they will be
+        // handled separately in handleMemberExpression
+        if (language is HasSuperClasses && current.name.localName == language.superClassKeyword) {
             return
         }
 
@@ -237,33 +244,23 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             refersTo = resolveMethodFunctionPointer(current, helperType)
         }
 
-        // only add new nodes for non-static unknown
-        if (
-            refersTo == null &&
-            !current.isStaticAccess &&
-            recordDeclType != null &&
-            recordDeclType.recordDeclaration != null
-        ) {
-            // Maybe we are referring to a field instead of a local var
-            val field = resolveMember(recordDeclType, current)
-            if (field != null) {
-                refersTo = field
-            }
-        }
-
-        // TODO: we need to do proper scoping (and merge it with the code above), but for now
-        //  this just enables CXX static fields
-        if (refersTo == null && language != null && current.name.isQualified()) {
-            recordDeclType = getEnclosingTypeOf(current)
-            val field = resolveMember(recordDeclType, current)
-            if (field != null) {
-                refersTo = field
-            }
-        }
-
+        // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
-            // We can try to infer a possible global variable, if the language supports this
-            refersTo = tryGlobalVariableInference(current)
+            refersTo =
+                // Try to infer fields or namespace variables, if it makes sense
+                if (
+                    language is HasImplicitReceiver &&
+                        !current.name.isQualified() &&
+                        !current.isStaticAccess &&
+                        recordDeclType is ObjectType &&
+                        recordDeclType.recordDeclaration != null
+                ) {
+                    ctx.tryFieldInference(current, recordDeclType)
+                } else {
+                    // We can try to infer a possible global variable (either at top-level or
+                    // namespace level), if the language supports this
+                    ctx.tryGlobalVariableInference(current)
+                }
         }
 
         if (refersTo != null) {
@@ -274,45 +271,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 log,
                 "Did not find a declaration for ${current.name}"
             )
-        }
-    }
-
-    /**
-     * Tries to infer a global variable from an unresolved [Reference]. This will return `null`, if
-     * inference was not possible, or if it was turned off in the [InferenceConfiguration].
-     */
-    private fun tryGlobalVariableInference(ref: Reference): Declaration? {
-        if (ref.language !is HasGlobalVariables) {
-            return null
-        }
-
-        // For now, we only infer globals at the top-most global level, i.e., no globals in
-        // namespaces
-        if (ref.name.isQualified()) {
-            return null
-        }
-
-        // Forward this to our inference system. This will also check whether and how inference is
-        // configured.
-        return scopeManager.globalScope?.astNode?.startInference(ctx)?.inferVariableDeclaration(ref)
-    }
-
-    /**
-     * We get the type of the "scope" this node is in. (e.g. for a field, we drop the field's name
-     * and have the class)
-     */
-    protected fun getEnclosingTypeOf(current: Node): Type {
-        val language = current.language
-
-        return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
-            val parentName = (current.name.parent ?: current.name).toString()
-            var type = current.objectType(parentName)
-            if (type is ObjectType) {
-                TypeResolver.resolveType(type)
-            }
-            type
-        } else {
-            current.unknownType()
         }
     }
 
@@ -358,17 +316,22 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         val baseType = base.type.root
-        current.refersTo = resolveMember(baseType, current)
+        if (baseType is ObjectType) {
+            current.refersTo = resolveMember(baseType, current)
+        }
     }
 
-    protected fun resolveMember(containingClass: Type, reference: Reference): ValueDeclaration? {
+    protected fun resolveMember(
+        containingClass: ObjectType,
+        reference: Reference
+    ): ValueDeclaration? {
         if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
             // this in the call resolver instead
             return null
         }
         var member: ValueDeclaration? = null
-        var type = containingClass
+        var type: Type = containingClass
 
         // Check for a possible overloaded operator->
         if (
@@ -414,79 +377,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return member
         }
 
-        // This is a little bit of a workaround, but at least this makes sure we are not inferring a
-        // record, where a namespace already exist
-        val (scope, _) = scopeManager.extractScope(reference, null)
-        return if (scope == null) {
-            handleUnknownField(containingClass, reference)
-        } else {
-            // Workaround needed for Java. If we already have a record scope, use the "old"
-            // inference function
-            when (scope) {
-                is RecordScope -> handleUnknownField(containingClass, reference)
-                is NameScope -> {
-                    log.warn(
-                        "We should infer a namespace variable ${reference.name} at this point, but this is not yet implemented."
-                    )
-                    null
-                }
-                else -> {
-                    log.warn(
-                        "We should infer a variable ${reference.name} in ${scope}, but this is not yet implemented."
-                    )
-                    null
-                }
-            }
-        }
-    }
-
-    // TODO(oxisto): Move to inference class
-    protected fun handleUnknownField(base: Type, ref: Reference): FieldDeclaration? {
-        val name = ref.name
-
-        // unwrap a potential pointer-type
-        if (base is PointerType) {
-            return handleUnknownField(base.elementType, ref)
-        }
-
-        var record = base.recordDeclaration
-        if (base !is UnknownType && base !is AutoType && record == null) {
-            // We access an unknown field of an unknown record. so we need to handle that along the
-            // way as well
-            record = ctx.tryRecordInference(base, locationHint = ref, updateType = true)
-        }
-
-        if (record == null) {
-            log.error(
-                "There is no matching record in the record map. Can't identify which field is used."
-            )
-            return null
-        }
-
-        val target = record.fields.firstOrNull { it.name.lastPartsMatch(name) }
-
-        return if (target != null) {
-            target
-        } else {
-            val declaration =
-                newFieldDeclaration(
-                    name.localName,
-                    // we will set the type later through the type inference observer
-                    record.unknownType(),
-                    listOf(),
-                    null,
-                    false,
-                )
-            record.addField(declaration)
-            declaration.language = record.language
-            declaration.isInferred = true
-
-            // We might be able to resolve the type later (or better), if a type is
-            // assigned to our reference later
-            ref.registerTypeObserver(TypeInferenceObserver(declaration))
-
-            declaration
-        }
+        return ctx.tryFieldInference(reference, containingClass)
     }
 
     protected fun handle(node: Node?, currClass: RecordDeclaration?) {
@@ -980,73 +871,4 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
-}
-
-fun TranslationContext.tryNamespaceInference(
-    name: Name,
-    locationHint: Node?
-): NamespaceDeclaration? {
-    return scopeManager.globalScope
-        ?.astNode
-        ?.startInference(this)
-        ?.inferNamespaceDeclaration(name, null, locationHint)
-}
-
-/**
- * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
- * inference was not possible, or if it was turned off in the [InferenceConfiguration].
- *
- * If [updateType] is set to true, also the [ObjectType.recordDeclaration] is adjusted. This is only
- * needed if we call this function in the [SymbolResolver] (and not in the [TypeResolver]).
- */
-fun TranslationContext.tryRecordInference(
-    type: Type,
-    locationHint: Node? = null,
-    updateType: Boolean = false,
-): RecordDeclaration? {
-    val kind =
-        if (type.language is HasStructs) {
-            "struct"
-        } else {
-            "class"
-        }
-    // Determine the scope where we want to start our inference
-    var (scope, _) = scopeManager.extractScope(type)
-
-    if (scope !is NameScope) {
-        scope = null
-    }
-
-    var holder = scope?.astNode
-
-    // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
-    // parent record)
-    var parentName = type.name.parent
-    if (scope == null && parentName != null) {
-        // At this point, we need to check whether we have any type reference to our parent
-        // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
-        // have a high chance that this is actually a parent record and not a namespace
-        var parentType = typeManager.lookupResolvedType(parentName)
-        holder =
-            if (parentType != null) {
-                tryRecordInference(parentType, locationHint = locationHint)
-            } else {
-                tryNamespaceInference(parentName, locationHint = locationHint)
-            }
-    }
-
-    val record =
-        (holder ?: this.scopeManager.globalScope?.astNode)
-            ?.startInference(this)
-            ?.inferRecordDeclaration(type, kind, locationHint)
-
-    // update the type's record. Because types are only unique per scope, we potentially need to
-    // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
-    if (updateType && record != null) {
-        typeManager.firstOrderTypesMap[record.name.toString()]?.forEach {
-            it.recordDeclaration = record
-        }
-    }
-
-    return record
 }

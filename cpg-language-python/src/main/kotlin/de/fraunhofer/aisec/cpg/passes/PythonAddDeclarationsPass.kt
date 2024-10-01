@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -102,22 +103,18 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                                 (scopeManager.currentFunction as? MethodDeclaration)?.receiver?.name
                     ) {
                         // We need to temporarily jump into the scope of the current record to
-                        // add the field
-                        val field =
-                            scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                                newFieldDeclaration(node.name)
-                            }
-                        field
+                        // add the field. These are instance attributes
+                        scopeManager.withScope(
+                            scopeManager.firstScopeIsInstanceOrNull<RecordScope>()
+                        ) {
+                            newFieldDeclaration(node.name)
+                        }
                     } else {
                         val v = newVariableDeclaration(node.name)
                         v
                     }
                 } else {
-                    val field =
-                        scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                            newFieldDeclaration(node.name)
-                        }
-                    field
+                    newFieldDeclaration(node.name)
                 }
             } else {
                 newVariableDeclaration(node.name)
@@ -127,14 +124,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         decl.location = node.location
         decl.isImplicit = true
 
-        if (decl is FieldDeclaration) {
-            scopeManager.currentRecord?.addField(decl)
-            scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                scopeManager.addDeclaration(decl)
-            }
-        } else {
-            scopeManager.addDeclaration(decl)
-        }
+        scopeManager.withScope(decl.scope) { scopeManager.addDeclaration(decl) }
+
         return decl
     }
 
