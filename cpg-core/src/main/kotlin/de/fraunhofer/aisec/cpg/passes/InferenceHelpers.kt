@@ -23,6 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
+import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
@@ -32,13 +33,16 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -49,6 +53,7 @@ import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
+import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import kotlin.collections.forEach
 
@@ -164,32 +169,22 @@ internal fun TranslationContext.tryGlobalVariableInference(ref: Reference): Decl
  */
 internal fun TranslationContext.tryFieldInference(
     ref: Reference,
-    containingClass: ObjectType
+    objectType: ObjectType
 ): ValueDeclaration? {
-    // This is a little bit of a workaround, but at least this makes sure we are not inferring a
-    // record, where a namespace already exist
+    // We only want to infer fields here, this can either happen if we have a reference with an
+    // implicit receiver or if we have a scoped reference and the scope points to a record
     val (scope, _) = scopeManager.extractScope(ref, null)
-    val shouldInfer =
-        if (scope == null) {
-            true
-        } else {
-            // Workaround needed for Java?
-            when (scope) {
-                is RecordScope -> true
-                else -> false
-            }
-        }
-    if (!shouldInfer) {
+    if (scope != null && scope !is RecordScope) {
         return null
     }
 
     val name = ref.name
 
-    var record = containingClass.recordDeclaration
+    var record = objectType.recordDeclaration
     if (record == null) {
         // We access an unknown field of an unknown record. so we need to handle that along the
         // way as well
-        record = tryRecordInference(containingClass, locationHint = ref, updateType = true)
+        record = tryRecordInference(objectType, locationHint = ref, updateType = true)
     }
 
     if (record == null) {
@@ -199,28 +194,65 @@ internal fun TranslationContext.tryFieldInference(
         return null
     }
 
-    val target = record.fields.firstOrNull { it.name.lastPartsMatch(name) }
+    val declaration =
+        ref.newFieldDeclaration(
+            name.localName,
+            // we will set the type later through the type inference observer
+            record.unknownType(),
+            listOf(),
+            null,
+            false,
+        )
+    record.addField(declaration)
+    declaration.language = record.language
+    declaration.isInferred = true
 
-    return if (target != null) {
-        target
+    // We might be able to resolve the type later (or better), if a type is
+    // assigned to our reference later
+    ref.registerTypeObserver(TypeInferenceObserver(declaration))
+
+    return declaration
+}
+
+
+fun TranslationContext.tryFunctionInference(
+    call: CallExpression,
+    result: CallResolutionResult,
+): List<FunctionDeclaration> {
+    // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
+    // main cases
+    // a) we have a member expression -> easy
+    // b) we have a call expression -> not so easy. This could be a member call with an implicit
+    //    this (in which case we want to explore the base type). But that is only possible if
+    //    the callee is not qualified, because otherwise we are in a static call like
+    //    MyClass::doSomething() or in a namespace call (in case we do not want to explore the
+    //    base type here yet). This will change in a future PR.
+    val (suitableBases, bestGuess) =
+        if (call.callee is MemberExpression || !call.callee.name.isQualified()) {
+            getPossibleContainingTypes(call)
+        } else {
+            Pair(setOf(), null)
+        }
+
+    return if (suitableBases.isEmpty()) {
+        // Resolution has provided no result, we can forward this to the inference system,
+        // if we want. While this is definitely a function, it could still be a function
+        // inside a namespace. We therefore have two possible start points, a namespace
+        // declaration or a translation unit. Nothing else is allowed (fow now). We can
+        // re-use the information in the ResolutionResult, since this already contains the
+        // actual start scope (e.g. in case the callee has an FQN).
+        var scope = result.actualStartScope
+        if (scope !is NameScope) {
+            scope = scopeManager.globalScope
+        }
+        val func =
+            when (val start = scope?.astNode) {
+                is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
+                is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
+                else -> null
+            }
+        listOfNotNull(func)
     } else {
-        val declaration =
-            ref.newFieldDeclaration(
-                name.localName,
-                // we will set the type later through the type inference observer
-                record.unknownType(),
-                listOf(),
-                null,
-                false,
-            )
-        record.addField(declaration)
-        declaration.language = record.language
-        declaration.isInferred = true
-
-        // We might be able to resolve the type later (or better), if a type is
-        // assigned to our reference later
-        ref.registerTypeObserver(TypeInferenceObserver(declaration))
-
-        declaration
+        createMethodDummies(suitableBases, bestGuess, call)
     }
 }
