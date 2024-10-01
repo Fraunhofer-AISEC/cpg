@@ -52,8 +52,10 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.passes.getPossibleContainingTypes
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
+import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import kotlin.collections.forEach
 
@@ -214,8 +216,7 @@ internal fun TranslationContext.tryFieldInference(
     return declaration
 }
 
-
-fun TranslationContext.tryFunctionInference(
+internal fun TranslationContext.tryFunctionInference(
     call: CallExpression,
     result: CallResolutionResult,
 ): List<FunctionDeclaration> {
@@ -247,12 +248,46 @@ fun TranslationContext.tryFunctionInference(
         }
         val func =
             when (val start = scope?.astNode) {
-                is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
-                is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
+                is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this)
+                is NamespaceDeclaration -> start.inferFunction(call, ctx = this)
                 else -> null
             }
         listOfNotNull(func)
     } else {
-        createMethodDummies(suitableBases, bestGuess, call)
+        tryMethodInference(call, suitableBases, bestGuess)
     }
+}
+
+/**
+ * Creates an inferred element for each RecordDeclaration
+ *
+ * @param call
+ * @param possibleContainingTypes
+ */
+internal fun TranslationContext.tryMethodInference(
+    call: CallExpression,
+    possibleContainingTypes: Set<Type>,
+    bestGuess: Type?,
+): List<FunctionDeclaration> {
+    var records =
+        possibleContainingTypes.mapNotNull {
+            val root = it.root as? ObjectType
+            root?.recordDeclaration
+        }
+
+    // We access an unknown method of an unknown record. so we need to handle that
+    // along the way as well. We prefer the base type
+    if (records.isEmpty()) {
+        records =
+            listOfNotNull(
+                tryRecordInference(
+                    bestGuess?.root ?: call.unknownType(),
+                    locationHint = call,
+                    updateType = true
+                )
+            )
+    }
+    records = records.distinct()
+
+    return records.mapNotNull { record -> record.inferMethod(call, ctx = this) }
 }

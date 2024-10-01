@@ -38,15 +38,13 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
-import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import tryFieldInference
+import tryFunctionInference
 import tryGlobalVariableInference
-import tryRecordInference
 
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
@@ -445,7 +443,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // callee
         var candidates =
             if (useLegacyResolution) {
-                val (possibleTypes, _) = getPossibleContainingTypes(call)
+                val (possibleTypes, _) = ctx.getPossibleContainingTypes(call)
                 resolveMemberByName(callee.name.localName, possibleTypes).toSet()
             } else {
                 callee.candidates
@@ -478,7 +476,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 call.invokes = result.bestViable.toMutableList()
             }
             UNRESOLVED -> {
-                call.invokes = tryFunctionInference(call, result).toMutableList()
+                call.invokes = ctx.tryFunctionInference(call, result).toMutableList()
             }
         }
 
@@ -592,40 +590,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return candidates
     }
 
-    /**
-     * Creates an inferred element for each RecordDeclaration
-     *
-     * @param possibleContainingTypes
-     * @param call
-     */
-    protected fun createMethodDummies(
-        possibleContainingTypes: Set<Type>,
-        bestGuess: Type?,
-        call: CallExpression
-    ): List<FunctionDeclaration> {
-        var records =
-            possibleContainingTypes.mapNotNull {
-                val root = it.root as? ObjectType
-                root?.recordDeclaration
-            }
-
-        // We access an unknown method of an unknown record. so we need to handle that
-        // along the way as well. We prefer the base type
-        if (records.isEmpty()) {
-            records =
-                listOfNotNull(
-                    ctx.tryRecordInference(
-                        bestGuess?.root ?: unknownType(),
-                        locationHint = call,
-                        updateType = true
-                    )
-                )
-        }
-        records = records.distinct()
-
-        return records.mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
-    }
-
     protected fun handleConstructExpression(constructExpression: ConstructExpression) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
             return
@@ -707,32 +671,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
 
-    /**
-     * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
-     * returns a [Pair], where the first element is the set of types and the second is our best
-     * guess.
-     */
-    protected fun getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
-        val possibleTypes = mutableSetOf<Type>()
-        var bestGuess: Type? = null
-        if (call is MemberCallExpression) {
-            call.base?.let { base ->
-                bestGuess = base.type
-                possibleTypes.add(base.type)
-                possibleTypes.addAll(base.assignedTypes)
-            }
-        } else {
-            // This could be a C++ member call with an implicit this (which we do not create), so
-            // let's add the current class to the possible list
-            scopeManager.currentRecord?.toType()?.let {
-                bestGuess = it
-                possibleTypes.add(it)
-            }
-        }
-
-        return Pair(possibleTypes, bestGuess)
-    }
-
     protected fun getInvocationCandidatesFromParents(
         name: Symbol,
         possibleTypes: Set<RecordDeclaration>,
@@ -806,48 +744,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 ?.createInferredConstructor(constructExpression.signature)
     }
 
-    fun tryFunctionInference(
-        call: CallExpression,
-        result: CallResolutionResult,
-    ): List<FunctionDeclaration> {
-        // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
-        // main cases
-        // a) we have a member expression -> easy
-        // b) we have a call expression -> not so easy. This could be a member call with an implicit
-        //    this (in which case we want to explore the base type). But that is only possible if
-        //    the callee is not qualified, because otherwise we are in a static call like
-        //    MyClass::doSomething() or in a namespace call (in case we do not want to explore the
-        //    base type here yet). This will change in a future PR.
-        val (suitableBases, bestGuess) =
-            if (call.callee is MemberExpression || !call.callee.name.isQualified()) {
-                getPossibleContainingTypes(call)
-            } else {
-                Pair(setOf(), null)
-            }
-
-        return if (suitableBases.isEmpty()) {
-            // Resolution has provided no result, we can forward this to the inference system,
-            // if we want. While this is definitely a function, it could still be a function
-            // inside a namespace. We therefore have two possible start points, a namespace
-            // declaration or a translation unit. Nothing else is allowed (fow now). We can
-            // re-use the information in the ResolutionResult, since this already contains the
-            // actual start scope (e.g. in case the callee has an FQN).
-            var scope = result.actualStartScope
-            if (scope !is NameScope) {
-                scope = scopeManager.globalScope
-            }
-            val func =
-                when (val start = scope?.astNode) {
-                    is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
-                    is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
-                    else -> null
-                }
-            listOfNotNull(func)
-        } else {
-            createMethodDummies(suitableBases, bestGuess, call)
-        }
-    }
-
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
@@ -871,4 +767,31 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
+}
+
+/**
+ * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
+ * returns a [Pair], where the first element is the set of types and the second is our best guess.
+ */
+internal fun TranslationContext.getPossibleContainingTypes(
+    call: CallExpression
+): Pair<Set<Type>, Type?> {
+    val possibleTypes = mutableSetOf<Type>()
+    var bestGuess: Type? = null
+    if (call is MemberCallExpression) {
+        call.base?.let { base ->
+            bestGuess = base.type
+            possibleTypes.add(base.type)
+            possibleTypes.addAll(base.assignedTypes)
+        }
+    } else if (call.language is HasImplicitReceiver) {
+        // This could be a member call with an implicit receiver, so let's add the current class
+        // to the possible list
+        scopeManager.currentRecord?.toType()?.let {
+            bestGuess = it
+            possibleTypes.add(it)
+        }
+    }
+
+    return Pair(possibleTypes, bestGuess)
 }
