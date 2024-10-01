@@ -29,17 +29,11 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -129,39 +123,52 @@ internal fun TranslationContext.tryRecordInference(
 }
 
 /**
- * Tries to infer a global variable from an unresolved [Reference]. This will return `null`, if
+ * Tries to infer a [VariableDeclaration] out of a [Reference]. This will return `null`, if
  * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
- * Currently, this can only infer variables in the [GlobalScope], but not in a namespace.
+ * We mainly try to infer global variables and fields here, since these are possibly parts of the
+ * code we do not "see". We do not try to infer local variables, because we are under the assumption
+ * that even with incomplete code, we at least have the complete current function code.
  */
-internal fun TranslationContext.tryGlobalVariableInference(ref: Reference): Declaration? {
-    // For now, we only infer globals at the top-most global level, i.e., no globals in
-    // namespaces
-    if (ref.name.isQualified()) {
+internal fun TranslationContext.tryVariableInference(
+    language: Language<*>?,
+    ref: Reference,
+): Declaration? {
+    var currentRecordType = scopeManager.currentRecord?.toType() as? ObjectType
+    return if (
+        language is HasImplicitReceiver &&
+            !ref.name.isQualified() &&
+            !ref.isStaticAccess &&
+            currentRecordType != null
+    ) {
+        // This could potentially be a reference to a field with an implicit receiver call
+        tryFieldInference(ref, currentRecordType)
+    } else if (ref.name.isQualified()) {
+        // For now, we only infer globals at the top-most global level, i.e., no globals in
+        // namespaces
         val (scope, _) = scopeManager.extractScope(ref, null)
         when (scope) {
             is NameScope -> {
                 log.warn(
                     "We should infer a namespace variable ${ref.name} at this point, but this is not yet implemented."
                 )
-                return null
+                null
             }
             else -> {
                 log.warn(
                     "We should infer a variable ${ref.name} in ${scope}, but this is not yet implemented."
                 )
-                return null
+                null
             }
         }
+    } else if (ref.language is HasGlobalVariables) {
+        // We can try to infer a possible global variable (at top-level), if the language supports
+        // this
+        scopeManager.globalScope?.astNode?.startInference(this)?.inferVariableDeclaration(ref)
+    } else {
+        // Nothing to infer
+        null
     }
-
-    if (ref.language !is HasGlobalVariables) {
-        return null
-    }
-
-    // Forward this to our inference system. This will also check whether and how inference is
-    // configured.
-    return scopeManager.globalScope?.astNode?.startInference(this)?.inferVariableDeclaration(ref)
 }
 
 /**
@@ -171,22 +178,20 @@ internal fun TranslationContext.tryGlobalVariableInference(ref: Reference): Decl
  */
 internal fun TranslationContext.tryFieldInference(
     ref: Reference,
-    objectType: ObjectType
+    targetType: ObjectType
 ): ValueDeclaration? {
     // We only want to infer fields here, this can either happen if we have a reference with an
     // implicit receiver or if we have a scoped reference and the scope points to a record
-    val (scope, _) = scopeManager.extractScope(ref, null)
+    val (scope, _) = scopeManager.extractScope(ref)
     if (scope != null && scope !is RecordScope) {
         return null
     }
 
-    val name = ref.name
-
-    var record = objectType.recordDeclaration
+    var record = targetType.recordDeclaration
     if (record == null) {
         // We access an unknown field of an unknown record. so we need to handle that along the
         // way as well
-        record = tryRecordInference(objectType, locationHint = ref, updateType = true)
+        record = tryRecordInference(targetType, locationHint = ref, updateType = true)
     }
 
     if (record == null) {
@@ -198,7 +203,7 @@ internal fun TranslationContext.tryFieldInference(
 
     val declaration =
         ref.newFieldDeclaration(
-            name.localName,
+            ref.name.localName,
             // we will set the type later through the type inference observer
             record.unknownType(),
             listOf(),

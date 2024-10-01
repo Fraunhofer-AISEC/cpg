@@ -44,7 +44,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import tryFieldInference
 import tryFunctionInference
-import tryGlobalVariableInference
+import tryVariableInference
 
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
@@ -161,34 +161,31 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return target
     }
 
-    protected fun handleReference(currentClass: RecordDeclaration?, current: Node?) {
-        val language = current?.language
-
-        if (current !is Reference || current is MemberExpression) return
+    protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
+        val language = ref.language
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
         if (
-            language is HasAnonymousIdentifier &&
-                current.name.localName == language.anonymousIdentifier
+            language is HasAnonymousIdentifier && ref.name.localName == language.anonymousIdentifier
         ) {
             return
         }
 
         // Ignore references to "super" if the language has super expressions, because they will be
         // handled separately in handleMemberExpression
-        if (language is HasSuperClasses && current.name.localName == language.superClassKeyword) {
+        if (language is HasSuperClasses && ref.name.localName == language.superClassKeyword) {
             return
         }
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        current.candidates = scopeManager.findSymbols(current.name, current.location).toSet()
+        ref.candidates = scopeManager.findSymbols(ref.name, ref.location).toSet()
 
         // Preparation for a future without legacy call resolving. Taking the first candidate is not
         // ideal since we are running into an issue with function pointers here (see workaround
         // below).
-        var wouldResolveTo = current.candidates.singleOrNull()
+        var wouldResolveTo = ref.candidates.singleOrNull()
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -199,7 +196,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // of this call expression back to its original variable declaration. In the future, we want
         // to extend this particular code to resolve all callee references to their declarations,
         // i.e., their function definitions and get rid of the separate CallResolver.
-        if (current.resolutionHelper is CallExpression) {
+        if (ref.resolutionHelper is CallExpression) {
             // Peek into the declaration, and if it is only one declaration and a variable, we can
             // proceed normally, as we are running into the special case explained above. Otherwise,
             // we abort here (for now).
@@ -213,7 +210,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // percentage of references now.
         if (wouldResolveTo is FunctionDeclaration) {
             // We need to invoke the legacy resolver, just to be sure
-            var legacy = scopeManager.resolveReference(current)
+            var legacy = scopeManager.resolveReference(ref)
 
             // This is just for us to catch these differences in symbol resolving in the future. The
             // difference is pretty much only that the legacy system takes parameters of the
@@ -230,45 +227,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
-        var refersTo = current.refersTo ?: wouldResolveTo
+        var refersTo = ref.refersTo ?: wouldResolveTo
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
             recordDeclType = currentClass.toType()
         }
 
-        val helperType = current.resolutionHelper?.type
+        val helperType = ref.resolutionHelper?.type
         if (helperType is FunctionPointerType && refersTo == null) {
-            refersTo = resolveMethodFunctionPointer(current, helperType)
+            refersTo = resolveMethodFunctionPointer(ref, helperType)
         }
 
         // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
-            refersTo =
-                // Try to infer fields or namespace variables, if it makes sense
-                if (
-                    language is HasImplicitReceiver &&
-                        !current.name.isQualified() &&
-                        !current.isStaticAccess &&
-                        recordDeclType is ObjectType &&
-                        recordDeclType.recordDeclaration != null
-                ) {
-                    ctx.tryFieldInference(current, recordDeclType)
-                } else {
-                    // We can try to infer a possible global variable (either at top-level or
-                    // namespace level), if the language supports this
-                    ctx.tryGlobalVariableInference(current)
-                }
+            refersTo = ctx.tryVariableInference(language, ref)
         }
 
         if (refersTo != null) {
-            current.refersTo = refersTo
+            ref.refersTo = refersTo
         } else {
-            Util.warnWithFileLocation(
-                current,
-                log,
-                "Did not find a declaration for ${current.name}"
-            )
+            Util.warnWithFileLocation(ref, log, "Did not find a declaration for ${ref.name}")
         }
     }
 
@@ -353,6 +332,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         val record = type.recordDeclaration
         if (record != null) {
+            // TODO(oxisto): This should use symbols rather than the AST fields
             member =
                 record.fields
                     .filter { it.name.lastPartsMatch(reference.name) }
@@ -367,15 +347,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     .map { it.definition }
                     .firstOrNull()
         }
+
         if (member == null && record is EnumDeclaration) {
             member = record.entries[reference.name.localName]
         }
 
-        if (member != null) {
-            return member
+        if (member == null) {
+            member = ctx.tryFieldInference(reference, containingClass)
         }
 
-        return ctx.tryFieldInference(reference, containingClass)
+        return member
     }
 
     protected fun handle(node: Node?, currClass: RecordDeclaration?) {
