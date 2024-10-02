@@ -28,14 +28,17 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -57,8 +60,14 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
-    val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    val firstOrderTypes = mutableListOf<Type>()
+    val secondOrderTypes = mutableListOf<Type>()
+
+    /**
+     * A map of declared types by their name. Useful to check for the existence of a declared type
+     * by its fully qualified name across all scopes.
+     */
+    @PopulatedByPass(TypeResolver::class) val declaredTypes = mutableMapOf<Name, Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -200,26 +209,9 @@ class TypeManager {
         }
 
         if (t.isFirstOrderType) {
-            // Make sure we only ever return one unique object per type
-            if (!firstOrderTypes.add(t)) {
-                return firstOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace(
-                    "Registering unique first order type {}{}",
-                    t.name,
-                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
-                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
-                    } else {
-                        ""
-                    }
-                )
-            }
+            synchronized(firstOrderTypes) { firstOrderTypes.add(t) }
         } else if (t is SecondOrderType) {
-            if (!secondOrderTypes.add(t)) {
-                return secondOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace("Registering unique second order type {}", t.name)
-            }
+            synchronized(secondOrderTypes) { secondOrderTypes.add(t) }
         }
 
         return t
@@ -240,25 +232,13 @@ class TypeManager {
      * This function returns the first (there should be only one) [Type] with the given [fqn] that
      * is [Type.Origin.RESOLVED].
      */
-    fun lookupResolvedType(
-        fqn: CharSequence,
-        generics: List<Type>? = null,
-        language: Language<*>? = null
-    ): Type? {
+    fun lookupResolvedType(fqn: CharSequence, language: Language<*>? = null): Type? {
         var primitiveType = language?.getSimpleTypeOf(fqn)
         if (primitiveType != null) {
             return primitiveType
         }
 
-        return firstOrderTypes.firstOrNull {
-            (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
-                it.root.name == fqn &&
-                if (generics != null) {
-                    (it as? ObjectType)?.generics == generics
-                } else {
-                    true
-                }
-        }
+        return declaredTypes[language.parseName(fqn)]
     }
 }
 
