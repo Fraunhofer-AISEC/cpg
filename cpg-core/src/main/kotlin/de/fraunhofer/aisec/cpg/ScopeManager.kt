@@ -899,7 +899,7 @@ class ScopeManager : ScopeProvider {
      * @return the declaration, or null if it does not exist
      */
     fun getRecordForName(name: Name): RecordDeclaration? {
-        return findSymbols(name).filterIsInstance<RecordDeclaration>().singleOrNull()
+        return lookupSymbolByName(name).filterIsInstance<RecordDeclaration>().singleOrNull()
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
@@ -960,16 +960,21 @@ class ScopeManager : ScopeProvider {
         get() = currentScope
 
     /**
-     * This function tries to resolve a [Node.name] to a list of symbols (a symbol represented by a
-     * [Declaration]) starting with [startScope]. This function can return a list of multiple
-     * symbols in order to check for things like function overloading. but it will only return list
-     * of symbols within the same scope; the list cannot be spread across different scopes.
+     * This function tries to convert a [Node.name] into a [Symbol] and then performs a lookup of
+     * this symbol. This can either be an "unqualified lookup" if [name] is not qualified or a
+     * "qualified lookup" if [Name.isQualified] is true. In the unqualified case the lookup starts
+     * in [startScope], in the qualified case we use [extractScope] to find the appropriate scope
+     * and need to restrict our search to this particular scope.
      *
-     * This means that as soon one or more symbols are found in a "local" scope, these shadow all
-     * other occurrences of the same / symbol in a "higher" scope and only the ones from the lower
-     * ones will be returned.
+     * This function can return a list of multiple declarations in order to check for things like
+     * function overloading. but it will only return list of declarations within the same scope; the
+     * list cannot be spread across different scopes.
+     *
+     * This means that as soon one or more declarations for the symbol are found in a "local" scope,
+     * these shadow all other occurrences of the same / symbol in a "higher" scope and only the ones
+     * from the lower ones will be returned.
      */
-    fun findSymbols(
+    fun lookupSymbolByName(
         name: Name,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
@@ -1112,7 +1117,7 @@ data class CallResolutionResult(
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
-     * [ScopeManager.findSymbols]), more specifically a list of [FunctionDeclaration] nodes.
+     * [ScopeManager.lookupSymbolByName]), more specifically a list of [FunctionDeclaration] nodes.
      */
     var candidateFunctions: Set<FunctionDeclaration>,
 
