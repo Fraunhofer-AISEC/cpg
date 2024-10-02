@@ -69,7 +69,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Match,
-            is Python.AST.Nonlocal,
             is Python.AST.Raise,
             is Python.AST.TryStar,
             is Python.AST.With,
