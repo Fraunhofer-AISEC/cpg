@@ -157,6 +157,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
+        map[LookupScopeStatement::class.java] = {
+            handleLookupScopeStatement(it as LookupScopeStatement)
+        }
         map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
@@ -1018,6 +1021,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
+    }
+
+    private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
+        // Include the node as part of the EOG itself, but we do not need to go into any children or
+        // properties here
+        pushToEOG(stmt)
     }
 
     protected fun handleThrowStatement(statement: ThrowStatement) {
