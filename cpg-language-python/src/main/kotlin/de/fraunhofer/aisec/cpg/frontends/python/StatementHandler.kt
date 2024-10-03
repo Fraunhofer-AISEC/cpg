@@ -546,8 +546,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Translates a Python [`Nonlocal`](https://docs.python.org/3/library/ast.html#ast.Nonlocal) into a
-     * [LookupScopeStatement].
+     * Translates a Python [`Nonlocal`](https://docs.python.org/3/library/ast.html#ast.Nonlocal)
+     * into a [LookupScopeStatement].
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
         // We need to find the first outer function scope, or rather the block scope belonging to
