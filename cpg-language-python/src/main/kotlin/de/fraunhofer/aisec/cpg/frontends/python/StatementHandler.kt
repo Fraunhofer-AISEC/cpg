@@ -527,6 +527,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return wrapDeclarationToStatement(result)
     }
 
+    /**
+     * Translates a Python [`Global`](https://docs.python.org/3/library/ast.html#ast.Global) into a
+     * [LookupScopeStatement].
+     */
     private fun handleGlobal(global: Python.AST.Global): LookupScopeStatement {
         // Technically, our global scope is not identical to the python "global" scope. The reason
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
@@ -541,6 +545,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
+    /**
+     * Translates a Python [`Nonlocal`](https://docs.python.org/3/library/ast.html#ast.Nonlocal) into a
+     * [LookupScopeStatement].
+     */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
         // We need to find the first outer function scope, or rather the block scope belonging to
         // the function
