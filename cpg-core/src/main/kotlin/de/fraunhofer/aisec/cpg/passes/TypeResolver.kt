@@ -67,7 +67,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // constructor declarations and such with the same name. It seems this is ok since most
             // languages will prefer structs/classes over functions when resolving types.
             var symbols =
-                ctx?.scopeManager?.findSymbols(type.name, startScope = type.scope) {
+                ctx?.scopeManager?.lookupSymbolByName(type.name, startScope = type.scope) {
                     it is DeclaresType
                 } ?: listOf()
 
