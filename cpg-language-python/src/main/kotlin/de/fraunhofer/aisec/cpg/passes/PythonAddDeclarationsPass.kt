@@ -38,11 +38,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
-@DependsOn(TypeResolver::class)
+// @DependsOn(TypeResolver::class)
+@ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
@@ -89,7 +89,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Look for a potential scope modifier for this reference
         // lookupScope
         var targetScope =
-            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
+            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.first
 
         // There are a couple of things to consider now
         var symbol =

@@ -100,7 +100,9 @@ abstract class Scope(
      * also store this information in the scope to avoid unnecessary AST traversals when resolving
      * symbols using [lookupSymbol].
      */
-    @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
+    @Transient
+    var predefinedLookupScopes: MutableMap<Symbol?, Pair<Scope, LookupScopeStatement?>> =
+        mutableMapOf()
 
     /** Adds a [declaration] with the defined [symbol]. */
     fun addSymbol(symbol: Symbol, declaration: Declaration) {
@@ -137,7 +139,7 @@ abstract class Scope(
     ): List<Declaration> {
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
-        var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
+        var modifiedScoped = this.findTargetScopeFor(symbol)
         var scope: Scope? =
             if (modifiedScoped != null) {
                 modifiedScoped
@@ -183,6 +185,17 @@ abstract class Scope(
         }
 
         return list ?: listOf()
+    }
+
+    fun findTargetScopeFor(symbol: Symbol): Scope? {
+        // Try to find an entry for the symbol itself
+        var pair = predefinedLookupScopes[symbol]
+        if (pair != null) {
+            return pair.first
+        }
+
+        // Maybe we have an entry for "null" symbol, which means that all symbols are affected
+        return predefinedLookupScopes[null]?.first
     }
 
     fun addLabelStatement(labelStatement: LabelStatement) {
