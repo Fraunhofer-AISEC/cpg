@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
@@ -42,6 +43,7 @@ import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -82,9 +84,12 @@ class WithStatementTest : BaseTest() {
             blockStmt.statements.filterIsInstance<AssignExpression>().firstOrNull()
         assertNotNull(ctxManagerAssign)
         assertEquals(true, ctxManagerAssign.isImplicit)
-        assertLocalName("open", ctxManagerAssign.rhs.firstOrNull())
-        assertIs<Reference>(ctxManagerAssign.lhs.firstOrNull())
-        assertIs<CallExpression>(ctxManagerAssign.rhs.firstOrNull())
+
+        val ctxManagerAssignLhs = ctxManagerAssign.lhs.firstOrNull()
+        assertIs<Reference>(ctxManagerAssignLhs)
+
+        val ctxManagerAssignRhs = ctxManagerAssign.rhs.firstOrNull()
+        assertLocalName("open", ctxManagerAssignRhs)
 
         val tryStatement = blockStmt.statements.filterIsInstance<TryStatement>().firstOrNull()
         assertNotNull(tryStatement)
@@ -141,9 +146,12 @@ class WithStatementTest : BaseTest() {
             blockStmt.statements.filterIsInstance<AssignExpression>().firstOrNull()
         assertNotNull(ctxManagerAssign)
         assertEquals(true, ctxManagerAssign.isImplicit)
-        assertLocalName("open", ctxManagerAssign.rhs.firstOrNull())
-        assertIs<Reference>(ctxManagerAssign.lhs.firstOrNull())
-        assertIs<CallExpression>(ctxManagerAssign.rhs.firstOrNull())
+
+        val ctxManagerAssignLhs = ctxManagerAssign.lhs.firstOrNull()
+        assertIs<Reference>(ctxManagerAssignLhs)
+
+        val ctxManagerAssignRhs = ctxManagerAssign.rhs.firstOrNull()
+        assertLocalName("open", ctxManagerAssignRhs)
 
         val tryStatement = blockStmt.statements.filterIsInstance<TryStatement>().firstOrNull()
         assertNotNull(tryStatement)
@@ -163,5 +171,65 @@ class WithStatementTest : BaseTest() {
         val exitCallAssign = finallyBlock.statements.first()
         assertIs<MemberCallExpression>(exitCallAssign)
         assertLocalName("__exit__", exitCallAssign)
+    }
+
+    @Test
+    fun testWithContextManager() {
+        val testFunction = result.functions.firstOrNull { it -> it.name.contains("test_function") }
+        assertNotNull(testFunction)
+
+        val withBlock =
+            testFunction.body.statements
+                .filterIsInstance<Block>()
+                .flatMap { it.statements.filterIsInstance<Block>() }
+                .firstOrNull()
+        assertNotNull(withBlock)
+
+        val withBlockStmts = withBlock.statements
+        assertEquals(2, withBlockStmts.size)
+
+        val ctxManagerAssign = withBlockStmts.filterIsInstance<AssignExpression>().firstOrNull()
+        assertNotNull(ctxManagerAssign)
+        assertEquals(true, ctxManagerAssign.isImplicit)
+
+        val ctxManagerAssignLhs = ctxManagerAssign.lhs.firstOrNull()
+        assertIs<Reference>(ctxManagerAssignLhs)
+        assertTrue(ctxManagerAssignLhs.name.contains("contextManager"))
+
+        val ctxManagerAssignRhs = ctxManagerAssign.rhs.firstOrNull()
+        assertLocalName("TestContextManager", ctxManagerAssignRhs)
+
+        val tryStatement = withBlockStmts.filterIsInstance<TryStatement>().firstOrNull()
+        assertNotNull(tryStatement)
+
+        val tryBlock = tryStatement.tryBlock
+        assertNotNull(tryBlock)
+
+        val enterCall = tryBlock.statements.firstOrNull()
+        assertIs<AssignExpression>(enterCall)
+
+        val enterCallAssignLhs = enterCall.lhs.firstOrNull()
+        assertIs<Reference>(enterCallAssignLhs)
+
+        val enterCallAssignRhs = enterCall.rhs.firstOrNull()
+        assertIs<MemberCallExpression>(enterCallAssignRhs)
+        assertLocalName("__enter__", enterCallAssignRhs)
+
+        val parentNameOfEnterCall = enterCallAssignRhs.name.parent
+        assertEquals("TestContextManager", parentNameOfEnterCall?.localName)
+
+        val withBodyStatement = tryBlock.statements[1]
+        assertIs<CallExpression>(withBodyStatement)
+
+        val finallyBlock = tryStatement.finallyBlock
+        assertNotNull(finallyBlock)
+        assertEquals(1, finallyBlock.statements.size)
+
+        val exitCallAssign = finallyBlock.statements.firstOrNull()
+        assertIs<MemberCallExpression>(exitCallAssign)
+        assertLocalName("__exit__", exitCallAssign)
+
+        val parentNameOfExitCall = exitCallAssign.name.parent
+        assertEquals("TestContextManager", parentNameOfExitCall?.localName)
     }
 }
