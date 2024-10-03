@@ -178,7 +178,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        current.candidates = scopeManager.findSymbols(current.name, current.location).toSet()
+        current.candidates = scopeManager.lookupSymbolByName(current.name, current.location).toSet()
 
         // Preparation for a future without legacy call resolving. Taking the first candidate is not
         // ideal since we are running into an issue with function pointers here (see workaround
@@ -679,7 +679,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         var candidates = mutableSetOf<Declaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
-            candidates.addAll(ctx.scopeManager.findSymbols(record.name.fqn(symbol)))
+            candidates.addAll(ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol)))
         }
 
         // Find invokes by supertypes
@@ -845,7 +845,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             listOf()
         } else {
             val firstLevelCandidates =
-                possibleTypes.map { scopeManager.findSymbols(it.name.fqn(name)) }.flatten()
+                possibleTypes.map { scopeManager.lookupSymbolByName(it.name.fqn(name)) }.flatten()
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
             // FunctionDeclaration with the same name as the function in the CallExpression we have
