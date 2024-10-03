@@ -967,7 +967,7 @@ class ScopeManager : ScopeProvider {
      * and need to restrict our search to this particular scope.
      *
      * This function can return a list of multiple declarations in order to check for things like
-     * function overloading. but it will only return list of declarations within the same scope; the
+     * function overloading. But it will only return list of declarations within the same scope; the
      * list cannot be spread across different scopes.
      *
      * This means that as soon one or more declarations for the symbol are found in a "local" scope,
