@@ -98,9 +98,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             //   - to look for a local symbol, unless
             //   - a global keyword is present for this symbol and scope
             if (targetScope != null) {
-                scopeManager.findSymbols(ref.name, ref.location, targetScope)
+                scopeManager.lookupSymbolByName(ref.name, ref.location, targetScope)
             } else {
-                scopeManager.findSymbols(ref.name, ref.location) {
+                scopeManager.lookupSymbolByName(ref.name, ref.location) {
                     it.scope == scopeManager.currentScope
                 }
             }
@@ -151,7 +151,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         decl.location = ref.location
         decl.isImplicit = true
 
-        // TODO: trace?
         log.debug(
             "Creating dynamic {} {} in {}",
             if (decl is FieldDeclaration) {
