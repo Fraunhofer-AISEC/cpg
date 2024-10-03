@@ -277,13 +277,22 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
                 var fqn = previous?.name.fqn(path)
 
-                if (path != "__init__") {
+                // The __init__ module is very special in Python. The symbols that are declared by
+                // __init__.py are available directly under the path of the package (not module) it
+                // lies in. For example, if the contents of the file foo/bar/__init__.py are
+                // available in the module foo.bar (under the assumption that both foo and bar are
+                // packages). We therefore do not want to create an additional __init__ namespace.
+                // However, in reality, the symbols are actually available in foo.bar as well as in
+                // foo.bar.__init__, although the latter is practically not used, and therefore we
+                // do not support it because major workarounds would be needed.
+                if (path == "__init__") {
+                    previous
+                } else {
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
+                    nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
                     scopeManager.enterScope(nsd)
                     nsd
-                } else {
-                    previous
                 }
             }
 

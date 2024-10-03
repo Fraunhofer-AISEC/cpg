@@ -58,7 +58,7 @@ class ScopeTest {
         var stmt = LookupScopeStatement()
         stmt.targetScope = globalScope
         stmt.symbols = listOf("a")
-        scope.predefinedLookupScopes["a"] = stmt
+        scope.predefinedLookupScopes["a"] = Pair(globalScope, stmt)
 
         // let's try the lookup again, this time it should point to the global A
         result = scope.lookupSymbol("a")

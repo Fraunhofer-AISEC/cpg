@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -1484,6 +1485,74 @@ class PythonFrontendTest : BaseTest() {
 
         // So the code exceeds the line, but we clamp it and avoid a crash
         assertEquals("e = \"é\"", unicodeFunc.body?.code)
+    }
+
+    @Test
+    fun testPackageResolution() {
+        val topLevel = Path.of("src", "test", "resources", "python", "packages")
+        var result =
+            analyze(
+                // Ordering is important until #1782 is merged in
+                listOf(
+                        topLevel.resolve("foobar/config/__init__.py"),
+                        topLevel.resolve("foobar/implementation/__init__.py"),
+                        topLevel.resolve("foobar/implementation/internal_bar.py"),
+                        topLevel.resolve("foobar/implementation/internal_foo.py"),
+                        topLevel.resolve("foobar/__init__.py"),
+                        topLevel.resolve("foobar/__main__.py"),
+                        topLevel.resolve("foobar/module1.py"),
+                    )
+                    .map { it.toFile() },
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.useParallelFrontends(false)
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferFunctions(false).build()
+                )
+            }
+        assertNotNull(result)
+
+        var expected =
+            setOf(
+                "foobar",
+                "foobar.__main__",
+                "foobar.module1",
+                "foobar.config",
+                "foobar.implementation",
+                "foobar.implementation.internal_bar",
+                "foobar.implementation.internal_foo"
+            )
+        assertEquals(expected, result.namespaces.map { it.name.toString() }.distinct().toSet())
+
+        var bar = result.functions["bar"]
+        assertNotNull(bar)
+        assertFullName("foobar.implementation.internal_bar.bar", bar)
+
+        var foo = result.functions["foo"]
+        assertNotNull(foo)
+        assertFullName("foobar.implementation.internal_foo.foo", foo)
+
+        var barCall = result.calls["bar"]
+        assertNotNull(barCall)
+        assertInvokes(barCall, bar)
+
+        var fooCalls = result.calls("foo")
+        assertEquals(2, fooCalls.size)
+        fooCalls.forEach { assertInvokes(it, foo) }
+
+        val refBarString = result.refs("bar_string")
+        refBarString.forEach {
+            assertNotNull(it)
+            assertNotNull(it.refersTo)
+        }
+
+        val refFooString = result.refs("foo_string")
+        refFooString.forEach {
+            assertNotNull(it)
+            assertNotNull(it.refersTo)
+        }
     }
 
     class PythonValueEvaluator : ValueEvaluator() {
