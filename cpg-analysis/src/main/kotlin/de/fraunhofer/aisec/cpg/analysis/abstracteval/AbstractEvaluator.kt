@@ -315,8 +315,9 @@ class AbstractEvaluator {
     }
 
     /**
-     * Returns 0 if the condition evaluates to True and 1 if it evaluates to false.
-     * If the outcome cannot be deduced it returns -1.
+     * Returns 0 if the condition evaluates to True and 1 if it evaluates to false. If the outcome
+     * cannot be deduced it returns -1.
+     *
      * @param condition The Expression used as branch condition
      * @return 0, 1 or -1 depending on the Boolean evaluation
      */
