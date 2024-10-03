@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -69,9 +70,8 @@ class WalkerTest : BaseTest() {
                     lit.value = k
                     decl.initializer = lit
 
-                    stmt.addToPropertyEdgeDeclaration(decl)
-
-                    comp.addStatement(stmt)
+                    stmt.declarationEdges += decl
+                    comp.statementEdges += stmt
                 }
 
                 method.body = comp
@@ -108,6 +108,17 @@ class WalkerTest : BaseTest() {
 
             log.info("Flat AST has {} nodes", flat.size)
         }
+
+        // Alternative approach using new edge extensions
+        val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
+        val flat = tu.astEdges.map { it.end }
+        bench.stop()
+
+        assertNotNull(flat)
+
+        assertEquals(82618, flat.size)
+
+        log.info("Flat AST has {} nodes", flat.size)
     }
 
     // 741ms with branch
@@ -119,7 +130,7 @@ class WalkerTest : BaseTest() {
             val decl = VariableDeclaration()
             decl.name = Name("var${k}")
 
-            stmt.addToPropertyEdgeDeclaration(decl)
+            stmt.declarationEdges.add(decl)
         }
 
         val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")

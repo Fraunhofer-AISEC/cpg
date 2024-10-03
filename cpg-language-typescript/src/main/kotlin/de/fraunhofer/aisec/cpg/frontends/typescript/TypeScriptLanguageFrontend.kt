@@ -209,7 +209,7 @@ class TypeScriptLanguageFrontend(
         astNode.children
             ?.filter { it.type == "Decorator" }
             ?.map { handleDecorator(it) }
-            ?.let { node.addAnnotations(it) }
+            ?.let { node.annotations += it }
     }
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {

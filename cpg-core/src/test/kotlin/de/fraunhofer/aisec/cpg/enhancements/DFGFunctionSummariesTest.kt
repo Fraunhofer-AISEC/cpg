@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.edge.CallingContextIn
-import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement

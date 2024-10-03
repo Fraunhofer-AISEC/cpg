@@ -507,7 +507,7 @@ private constructor(
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
-            registerPass<ReplaceCallCastPass>()
+            registerPass<ResolveCallExpressionAmbiguityPass>()
             useDefaultPasses = true
             return this
         }
@@ -651,171 +651,16 @@ private constructor(
             )
         }
 
-        /**
-         * Collects the requested passes stored in [registeredPasses] and generates a
-         * [PassWithDepsContainer] consisting of pairs of passes and their dependencies.
-         *
-         * @return A populated [PassWithDepsContainer] derived from [registeredPasses].
-         */
-        private fun collectInitialPasses(): PassWithDepsContainer {
-            val workingList = PassWithDepsContainer()
-
-            val softDependencies =
-                mutableMapOf<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>()
-            val hardDependencies =
-                mutableMapOf<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>()
-
-            // Add the "execute before" dependencies.
-            for (p in passes) {
-                val executeBefore = mutableListOf<KClass<out Pass<*>>>()
-
-                val depAnn = p.findAnnotations<DependsOn>()
-                // collect all dependencies added by [DependsOn] annotations.
-                for (d in depAnn) {
-                    val deps =
-                        if (d.softDependency) {
-                            softDependencies.computeIfAbsent(p) { mutableSetOf() }
-                        } else {
-                            hardDependencies.computeIfAbsent(p) { mutableSetOf() }
-                        }
-                    deps += d.value
-                }
-
-                val execBeforeAnn = p.findAnnotations<ExecuteBefore>()
-                for (d in execBeforeAnn) {
-                    executeBefore.add(d.other)
-                }
-
-                for (eb in executeBefore) {
-                    passes
-                        .filter { eb == it }
-                        .forEach {
-                            val deps = softDependencies.computeIfAbsent(it) { mutableSetOf() }
-                            deps += p
-                        }
-                }
-            }
-
-            log.info(
-                "The following mermaid graph represents the pass dependencies: \n ${buildMermaid(softDependencies, hardDependencies)}"
-            )
-
-            for (p in passes) {
-                var passFound = false
-                for ((pass) in workingList.getWorkingList()) {
-                    if (pass == p) {
-                        passFound = true
-                        break
-                    }
-                }
-                if (!passFound) {
-                    workingList.addToWorkingList(
-                        PassWithDependencies(
-                            p,
-                            softDependencies[p] ?: mutableSetOf(),
-                            hardDependencies[p] ?: mutableSetOf()
-                        )
-                    )
-                }
-            }
-            return workingList
-        }
-
-        /**
-         * Builds a markdown representation of a pass dependency graph, based on
-         * [Mermaid](https://mermaid.js.org) syntax.
-         */
-        private fun buildMermaid(
-            softDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>,
-            hardDependencies: MutableMap<KClass<out Pass<*>>, MutableSet<KClass<out Pass<*>>>>
-        ): String {
-            var s = "```mermaid\n"
-            s += "flowchart TD;\n"
-            for ((pass, deps) in softDependencies.entries) {
-                for (dep in deps) {
-                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
-                }
-            }
-            for ((pass, deps) in hardDependencies.entries) {
-                for (dep in deps) {
-                    s += "    ${dep.simpleName}-->${pass.simpleName};\n"
-                }
-            }
-            s += "```"
-            return s
-        }
-
-        /**
-         * This function reorders passes in order to meet their dependency requirements.
-         * * soft dependencies [DependsOn] with `softDependency == true`: all passes registered as
-         *   soft dependency will be executed before the current pass if they are registered
-         * * hard dependencies [DependsOn] with `softDependency == false (default)`: all passes
-         *   registered as hard dependency will be executed before the current pass (hard
-         *   dependencies will be registered even if the user did not register them)
-         * * first pass [ExecuteFirst]: a pass registered as first pass will be executed in the
-         *   beginning
-         * * last pass [ExecuteLast]: a pass registered as last pass will be executed at the end
-         *
-         * This function uses a very simple (and inefficient) logic to meet the requirements above:
-         * 1. A list of all registered passes and their dependencies is build
-         *    [PassWithDepsContainer.workingList]
-         * 1. All missing hard dependencies [DependsOn] are added to the
-         *    [PassWithDepsContainer.workingList]
-         * 1. The first pass [ExecuteFirst] is added to the result and removed from the other passes
-         *    dependencies
-         * 1. A list of passes in the workingList without dependencies are added to the result, and
-         *    removed from the other passes dependencies
-         * 1. The above step is repeated until all passes are added to the result
-         *
-         * @return a sorted list of passes, with passes that can be run in parallel together in a
-         *   nested list.
-         */
+        /** This function reorders passes in order to meet their dependency requirements. */
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
-            val result = mutableListOf<List<KClass<out Pass<*>>>>()
-
-            // Create a local copy of all passes and their "current" dependencies without possible
-            // duplicates
-            val workingList = collectInitialPasses()
-            log.debug("Working list after initial scan: {}", workingList)
-            workingList.addMissingDependencies()
-            log.debug("Working list after adding missing dependencies: {}", workingList)
-            if (workingList.getFirstPasses().size > 1) {
-                log.error(
-                    "Too many passes require to be executed as first pass: {}",
-                    workingList.getWorkingList()
-                )
-                throw ConfigurationException(
-                    "Too many passes require to be executed as first pass."
-                )
-            }
-            if (workingList.getLastPasses().size > 1) {
-                log.error(
-                    "Too many passes require to be executed as last pass: {}",
-                    workingList.getLastPasses()
-                )
-                throw ConfigurationException("Too many passes require to be executed as last pass.")
-            }
-            val firstPass = workingList.getAndRemoveFirstPass()
-            if (firstPass != null) {
-                result.add(listOf(firstPass))
-            }
-            while (!workingList.isEmpty) {
-                val p = workingList.getAndRemoveFirstPassWithoutDependencies()
-                if (p.isNotEmpty()) {
-                    result.add(p)
-                } else {
-                    // failed to find a pass that can be added to the result -> deadlock :(
-                    throw ConfigurationException("Failed to satisfy ordering requirements.")
-                }
-            }
+            val orderingHelper = PassOrderingHelper(passes)
             log.info(
-                "Passes after enforcing order: {}",
-                result.map { list -> list.map { it.simpleName } }
+                "The following mermaid graph represents the pass dependencies: \n${buildMermaid(passes)}"
             )
 
-            return result
+            return orderingHelper.order()
         }
     }
 

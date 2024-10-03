@@ -263,7 +263,7 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
     val node = newBlock()
 
     scopeIfNecessary(needsScope, node, init)
-    (this@StatementHolder).addStatement(node)
+    (this@StatementHolder).statementEdges += node
 
     return node
 }
@@ -375,7 +375,28 @@ fun LanguageFrontend<*, *>.variable(
     val node = newVariableDeclaration(name, type)
     if (init != null) init(node)
 
-    addToPropertyEdgeDeclaration(node)
+    declarationEdges += node
+
+    scopeManager.addDeclaration(node)
+
+    return node
+}
+
+/**
+ * Creates a new [ProblemDeclaration] in the Fluent Node DSL and adds it to the
+ * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
+ */
+context(DeclarationStatement)
+fun LanguageFrontend<*, *>.problemDecl(
+    description: String,
+    type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
+    init: (ProblemDeclaration.() -> Unit)? = null
+): ProblemDeclaration {
+    val node = newProblemDeclaration(problem = description, problemType = type)
+    if (init != null) init(node)
+
+    declarationEdges += node
 
     scopeManager.addDeclaration(node)
 
@@ -785,8 +806,8 @@ fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -
 }
 
 /**
- * Creates a new [LabelStatement] in the Fluent Node DSL and invokes [StatementHolder.addStatement]
- * of the nearest enclosing [Holder], but only if it is an [StatementHolder].
+ * Creates a new [LabelStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * [StatementHolder].
  */
 context(Holder<out Statement>)
 fun LanguageFrontend<*, *>.label(
@@ -809,8 +830,8 @@ fun LanguageFrontend<*, *>.label(
 }
 
 /**
- * Creates a new [ContinueStatement] in the Fluent Node DSL and invokes
- * [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * Creates a new [ContinueStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * [StatementHolder].
  */
 context(StatementHolder)
 fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatement {
@@ -823,8 +844,8 @@ fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatemen
 }
 
 /**
- * Creates a new [BreakStatement] in the Fluent Node DSL and invokes [StatementHolder.addStatement]
- * of the nearest enclosing [Holder], but only if it is an [StatementHolder].
+ * Creates a new [BreakStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * [Holder], but only if it is an [StatementHolder].
  */
 context(Holder<out Statement>)
 fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
@@ -841,8 +862,8 @@ fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
 }
 
 /**
- * Creates a new [CaseStatement] in the Fluent Node DSL and invokes [StatementHolder.addStatement]
- * of the nearest enclosing [Holder], but only if it is an [StatementHolder].
+ * Creates a new [CaseStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * [Holder], but only if it is an [StatementHolder].
  */
 context(Holder<out Statement>)
 fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStatement {
@@ -858,8 +879,7 @@ fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStateme
     return node
 }
 /**
- * Creates a new [DefaultStatement] in the Fluent Node DSL and invokes
- * [StatementHolder.addStatement] of the nearest enclosing [Holder], but only if it is an
+ * Creates a new [DefaultStatement] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
 context(Holder<out Statement>)
@@ -1084,7 +1104,7 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
 
 /**
  * Creates a new [BinaryOperator] with a `+` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 operator fun Expression.plusAssign(rhs: Expression) {
@@ -1145,7 +1165,7 @@ fun reference(input: Expression): UnaryOperator {
 
 /**
  * Creates a new [UnaryOperator] with a `--` [UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Statement>)
 operator fun Expression.dec(): UnaryOperator {
@@ -1284,7 +1304,7 @@ infix fun Expression.le(rhs: Expression): BinaryOperator {
 
 /**
  * Creates a new [ConditionalExpression] with a `=` [BinaryOperator.operatorCode] in the Fluent Node
- * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 fun Expression.conditional(
@@ -1306,12 +1326,12 @@ fun Expression.conditional(
 
 /**
  * Creates a new [BinaryOperator] with a `=` [BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, StatementHolder)
 infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
     val node = (this@LanguageFrontend).newAssignExpression("=")
-    node.lhs = listOf(this)
+    node.lhs = mutableListOf(this)
     init(node)
     // node.rhs = listOf(init(node))
 
@@ -1322,7 +1342,7 @@ infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpr
 
 /**
  * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
- * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assign(rhs: Expression): AssignExpression {
@@ -1337,7 +1357,7 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
 
 /**
  * Creates a new [AssignExpression] with a `+=` [AssignExpression.operatorCode] in the Fluent Node
- * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
@@ -1352,7 +1372,7 @@ infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
 
 /**
  * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
- * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
@@ -1364,7 +1384,7 @@ infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
 }
 /**
  * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
- * DSL and invokes [StatementHolder.addStatement] of the nearest enclosing [StatementHolder].
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpression {

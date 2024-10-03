@@ -180,7 +180,7 @@ open class ValueEvaluator(
             "<=" -> handleLEq(lhsValue, rhsValue, expr)
             "==" -> handleEq(lhsValue, rhsValue, expr)
             "!=" -> handleNEq(lhsValue, rhsValue, expr)
-            else -> cannotEvaluate(expr as Node, this)
+            else -> cannotEvaluate(expr, this)
         }
     }
 

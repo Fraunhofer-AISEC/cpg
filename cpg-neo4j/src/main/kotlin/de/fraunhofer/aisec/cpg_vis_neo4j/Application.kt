@@ -522,6 +522,8 @@ class Application : Callable<Int> {
 
         if (!noDefaultPasses) {
             translationConfiguration.defaultPasses()
+            translationConfiguration.registerPass<ControlDependenceGraphPass>()
+            translationConfiguration.registerPass<ProgramDependenceGraphPass>()
         }
         if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")

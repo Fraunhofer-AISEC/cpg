@@ -29,7 +29,6 @@
 //
 plugins {
     id("org.jetbrains.dokka")
-    id("org.sonarqube")
     id("io.github.gradle-nexus.publish-plugin")
 }
 
@@ -76,18 +75,6 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 
-
-//
-// Configure sonarqube for the whole cpg project
-//
-sonarqube {
-    properties {
-        property("sonar.sourceEncoding", "UTF-8")
-        // The report part is either relative to the submodules or the main module. We want to specify our
-        // aggregated jacoco report here
-        property("sonar.coverage.jacoco.xmlReportPaths", "../cpg-all/build/reports/kover/report.xml,cpg-all/build/reports/kover/report.xml")
-    }
-}
 
 /**
  * Publishing to maven central
@@ -150,3 +137,9 @@ val enableRubyFrontend: Boolean by extra {
     enableRubyFrontend.toBoolean()
 }
 project.logger.lifecycle("Ruby frontend is ${if (enableRubyFrontend) "enabled" else "disabled"}")
+
+val enableJVMFrontend: Boolean by extra {
+    val enableJVMFrontend: String? by project
+    enableJVMFrontend.toBoolean()
+}
+project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")

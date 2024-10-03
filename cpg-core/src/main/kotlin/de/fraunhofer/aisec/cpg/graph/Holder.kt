@@ -37,6 +37,15 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
  * [CallExpression]).
  */
 interface Holder<NodeTypeToHold : Node> {
+
+    /**
+     * Replaces the existing node specified in [old] with the one in [new]. Implementation how to do
+     * that might be specific to the holder.
+     *
+     * An indication whether this operation was successful needs to be returned.
+     */
+    fun replace(old: NodeTypeToHold, new: NodeTypeToHold): Boolean
+
     /** Adds a [Node] to the list of "held" nodes. */
     operator fun plusAssign(node: NodeTypeToHold)
 }

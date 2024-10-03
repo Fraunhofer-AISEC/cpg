@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edge.partial
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -75,13 +75,17 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     if (param == (invoked as? MethodDeclaration)?.receiver) {
                         (call as? MemberCallExpression)
                             ?.base
-                            ?.addPrevDFG(param, callingContext = CallingContextOut(call))
+                            ?.prevDFGEdges
+                            ?.addContextSensitive(param, callingContext = CallingContextOut(call))
                     } else if (param is ParameterDeclaration) {
                         val arg = call.arguments[param.argumentIndex]
-                        arg.addPrevDFG(param, callingContext = CallingContextOut(call))
+                        arg.prevDFGEdges.addContextSensitive(
+                            param,
+                            callingContext = CallingContextOut(call)
+                        )
                         (arg as? Reference)?.let {
                             it.access = AccessValues.READWRITE
-                            it.refersTo?.let { it1 -> it.addNextDFG(it1) }
+                            it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
                 }
@@ -138,22 +142,22 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // If this is a compound assign, we also need to model a dataflow to the node itself
         if (node.isCompoundAssignment) {
             node.lhs.firstOrNull()?.let {
-                node.addPrevDFG(it)
-                node.addNextDFG(it)
+                node.prevDFGEdges += it
+                node.nextDFGEdges += it
             }
-            node.rhs.firstOrNull()?.let { node.addPrevDFG(it) }
+            node.rhs.firstOrNull()?.let { node.prevDFGEdges += it }
         } else {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.addNextDFG(target) }
+                targets.forEach { target -> it.nextDFGEdges += target }
             }
         }
 
         // If the assignment is used as an expression, we also model a data flow from the (first)
         // rhs to the node itself
         if (node.usedAsExpression) {
-            node.expressionValue?.addNextDFG(node)
+            node.expressionValue?.nextDFGEdges += node
         }
     }
 
@@ -164,15 +168,15 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleMemberExpression(node: MemberExpression) {
         when (node.access) {
             AccessValues.WRITE -> {
-                node.addNextDFG(node.base, granularity = partial(node.refersTo))
+                node.nextDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
             }
             AccessValues.READWRITE -> {
-                node.addNextDFG(node.base, granularity = partial(node.refersTo))
+                node.nextDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
             }
             else -> {
-                node.addPrevDFG(node.base, granularity = partial(node.refersTo))
+                node.prevDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
             }
         }
     }
@@ -184,10 +188,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
             node.elements.withIndex().forEach {
-                it.value.addPrevDFG(
-                    initializer,
-                    granularity = partial(it.value),
-                )
+                it.value.prevDFGEdges.add(initializer) { granularity = partial(it.value) }
             }
         }
     }
@@ -197,7 +198,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
-        node.initializer?.let { node.addPrevDFG(it) }
+        node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -213,17 +214,16 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             if (!summaryExists) {
                 // If the function is inferred, we connect all parameters to the function
-                // declaration.
-                // The condition should make sure that we don't add edges multiple times, i.e., we
-                // only handle the declaration exactly once.
-                node.addAllPrevDFG(node.parameters)
+                // declaration.  The condition should make sure that we don't add edges multiple
+                // times, i.e., we only handle the declaration exactly once.
+                node.prevDFGEdges.addAll(node.parameters)
                 // If it's a method with a receiver, we connect that one too.
                 if (node is MethodDeclaration) {
-                    node.receiver?.let { node.addPrevDFG(it) }
+                    node.receiver?.let { node.prevDFGEdges += it }
                 }
             }
         } else {
-            node.allChildren<ReturnStatement>().forEach { node.addPrevDFG(it) }
+            node.allChildren<ReturnStatement>().forEach { node.prevDFGEdges += it }
         }
     }
 
@@ -231,7 +231,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [FieldDeclaration]. The data flows from the initializer to the field.
      */
     protected fun handleFieldDeclaration(node: FieldDeclaration) {
-        node.initializer?.let { node.addPrevDFG(it) }
+        node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -239,7 +239,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * statement.
      */
     protected fun handleReturnStatement(node: ReturnStatement) {
-        node.returnValues.forEach { node.addPrevDFG(it) }
+        node.returnValues.forEach { node.prevDFGEdges += it }
     }
 
     /**
@@ -254,13 +254,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node.iterable?.let { iterable ->
             if (node.variable is DeclarationStatement) {
                 (node.variable as DeclarationStatement).declarations.forEach {
-                    it.addPrevDFG(iterable)
+                    it.prevDFGEdges += iterable
                 }
             } else {
-                node.variable.variables.lastOrNull()?.addPrevDFG(iterable)
+                node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
             }
         }
-        node.variable?.let { node.addPrevDFG(it) }
+        node.variable?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -268,7 +268,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * dependence between data and the branching node.
      */
     protected fun handleDoStatement(node: DoStatement) {
-        node.condition?.let { node.addPrevDFG(it) }
+        node.condition?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -329,9 +329,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
         node.input.let {
-            node.addPrevDFG(it)
+            node.prevDFGEdges += it
             if (node.operatorCode == "++" || node.operatorCode == "--") {
-                node.addNextDFG(it)
+                node.nextDFGEdges += it
             }
         }
     }
@@ -341,7 +341,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * lambda to the expression.
      */
     protected fun handleLambdaExpression(node: LambdaExpression) {
-        node.function?.let { node.addPrevDFG(it) }
+        node.function?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -349,7 +349,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Check with python and JS implementation
      */
     protected fun handleKeyValueExpression(node: KeyValueExpression) {
-        node.value?.let { node.addPrevDFG(it) }
+        node.value?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -357,7 +357,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * this expression.
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
-        node.initializers.forEach { node.addPrevDFG(it) }
+        node.initializers.forEach { node.prevDFGEdges += it }
     }
 
     /**
@@ -365,7 +365,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * list.
      */
     protected fun handleExpressionList(node: ExpressionList) {
-        node.expressions.lastOrNull()?.let { node.addPrevDFG(it) }
+        node.expressions.lastOrNull()?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -373,7 +373,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * expression.
      */
     protected fun handleNewExpression(node: NewExpression) {
-        node.initializer?.let { node.addPrevDFG(it) }
+        node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -385,11 +385,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleReference(node: Reference) {
         node.refersTo?.let {
             when (node.access) {
-                AccessValues.WRITE -> node.addNextDFG(it)
-                AccessValues.READ -> node.addPrevDFG(it)
+                AccessValues.WRITE -> node.nextDFGEdges += it
+                AccessValues.READ -> node.prevDFGEdges += it
                 else -> {
-                    node.addNextDFG(it)
-                    node.addPrevDFG(it)
+                    node.nextDFGEdges += it
+                    node.prevDFGEdges += it
                 }
             }
         }
@@ -400,8 +400,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * expression to the whole expression.
      */
     protected fun handleConditionalExpression(node: ConditionalExpression) {
-        node.thenExpression?.let { node.addPrevDFG(it) }
-        node.elseExpression?.let { node.addPrevDFG(it) }
+        node.thenExpression?.let { node.prevDFGEdges += it }
+        node.elseExpression?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -409,12 +409,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * `x[i]`.
      */
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
-        node.addPrevDFG(node.arrayExpression)
+        node.prevDFGEdges += node.arrayExpression
     }
 
     /** Adds the DFG edge to an [NewArrayExpression]. The initializer flows to the expression. */
     protected fun handleNewArrayExpression(node: NewArrayExpression) {
-        node.initializer?.let { node.addPrevDFG(it) }
+        node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
@@ -424,26 +424,26 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
             "=" -> {
-                node.rhs.let { node.lhs.addPrevDFG(it) }
+                node.rhs.let { node.lhs.prevDFGEdges += it }
                 // There are cases where we explicitly want to connect the rhs to the =.
                 // E.g., this is the case in C++ where subexpressions can make the assignment.
                 // Examples: a + (b = 1)  or  a = a == b ? b = 2: b = 3
                 // When the parent is a compound statement (or similar block of code), we can safely
                 // assume that we're not in such a sub-expression
                 if (parent == null || parent !is Block) {
-                    node.rhs.addNextDFG(node)
+                    node.rhs.nextDFGEdges += node
                 }
             }
             in node.language?.compoundAssignmentOperators ?: setOf() -> {
                 node.lhs.let {
-                    node.addPrevDFG(it)
-                    node.addNextDFG(it)
+                    node.prevDFGEdges += it
+                    node.nextDFGEdges += it
                 }
-                node.rhs.let { node.addPrevDFG(it) }
+                node.rhs.let { node.prevDFGEdges += it }
             }
             else -> {
-                node.lhs.let { node.addPrevDFG(it) }
-                node.rhs.let { node.addPrevDFG(it) }
+                node.lhs.let { node.prevDFGEdges += it }
+                node.rhs.let { node.prevDFGEdges += it }
             }
         }
     }
@@ -452,15 +452,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge to a [CastExpression]. The inner expression flows to the cast expression.
      */
     protected fun handleCastExpression(castExpression: CastExpression) {
-        castExpression.expression.let { castExpression.addPrevDFG(it) }
+        castExpression.expression.let { castExpression.prevDFGEdges += it }
     }
 
     /** Adds the DFG edges to a [CallExpression]. */
     fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
         // CallExpression with the invokes edges to the called functions)
-        call.prevDFG.forEach { it.nextDFG.remove(call) }
-        call.prevDFG.clear()
+        call.prevDFGEdges.clear()
 
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
@@ -468,7 +467,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
                 Util.attachCallParameters(it, call)
-                call.addPrevDFG(it, callingContext = CallingContextOut(call))
+                call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)
                 }
@@ -483,9 +482,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleUnresolvedCalls(call: CallExpression, dfgTarget: Node) {
         if (call is MemberCallExpression && !call.isStatic) {
-            call.base?.let { dfgTarget.addPrevDFG(it) }
+            call.base?.let { dfgTarget.prevDFGEdges += it }
         }
 
-        call.arguments.forEach { dfgTarget.addPrevDFG(it) }
+        call.arguments.forEach { dfgTarget.prevDFGEdges += it }
     }
 }

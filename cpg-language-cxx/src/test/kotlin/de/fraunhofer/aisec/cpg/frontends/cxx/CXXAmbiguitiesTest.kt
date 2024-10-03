@@ -57,8 +57,10 @@ class CXXAmbiguitiesTest {
             }
         assertNotNull(tu)
 
-        // make sure we still have only one declaration in the file (the record)
-        assertEquals(1, tu.declarations.size)
+        // we have 3 (record) declarations in our TU now. 1 of the original MyClass and two because
+        // CDT thinks that "call" is the return type and "crazy" the type of the parameter. We infer
+        // record declarations for all types, so we end up with 3 declarations here.
+        assertEquals(3, tu.declarations.size)
 
         val myClass = tu.records["MyClass"]
         assertNotNull(myClass)

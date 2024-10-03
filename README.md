@@ -1,6 +1,6 @@
 # Code Property Graph 
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
- [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
+ [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
 
 A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
@@ -128,15 +128,16 @@ Languages are maintained to different degrees, and are noted in the table below 
   
 The current state of languages is:
 
-| Language | Module | Branch | State |
-|---|---|---|---|
-| Java | cpg-language-java | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| C++ | cpg-language-cxx | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| Python | cpg-language-python | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| Go | cpg-language-go | [main](https://github.com/Fraunhofer-AISEC/cpg) | `maintained` |
-| LLVM | cpg-language-llvm | [main](https://github.com/Fraunhofer-AISEC/cpg) | `incubating` |
-| TypeScript/JavaScript | cpg-language-typescript | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
-| Ruby | cpg-language-ruby | [main](https://github.com/Fraunhofer-AISEC/cpg) | `experimental` |
+| Language                 | Module                                | Branch                                                                  | State          |
+|--------------------------|---------------------------------------|-------------------------------------------------------------------------|----------------|
+| Java (Source)            | cpg-language-java                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
 | {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
 
 ### Languages and Configuration

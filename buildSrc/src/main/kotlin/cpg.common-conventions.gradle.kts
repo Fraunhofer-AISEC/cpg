@@ -107,7 +107,7 @@ kotlin {
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xcontext-receivers")
+        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-opt-in=kotlin.uuid.ExperimentalUuidApi", "-Xcontext-receivers")
     }
 }
 
@@ -148,8 +148,6 @@ val performanceTest = tasks.register<Test>("performanceTest") {
     maxParallelForks = 1
     // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
     usesService(serialExecutionService)
-
-    mustRunAfter(tasks.getByPath(":sonar"))
 }
 
 // A build service that ensures serial execution of a group of tasks

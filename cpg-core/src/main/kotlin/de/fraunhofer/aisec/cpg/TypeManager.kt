@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -140,8 +139,7 @@ class TypeManager {
             val node = scope.astNode
 
             // We need an additional check here, because of parsing or other errors, the AST node
-            // might
-            // not necessarily be a template declaration.
+            // might not necessarily be a template declaration.
             if (node is TemplateDeclaration) {
                 val parameterizedType = getTypeParameter(node, name)
                 if (parameterizedType != null) {
@@ -224,12 +222,9 @@ class TypeManager {
         return t
     }
 
-    fun typeExists(name: String): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
-    }
-
-    fun typeExists(name: Name): Type? {
-        return firstOrderTypes.firstOrNull { type: Type -> type.root.name == name }
+    /** Checks, whether a [Type] with the given [name] exists. */
+    fun typeExists(name: CharSequence): Boolean {
+        return firstOrderTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -243,7 +238,7 @@ class TypeManager {
      * is [Type.Origin.RESOLVED].
      */
     fun lookupResolvedType(
-        fqn: String,
+        fqn: CharSequence,
         generics: List<Type>? = null,
         language: Language<*>? = null
     ): Type? {
@@ -254,7 +249,7 @@ class TypeManager {
 
         return firstOrderTypes.firstOrNull {
             (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
-                it.name.toString() == fqn &&
+                it.root.name == fqn &&
                 if (generics != null) {
                     (it as? ObjectType)?.generics == generics
                 } else {

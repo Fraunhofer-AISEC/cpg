@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -39,15 +39,13 @@ import org.neo4j.ogm.annotation.Relationship
  */
 // TODO Merge and/or refactor with new Expression
 class NewArrayExpression : Expression() {
+    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
+
     /**
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
      */
-    @AST
-    var initializer: Expression? = null
-        set(value) {
-            field = value
-        }
+    var initializer by unwrapping(NewArrayExpression::initializerEdge)
 
     /**
      * Specifies the dimensions of the array that is to be created. Many languages, such as Java,
@@ -55,11 +53,10 @@ class NewArrayExpression : Expression() {
      * dimensions. In the graph, this will NOT be done.
      */
     @Relationship(value = "DIMENSIONS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var dimensionEdges = mutableListOf<PropertyEdge<Expression>>()
+    var dimensionEdges = astEdgesOf<Expression>()
 
     /** Virtual property to access [dimensionEdges] without property edges. */
-    var dimensions by PropertyEdgeDelegate(NewArrayExpression::dimensionEdges)
+    var dimensions by unwrapping(NewArrayExpression::dimensionEdges)
 
     /** Adds an [Expression] to the existing [dimensions]. */
     fun addDimension(expression: Expression) {

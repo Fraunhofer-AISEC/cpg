@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.GeneratedValue
@@ -90,6 +92,16 @@ abstract class Scope(
      */
     @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
 
+    /**
+     * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a
+     * [Reference]) can be adjusted through keywords (such as `global` in Python or PHP).
+     *
+     * We store this information in the form of a [LookupScopeStatement] in the AST, but we need to
+     * also store this information in the scope to avoid unnecessary AST traversals when resolving
+     * symbols using [lookupSymbol].
+     */
+    @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
+
     /** Adds a [declaration] with the defined [symbol]. */
     fun addSymbol(symbol: Symbol, declaration: Declaration) {
         if (declaration is ImportDeclaration && declaration.wildcardImport) {
@@ -105,14 +117,34 @@ abstract class Scope(
     /**
      * Looks up a list of [Declaration] nodes for the specified [symbol]. Optionally, [predicate]
      * can be used for additional filtering.
+     *
+     * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
+     * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
+     * qualified lookups, where we want to stay in our lookup-scope.
+     *
+     * @param symbol the symbol to lookup
+     * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
+     *   its parents if no match was found.
+     * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
+     *   wildcards should be replaced with their actual nodes
+     * @param predicate An optional predicate which should be used in the lookup.
      */
     fun lookupSymbol(
         symbol: Symbol,
+        thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null
     ): List<Declaration> {
-        // First, try to look for the symbol in the current scope
-        var scope: Scope? = this
+        // First, try to look for the symbol in the current scope (unless we have a predefined
+        // search scope). In the latter case we also need to restrict the lookup to the search scope
+        var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
+        var scope: Scope? =
+            if (modifiedScoped != null) {
+                modifiedScoped
+            } else {
+                this
+            }
+
         var list: MutableList<Declaration>? = null
 
         while (scope != null) {
@@ -141,8 +173,13 @@ abstract class Scope(
                 break
             }
 
-            // If we do not have a hit, we can go up one scope
-            scope = scope.parent
+            // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
+            // (or we had a modified scope)
+            if (thisScopeOnly || modifiedScoped != null) {
+                break
+            } else {
+                scope = scope.parent
+            }
         }
 
         return list ?: listOf()

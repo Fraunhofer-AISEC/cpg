@@ -16,6 +16,12 @@ publishing {
     }
 }
 
+repositories {
+    maven {
+        setUrl("https://jitpack.io")
+    }
+}
+
 dependencies {
     // this exposes all of our (published) modules as dependency
     api(projects.cpgConsole)
@@ -28,7 +34,3 @@ dependencies {
     kover(projects.cpgAnalysis)
     kover(projects.cpgNeo4j)
 }
-
-val sonar = tasks.getByPath(":sonar")
-sonar.dependsOn(tasks.named("koverHtmlReport"))
-sonar.dependsOn(tasks.named("koverXmlReport"))

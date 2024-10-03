@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.pointer
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 
 class Query {
     companion object {
@@ -99,7 +98,6 @@ class Query {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
-                    .registerPass<EdgeCachePass>()
                     .inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
                     .build()
         ) =
@@ -176,7 +174,6 @@ class Query {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
-                    .registerPass<EdgeCachePass>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder().inferFunctions(false).build()
                     )
@@ -255,7 +252,6 @@ class Query {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage(TestLanguage("."))
-                    .registerPass<EdgeCachePass>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -392,7 +388,6 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
@@ -438,7 +433,6 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
@@ -498,7 +492,6 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =
