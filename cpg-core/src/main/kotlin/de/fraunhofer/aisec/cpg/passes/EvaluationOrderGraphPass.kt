@@ -1029,8 +1029,28 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(stmt)
     }
 
+    /*
+    TODO: doc
+    Copy & paste from [handleThrowOperator]
+     */
     protected fun handleThrowStatement(statement: ThrowStatement) {
-        TODO("Needs implementing")
+        val input = statement.exception
+        createEOG(input)
+
+        val catchingScope =
+            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
+
+        val throwType = input?.type
+        if (throwType == null) {
+            TODO("???")
+        }
+        pushToEOG(statement)
+        if (catchingScope is TryScope) {
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        } else if (catchingScope is FunctionScope) {
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        }
+        currentPredecessors.clear()
     }
 
     companion object {
