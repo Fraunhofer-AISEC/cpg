@@ -33,9 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
-class ForStatement : Statement(), BranchingNode {
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    var statement by unwrapping(ForStatement::statementEdge)
+/**
+ * Represents an iterating loop statement of the form `for(initializer; condition; iteration){...}`
+ * that declares variables, can change them in an iteration statement and is executed until the
+ * condition evaluates to false.
+ */
+class ForStatement : LoopStatement(), BranchingNode {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
@@ -67,7 +70,8 @@ class ForStatement : Statement(), BranchingNode {
             initializerStatement == other.initializerStatement &&
             conditionDeclaration == other.conditionDeclaration &&
             condition == other.condition &&
-            iterationStatement == other.iterationStatement)
+            iterationStatement == other.iterationStatement &&
+            elseStatement == other.elseStatement)
     }
 
     override fun hashCode(): Int {
@@ -76,7 +80,8 @@ class ForStatement : Statement(), BranchingNode {
             this.condition,
             this.initializerStatement,
             this.conditionDeclaration,
-            this.iterationStatement
+            this.iterationStatement,
+            this.elseStatement
         )
     }
 }

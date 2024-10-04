@@ -35,7 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class ForEachStatement : Statement(), BranchingNode, StatementHolder {
+/**
+ * Represent a for statement of the form for(variable ... iterable){...} that executes the loop body
+ * for each instance of an element in `iterable` that is temporarily stored in `variable`.
+ */
+class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
 
     @Relationship("VARIABLE")
     var variableEdge =
@@ -58,10 +62,6 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ForEachStatement::iterableEdge)
 
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    /** This field contains the body of the loop. */
-    var statement by unwrapping(ForEachStatement::statementEdge)
-
     override val branchedBy: Node?
         get() = iterable
 
@@ -71,6 +71,7 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
             variable?.let { statements.add(AstEdge(this, it)) }
             iterable?.let { statements.add(AstEdge(this, it)) }
             statement?.let { statements.add(AstEdge(this, it)) }
+            elseStatement?.let { statements.add(AstEdge(this, it)) }
             return statements
         }
         set(_) {
@@ -85,8 +86,10 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
         return super.equals(other) &&
             variable == other.variable &&
             iterable == other.iterable &&
-            statement == other.statement
+            statement == other.statement &&
+            elseStatement == other.elseStatement
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, statement)
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), variable, iterable, statement, elseStatement)
 }
