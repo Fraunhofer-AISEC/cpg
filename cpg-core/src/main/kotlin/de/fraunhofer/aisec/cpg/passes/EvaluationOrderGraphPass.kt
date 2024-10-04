@@ -157,6 +157,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
+        map[LookupScopeStatement::class.java] = {
+            handleLookupScopeStatement(it as LookupScopeStatement)
+        }
     }
 
     protected fun doNothing() {
@@ -1021,6 +1024,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         } else {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }
+    }
+
+    private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
+        // Include the node as part of the EOG itself, but we do not need to go into any children or
+        // properties here
+        pushToEOG(stmt)
     }
 
     companion object {
