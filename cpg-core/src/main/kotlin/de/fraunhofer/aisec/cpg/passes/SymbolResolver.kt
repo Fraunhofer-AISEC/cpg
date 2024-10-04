@@ -161,6 +161,28 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return target
     }
 
+    /**
+     * This function handles symbol resolving for a [Reference]. After a successful lookup of the
+     * symbol contained in [Reference.name], the property [Reference.refersTo] is set to the best
+     * (or only) candidate.
+     *
+     * On a high-level, it performs the following steps:
+     * - Use [ScopeManager.lookupSymbolByName] to retrieve [Declaration] candidates based on the
+     *   [Reference.name]. This can either result in an "unqualified" or "qualified" lookup,
+     *   depending on the name.
+     * - The results of the lookup are stored in [Reference.candidates]. The purpose of this is
+     *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
+     *   is used by other functions, for example [handleCallExpression], which then picks the best
+     *   viable option out of the candidates (if the reference is part of the
+     *   [CallExpression.callee]).
+     * - In the next step, we need to decide whether we are resolving a standalone reference (which
+     *   most likely points to a [VariableDeclaration]) or if we are part of a
+     *   [CallExpression.callee]. In the first case, we can directly assign [Reference.refersTo]
+     *   based on the candidates (at the moment we only assign it if we have exactly one candidate).
+     *   In the second case, we are finished and let [handleCallExpression] take care of the rest
+     *   once the EOG reaches the appropriate [CallExpression] (which should actually be just be the
+     *   next EOG node).
+     */
     protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
         val language = ref.language
 

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -119,12 +120,21 @@ internal fun Pass<*>.tryRecordInference(
 }
 
 /**
- * Tries to infer a [VariableDeclaration] out of a [Reference]. This will return `null`, if
- * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [VariableDeclaration] (or [FieldDeclaration]) out of a [Reference]. This will
+ * return `null`, if inference was not possible, or if it was turned off in the
+ * [InferenceConfiguration].
  *
  * We mainly try to infer global variables and fields here, since these are possibly parts of the
  * code we do not "see". We do not try to infer local variables, because we are under the assumption
- * that even with incomplete code, we at least have the complete current function code.
+ * that even with incomplete code, we at least have the complete current function code. We can
+ * therefore differentiate between four scenarios:
+ * - Inference of a [FieldDeclaration] if we have a language that allows implicit receivers, are
+ *   inside a function and the ref is not qualified. This is then forwarded to [tryFieldInference].
+ * - Inference of a top-level [VariableDeclaration] on a namespace level (this is not yet
+ *   implemented)
+ * - Inference of a global [VariableDeclaration] in the [GlobalScope].
+ * - No inference, in any other cases since this would mean that we would infer a local variable.
+ *   This is something we do not want to do see (see above).
  */
 internal fun Pass<*>.tryVariableInference(
     ref: Reference,
@@ -234,7 +244,7 @@ internal fun Pass<*>.tryFieldInference(
  * whether the language supports [HasImplicitReceiver] we either infer
  * - a global [FunctionDeclaration]
  * - a [FunctionDeclaration] in a namespace
- * - a [MethodDeclaration] in a record
+ * - a [MethodDeclaration] in a record using [tryMethodInference]
  *
  * Since potentially multiple suitable bases exist for the inference of methods (derived by
  * [getPossibleContainingTypes]), we infer a method for all of them and return a list.
@@ -264,7 +274,7 @@ internal fun Pass<*>.tryFunctionInference(
     return if (suitableBases.isEmpty()) {
         // While this is definitely a function, it could still be a function
         // inside a namespace. We therefore have two possible start points, a namespace
-        // declaration or a translation unit. Nothing else is allowed (fow now). We can
+        // declaration or a translation unit. Nothing else is allowed (for now). We can
         // re-use the information in the ResolutionResult, since this already contains the
         // actual start scope (e.g. in case the callee has an FQN).
         var scope = result.actualStartScope
@@ -284,10 +294,17 @@ internal fun Pass<*>.tryFunctionInference(
 }
 
 /**
- * Creates an inferred element for each RecordDeclaration
+ * Tries to infer a [MethodDeclaration] from a [CallExpression]. This will return an empty list, if
+ * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
- * @param call
- * @param possibleContainingTypes
+ * Since potentially multiple suitable bases exist for the inference of methods (specified in
+ * [possibleContainingTypes]), we infer a method for all of them and return a list.
+ *
+ * Should we encounter that none of our types in [possibleContainingTypes] have a resolved
+ * declaration, we are inferring one (using [bestGuess]). This should normally not happen as missing
+ * type declarations are already inferred in the [TypeResolver]. However, there is a special
+ * corner-case involving types in [Language.builtInTypes] (see [tryFieldInference] for more
+ * details),
  */
 internal fun Pass<*>.tryMethodInference(
     call: CallExpression,
@@ -300,8 +317,9 @@ internal fun Pass<*>.tryMethodInference(
             root?.recordDeclaration
         }
 
-    // We access an unknown method of an unknown record. so we need to handle that
-    // along the way as well. We prefer the base type
+    // We access an unknown method of an unknown record. so we need to handle that along the way as
+    // well. We prefer the base type. This should only happen on types that are "built-in", as all
+    // other type declarations are already inferred by the type resolver at this stage.
     if (records.isEmpty()) {
         records =
             listOfNotNull(
