@@ -594,7 +594,7 @@ fun LanguageFrontend<*, *>.forStmt(
     initializer: DeclarationStatement,
     condition: Expression,
     iteration: Statement,
-    elseStmt: Statement,
+    elseStmt: Statement? = null,
     init: Block.() -> Unit
 ): ForStatement {
     val node = newForStatement()
@@ -609,6 +609,8 @@ fun LanguageFrontend<*, *>.forStmt(
     val body = newBlock()
     init(body)
     node.statement = body
+
+    elseStmt?.let { node.elseStatement = it }
 
     (this@StatementHolder) += node
 

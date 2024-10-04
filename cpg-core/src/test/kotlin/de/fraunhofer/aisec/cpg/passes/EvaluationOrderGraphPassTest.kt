@@ -166,7 +166,7 @@ class EvaluationOrderGraphPassTest {
 
         val forEachStmt = forTest.statements.filterIsInstance<ForEachStatement>().firstOrNull()
         assertNotNull(forEachStmt)
-        val breakStmt = forEachStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
+        val breakStmt = forTest.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postForEach = forTest.callsByName("postForEach").getOrNull(0)
         assertNotNull(breakStmt)

@@ -189,7 +189,7 @@ class Passes {
                                     }
 
                                     whileStmt {
-                                        doCondition { ref("x") }
+                                        whileCondition { ref("x") }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
@@ -211,7 +211,7 @@ class Passes {
                                     }
 
                                     whileStmt {
-                                        doCondition { ref("x") }
+                                        whileCondition { ref("x") }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
@@ -230,7 +230,7 @@ class Passes {
                             method("whileFalse", void()) {
                                 body {
                                     whileStmt {
-                                        doCondition { literal(false, t("boolean")) }
+                                        whileCondition { literal(false, t("boolean")) }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
@@ -250,7 +250,7 @@ class Passes {
                                     declare { variable("x", t("boolean")) { literal(1, t("int")) } }
 
                                     whileStmt {
-                                        doCondition { ref("x") lt literal(3, t("int")) }
+                                        whileCondition { ref("x") lt literal(3, t("int")) }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
@@ -270,7 +270,7 @@ class Passes {
                                     declare { variable("x", t("boolean")) { literal(1, t("int")) } }
 
                                     whileStmt {
-                                        doCondition { ref("x") gt literal(3, t("int")) }
+                                        whileCondition { ref("x") gt literal(3, t("int")) }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
@@ -294,7 +294,7 @@ class Passes {
                                     }
 
                                     whileStmt {
-                                        doCondition { ref("y") lt literal(3, t("int")) }
+                                        whileCondition { ref("y") lt literal(3, t("int")) }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
