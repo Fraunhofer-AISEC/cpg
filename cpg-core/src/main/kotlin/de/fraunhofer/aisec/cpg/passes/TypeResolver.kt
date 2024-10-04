@@ -60,65 +60,61 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    companion object {
-        context(ContextProvider)
-        fun resolveType(type: Type): Boolean {
-            // Let's start by looking up the type according to their name and scope. We exclusively
-            // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
-            // constructor declarations and such with the same name. It seems this is ok since most
-            // languages will prefer structs/classes over functions when resolving types.
-            var symbols =
-                ctx?.scopeManager?.lookupSymbolByName(type.name, startScope = type.scope) {
-                    it is DeclaresType
-                } ?: listOf()
-
-            // We need to have a single match, otherwise we have an ambiguous type and we cannot
-            // normalize it.
-            // TODO: Maybe we should have a warning in this case?
-            var declares = symbols.filterIsInstance<DeclaresType>().singleOrNull()
-
-            // Check for a possible typedef
-            var target = ctx?.scopeManager?.typedefFor(type.name, type.scope)
-            if (target != null) {
-                if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
-                    // Make sure our typedef target is resolved
-                    resolveType(target)
-                }
-
-                var originDeclares = target.recordDeclaration
-                var name = target.name
-                log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
-                type.declaredFrom = originDeclares
-                type.recordDeclaration = originDeclares
-                type.typeOrigin = Type.Origin.RESOLVED
-                return true
+    fun resolveType(type: Type): Boolean {
+        // Let's start by looking up the type according to their name and scope. We exclusively
+        // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
+        // constructor declarations and such with the same name. It seems this is ok since most
+        // languages will prefer structs/classes over functions when resolving types.
+        var symbols =
+            scopeManager.lookupSymbolByName(type.name, startScope = type.scope) {
+                it is DeclaresType
             }
 
-            if (declares == null) {
-                declares = ctx?.tryRecordInference(type, locationHint = type)
+        // We need to have a single match, otherwise we have an ambiguous type and we cannot
+        // normalize it.
+        // TODO: Maybe we should have a warning in this case?
+        var declares = symbols.filterIsInstance<DeclaresType>().singleOrNull()
+
+        // Check for a possible typedef
+        var target = scopeManager.typedefFor(type.name, type.scope)
+        if (target != null) {
+            if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
+                // Make sure our typedef target is resolved
+                resolveType(target)
             }
 
-            // If we found the "real" declared type, we can normalize the name of our scoped type
-            // and
-            // set the name to the declared type.
-            if (declares != null) {
-                var declaredType = declares.declaredType
-                log.debug(
-                    "Resolving type {} in {} scope to {}",
-                    type.name,
-                    type.scope,
-                    declaredType.name
-                )
-                type.name = declaredType.name
-                type.declaredFrom = declares
-                type.recordDeclaration = declares as? RecordDeclaration
-                type.typeOrigin = Type.Origin.RESOLVED
-                type.superTypes.addAll(declaredType.superTypes)
-                return true
-            }
-
-            return false
+            var originDeclares = target.recordDeclaration
+            var name = target.name
+            log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
+            type.declaredFrom = originDeclares
+            type.recordDeclaration = originDeclares
+            type.typeOrigin = Type.Origin.RESOLVED
+            return true
         }
+
+        if (declares == null) {
+            declares = tryRecordInference(type, locationHint = type)
+        }
+
+        // If we found the "real" declared type, we can normalize the name of our scoped type
+        // and set the name to the declared type.
+        if (declares != null) {
+            var declaredType = declares.declaredType
+            log.debug(
+                "Resolving type {} in {} scope to {}",
+                type.name,
+                type.scope,
+                declaredType.name
+            )
+            type.name = declaredType.name
+            type.declaredFrom = declares
+            type.recordDeclaration = declares as? RecordDeclaration
+            type.typeOrigin = Type.Origin.RESOLVED
+            type.superTypes.addAll(declaredType.superTypes)
+            return true
+        }
+
+        return false
     }
 
     private fun handleNode(node: Node?) {

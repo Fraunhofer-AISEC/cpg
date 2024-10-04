@@ -241,7 +241,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
-            refersTo = ctx.tryVariableInference(language, ref)
+            refersTo = tryVariableInference(ref)
         }
 
         if (refersTo != null) {
@@ -353,7 +353,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         if (member == null) {
-            member = ctx.tryFieldInference(reference, containingClass)
+            member = tryFieldInference(reference, containingClass)
         }
 
         return member
@@ -424,7 +424,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // callee
         var candidates =
             if (useLegacyResolution) {
-                val (possibleTypes, _) = ctx.getPossibleContainingTypes(call)
+                val (possibleTypes, _) = getPossibleContainingTypes(call)
                 resolveMemberByName(callee.name.localName, possibleTypes).toSet()
             } else {
                 callee.candidates
@@ -457,7 +457,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 call.invokes = result.bestViable.toMutableList()
             }
             UNRESOLVED -> {
-                call.invokes = ctx.tryFunctionInference(call, result).toMutableList()
+                call.invokes = tryFunctionInference(call, result).toMutableList()
             }
         }
 
@@ -754,9 +754,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
  * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
  * returns a [Pair], where the first element is the set of types and the second is our best guess.
  */
-internal fun TranslationContext.getPossibleContainingTypes(
-    call: CallExpression
-): Pair<Set<Type>, Type?> {
+internal fun Pass<*>.getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
     if (call is MemberCallExpression) {

@@ -25,11 +25,9 @@
  */
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -43,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
@@ -53,13 +52,10 @@ import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import kotlin.collections.forEach
 
-internal fun TranslationContext.tryNamespaceInference(
-    name: Name,
-    locationHint: Node?
-): NamespaceDeclaration? {
+internal fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDeclaration? {
     return scopeManager.globalScope
         ?.astNode
-        ?.startInference(this)
+        ?.startInference(this.ctx)
         ?.inferNamespaceDeclaration(name, null, locationHint)
 }
 
@@ -70,7 +66,7 @@ internal fun TranslationContext.tryNamespaceInference(
  * If [updateType] is set to true, also the [ObjectType.recordDeclaration] is adjusted. This is only
  * needed if we call this function in the [SymbolResolver] (and not in the [TypeResolver]).
  */
-internal fun TranslationContext.tryRecordInference(
+internal fun Pass<*>.tryRecordInference(
     type: Type,
     locationHint: Node? = null,
     updateType: Boolean = false,
@@ -108,7 +104,7 @@ internal fun TranslationContext.tryRecordInference(
 
     val record =
         (holder ?: this.scopeManager.globalScope?.astNode)
-            ?.startInference(this)
+            ?.startInference(this.ctx)
             ?.inferRecordDeclaration(type, kind, locationHint)
 
     // update the type's record. Because types are only unique per scope, we potentially need to
@@ -130,13 +126,12 @@ internal fun TranslationContext.tryRecordInference(
  * code we do not "see". We do not try to infer local variables, because we are under the assumption
  * that even with incomplete code, we at least have the complete current function code.
  */
-internal fun TranslationContext.tryVariableInference(
-    language: Language<*>?,
+internal fun Pass<*>.tryVariableInference(
     ref: Reference,
 ): Declaration? {
     var currentRecordType = scopeManager.currentRecord?.toType() as? ObjectType
     return if (
-        language is HasImplicitReceiver &&
+        ref.language is HasImplicitReceiver &&
             !ref.name.isQualified() &&
             !ref.isStaticAccess &&
             currentRecordType != null
@@ -162,9 +157,10 @@ internal fun TranslationContext.tryVariableInference(
             }
         }
     } else if (ref.language is HasGlobalVariables) {
-        // We can try to infer a possible global variable (at top-level), if the language supports
+        // We can try to infer a possible global variable (at top-level), if the language
+        // supports
         // this
-        scopeManager.globalScope?.astNode?.startInference(this)?.inferVariableDeclaration(ref)
+        scopeManager.globalScope?.astNode?.startInference(this.ctx)?.inferVariableDeclaration(ref)
     } else {
         // Nothing to infer
         null
@@ -176,10 +172,7 @@ internal fun TranslationContext.tryVariableInference(
  * language has [HasImplicitReceiver]). This will return `null`, if inference was not possible, or
  * if it was turned off in the [InferenceConfiguration].
  */
-internal fun TranslationContext.tryFieldInference(
-    ref: Reference,
-    targetType: ObjectType
-): ValueDeclaration? {
+internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): ValueDeclaration? {
     // We only want to infer fields here, this can either happen if we have a reference with an
     // implicit receiver or if we have a scoped reference and the scope points to a record
     val (scope, _) = scopeManager.extractScope(ref)
@@ -221,7 +214,7 @@ internal fun TranslationContext.tryFieldInference(
     return declaration
 }
 
-internal fun TranslationContext.tryFunctionInference(
+internal fun Pass<*>.tryFunctionInference(
     call: CallExpression,
     result: CallResolutionResult,
 ): List<FunctionDeclaration> {
@@ -253,8 +246,8 @@ internal fun TranslationContext.tryFunctionInference(
         }
         val func =
             when (val start = scope?.astNode) {
-                is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this)
-                is NamespaceDeclaration -> start.inferFunction(call, ctx = this)
+                is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this.ctx)
+                is NamespaceDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 else -> null
             }
         listOfNotNull(func)
@@ -269,7 +262,7 @@ internal fun TranslationContext.tryFunctionInference(
  * @param call
  * @param possibleContainingTypes
  */
-internal fun TranslationContext.tryMethodInference(
+internal fun Pass<*>.tryMethodInference(
     call: CallExpression,
     possibleContainingTypes: Set<Type>,
     bestGuess: Type?,
@@ -294,5 +287,5 @@ internal fun TranslationContext.tryMethodInference(
     }
     records = records.distinct()
 
-    return records.mapNotNull { record -> record.inferMethod(call, ctx = this) }
+    return records.mapNotNull { record -> record.inferMethod(call, ctx = this.ctx) }
 }
