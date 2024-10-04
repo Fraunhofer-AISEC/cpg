@@ -180,7 +180,10 @@ internal fun Pass<*>.tryVariableInference(
  * until the symbol resolver, in case we really "see" the record, e.g., if we parse the std headers.
  * If we did not "see" its declaration, we can infer it now.
  */
-internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): VariableDeclaration? {
+internal fun Pass<*>.tryFieldInference(
+    ref: Reference,
+    targetType: ObjectType
+): VariableDeclaration? {
     // We only want to infer fields here, this can either happen if we have a reference with an
     // implicit receiver or if we have a scoped reference and the scope points to a record
     val (scope, _) = scopeManager.extractScope(ref)
