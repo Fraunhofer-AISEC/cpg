@@ -880,6 +880,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = true
         connectCurrentToLoopStart()
         nextEdgeBranch = false
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
@@ -900,13 +901,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.statement)
         connectCurrentToLoopStart()
         currentPredecessors.clear()
+        currentPredecessors.addAll(tmpEOGNodes)
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
-        currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
     }
 
@@ -926,13 +928,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         connectCurrentToLoopStart()
 
         currentPredecessors.clear()
+        currentPredecessors.addAll(tmpEOGNodes)
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
-        currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
     }
 
@@ -1009,14 +1012,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // Replace current EOG nodes without triggering post setEOG ... processing
         currentPredecessors.clear()
+        currentPredecessors.addAll(tmpEOGNodes)
+        nextEdgeBranch = false
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }
-        currentPredecessors.addAll(tmpEOGNodes)
-        nextEdgeBranch = false
     }
 
     companion object {
