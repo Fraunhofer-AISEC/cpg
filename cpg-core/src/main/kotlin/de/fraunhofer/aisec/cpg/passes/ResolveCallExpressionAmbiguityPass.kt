@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.doesReferToType
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleCasts
@@ -85,27 +86,17 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         var callee = call.callee
         val language = callee.language
 
+        // We can skip all callees that are not references
+        if (callee !is Reference) {
+            return
+        }
+
         // Check, if this is cast is really a construct expression (if the language supports
         // functional-constructs)
         if (language is HasFunctionStyleConstruction) {
-            // Make sure, we do not accidentally "construct" primitive types
-            if (language.builtInTypes.contains(callee.name.toString()) == true) {
-                return
-            }
-
-            val fqn =
-                if (callee.name.parent == null) {
-                    scopeManager.currentNamespace.fqn(
-                        callee.name.localName,
-                        delimiter = callee.name.delimiter
-                    )
-                } else {
-                    callee.name
-                }
-
             // Check for our type. We are only interested in object types
-            val type = typeManager.lookupResolvedType(fqn)
-            if (type is ObjectType) {
+            var type = callee.doesReferToType()
+            if (type is ObjectType && !type.isPrimitive) {
                 walker.replaceCallWithConstruct(type, parent, call)
             }
         }
@@ -114,34 +105,10 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
         if (language is HasFunctionStyleCasts && call.arguments.size == 1) {
-            var pointer = false
-            // If the argument is a UnaryOperator, unwrap them
-            if (callee is UnaryOperator && callee.operatorCode == "*") {
-                pointer = true
-                callee = callee.input
-            }
-
-            // First, check if this is a built-in type
-            var builtInType = language.getSimpleTypeOf(callee.name)
-            if (builtInType != null) {
-                walker.replaceCallWithCast(builtInType, parent, call, false)
-            } else {
-                // If not, then this could still refer to an existing type. We need to make sure
-                // that we take the current namespace into account
-                val fqn =
-                    if (callee.name.parent == null) {
-                        scopeManager.currentNamespace.fqn(
-                            callee.name.localName,
-                            delimiter = callee.name.delimiter
-                        )
-                    } else {
-                        callee.name
-                    }
-
-                val type = typeManager.lookupResolvedType(fqn)
-                if (type != null) {
-                    walker.replaceCallWithCast(type, parent, call, pointer)
-                }
+            // Check if it is type and replace the call
+            var type = callee.doesReferToType()
+            if (type != null) {
+                walker.replaceCallWithCast(type, parent, call, false)
             }
         }
     }

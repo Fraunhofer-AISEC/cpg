@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.doesReferToType
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -77,7 +78,8 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
-        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name)) {
+        var input = node.input
+        if (node.operatorCode == "()" && input is Reference && input.doesReferToType() == null) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
             //
@@ -101,24 +103,25 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
         val fakeUnaryOp = binOp.lhs
         val language = fakeUnaryOp.language as? CLanguage
+
         // We need to check, if the expression in parentheses is really referring to a type or
         // not. A common example is code like `(long) &addr`. We could end up parsing this as a
         // binary operator with the left-hand side of `(long)`, an operator code `&` and a rhs
         // of `addr`.
-        if (
-            language != null &&
-                fakeUnaryOp is UnaryOperator &&
-                fakeUnaryOp.operatorCode == "()" &&
-                typeManager.typeExists(fakeUnaryOp.input.name)
-        ) {
-            // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
-            // is really a cast and our binary operator is really a unary operator `&addr`.
+        if (language == null || fakeUnaryOp !is UnaryOperator || fakeUnaryOp.operatorCode != "()") {
+            return
+        }
+
+        // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
+        // is really a cast and our binary operator is really a unary operator `&addr`.
+        var type = (fakeUnaryOp.input as? Reference)?.doesReferToType()
+        if (type != null) {
             // We need to perform the following steps:
             // * create a cast expression out of the ()-unary operator, with the type that is
             //   referred to in the op.
             val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
             cast.language = language
-            cast.castType = fakeUnaryOp.objectType(fakeUnaryOp.input.name)
+            cast.castType = type
 
             // * create a unary operator with the rhs of the binary operator (and the same
             //   operator code).
