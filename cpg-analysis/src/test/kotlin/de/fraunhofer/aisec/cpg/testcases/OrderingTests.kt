@@ -412,7 +412,7 @@ class GraphExamples {
                                         }
                                     }
                                     whileStmt {
-                                        whileCondition { literal(true, t("boolean")) }
+                                        doCondition { literal(true, t("boolean")) }
                                         loopBody {
                                             memberCall("create", ref("p6"))
                                             memberCall("init", ref("p6"))
@@ -436,7 +436,7 @@ class GraphExamples {
                                     memberCall("create", ref("p7"))
                                     memberCall("init", ref("p7"))
                                     whileStmt {
-                                        whileCondition {
+                                        doCondition {
                                             memberCall("nextUInt", ref("URandomKt"), true) gt
                                                 literal(5, t("int"))
                                         }
@@ -464,7 +464,7 @@ class GraphExamples {
                                     memberCall("process", ref("p8"))
                                     memberCall("finish", ref("p8"))
                                     whileStmt {
-                                        whileCondition { literal(true, t("boolean")) }
+                                        doCondition { literal(true, t("boolean")) }
                                         loopBody {
                                             memberCall("start", ref("p8"))
                                             memberCall("process", ref("p8"))
@@ -486,7 +486,7 @@ class GraphExamples {
                                     memberCall("create", ref("p8"))
                                     memberCall("init", ref("p8"))
                                     whileStmt {
-                                        whileCondition { literal(true, t("boolean")) }
+                                        doCondition { literal(true, t("boolean")) }
                                         loopBody {
                                             memberCall("start", ref("p8"))
                                             memberCall("process", ref("p8"))
@@ -514,7 +514,7 @@ class GraphExamples {
                                             memberCall("finish", ref("p6"))
                                         }
 
-                                        whileCondition {
+                                        doCondition {
                                             memberCall("nextUInt", ref("URandomKt")) gt
                                                 literal(5, t("int"))
                                         }
