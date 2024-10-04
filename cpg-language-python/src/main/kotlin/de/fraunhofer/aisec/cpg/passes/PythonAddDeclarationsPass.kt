@@ -110,8 +110,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             newFieldDeclaration(node.name)
                         }
                     } else {
-                        val v = newVariableDeclaration(node.name)
-                        v
+                        newVariableDeclaration(node.name)
                     }
                 } else {
                     newFieldDeclaration(node.name)
