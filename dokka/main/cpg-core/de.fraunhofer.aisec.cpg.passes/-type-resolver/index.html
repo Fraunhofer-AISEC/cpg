@@ -87,25 +87,6 @@
           </div>
         </div>
       </div>
-      <div data-togglable="TYPE">
-        <h2 class="">Types</h2>
-        <div class="table"><a data-name="-1254870625%2FClasslikes%2F1556141526" anchor-label="Companion" id="-1254870625%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-companion/index.html"><span><span>Companion</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1254870625%2FClasslikes%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-companion/index.html">Companion</a></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       <div data-togglable="PROPERTY">
         <h2 class="">Properties</h2>
         <div class="table"><a data-name="-27087183%2FProperties%2F1556141526" anchor-label="config" id="-27087183%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
@@ -1322,7 +1303,22 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="resolve-first-order-types.html"><span class="token function">resolveFirstOrderTypes</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="resolve-first-order-types.html"><span class="token function">resolveFirstOrderTypes</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Resolves all types in <a href="../../de.fraunhofer.aisec.cpg/-type-manager/first-order-types.html">TypeManager.firstOrderTypes</a> using <a href="resolve-type.html">resolveType</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1840351015%2FFunctions%2F1556141526" anchor-label="resolveType" id="1840351015%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="resolve-type.html"><span>resolve</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1840351015%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="resolve-type.html"><span class="token function">resolveType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">This function tries to "resolve" a <a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a> back to the original declaration that declared it (see <a href="../../de.fraunhofer.aisec.cpg.graph.types/-declares-type/index.html">DeclaresType</a>). More specifically, it harmonises the type's name to the FQN of the declared type and sets the <a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/declared-from.html">Type.declaredFrom</a> (and <a href="../../de.fraunhofer.aisec.cpg.graph.types/-object-type/record-declaration.html">ObjectType.recordDeclaration</a>) property. It also sets <a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/type-origin.html">Type.typeOrigin</a> to <a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/-origin/-r-e-s-o-l-v-e-d/index.html">Type.Origin.RESOLVED</a> to mark it as resolved.</p></div></div></div>
                 </div>
               </div>
             </div>
