@@ -304,7 +304,12 @@ var Type.recordDeclaration: RecordDeclaration?
         }
     }
 
+/**
+ * This interfaces specifies that this node (most likely a [Declaration]) declares a type. This is
+ * used by [TypeResolver.resolveType] to find appropriate symbols and declarations.
+ */
 interface DeclaresType {
 
+    /** The [Type] that is being declared. */
     val declaredType: Type
 }

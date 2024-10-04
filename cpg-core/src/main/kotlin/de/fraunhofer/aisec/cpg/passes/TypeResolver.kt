@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
@@ -60,21 +62,27 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * This function tries to "resolve" a [Type] back to the original declaration that declared it
+     * (see [DeclaresType]). More specifically, it harmonises the type's name to the FQN of the
+     * declared type and sets the [Type.declaredFrom] (and [ObjectType.recordDeclaration]) property.
+     * It also sets [Type.typeOrigin] to [Type.Origin.RESOLVED] to mark it as resolved.
+     *
+     * The high-level approach looks like the following:
+     * - First, we check if this type refers to a typedef (see [ScopeManager.typedefFor]). If yes,
+     *   we need to make sure that the target type is resolved and then resolve the type to the
+     *   target type's declaration.
+     * - If no typedef is used, [ScopeManager.lookupSymbolByName] is used to look up declarations by
+     *   the type's name, starting at its [Type.scope]. Depending on the type, this can be
+     *   unqualified or qualified. We filter exclusively for declarations that implement
+     *   [DeclaresType].
+     * - If this yields no declaration, we try to infer a record declaration using
+     *   [tryRecordInference].
+     * - Finally, we set the type's name to the resolved type, set [Type.declaredFrom],
+     *   [ObjectType.recordDeclaration], sync [Type.superTypes] with the declaration and set
+     *   [Type.typeOrigin] to [Type.Origin.RESOLVED].
+     */
     fun resolveType(type: Type): Boolean {
-        // Let's start by looking up the type according to their name and scope. We exclusively
-        // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
-        // constructor declarations and such with the same name. It seems this is ok since most
-        // languages will prefer structs/classes over functions when resolving types.
-        var symbols =
-            scopeManager.lookupSymbolByName(type.name, startScope = type.scope) {
-                it is DeclaresType
-            }
-
-        // We need to have a single match, otherwise we have an ambiguous type and we cannot
-        // normalize it.
-        // TODO: Maybe we should have a warning in this case?
-        var declares = symbols.filterIsInstance<DeclaresType>().singleOrNull()
-
         // Check for a possible typedef
         var target = scopeManager.typedefFor(type.name, type.scope)
         if (target != null) {
@@ -92,6 +100,26 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return true
         }
 
+        // Let's start by looking up the type according to their name and scope. We exclusively
+        // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
+        // constructor declarations and such with the same name. It seems this is ok since most
+        // languages will prefer structs/classes over functions when resolving types.
+        var symbols =
+            scopeManager
+                .lookupSymbolByName(type.name, startScope = type.scope) { it is DeclaresType }
+                .filterIsInstance<DeclaresType>()
+
+        // We need to have a single match, otherwise we have an ambiguous type, and we cannot
+        // normalize it.
+        if (symbols.size > 1) {
+            log.warn(
+                "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
+                name
+            )
+        }
+        var declares = symbols.singleOrNull()
+
+        // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
             declares = tryRecordInference(type, locationHint = type)
         }
@@ -132,6 +160,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Nothing to do
     }
 
+    /** Resolves all types in [TypeManager.firstOrderTypes] using [resolveType]. */
     fun resolveFirstOrderTypes() {
         for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
             if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
