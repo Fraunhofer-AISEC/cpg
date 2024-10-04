@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import tryRecordInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 
 /**
  * The purpose of this [Pass] is to establish a relationship between [Type] nodes (more specifically

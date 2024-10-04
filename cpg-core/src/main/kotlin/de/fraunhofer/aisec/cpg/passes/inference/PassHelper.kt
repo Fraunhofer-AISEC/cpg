@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+package de.fraunhofer.aisec.cpg.passes.inference
+
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
@@ -47,9 +49,6 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.getPossibleContainingTypes
 import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
-import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
-import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
-import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import kotlin.collections.forEach
 
 internal fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDeclaration? {
