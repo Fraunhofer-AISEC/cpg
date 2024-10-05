@@ -46,6 +46,7 @@ class ImportResolverTest {
     fun testImportOrderResolve() {
         val frontend =
             TestLanguageFrontend(
+                namespaceDelimiter = ".",
                 ctx =
                     TranslationContext(
                         TranslationConfiguration.builder().defaultPasses().build(),
@@ -68,6 +69,8 @@ class ImportResolverTest {
                             scopeManager.enterScope(pkgB)
                             var import = newImportDeclaration(parseName("a"))
                             scopeManager.addDeclaration(import)
+                            import = newImportDeclaration(parseName("c.bar"))
+                            scopeManager.addDeclaration(import)
                             scopeManager.leaveScope(pkgB)
                             tuB
                         }
@@ -85,6 +88,19 @@ class ImportResolverTest {
                             tuA
                         }
                         .also { this.addTranslationUnit(it) }
+
+                    with(frontend) {
+                            var tuA = newTranslationUnitDeclaration("file.c")
+                            scopeManager.resetToGlobal(tuA)
+                            var pkgA = newNamespaceDeclaration("c")
+                            scopeManager.addDeclaration(pkgA)
+                            scopeManager.enterScope(pkgA)
+                            var foo = newVariableDeclaration(parseName("c.bar"))
+                            scopeManager.addDeclaration(foo)
+                            scopeManager.leaveScope(pkgA)
+                            tuA
+                        }
+                        .also { this.addTranslationUnit(it) }
                 }
             }
 
@@ -95,21 +111,29 @@ class ImportResolverTest {
         var app = result.components.firstOrNull()
         assertNotNull(app)
 
-        // a has 0 dependency
+        // a has 0 dependencies
         var a =
             app.importDependencies.entries
-                .filter { it.key.name.localName == "file.a" }
+                .filter { it.key.name.toString() == "file.a" }
                 .firstOrNull()
         assertNotNull(a)
         assertEquals(0, a.value.size)
 
-        // b has 1 dependency (a)
+        // c has 0 dependencies
+        var c =
+            app.importDependencies.entries
+                .filter { it.key.name.toString() == "file.c" }
+                .firstOrNull()
+        assertNotNull(c)
+        assertEquals(0, c.value.size)
+
+        // b has two dependencies (a, c)
         var b =
             app.importDependencies.entries
-                .filter { it.key.name.localName == "file.b" }
+                .filter { it.key.name.toString() == "file.b" }
                 .firstOrNull()
         assertNotNull(b)
-        assertEquals(1, b.value.size)
-        assertEquals(setOf(a.key), b.value)
+        assertEquals(2, b.value.size)
+        assertEquals(setOf(a.key, c.key), b.value)
     }
 }
