@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencyMap
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -46,6 +47,7 @@ open class Component : Node() {
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 
+    @Transient
     @PopulatedByPass(ImportResolver::class)
     var importDependencies: ImportDependencyMap =
         mutableMapOf<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>()
