@@ -86,8 +86,11 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         var callee = call.callee
         val language = callee.language
 
-        // We can skip all callees that are not references
-        if (callee !is Reference) {
+        // We need to "unwrap" some references because they might be nested in unary operations such
+        // as pointers. We are interested in the references in the "core". We can skip all
+        // references that are member expressions
+        val ref = callee.unwrapReference()
+        if (ref == null || ref is MemberExpression) {
             return
         }
 
@@ -95,7 +98,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // functional-constructs)
         if (language is HasFunctionStyleConstruction) {
             // Check for our type. We are only interested in object types
-            var type = callee.doesReferToType()
+            var type = ref.doesReferToType()
             if (type is ObjectType && !type.isPrimitive) {
                 walker.replaceCallWithConstruct(type, parent, call)
             }
@@ -106,7 +109,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // argument.
         if (language is HasFunctionStyleCasts && call.arguments.size == 1) {
             // Check if it is type and replace the call
-            var type = callee.doesReferToType()
+            var type = ref.doesReferToType()
             if (type != null) {
                 walker.replaceCallWithCast(type, parent, call, false)
             }
