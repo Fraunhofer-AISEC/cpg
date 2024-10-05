@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.passes.ImportDependencyMap
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -42,6 +45,10 @@ open class Component : Node() {
     val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
+
+    @PopulatedByPass(ImportResolver::class)
+    var importDependencies: ImportDependencyMap =
+        mutableMapOf<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>()
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {

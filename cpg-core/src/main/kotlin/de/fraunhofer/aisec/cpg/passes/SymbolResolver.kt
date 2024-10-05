@@ -100,11 +100,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
 
-        for (tu in component.translationUnits) {
-            currentTU = tu
+        // Resolve symbols in our translation units in the order depending on their import
+        // dependencies
+        component.importDependencies.resolveDependencies {
+            log.debug("Resolving symbols of translation unit {}", it.name)
+            currentTU = it
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+            val nodes = currentTU.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
