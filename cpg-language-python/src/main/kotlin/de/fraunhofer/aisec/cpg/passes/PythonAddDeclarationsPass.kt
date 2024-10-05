@@ -110,30 +110,28 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // First, check if we need to create a field
         var field: FieldDeclaration? =
-            if (scopeManager.isInRecord && scopeManager.isInFunction) {
+            when {
                 // Check, whether we are referring to a "self.X", which would create a field
-                if (
-                    ref is MemberExpression &&
-                        ref.base.name == scopeManager.currentMethod?.receiver?.name
-                ) {
+                scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
                     scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
                         newFieldDeclaration(ref.name)
                     }
-                } else if (ref is MemberExpression) {
+                }
+                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
                     // If this is any other member expression, we are usually not interested in
                     // creating fields, except if this is a receiver
                     return null
-                } else {
+                }
+                scopeManager.isInRecord -> {
+                    // We end up here for fields declared directly in the class body. These are
+                    // class attributes; more or less static fields.
+                    newFieldDeclaration(ref.name)
+                }
+                else -> {
                     null
                 }
-            } else if (scopeManager.isInRecord) {
-                // We end up here for fields declared directly in the class body. These are class
-                // attributes; more or less static fields.
-                newFieldDeclaration(ref.name)
-            } else {
-                null
             }
 
         // If we didn't create any field up to this point and if we are still have not returned, we
@@ -168,6 +166,12 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         return decl
     }
+
+    private val Reference.refersToReceiver: Boolean
+        get() {
+            return this is MemberExpression &&
+                this.base.name == scopeManager.currentMethod?.receiver?.name
+        }
 
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {

@@ -1342,10 +1342,8 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        assertEquals(2, result.variables.size)
-        // Note, that "pi" is incorrectly inferred as a field declaration. This is a known bug in
-        // the inference system (and not in the python module) and will be handled separately.
-        assertEquals(listOf("mypi", "pi"), result.variables.map { it.name.localName })
+        assertEquals(1, result.variables.size)
+        assertEquals(listOf("mypi"), result.variables.map { it.name.localName })
     }
 
     @Test

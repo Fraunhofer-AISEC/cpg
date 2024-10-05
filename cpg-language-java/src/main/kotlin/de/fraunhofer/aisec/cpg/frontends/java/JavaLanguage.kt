@@ -45,7 +45,8 @@ open class JavaLanguage :
     HasQualifier,
     HasUnknownType,
     HasShortCircuitOperators,
-    HasFunctionOverloading {
+    HasFunctionOverloading,
+    HasImplicitReceiver {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
     @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
@@ -116,4 +117,6 @@ open class JavaLanguage :
 
     override val startCharacter = '<'
     override val endCharacter = '>'
+    override val receiverName: String
+        get() = "this"
 }
