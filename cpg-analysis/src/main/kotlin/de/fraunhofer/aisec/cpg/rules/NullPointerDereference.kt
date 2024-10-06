@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.rules
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.HasBase
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.query.*
 
 class NullPointerDereference : Rule {

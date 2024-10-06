@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.rules
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.query.*
-import de.fraunhofer.aisec.cpg.rules.Util
 
 class PathTraversalViaUserInputConcatenationRule : Rule {
     override var queryResult: QueryTree<*>? = null
@@ -38,7 +36,8 @@ class PathTraversalViaUserInputConcatenationRule : Rule {
     override val id = "PTR-001"
     override val name = "Path Traversal via User Input Concatenation"
     override val cweId = "22"
-    override val shortDescription = "User input is concatenated with file paths without proper validation"
+    override val shortDescription =
+        "User input is concatenated with file paths without proper validation"
     override val mdShortDescription = null
     override val level = Rule.Level.Warning
     override val message =
@@ -57,23 +56,24 @@ class PathTraversalViaUserInputConcatenationRule : Rule {
                         from = outer,
                         predicate = { inner ->
                             inner is CallExpression &&
-                                    inner.name.localName.contains(concatFunctionsRegex) &&
-                                    inner.arguments.any { Util.isPathLike(it) } ||
-                                    inner is BinaryOperator && inner.operatorCode == "+" ||
-                                    inner is BinaryOperator && inner.operatorCode == "+="
+                                inner.name.localName.contains(concatFunctionsRegex) &&
+                                inner.arguments.any { Util.isPathLike(it) } ||
+                                inner is BinaryOperator && inner.operatorCode == "+" ||
+                                inner is BinaryOperator && inner.operatorCode == "+="
                         },
                         collectFailedPaths = false,
                         findAllPossiblePaths = true
-                    ) and not( // and doesn't reach validation
-                        dataFlow(
-                            from = outer,
-                            predicate = {
-                                it is CallExpression && Util.isValidationFunction(it)
-                            },
-                            collectFailedPaths = false,
-                            findAllPossiblePaths = true
+                    ) and
+                        not( // and doesn't reach validation
+                            dataFlow(
+                                from = outer,
+                                predicate = {
+                                    it is CallExpression && Util.isValidationFunction(it)
+                                },
+                                collectFailedPaths = false,
+                                findAllPossiblePaths = true
+                            )
                         )
-                    )
                 }
             )
     }

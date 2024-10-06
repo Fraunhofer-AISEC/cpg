@@ -46,7 +46,8 @@ class UseAfterFree : Rule {
                 { outer ->
                     executionPath(outer) { inner ->
                         (outer.arguments[0] as? Reference)?.refersTo == // free argument
-                            (inner as? Reference)?.refersTo // reference to free argument after the free
+                            (inner as? Reference)
+                                ?.refersTo // reference to free argument after the free
                     }
                 }
             )

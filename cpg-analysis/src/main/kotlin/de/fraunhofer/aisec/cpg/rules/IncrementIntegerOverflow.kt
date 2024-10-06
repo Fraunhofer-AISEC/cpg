@@ -38,7 +38,7 @@ class IncrementIntegerOverflow : Rule {
     override val cweId: String = "128"
     override val shortDescription =
         "Detects (post- or prefix) unary increments that may cause the their target to " +
-                "overflow"
+            "overflow"
     override val level = Rule.Level.Error
     override val message = "Increment may cause overflow"
 
@@ -49,21 +49,21 @@ class IncrementIntegerOverflow : Rule {
                 {
                     val max = max(it.input)
                     (max eq maxSizeOfType(it.input.type)) or
-                            when (max.value) {
-                                is Long -> max as QueryTree<Long> eq
-                                        const((2L shl (it.input.type as NumericType).bitWidth!!) - 1)
-
-                                is Int -> max as QueryTree<Int> eq
-                                        const((2 shl (it.input.type as NumericType).bitWidth!!) - 1)
-
-                                is Float -> max as QueryTree<Float> eq
-                                        const(2.0f.pow((it.input.type as NumericType).bitWidth!!) - 1)
-
-                                is Double -> max as QueryTree<Double> eq
-                                        const(2.0.pow((it.input.type as NumericType).bitWidth!!) - 1)
-
-                                else -> const(false)
-                            }
+                        when (max.value) {
+                            is Long ->
+                                max as QueryTree<Long> eq
+                                    const((2L shl (it.input.type as NumericType).bitWidth!!) - 1)
+                            is Int ->
+                                max as QueryTree<Int> eq
+                                    const((2 shl (it.input.type as NumericType).bitWidth!!) - 1)
+                            is Float ->
+                                max as QueryTree<Float> eq
+                                    const(2.0f.pow((it.input.type as NumericType).bitWidth!!) - 1)
+                            is Double ->
+                                max as QueryTree<Double> eq
+                                    const(2.0.pow((it.input.type as NumericType).bitWidth!!) - 1)
+                            else -> const(false)
+                        }
                 }
             )
     }
