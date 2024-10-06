@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-// import de.fraunhofer.aisec.cpg.rules.*
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -101,6 +100,8 @@ class RuleRunner(
             }
             .loadIncludes(loadIncludes)
             .defaultPasses()
+            .useParallelFrontends(true)
+            .useParallelPasses(true)
             .build()
 
     private val result: TranslationResult =
@@ -148,7 +149,7 @@ private class Cli : Runnable {
             return try {
                 Language.valueOf(value!!.uppercase())
             } catch (_: Exception) {
-                throw CommandLine.ParameterException(CommandLine(this), "Invalid language: $value")
+                throw CommandLine.ParameterException(CommandLine(this), "Invalid language:$value")
             } // TODO: maybe ignore or just warn
         }
     }
@@ -192,14 +193,16 @@ private class Cli : Runnable {
 
     // TODO: add functionality
     //  -> Pass-related options from the neo4j app
-    //  -> don't hardcode rules but load them dynamically (may be similar to the pass system in the neo4j app)
+    //  -> don't hardcode rules but load them dynamically (may be similar to the pass system in the
+    // neo4j app)
 
     /**
      * Runs the rules on the given compilation database and reports the results.
      *
-     * The rules are currently built into the application and cannot be changed without modifying the source code.
-     * The output is a SARIF file because currently the only [Reporter] is the [SarifReporter].
-     * The report's path is determined by the [Reporter.getDefaultPath] method of the respective [Reporter].
+     * The rules are currently built into the application and cannot be changed without modifying
+     * the source code. The output is a SARIF file because currently the only [Reporter] is the
+     * [SarifReporter]. The report's path is determined by the [Reporter.getDefaultPath] method of
+     * the respective [Reporter].
      */
     override fun run() {
         val runner =

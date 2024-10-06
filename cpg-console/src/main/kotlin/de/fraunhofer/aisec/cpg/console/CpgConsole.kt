@@ -149,10 +149,10 @@ enum class Language {
 @CommandLine.Command(
     name = "cpg-analysis",
     description =
-    [
-        "Either specify no arguments to start an interactive shell or specify a compilation database and rules to run" +
+        [
+            "Either specify no arguments to start an interactive shell or specify a compilation database and rules to run" +
                 " like a normal CLI tool."
-    ]
+        ]
 )
 private class Cli : Runnable {
     @CommandLine.Option(
@@ -195,22 +195,22 @@ private class Cli : Runnable {
     @CommandLine.Option(
         names = ["-o", "--output"],
         description =
-        [
-            "Path to write the output to. If unspecified, a default path is used. Used to determine the " +
+            [
+                "Path to write the output to. If unspecified, a default path is used. Used to determine the " +
                     "report type (currently only SARIF). The default is SARIF."
-        ],
+            ],
         paramLabel = "FILE",
     )
     var outputPath: File =
         Path.of(
-            "reports",
-            "report-${
+                "reports",
+                "report-${
                 LocalDateTime.now().format(
                     DateTimeFormatter.ofPattern
                         ("yyyy-MM-dd-HH-mm-ss")
                 )
             }.sarif"
-        )
+            )
             .toFile()
 
     @CommandLine.Option(
@@ -294,9 +294,11 @@ private class Cli : Runnable {
             // create the report
             results.add(reportPlugin.execute(":report ${outputPath.absolutePath} $minify"))
 
-            // the following code is a copy of parts of the org.jetbrains.kotlinx.ki.shell.Shell.doRun() method
+            // the following code is a copy of parts of the
+            // org.jetbrains.kotlinx.ki.shell.Shell.doRun() method
             // of the kotlin-interactive-shell licensed under the Apache License 2.0.
-            // This is necessary because we want to run the shell headless which isn't directly supported.
+            // This is necessary because we want to run the shell headless which isn't directly
+            // supported.
             // COPY START
             var blankLines = 0
             fun evalSnippet(line: String) {
@@ -318,7 +320,6 @@ private class Cli : Runnable {
                             repl.incompleteLines.clear()
                             repl.handleError(result.result, result.isCompiled)
                         }
-
                         ResultWrapper.Status.SUCCESS -> {
                             repl.incompleteLines.clear()
                             repl.handleSuccess(result.result as ResultWithDiagnostics.Success<*>)
