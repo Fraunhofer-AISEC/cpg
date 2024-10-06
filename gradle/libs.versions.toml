@@ -45,8 +45,6 @@ jline = { module = "org.jline:jline", version = "3.26.0" }
 antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
 sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version = "0.6.0"}
 
-sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version = "0.6.0"}
-
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.10.0"}
 mockito = { module = "org.mockito:mockito-core", version = "5.12.0"}
