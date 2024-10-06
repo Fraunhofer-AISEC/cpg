@@ -33,6 +33,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 
 interface Reporter {
+
     /**
      * Generates a report for the given rule
      *
@@ -41,7 +42,11 @@ interface Reporter {
      * @param minify if true, a minified version of the report is generated
      * @return the report as a string that can be written to a file
      */
-    fun report(rules: Collection<Rule>, minify: Boolean = false): String
+    fun report(
+        rules: Collection<Rule>,
+        minify: Boolean = false,
+        arguments: List<String> = ArrayList(0),
+    ): String
 
     /**
      * Maps a level to the respective format

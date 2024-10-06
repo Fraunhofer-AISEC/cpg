@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.graph.Node as CpgGraphNode
+import de.fraunhofer.aisec.cpg.graph.Node
 import io.github.detekt.sarif4k.*
 import java.nio.file.Paths
 
@@ -39,7 +39,7 @@ class SarifReporter : Reporter {
      * @param rules the [Rule]s to generate the report for
      * @param minify if true, the output json will be minified to reduce file size
      */
-    override fun report(rules: Collection<Rule>, minify: Boolean): String {
+    override fun report(rules: Collection<Rule>, minify: Boolean, arguments: List<String>): String {
         // TODO: consider validation of rule fields
         val sarifObj =
             SarifSchema210(
@@ -91,9 +91,12 @@ class SarifReporter : Reporter {
                                             )
                                         )
                                 ),
-                            // TODO: automationDetails, invocation
-                            //  automationDetails is definitely possible if used with the [RuleRunner]
-                            results = createResults(rules)
+                            // TODO: heuristic for executionSuccessful needed
+                            invocations =
+                                listOf(
+                                    Invocation(executionSuccessful = true, arguments = arguments)
+                                ),
+                            results = results(rules)
                         )
                     )
             )
@@ -101,8 +104,7 @@ class SarifReporter : Reporter {
         else SarifSerializer.toJson(sarifObj)
     }
 
-    private fun createResults(rules: Collection<Rule>): List<Result> {
-
+    private fun results(rules: Collection<Rule>): List<Result> {
         val results = mutableListOf<Result>()
         for ((i, rule) in rules.withIndex()) {
             results.addAll(results(rule, i.toLong()))
@@ -131,39 +133,41 @@ class SarifReporter : Reporter {
                                 id = if (rule.cweId != null) "CWE-${rule.cweId}" else null
                             )
                         ),
-                    locations = locations(threadFlowLocations),
-                    codeFlows = codeFlows(threadFlowLocations)
+                    locations =
+                        findReasonableLocation(threadFlowLocations).let {
+                            if (it != null) listOf(it) else null
+                        },
+                    codeFlows = codeFlows(threadFlowLocations),
                 )
             )
         }
         return results
     }
 
-    private fun codeFlows(threadFlowLocations: MutableList<ThreadFlowLocation>) =
-        if (threadFlowLocations.isEmpty()) null
-        else listOf(CodeFlow(threadFlows = listOf(ThreadFlow(locations = threadFlowLocations))))
-
-    private fun locations(threadFlowLocations: MutableList<ThreadFlowLocation>) =
-        listOf(
-            Location(
+    private fun findReasonableLocation(threadFlowLocations: List<ThreadFlowLocation>): Location? {
+        threadFlowLocations.getOrNull(threadFlowLocations.lastIndex)?.let {
+            val physicalLocation = it.location?.physicalLocation
+            return@findReasonableLocation Location(
                 physicalLocation =
                     PhysicalLocation(
                         artifactLocation =
-                            ArtifactLocation(
-                                // TODO: Hacky but idk a better way
-                                uri =
-                                    threadFlowLocations
-                                        .getOrNull(0)
-                                        ?.location
-                                        ?.physicalLocation
-                                        ?.artifactLocation
-                                        ?.uri
-                                // TODO: no baseId rn even though the spec suggests its use bcs of
-                                // editor extension support
-                            ),
+                            ArtifactLocation(uri = physicalLocation?.artifactLocation?.uri),
+                        region =
+                            Region(
+                                startLine = physicalLocation?.region?.startLine,
+                                endLine = physicalLocation?.region?.endLine,
+                                startColumn = physicalLocation?.region?.startColumn,
+                                endColumn = physicalLocation?.region?.endColumn
+                            )
                     )
             )
-        )
+        }
+        return null
+    }
+
+    private fun codeFlows(threadFlowLocations: MutableList<ThreadFlowLocation>) =
+        if (threadFlowLocations.isEmpty()) null
+        else listOf(CodeFlow(threadFlows = listOf(ThreadFlow(locations = threadFlowLocations))))
 
     private fun threadFlows(root: QueryTree<*>): MutableList<ThreadFlowLocation> {
         var initDepth: Long = -1
@@ -171,8 +175,8 @@ class SarifReporter : Reporter {
         val threadFlowLocations = mutableListOf<ThreadFlowLocation>()
 
         root.inOrder({ (node, depth): Pair<QueryTree<*>, Long> ->
-            if (node.value is CpgGraphNode) {
-                nodeValueLocation = (node.value as CpgGraphNode).location
+            if (node.value is Node) {
+                nodeValueLocation = (node.value as Node).location
                 if (nodeValueLocation != null) {
                     threadFlowLocations.add(
                         ThreadFlowLocation(
