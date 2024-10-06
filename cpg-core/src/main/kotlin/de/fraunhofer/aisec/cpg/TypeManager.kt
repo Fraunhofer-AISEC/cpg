@@ -32,7 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -353,3 +356,29 @@ val Collection<Type>.commonType: Type?
         // root node is 0) and re-wrap the final common type back into the original wrap state
         return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
+
+/**
+ * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
+ * passes that replace certain [Reference] nodes with other nodes, e.g., the
+ * [ResolveCallExpressionAmbiguityPass].
+ *
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupUniqueTypeSymbolByName]), so
+ * this can only be used in passes.
+ */
+context(Pass<*>)
+fun Reference.nameIsType(): Type? {
+    // First, check if it is a simple type
+    var type = language?.getSimpleTypeOf(name)
+    if (type != null) {
+        return type
+    }
+
+    // This could also be a typedef
+    type = scopeManager.typedefFor(name, scope)
+    if (type != null) {
+        return type
+    }
+
+    // Lastly, check if the reference contains a symbol that points to type (declaration)
+    return scopeManager.lookupUniqueTypeSymbolByName(name, scope)?.declaredType
+}
