@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -134,7 +131,7 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
         return QueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)")
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(n), "min($n)")
+    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(QueryTree(n)), "min($n)")
 }
 
 /**
@@ -155,7 +152,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(n), "min($n)")
+    return QueryTree(result, mutableListOf(QueryTree(n)), "min($n)")
 }
 
 /**
@@ -176,7 +173,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(n), "max($n)")
+    return QueryTree(result, mutableListOf(QueryTree(n)), "max($n)")
 }
 
 /**
@@ -250,8 +247,8 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
  */
 fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
     val evalRes = from.followNextEOGEdgesUntilHit(predicate)
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
+    val allPaths = evalRes.fulfilled.map { QueryTree(it, it.map { QueryTree(it) }.toMutableList()) }
+    // allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
@@ -320,91 +317,3 @@ val Expression.size: QueryTree<Int>
     get() {
         return sizeof(this)
     }
-
-/**
- * The minimal integer value of this expression. It uses the default argument for `eval` of [min]
- */
-val Expression.min: QueryTree<Number>
-    get() {
-        return min(this)
-    }
-
-/**
- * The maximal integer value of this expression. It uses the default argument for `eval` of [max]
- */
-val Expression.max: QueryTree<Number>
-    get() {
-        return max(this)
-    }
-
-/** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
-val Expression.value: QueryTree<Any?>
-    get() {
-        return QueryTree(evaluate(), mutableListOf(), "$this")
-    }
-
-/**
- * Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. The
- * result is interpreted as an integer.
- */
-val Expression.intValue: QueryTree<Int>?
-    get() {
-        val evalRes = evaluate() as? Int ?: return null
-        return QueryTree(evalRes, mutableListOf(), "$this")
-    }
-
-/**
- * Does some magic to identify if the value which is in [from] also reaches [to]. To do so, it goes
- * some data flow steps backwards in the graph (ideally to find the last assignment) and then
- * follows this value to the node [to].
- */
-fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): QueryTree<Boolean> {
-    return when (from) {
-        is CallExpression -> {
-            val prevEdges =
-                from.prevDFG
-                    .fold(mutableListOf<Node>()) { l, e ->
-                        if (e !is Literal<*>) {
-                            l.add(e)
-                        }
-                        l
-                    }
-                    .toMutableSet()
-            prevEdges.addAll(from.arguments)
-            // For a call, we collect the incoming data flows (typically only the arguments)
-            val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
-            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList())
-        }
-        is Literal<*> ->
-            QueryTree(true, mutableListOf(QueryTree(from)), "DF Irrelevant for Literal node")
-        else -> {
-            // We go one step back to see if that one goes into to but also check that no assignment
-            // to from happens in the paths between from and to
-            val prevQTs = from.prevFullDFG.map { dataFlow(it, to) }.toMutableSet()
-            // The base flows into a MemberExpression, but we don't care about such a partial
-            // flow and are only interested in the prevDFG setting the field (if it exists). So, if
-            // there are multiple edges, we filter out partial edges.
-
-            val noAssignmentToFrom =
-                allPaths.none {
-                    it.any { it2 ->
-                        if (it2 is AssignmentHolder) {
-                            it2.assignments.any { assign ->
-                                val prevMemberFromExpr = (from as? MemberExpression)?.prevDFG
-                                val nextMemberToExpr = (assign.target as? MemberExpression)?.nextDFG
-                                assign.target == from ||
-                                    prevMemberFromExpr != null &&
-                                        nextMemberToExpr != null &&
-                                        prevMemberFromExpr.any { it3 ->
-                                            nextMemberToExpr.contains(it3)
-                                        }
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                }
-            QueryTree(prevQTs.all { it.value } && noAssignmentToFrom, prevQTs.toMutableList())
-        }
-    }
-}
