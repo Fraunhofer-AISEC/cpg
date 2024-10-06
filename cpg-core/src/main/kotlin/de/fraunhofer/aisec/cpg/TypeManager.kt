@@ -366,7 +366,7 @@ val Collection<Type>.commonType: Type?
  * this can only be used in passes.
  */
 context(Pass<*>)
-fun Reference.doesReferToType(): Type? {
+fun Reference.nameIsType(): Type? {
     // First, check if it is a simple type
     var type = language?.getSimpleTypeOf(name)
     if (type != null) {

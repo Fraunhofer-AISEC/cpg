@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.doesReferToType
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -37,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
+import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
@@ -78,8 +78,8 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
-        var input = node.input
-        if (node.operatorCode == "()" && input is Reference && input.doesReferToType() == null) {
+        val input = node.input
+        if (node.operatorCode == "()" && input is Reference && input.nameIsType() == null) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
             //
@@ -114,7 +114,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
         // is really a cast and our binary operator is really a unary operator `&addr`.
-        var type = (fakeUnaryOp.input as? Reference)?.doesReferToType()
+        var type = (fakeUnaryOp.input as? Reference)?.nameIsType()
         if (type != null) {
             // We need to perform the following steps:
             // * create a cast expression out of the ()-unary operator, with the type that is

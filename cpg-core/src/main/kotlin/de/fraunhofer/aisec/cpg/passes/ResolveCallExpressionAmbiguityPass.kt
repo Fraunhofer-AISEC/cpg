@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.doesReferToType
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleCasts
@@ -41,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
+import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
@@ -98,7 +98,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // functional-constructs)
         if (language is HasFunctionStyleConstruction) {
             // Check for our type. We are only interested in object types
-            var type = ref.doesReferToType()
+            var type = ref.nameIsType()
             if (type is ObjectType && !type.isPrimitive) {
                 walker.replaceCallWithConstruct(type, parent, call)
             }
@@ -109,7 +109,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // argument.
         if (language is HasFunctionStyleCasts && call.arguments.size == 1) {
             // Check if it is type and replace the call
-            var type = ref.doesReferToType()
+            var type = ref.nameIsType()
             if (type != null) {
                 walker.replaceCallWithCast(type, parent, call, false)
             }
