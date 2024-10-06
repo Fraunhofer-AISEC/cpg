@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,24 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.rules
 
-import de.fraunhofer.aisec.cpg.console.RunPlugin
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import org.jetbrains.kotlinx.ki.shell.Command
-import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.query.*
 
-class RunPluginTest {
-    object TestConfig : ReplConfigurationBase()
+class ArrayUnderRead : Rule {
+    // cwe 127 underread
+    override var queryResult: QueryTree<*>? = null // to be set
+    override val id = "cpg-0011" // TODO IDS
+    override val name = "array under-read"
+    override val cweId: String = "127"
+    override val shortDescription = "This rule detects Array accesses with indices smaller than 0"
+    override val level = Rule.Level.Error
+    override val message = "Array under-read detected"
 
-    @Test
-    fun testExecute() {
-        val plugin = RunPlugin().Load(TestConfig)
-
-        val result = plugin.execute(":run")
-        assertTrue(result is Command.Result.RunSnippets)
-        assertEquals(4, result.snippetsToRun.toList().size)
+    override fun run(result: TranslationResult) {
+        queryResult =
+            result.allExtended<SubscriptExpression>(
+                mustSatisfy = { min(it.subscriptExpression) lt const(0) }
+            )
     }
 }
