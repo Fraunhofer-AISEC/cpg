@@ -69,18 +69,21 @@ class CompilationDatabase : Plugin {
                     "val db = fromFile(File(\"$path\"))",
                     // lets build and analyze
                     "val config =\n" +
-                        "                TranslationConfiguration.builder()\n" +
-                        "                    .useCompilationDatabase(db)\n" +
-                        "                    .sourceLocations(db.sourceFiles)\n" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
-                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage\")" +
-                        "                    .defaultPasses()\n" +
+                        "    TranslationConfiguration.builder()\n" +
+                        "        .useCompilationDatabase(db)\n" +
+                        "        .sourceLocations(db.sourceFiles)\n" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
+                        "        .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage\")" +
+                        "        .defaultPasses()\n" +
+                        "        .loadIncludes(true)\n" +
+                        // "                    .useParallelFrontends(true)\n" +
+                        // "                    .useParallelPasses(true)\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
                     "val result = analyzer.analyze().get()",
