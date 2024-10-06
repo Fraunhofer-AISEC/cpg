@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.sarif.Region
+import kotlin.math.min
 import org.apache.commons.lang3.StringUtils
 
 /**
@@ -62,12 +63,17 @@ fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): Str
             (StringUtils.ordinalIndexOf(code, nlType, subRegion.startLine - nodeRegion.startLine) +
                 subRegion.startColumn)
         }
-    val end =
+    var end =
         if (subRegion.endLine == nodeRegion.startLine) {
             subRegion.endColumn - nodeRegion.startColumn
         } else {
             (StringUtils.ordinalIndexOf(code, nlType, subRegion.endLine - nodeRegion.startLine) +
                 subRegion.endColumn)
         }
+
+    // Unfortunately, we sometimes have issues with (non)-Unicode characters in code, where the
+    // python AST thinks that multiple characters are needed and reports a position that is actually
+    // beyond our "end"
+    end = min(end, code.length)
     return code.substring(start, end)
 }
