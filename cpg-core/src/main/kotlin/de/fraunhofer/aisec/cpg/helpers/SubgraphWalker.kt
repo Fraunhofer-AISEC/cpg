@@ -391,6 +391,12 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         new.prevEOG = oldPrevEOG
         new.nextEOG = oldNextEOG
 
+        // Also move over any type observers
+        old.typeObservers.forEach {
+            old.unregisterTypeObserver(it)
+            new.registerTypeObserver(it)
+        }
+
         // Make sure to inform the walker about our change
         this.registerReplacement(old, new)
     }
