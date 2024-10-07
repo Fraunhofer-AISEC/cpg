@@ -44,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -96,9 +95,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Block].
      *
      * We return a Block to handle the with statement, following
-     * [PEP 343](https://peps.python.org/pep-0343/#specification-the-with-statement). The context
-     * managers `__enter__()` runs before the try block and `__exit__()` is always called later in
-     * the `finally` block to clean up, whether an exception occurs or not.
+     * [python's documentation](https://docs.python.org/3/reference/compound_stmts.html#the-with-statement).
+     * The context manager's `__enter__` and `__exit__` methods are identified before entering the
+     * try-block. `__enter__()` is called before the try-block. We simplify this a bit (compared to
+     * the documentation) and make the identification and the call in the same step. `__exit__()` is
+     * either called in the `except`-block or in the `finally`-block. In fact, the `finally` is used
+     * like an `else`-block, so we use this construction.
      *
      * Example: We will translate the code
      *
@@ -111,10 +113,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      *
      * ```python
      * manager = ContextManager()
-     * enter = type(manager).__enter__
      * exit = type(manager).__exit__
+     * tmpVal = manager.__enter__()
      * try:
-     *     cm = enter(manager)
+     *     cm = tmpVal # Doesn't exist if no variable is used
      *     cm.doSomething()
      * except:
      *     if not exit(manager, *sys.exc_info()):
@@ -124,43 +126,104 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * ```
      */
     private fun handleWithStatement(node: Python.AST.With): Block {
-        val mainBlock = newBlock().implicit(code = codeOf(node), location = locationOf(node))
-        val exitStatements = mutableListOf<Statement>()
+        val mainBlock = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
+        val exitStatementsElse = mutableListOf<Statement>()
+        val exitStatementsCatch = mutableListOf<Statement>()
         val tryBlock = newBlock().implicit()
 
         node.items.forEach { withItem ->
             // Create a temporary reference for the context manager
-            val tempVarName = Name.random(prefix = CONTEXT_MANAGER)
-            val tempRef = newReference(name = tempVarName).implicit()
+            val managerName = Name.random(prefix = CONTEXT_MANAGER)
+            val manager = newReference(name = managerName).implicit()
 
             // Handle the 'context expression' (the part before 'as') and assign to tempRef
+            // Represents the line "manager = ContextManager()"
             val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
-            mainBlock.statements.add(createImplicitAssignStatement(tempRef, contextExpr))
+            val managerAssignment =
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(manager),
+                        rhs = listOf(contextExpr)
+                    )
+                    .implicit()
+            mainBlock.statements.add(managerAssignment)
 
-            // Handle the __enter__() call and assign to optionalVars (if present)
+            // Identifies the `__exit__()`-method without calling it. Is assigned to another random
+            // variable.
+            // Represents the line "exit = type(manager).__exit__"
+            val tempExitName = Name.random(prefix = CONTEXT_MANAGER + "Exit")
+            val exitRef = newReference(name = tempExitName).implicit()
+            val typeOfMgrExit = newCallExpression(newReference("type"), "type").implicit()
+            typeOfMgrExit.addArgument(newReference(managerName).implicit())
+            val exitMemberRef = newMemberExpression("__exit__", typeOfMgrExit).implicit()
+            val exitAssignment =
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(exitRef),
+                        rhs = listOf(exitMemberRef)
+                    )
+                    .implicit()
+            mainBlock.statements.add(exitAssignment)
+
+            // calls __enter__() and assign to another random variable.
+            // Represents the line "tmpVal = manager.__enter__()"
+            val enterVarName = Name.random(prefix = CONTEXT_MANAGER + "Enter")
+            val enterVar = newReference(name = enterVarName).implicit()
             val enterCall =
-                createImplicitMemberCallExpression(
-                    name = "__enter__",
-                    base = tempRef,
-                    item = withItem
+                newMemberCallExpression(
+                        callee = newMemberExpression(name = "__enter__", base = manager),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            val enterAssignment =
+                newAssignExpression(
+                    operatorCode = "=",
+                    lhs = listOf(enterVar),
+                    rhs = listOf(enterCall)
                 )
+            mainBlock.statements.add(enterAssignment)
+
             val optionalVars = withItem.optional_vars?.let { frontend.expressionHandler.handle(it) }
             node.type_comment?.let { optionalVars?.type = frontend.typeOf(it) }
             if (optionalVars != null) {
-                // Assign the __enter__() to `optionalVars`
-                tryBlock.statements.add(createImplicitAssignStatement(optionalVars, enterCall))
-            } else {
-                tryBlock.statements.add(enterCall)
+                // Assign the result of __enter__() to `optionalVars`
+                // Represents the line "cm = tmpVal # Doesn't exist if no variable is used"
+                tryBlock.statements.add(
+                    newAssignExpression(
+                            operatorCode = "=",
+                            lhs = listOf(optionalVars),
+                            rhs = listOf(newReference(name = enterVarName).implicit())
+                        )
+                        .implicit()
+                )
             }
 
-            // Prepare the __exit__() call and store it for the finally block
-            val exitCall =
-                createImplicitMemberCallExpression(
-                    name = "__exit__",
-                    base = tempRef,
-                    item = withItem
-                )
-            exitStatements.add(exitCall)
+            // Prepare the __exit__(manager, None, None, None) call for the else-block.
+            val exitCallWithNone =
+                newMemberCallExpression(
+                        callee = newReference(name = tempExitName).implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            exitCallWithNone.addArgument(newReference(name = managerName).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitStatementsElse.add(exitCallWithNone)
+
+            // Prepare the __exit__(manager, *sys.exc_info()) call for the catch-block.
+            val exitCallWithSysExec =
+                newMemberCallExpression(
+                        callee = newReference(name = tempExitName).implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            exitCallWithNone.addArgument(newReference(name = managerName).implicit())
+            val starOp = newUnaryOperator("*", false, false)
+            starOp.input =
+                newMemberExpression("exec_info", newReference("sys").implicit()).implicit()
+            exitCallWithNone.addArgument(starOp)
+            exitStatementsCatch.add(exitCallWithSysExec)
         }
 
         // Create the block for the body of the with statement
@@ -171,8 +234,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val tryStatement =
             newTryStatement(rawNode = node).apply {
                 this.tryBlock = tryBlock
-                this.finallyBlock =
-                    newBlock().implicit().apply { this.statements.addAll(exitStatements) }
+                // Add the catch block
+                val catchClause = newCatchClause().implicit()
+                catchClause.body =
+                    newBlock().implicit().apply { this.statements.addAll(exitStatementsCatch) }
+                this.catchClauses.add(catchClause)
+                // Add the else-block
+                this.elseBlock =
+                    newBlock().implicit().apply { this.statements.addAll(exitStatementsElse) }
             }
 
         mainBlock.statements.add(tryStatement)
@@ -914,24 +983,5 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
         return declStmt
-    }
-
-    /** Creates an implicit [AssignExpression]. */
-    private fun createImplicitAssignStatement(lhs: Expression, rhs: Expression): AssignExpression {
-        return newAssignExpression(operatorCode = "=", lhs = listOf(lhs), rhs = listOf(rhs))
-            .implicit()
-    }
-
-    /** Creates an implicit [MemberCallExpression] (e.g., `__enter__`, `__exit__`). */
-    private fun createImplicitMemberCallExpression(
-        name: String,
-        base: Expression,
-        item: Python.AST.withitem
-    ): MemberCallExpression {
-        return newMemberCallExpression(
-                callee = newMemberExpression(name = name, base = base),
-                rawNode = item
-            )
-            .implicit()
     }
 }
