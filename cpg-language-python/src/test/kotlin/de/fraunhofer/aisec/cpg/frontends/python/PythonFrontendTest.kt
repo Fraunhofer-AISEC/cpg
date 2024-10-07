@@ -1453,6 +1453,33 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(4.toLong(), rhs.evaluate())
     }
 
+    @Test
+    fun testParseWithUnicode() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("unicode.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val normalFunc = tu.functions["normal_func"]
+        assertNotNull(normalFunc)
+        // 11 chars (including whitespace) -> SARIF position = 12
+        //     e = "e"
+        assertEquals(12, normalFunc.body?.location?.region?.endColumn)
+
+        val unicodeFunc = tu.functions["unicode_func"]
+        assertNotNull(unicodeFunc)
+
+        // also 11 chars (including whitespace) -> SARIF position = 12
+        // But the python parser somehow sees these as two bytes so the position is 13 :(
+        //     e = "é"
+        assertEquals(13, unicodeFunc.body?.location?.region?.endColumn)
+
+        // So the code exceeds the line, but we clamp it and avoid a crash
+        assertEquals("e = \"é\"", unicodeFunc.body?.code)
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

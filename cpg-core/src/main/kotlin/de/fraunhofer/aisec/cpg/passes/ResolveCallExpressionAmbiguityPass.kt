@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
+import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
@@ -85,27 +86,20 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         var callee = call.callee
         val language = callee.language
 
+        // We need to "unwrap" some references because they might be nested in unary operations such
+        // as pointers. We are interested in the references in the "core". We can skip all
+        // references that are member expressions
+        val ref = callee.unwrapReference()
+        if (ref == null || ref is MemberExpression) {
+            return
+        }
+
         // Check, if this is cast is really a construct expression (if the language supports
         // functional-constructs)
         if (language is HasFunctionStyleConstruction) {
-            // Make sure, we do not accidentally "construct" primitive types
-            if (language.builtInTypes.contains(callee.name.toString()) == true) {
-                return
-            }
-
-            val fqn =
-                if (callee.name.parent == null) {
-                    scopeManager.currentNamespace.fqn(
-                        callee.name.localName,
-                        delimiter = callee.name.delimiter
-                    )
-                } else {
-                    callee.name
-                }
-
             // Check for our type. We are only interested in object types
-            val type = typeManager.lookupResolvedType(fqn)
-            if (type is ObjectType) {
+            var type = ref.nameIsType()
+            if (type is ObjectType && !type.isPrimitive) {
                 walker.replaceCallWithConstruct(type, parent, call)
             }
         }
@@ -114,34 +108,10 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // cast expression. And this is only really necessary, if the function call has a single
         // argument.
         if (language is HasFunctionStyleCasts && call.arguments.size == 1) {
-            var pointer = false
-            // If the argument is a UnaryOperator, unwrap them
-            if (callee is UnaryOperator && callee.operatorCode == "*") {
-                pointer = true
-                callee = callee.input
-            }
-
-            // First, check if this is a built-in type
-            var builtInType = language.getSimpleTypeOf(callee.name)
-            if (builtInType != null) {
-                walker.replaceCallWithCast(builtInType, parent, call, false)
-            } else {
-                // If not, then this could still refer to an existing type. We need to make sure
-                // that we take the current namespace into account
-                val fqn =
-                    if (callee.name.parent == null) {
-                        scopeManager.currentNamespace.fqn(
-                            callee.name.localName,
-                            delimiter = callee.name.delimiter
-                        )
-                    } else {
-                        callee.name
-                    }
-
-                val type = typeManager.lookupResolvedType(fqn)
-                if (type != null) {
-                    walker.replaceCallWithCast(type, parent, call, pointer)
-                }
+            // Check if it is type and replace the call
+            var type = ref.nameIsType()
+            if (type != null) {
+                walker.replaceCallWithCast(type, parent, call, false)
             }
         }
     }

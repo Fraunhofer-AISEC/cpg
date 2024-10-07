@@ -45,6 +45,6 @@ class CXXExpressionTest {
         // We should have two calls (int and myint64)
         val casts = tu.casts
         assertEquals(2, casts.size)
-        assertEquals(listOf("int", "myint64"), casts.map { it.name.localName })
+        assertEquals(listOf("int", "long long int"), casts.map { it.name.localName })
     }
 }
