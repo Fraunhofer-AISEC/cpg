@@ -56,4 +56,6 @@ dependencies {
     annotationProcessor(libs.picocli.codegen)
 
     testImplementation(testFixtures(projects.cpgCore))
+    // For testing, remove later!
+    implementation(projects.cpgAnalysis)
 }
