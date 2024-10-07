@@ -51,7 +51,7 @@ abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
     abstract fun handleNode(node: HandlerNode): ResultNode
 
     companion object {
-        /** A prefix to add random names when having to add implicit assignments. */
+        /** A prefix to add to random names when having to add implicit assignments. Used when handling loops with multiple variables. */
         const val LOOP_VAR_PREFIX = "loopMultiVarHelperVar"
         const val CONTEXT_MANAGER = "contextManager"
     }
