@@ -81,20 +81,6 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
  * In the frontend we only do the assignment, therefore we need to create a new
  * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
  *
- * ## Converting Call Expressions into Cast Expressions
- *
- * In Go, it is possible to convert compatible types by "calling" the type name as a function, such
- * as
- *
- * ```go
- * var i = int(2.0)
- * ```
- *
- * This is also possible with more complex types, such as interfaces or aliased types, as long as
- * they are compatible. Because types in the same package can be defined in multiple files, we
- * cannot decide during the frontend run. Therefore, we need to execute this pass before the
- * [SymbolResolver] and convert certain [CallExpression] nodes into a [CastExpression].
- *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
  * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
@@ -403,7 +389,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.findSymbols(import.name, null).filter {
+            scopeManager.lookupSymbolByName(import.name, null).filter {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
 

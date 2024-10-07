@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -899,7 +900,7 @@ class ScopeManager : ScopeProvider {
      * @return the declaration, or null if it does not exist
      */
     fun getRecordForName(name: Name): RecordDeclaration? {
-        return findSymbols(name).filterIsInstance<RecordDeclaration>().singleOrNull()
+        return lookupSymbolByName(name).filterIsInstance<RecordDeclaration>().singleOrNull()
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
@@ -960,16 +961,21 @@ class ScopeManager : ScopeProvider {
         get() = currentScope
 
     /**
-     * This function tries to resolve a [Node.name] to a list of symbols (a symbol represented by a
-     * [Declaration]) starting with [startScope]. This function can return a list of multiple
-     * symbols in order to check for things like function overloading. but it will only return list
-     * of symbols within the same scope; the list cannot be spread across different scopes.
+     * This function tries to convert a [Node.name] into a [Symbol] and then performs a lookup of
+     * this symbol. This can either be an "unqualified lookup" if [name] is not qualified or a
+     * "qualified lookup" if [Name.isQualified] is true. In the unqualified case the lookup starts
+     * in [startScope], in the qualified case we use [extractScope] to find the appropriate scope
+     * and need to restrict our search to this particular scope.
      *
-     * This means that as soon one or more symbols are found in a "local" scope, these shadow all
-     * other occurrences of the same / symbol in a "higher" scope and only the ones from the lower
-     * ones will be returned.
+     * This function can return a list of multiple declarations in order to check for things like
+     * function overloading. But it will only return list of declarations within the same scope; the
+     * list cannot be spread across different scopes.
+     *
+     * This means that as soon one or more declarations for the symbol are found in a "local" scope,
+     * these shadow all other occurrences of the same / symbol in a "higher" scope and only the ones
+     * from the lower ones will be returned.
      */
-    fun findSymbols(
+    fun lookupSymbolByName(
         name: Name,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
@@ -1003,6 +1009,30 @@ class ScopeManager : ScopeProvider {
         }
 
         return list
+    }
+
+    /**
+     * This function tries to look up the symbol contained in [name] (using [lookupSymbolByName])
+     * and returns a [DeclaresType] node, if this name resolved to something which declares a type.
+     *
+     * It is important to know that the lookup needs to be unique, so if multiple declarations match
+     * this symbol, a warning is triggered and null is returned.
+     */
+    fun lookupUniqueTypeSymbolByName(name: Name, startScope: Scope?): DeclaresType? {
+        var symbols =
+            lookupSymbolByName(name = name, startScope = startScope) { it is DeclaresType }
+                .filterIsInstance<DeclaresType>()
+
+        // We need to have a single match, otherwise we have an ambiguous type, and we cannot
+        // normalize it.
+        if (symbols.size > 1) {
+            LOGGER.warn(
+                "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
+                name
+            )
+        }
+
+        return symbols.singleOrNull()
     }
 }
 
@@ -1112,7 +1142,7 @@ data class CallResolutionResult(
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
-     * [ScopeManager.findSymbols]), more specifically a list of [FunctionDeclaration] nodes.
+     * [ScopeManager.lookupSymbolByName]), more specifically a list of [FunctionDeclaration] nodes.
      */
     var candidateFunctions: Set<FunctionDeclaration>,
 

@@ -167,8 +167,9 @@ nav:
   - "Implementation":
       - CPG/impl/index.md
       - "Language Frontends": CPG/impl/language.md
-      - "Scopes": CPG/impl/scopes.md
+      - "Scopes and Symbols": CPG/impl/scopes.md
       - "Passes": CPG/impl/passes.md
+      - "Symbol Resolution": CPG/impl/symbol-resolver.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!

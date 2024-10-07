@@ -58,7 +58,7 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Let's do some importing. We need to import either a wildcard
         if (node.wildcardImport) {
-            val list = scopeManager.findSymbols(node.import, node.location, scope)
+            val list = scopeManager.lookupSymbolByName(node.import, node.location, scope)
             val symbol = list.singleOrNull()
             if (symbol != null) {
                 // In this case, the symbol must point to a name scope
@@ -69,7 +69,8 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         } else {
             // or a symbol directly
-            val list = scopeManager.findSymbols(node.import, node.location, scope).toMutableList()
+            val list =
+                scopeManager.lookupSymbolByName(node.import, node.location, scope).toMutableList()
             node.importedSymbols = mutableMapOf(node.symbol to list)
         }
     }
