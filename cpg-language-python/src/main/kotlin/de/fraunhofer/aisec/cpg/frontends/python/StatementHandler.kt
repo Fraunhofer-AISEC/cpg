@@ -99,9 +99,32 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [PEP 343](https://peps.python.org/pep-0343/#specification-the-with-statement). The context
      * managers `__enter__()` runs before the try block and `__exit__()` is always called later in
      * the `finally` block to clean up, whether an exception occurs or not.
+     *
+     * Example: We will translate the code
+     *
+     * ```python
+     * with ContextManager() as cm:
+     *     cm.doSomething()
+     * ```
+     *
+     * to something like
+     *
+     * ```python
+     * manager = ContextManager()
+     * enter = type(manager).__enter__
+     * exit = type(manager).__exit__
+     * try:
+     *     cm = enter(manager)
+     *     cm.doSomething()
+     * except:
+     *     if not exit(manager, *sys.exc_info()):
+     *         raise
+     * else:
+     *     exit(manager, None, None, None)
+     * ```
      */
     private fun handleWithStatement(node: Python.AST.With): Block {
-        val mainBlock = newBlock().implicit()
+        val mainBlock = newBlock().implicit(code = codeOf(node), location = locationOf(node))
         val exitStatements = mutableListOf<Statement>()
         val tryBlock = newBlock().implicit()
 
@@ -140,12 +163,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             exitStatements.add(exitCall)
         }
 
+        // Create the block for the body of the with statement
+        val bodyBlock = makeBlock(node.body, parentNode = node)
+        tryBlock.statements.addAll(bodyBlock.statements)
+
+        // Create the try statement with __exit__ calls in the finally block
         val tryStatement =
-            createTryStatementWithBody(
-                node = node,
-                tryBlock = tryBlock,
-                exitStatements = exitStatements
-            )
+            newTryStatement(rawNode = node).apply {
+                this.tryBlock = tryBlock
+                this.finallyBlock =
+                    newBlock().implicit().apply { this.statements.addAll(exitStatements) }
+            }
 
         mainBlock.statements.add(tryStatement)
         return mainBlock
@@ -905,23 +933,5 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 rawNode = item
             )
             .implicit()
-    }
-
-    /** Creates a [TryStatement]. */
-    private fun createTryStatementWithBody(
-        node: Python.AST.With,
-        tryBlock: Block,
-        exitStatements: List<Statement>
-    ): TryStatement {
-        // Create the block for the body of the with statement
-        val bodyBlock = makeBlock(node.body, parentNode = node)
-        tryBlock.statements.addAll(bodyBlock.statements)
-
-        // Create the try statement with __exit__ calls in the finally block
-        return newTryStatement(rawNode = node).apply {
-            this.tryBlock = tryBlock
-            this.finallyBlock =
-                newBlock().implicit().apply { this.statements.addAll(exitStatements) }
-        }
     }
 }
