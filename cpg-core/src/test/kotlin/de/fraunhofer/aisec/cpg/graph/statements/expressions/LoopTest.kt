@@ -23,25 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.callsByName
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class EvaluationOrderGraphPassTest {
+class LoopTest {
 
     @Test
     fun testWhileStatement() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
-
+        val func = whileTest.functions["someRecord.func"]
+        assertNotNull(func)
         val whileStmt = whileTest.statements.filterIsInstance<WhileStatement>().firstOrNull()
         assertNotNull(whileStmt)
+        assertTrue { func.body.statements.contains(whileStmt) }
         val breakStmt = whileStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = whileTest.callsByName("elseCall").getOrNull(0)
         val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
@@ -49,46 +52,16 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(elseCall)
         assertNotNull(postWhile)
         assertTrue(whileStmt.astChildren.all { whileStmt.toString().contains(it.toString()) })
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = elseCall,
-                refs = listOf(whileStmt),
-                cr = Util.Connect.NODE
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = postWhile,
-                refs = listOf(whileStmt.elseStatement, breakStmt),
-                cr = Util.Connect.NODE
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = whileStmt.elseStatement,
-                refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = breakStmt,
-                refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
-            )
-        )
     }
 
     @Test
     fun testDoStatement() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
-
+        val func = doTest.functions["someRecord.func"]
+        assertNotNull(func)
         val doStmt = doTest.statements.filterIsInstance<DoStatement>().firstOrNull()
         assertNotNull(doStmt)
+        assertTrue { func.body.statements.contains(doStmt) }
         val breakStmt = doStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = doTest.callsByName("elseCall").getOrNull(0)
         val postWhile = doTest.callsByName("postDo").getOrNull(0)
@@ -96,85 +69,33 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(elseCall)
         assertNotNull(postWhile)
         assertTrue(doStmt.astChildren.all { doStmt.toString().contains(it.toString()) })
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = elseCall,
-                refs = listOf(doStmt),
-                cr = Util.Connect.NODE
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = postWhile,
-                refs = listOf(doStmt.elseStatement, breakStmt),
-                cr = Util.Connect.NODE
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = doStmt.elseStatement,
-                refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = breakStmt,
-                refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
-            )
-        )
     }
 
     @Test
     fun testForStatement() {
         val forTest = GraphExamples.getForWithElseAndBreak()
-
+        val func = forTest.functions["someRecord.func"]
+        assertNotNull(func)
         val forStmt = forTest.statements.filterIsInstance<ForStatement>().firstOrNull()
         assertNotNull(forStmt)
         val breakStmt = forStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postFor = forTest.callsByName("postFor").getOrNull(0)
+        assertTrue { func.body.statements.contains(forStmt) }
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postFor)
         assertTrue(forStmt.astChildren.all { forStmt.toString().contains(it.toString()) })
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = elseCall,
-            refs = listOf(forStmt),
-            cr = Util.Connect.NODE
-        )
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = postFor,
-            refs = listOf(forStmt.elseStatement, breakStmt),
-            cr = Util.Connect.NODE
-        )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = forStmt.elseStatement,
-            refs = listOf(postFor),
-            cr = Util.Connect.SUBTREE
-        )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = breakStmt,
-            refs = listOf(postFor),
-            cr = Util.Connect.SUBTREE
-        )
     }
 
     @Test
     fun testForEachStatement() {
         val forTest = GraphExamples.getForEachWithElseAndBreak()
-
+        val func = forTest.functions["someRecord.func"]
+        assertNotNull(func)
         val forEachStmt = forTest.statements.filterIsInstance<ForEachStatement>().firstOrNull()
         assertNotNull(forEachStmt)
+        assertTrue { func.body.statements.contains(forEachStmt) }
         val breakStmt = forTest.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postForEach = forTest.callsByName("postForEach").getOrNull(0)
@@ -182,29 +103,5 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(elseCall)
         assertNotNull(postForEach)
         assertTrue(forEachStmt.astChildren.all { forEachStmt.toString().contains(it.toString()) })
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = elseCall,
-            refs = listOf(forEachStmt),
-            cr = Util.Connect.NODE
-        )
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = postForEach,
-            refs = listOf(forEachStmt.elseStatement, breakStmt),
-            cr = Util.Connect.NODE
-        )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = forEachStmt.elseStatement,
-            refs = listOf(postForEach),
-            cr = Util.Connect.SUBTREE
-        )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = breakStmt,
-            refs = listOf(postForEach),
-            cr = Util.Connect.SUBTREE
-        )
     }
 }

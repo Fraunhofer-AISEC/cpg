@@ -78,19 +78,21 @@ class GraphExamples {
                 translationResult {
                     translationUnit("whileWithBreakAndElse.py") {
                         record("someRecord") {
-                            function("func") {
-                                whileStmt {
-                                    whileCondition { literal(true, t("bool")) }
-                                    loopBody {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                            method("func") {
+                                body {
+                                    whileStmt {
+                                        whileCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        loopElseStmt { call("elseCall") }
                                     }
-                                    loopElseStmt { call("elseCall") }
+                                    call("postWhile")
                                 }
-                                call("postWhile")
                             }
                         }
                     }
@@ -108,19 +110,21 @@ class GraphExamples {
                 translationResult {
                     translationUnit("whileWithBreakAndElse.py") {
                         record("someRecord") {
-                            function("func") {
-                                doStmt {
-                                    doCondition { literal(true, t("bool")) }
-                                    loopBody {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                            method("func") {
+                                body {
+                                    doStmt {
+                                        doCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        loopElseStmt { call("elseCall") }
                                     }
-                                    loopElseStmt { call("elseCall") }
+                                    call("postDo")
                                 }
-                                call("postDo")
                             }
                         }
                     }
@@ -138,20 +142,22 @@ class GraphExamples {
                 translationResult {
                     translationUnit("whileWithBreakAndElse.py") {
                         record("someRecord") {
-                            function("func") {
-                                forStmt(
-                                    initializer = declare { variable("a") },
-                                    condition = literal(true, t("bool")),
-                                    iteration = newUnaryOperator("++", true, false),
-                                    elseStmt = call("elseCall")
-                                ) {
-                                    ifStmt {
-                                        condition { literal(true, t("bool")) }
-                                        thenStmt { breakStmt() }
+                            method("func") {
+                                body {
+                                    forStmt(
+                                        initializer = declare { variable("a") },
+                                        condition = literal(true, t("bool")),
+                                        iteration = newUnaryOperator("++", true, false),
+                                        elseStmt = call("elseCall")
+                                    ) {
+                                        ifStmt {
+                                            condition { literal(true, t("bool")) }
+                                            thenStmt { breakStmt() }
+                                        }
+                                        call("postIf")
                                     }
-                                    call("postIf")
+                                    call("postFor")
                                 }
-                                call("postFor")
                             }
                         }
                     }
@@ -169,18 +175,20 @@ class GraphExamples {
                 translationResult {
                     translationUnit("whileWithBreakAndElse.py") {
                         record("someRecord") {
-                            function("func") {
-                                forEachStmt {
-                                    iterable { call("listOf") }
-                                    variable { declare { variable("a") } }
-                                    loopBody {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                            method("func") {
+                                body {
+                                    forEachStmt {
+                                        iterable { call("listOf") }
+                                        variable { declare { variable("a") } }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        loopElseStmt { call("elseCall") }
                                     }
-                                    loopElseStmt { call("elseCall") }
                                     call("postForEach")
                                 }
                             }

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -56,6 +57,15 @@ class ForStatement : LoopStatement(), BranchingNode {
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
+
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("initializer", initializerStatement)
+            .append("condition", condition)
+            .append("conditionDeclaration", conditionDeclaration)
+            .append("iteration", iterationStatement)
+            .toString()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

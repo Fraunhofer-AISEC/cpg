@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 abstract class LoopStatement : Statement() {
@@ -48,4 +49,11 @@ abstract class LoopStatement : Statement() {
      */
     @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
     var elseStatement by unwrapping(LoopStatement::elseStatementEdge)
+
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("statement", statement)
+            .append("else", elseStatement)
+            .toString()
 }

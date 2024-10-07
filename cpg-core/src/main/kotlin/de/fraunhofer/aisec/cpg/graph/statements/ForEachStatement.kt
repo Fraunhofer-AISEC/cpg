@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -79,6 +80,13 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
         }
 
     override var statements by unwrapping(ForEachStatement::statementEdges)
+
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("variable", variable)
+            .append("iterable", iterable)
+            .toString()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
