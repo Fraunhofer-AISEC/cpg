@@ -103,7 +103,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node)
-            is Reference -> handleReference(node)
+            // The ControlFlowSensitiveDFGPass will draw the DFG Edges for these
+            // is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
             is InitializerListExpression -> handleInitializerListExpression(node)
@@ -138,7 +139,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.addNextDFG(target) }
+                targets.forEach { target ->
+                    val granularity =
+                        if (target is PointerDereference)
+                            PointerDataflowGranularity(PointerAccess.VALUE)
+                        else default()
+                    it.addNextDFG(target, granularity)
+                }
             }
         }
 
@@ -381,7 +388,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected open fun handleReference(node: Reference) {
         node.refersTo?.let {
             val granularity =
-                if (node is PointerReference) PointerDataflowGranularity() else default()
+                if (node is PointerReference) PointerDataflowGranularity(PointerAccess.ADDRESS)
+                else if (node is PointerDereference) PointerDataflowGranularity(PointerAccess.VALUE)
+                else default()
             when (node.access) {
                 AccessValues.WRITE -> node.addNextDFG(it)
                 AccessValues.READ -> node.addPrevDFG(it, granularity)

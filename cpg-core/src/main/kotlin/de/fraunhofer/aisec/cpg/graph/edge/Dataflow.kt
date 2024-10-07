@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.PointerAccess
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
@@ -53,7 +54,10 @@ data object FullDataflowGranularity : Granularity
  * This dataflow granularity denotes that the value or address of a pointer is flowing from
  * [Dataflow.start] to [Dataflow.end].
  */
-class PointerDataflowGranularity() : Granularity
+class PointerDataflowGranularity(
+    /** Does the Dataflow affect the pointer's address or its value? */
+    val pointerTarget: PointerAccess
+) : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -86,8 +90,8 @@ fun partial(target: Declaration?): PartialDataflowGranularity {
  * Creates a new [PointerDataflowGranularity]. The [ValueAccess] is specifies if the pointer's value
  * is accessed, or its address.
  */
-fun pointer(): PointerDataflowGranularity {
-    return PointerDataflowGranularity()
+fun pointer(access: PointerAccess): PointerDataflowGranularity {
+    return PointerDataflowGranularity(access)
 }
 
 /**

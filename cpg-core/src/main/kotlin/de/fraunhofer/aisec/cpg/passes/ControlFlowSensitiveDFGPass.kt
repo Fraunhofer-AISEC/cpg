@@ -89,7 +89,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         log.trace("Handling {} (complexity: {})", node.name, c)
 
-        clearFlowsOfVariableDeclarations(node)
+        // clearFlowsOfVariableDeclarations(node)
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
@@ -124,8 +124,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             } else {
                 value.elements.forEach {
                     val granularity =
-                        if (key is PointerReference && it is VariableDeclaration)
-                            PointerDataflowGranularity()
+                        if (
+                            (key is PointerReference || key is PointerDereference) &&
+                                (it is VariableDeclaration || it is ParameterDeclaration)
+                        )
+                            PointerDataflowGranularity(PointerAccess.ADDRESS)
+                        else if (key is PointerDereference)
+                            PointerDataflowGranularity(PointerAccess.VALUE)
                         else default()
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
