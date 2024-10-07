@@ -33,8 +33,20 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
@@ -231,7 +243,26 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleFor(node: Python.AST.NormalOrAsyncFor): Statement {
+    /**
+     * Translates a Python [`For`](https://docs.python.org/3/library/ast.html#ast.For) into an
+     * [ForEachStatement].
+     *
+     * Python supports implicit unpacking of multiple loop variables. To map this to CPG node, we
+     * translate the following implicit unpacking of code like this:
+     * ```python
+     * for a, b, c in someNestedList:
+     *     pass
+     * ```
+     *
+     * to have only one loop variable and add the unpacking statement to the top of the loop body
+     * like this:
+     * ```python
+     * for tempVar in someNestedList:
+     *     a, b, c = tempVar
+     *     pass
+     * ```
+     */
+    private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEachStatement {
         val ret = newForEachStatement(rawNode = node)
         if (node is IsAsync) {
             ret.addDeclaration(
@@ -243,12 +274,64 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body, parentNode = node)
+
+        when (val loopVar = frontend.expressionHandler.handle(node.target)) {
+            is InitializerListExpression -> { // unpacking
+                val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
+
+                ret.variable = tempVarRef
+
+                val body = makeBlock(node.body, parentNode = node)
+                body.statements.add(
+                    0,
+                    unpackingAssignment
+                ) // add the unpacking instruction to the top of the loop body
+                ret.statement = body
+            }
+            is Reference -> { // only one var
+                ret.variable = loopVar
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+            else -> {
+                ret.variable =
+                    newProblemExpression(
+                        problem =
+                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                        rawNode = node.target
+                    )
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+        }
+
         if (node.orelse.isNotEmpty()) {
             ret.elseStatement = makeBlock(node.orelse, parentNode = node)
         }
         return ret
+    }
+
+    /**
+     * This function creates two things:
+     * - A [Reference] to a variable with a random [Name]
+     * - An [AssignExpression] assigning the reference above to the [loopVar] input
+     *
+     * This is used in [handleFor] when loops have multiple loop variables to iterate over with
+     * automatic unpacking. We translate this implicit unpacking to multiple CPG nodes, as the CPG
+     * does not support automatic unpacking.
+     */
+    private fun getUnpackingNodes(
+        loopVar: InitializerListExpression
+    ): Pair<Reference, AssignExpression> {
+        val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
+        val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
+        val assign =
+            newAssignExpression(
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef)
+                )
+                .implicit()
+                .codeAndLocationFrom(loopVar)
+        return Pair(tempRef, assign)
     }
 
     private fun handleExpressionStatement(node: Python.AST.Expr): Statement {
@@ -436,8 +519,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Make sure we open a new (block) scope for the function body. This is not a 1:1
             // mapping to python scopes, since python only has a "function scope", but in the CPG
             // the function scope only comprises the function arguments, and we need a block scope
-            // to
-            // hold all local variables within the function body.
+            // to hold all local variables within the function body.
             result.body = makeBlock(s.body, parentNode = s, enterScope = true)
         }
 
@@ -592,47 +674,60 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            if (decorator !is Python.AST.Call) {
-                log.warn(
-                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
-            if (decFuncParsed !is MemberExpression) {
-                log.warn(
-                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val annotation =
-                newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
-                    )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
+            var annotation =
+                when (decorator) {
+                    is Python.AST.Name -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
+                    }
+                    is Python.AST.Attribute -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        newAnnotation(name = name, rawNode = decorator)
+                    }
+                    is Python.AST.Call -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        val annotation = newAnnotation(name = name, rawNode = decorator)
+                        for (arg in decorator.args) {
+                            val argParsed = frontend.expressionHandler.handle(arg)
+                            annotation.members +=
+                                newAnnotationMember(
+                                    "annotationArg" + decorator.args.indexOf(arg), // TODO
+                                    argParsed,
+                                    rawNode = arg
+                                )
+                        }
+                        for (keyword in decorator.keywords) {
+                            annotation.members +=
+                                newAnnotationMember(
+                                    name = keyword.arg,
+                                    value = frontend.expressionHandler.handle(keyword.value),
+                                    rawNode = keyword
+                                )
+                        }
+                        annotation
+                    }
+                    else -> {
+                        Util.warnWithFileLocation(
+                            frontend,
+                            decorator,
+                            log,
+                            "Decorator is of type ${decorator::class}, cannot handle this (yet)."
+                        )
+                        continue
+                    }
+                }
 
             annotations += annotation
         }
@@ -668,16 +763,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt
-        var baseStmt = parentNode as? Python.AST.BaseStmt
-        return if (baseStmt != null) {
-            result.codeAndLocationFromChildren(baseStmt)
-        } else {
-            // Otherwise, continue without setting the location
-            log.warn(
-                "Could not set location on wrapped block because the parent node is not a python statement"
-            )
-            result
+        val ast = parentNode as? Python.AST.AST
+        if (ast != null) {
+            // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+            // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+            // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+            // other nodes that are not "statements", but also handled as part of this handler,
+            // e.g., the Python.AST.ExceptHandler.
+            with(frontend) { result.codeAndLocationFromChildren(ast) }
         }
+
+        return result
     }
 
     /**

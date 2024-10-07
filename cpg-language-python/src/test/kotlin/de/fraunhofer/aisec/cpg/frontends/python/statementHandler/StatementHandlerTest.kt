@@ -154,7 +154,7 @@ class StatementHandlerTest : BaseTest() {
 
             val add = result.operators["__add__"]
             assertNotNull(add)
-            assertEquals(add, opCall.invokes.singleOrNull())
+            assertInvokes(opCall, add)
 
             // ... and one to __pos__ (+)
             opCall = result.operatorCalls("+").getOrNull(1)
@@ -163,7 +163,7 @@ class StatementHandlerTest : BaseTest() {
 
             val pos = result.operators["__pos__"]
             assertNotNull(pos)
-            assertEquals(pos, opCall.invokes.singleOrNull())
+            assertInvokes(opCall, pos)
         }
     }
 
@@ -174,16 +174,15 @@ class StatementHandlerTest : BaseTest() {
         val func = result.functions["test_assert"]
         assertNotNull(func, "Function 'test_assert' should be found")
 
-        val assertStatement =
-            func.body.statements.firstOrNull { it is AssertStatement } as? AssertStatement
-        assertNotNull(assertStatement, "Assert statement should be found")
+        val assertStatement = func.body.statements.firstOrNull { it is AssertStatement }
+        assertIs<AssertStatement>(assertStatement, "Assert statement should be found")
 
         val condition = assertStatement.condition
         assertNotNull(condition, "Assert statement should have a condition")
         assertEquals("1 == 1", condition.code, "The condition is incorrect")
 
-        val message = assertStatement.message as? Literal<*>
-        assertNotNull(message, "Assert statement should have a message")
+        val message = assertStatement.message
+        assertIs<Literal<*>>(message, "Assert statement should have a message")
         assertEquals("Test message", message.value, "The assert message is incorrect")
     }
 
@@ -202,13 +201,13 @@ class StatementHandlerTest : BaseTest() {
         // Test for `del my_list[2]`
         val deleteStmt2 = deleteExpressions[1]
         assertEquals(1, deleteStmt2.operands.size)
-        assertTrue(deleteStmt2.operands.first() is SubscriptExpression)
+        assertIs<SubscriptExpression>(deleteStmt2.operands.firstOrNull())
         assertTrue(deleteStmt2.additionalProblems.isEmpty())
 
         // Test for `del my_dict['b']`
         val deleteStmt3 = deleteExpressions[2]
         assertEquals(1, deleteStmt3.operands.size)
-        assertTrue(deleteStmt3.operands.first() is SubscriptExpression)
+        assertIs<SubscriptExpression>(deleteStmt3.operands.firstOrNull())
         assertTrue(deleteStmt3.additionalProblems.isEmpty())
 
         // Test for `del obj.d`
