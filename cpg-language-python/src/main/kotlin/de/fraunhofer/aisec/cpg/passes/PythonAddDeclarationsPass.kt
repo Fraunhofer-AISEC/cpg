@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import com.fasterxml.jackson.annotation.JsonProperty.Access
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -83,7 +84,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the [ref].
      */
     private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
-        if (ref.resolutionHelper is CallExpression) {
+        if (ref.access != AccessValues.WRITE) {
             return null
         }
 
