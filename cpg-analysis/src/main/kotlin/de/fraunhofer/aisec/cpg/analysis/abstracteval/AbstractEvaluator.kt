@@ -42,10 +42,15 @@ import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
 
 class AbstractEvaluator {
+    // The node for which we want to get the value
+    lateinit var goalNode: Node
+    // The name of the value we are analyzing
     lateinit var targetName: String
+    // The type of the value we are analyzing
     lateinit var targetType: KClass<out Value>
 
     fun evaluate(node: Node): LatticeInterval {
+        goalNode = node
         targetName = node.name.toString()
         targetType = getType(node)
         val initializer = getInitializerOf(node, targetType)!!
@@ -55,14 +60,32 @@ class AbstractEvaluator {
         // evaluate effect of each operation on the list until we reach "node"
         val startState = IntervalState(null)
         startState.push(initializer, IntervalLattice(initialRange))
-        val finalState = iterateEOG(initializer, startState, ::test)
+        val finalState = iterateEOG(initializer, startState, ::handleNode)
         // TODO: null-safety
         return finalState!![node]!!.elements
     }
 
-    private fun test(n: Node, s: State<Node, LatticeInterval>, w: Worklist<Node, Node, LatticeInterval>): State<Node, LatticeInterval> {
+    /**
+     * This function delegates to the right handler depending on the next node.
+     * This is the handler used in _iterateEOG_ to correctly handle complex statements.
+     *
+     * @param currentNode The current node
+     * @param state The state for the current node
+     * @param worklist The whole worklist to manually handle complex scenarios if necessary
+     * @return The updated state after handling the current node
+     */
+    private fun handleNode(currentNode: Node, state: State<Node, LatticeInterval>, worklist: Worklist<Node, Node, LatticeInterval>): State<Node, LatticeInterval> {
+        // TODO: handle the different cases
+        return when (currentNode) {
+            is ForStatement,
+            is WhileStatement,
+            is ForEachStatement,
+            is DoStatement -> handleLoop(currentNode, state)
+            is BranchingNode -> handleBranch(currentNode, state)
+            else -> state.applyEffect(currentNode).first
+        }
         // TODO: when the goal node is reached we must not return any more states in order to terminate!
-        return s
+        return state
     }
 
     private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
@@ -73,12 +96,15 @@ class AbstractEvaluator {
         return type.createInstance().getInitialRange(initializer)
     }
 
-    private fun LatticeInterval.applyEffect(
+    private fun State<Node, LatticeInterval>.applyEffect(
         node: Node,
-        name: String,
-        type: KClass<out Value>
-    ): Pair<LatticeInterval, Boolean> {
-        return type.createInstance().applyEffect(this, node, name)
+    ): Pair<State<Node, LatticeInterval>, Boolean> {
+        // TODO: do we really need the knowledge if it had an effect from this method?
+        val (newInterval, hadEffect) = targetType.createInstance().applyEffect(this[node]!!.elements, node, targetName)
+        this.push(node, IntervalLattice(newInterval))
+        // Push all the next EOG nodes to the state with BOTTOM (unknown) value
+        node.nextEOG.forEach {this.push(it, IntervalLattice(LatticeInterval.BOTTOM))}
+        return this to hadEffect
     }
 
     /**
@@ -102,17 +128,7 @@ class AbstractEvaluator {
         }
     }
 
-    /**
-     * This function delegates to the right handler depending on the next node. Use this instead of
-     * directly calling _applyEffect_ to correctly handle complex statements.
-     *
-     * @param range The previous size range
-     * @param node The current node
-     * @param name The name of the collection variable
-     * @param type The type of the collection
-     * @param goalNode The target node for the analysis
-     * @return A Pair containing the new size range and the next node for the analysis
-     */
+
     private fun handleNext(
         range: LatticeInterval,
         node: Node,
@@ -120,14 +136,7 @@ class AbstractEvaluator {
         type: KClass<out Value>,
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
-        return when (node) {
-            is ForStatement,
-            is WhileStatement,
-            is ForEachStatement,
-            is DoStatement -> handleLoop(range, node, name, type, goalNode)
-            is BranchingNode -> handleBranch(range, node, name, type, goalNode)
-            else -> range.applyEffect(node, name, type).first to node.nextEOG.first()
-        }
+
     }
 
     /**
