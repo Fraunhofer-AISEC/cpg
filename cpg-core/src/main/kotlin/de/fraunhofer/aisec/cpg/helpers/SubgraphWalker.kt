@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
@@ -349,13 +350,14 @@ object SubgraphWalker {
 /**
  * Tries to replace the [old] expression with a [new] one, given the [parent].
  *
- * There are two things to consider:
+ * There are three things to consider:
  * - First, this only works if [parent] is either an [ArgumentHolder] or [StatementHolder].
  *   Otherwise, we cannot instruct the parent to exchange the node
  * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
  *   only support a replacement very early in the pass system. To be specific, we only allow
  *   replacement before any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
+ * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
  */
 context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
