@@ -48,6 +48,8 @@ class AbstractEvaluator {
     lateinit var targetName: String
     // The type of the value we are analyzing
     lateinit var targetType: KClass<out Value>
+    // A barrier that is used to block the evaluation from progressing until it is cleared
+    var pathBarrier: Node? = null
 
     fun evaluate(node: Node): LatticeInterval {
         goalNode = node
@@ -75,12 +77,16 @@ class AbstractEvaluator {
      * @return The updated state after handling the current node
      */
     private fun handleNode(currentNode: Node, state: State<Node, LatticeInterval>, worklist: Worklist<Node, Node, LatticeInterval>): State<Node, LatticeInterval> {
+        // Do not add perform any operation or add new nodes if we reached a barrier
+        if (currentNode == pathBarrier) {
+            return state
+        }
         // TODO: handle the different cases
         return when (currentNode) {
             is ForStatement,
             is WhileStatement,
             is ForEachStatement,
-            is DoStatement -> handleLoop(currentNode, state)
+            is DoStatement -> handleLoop(currentNode, state, worklist)
             is BranchingNode -> handleBranch(currentNode, state)
             else -> state.applyEffect(currentNode).first
         }
@@ -128,17 +134,6 @@ class AbstractEvaluator {
         }
     }
 
-
-    private fun handleNext(
-        range: LatticeInterval,
-        node: Node,
-        name: String,
-        type: KClass<out Value>,
-        goalNode: Node
-    ): Pair<LatticeInterval, Node> {
-
-    }
-
     /**
      * Handles the analysis of a Looping statement. It does so by filtering out uninteresting
      * statements before applying widening and narrowing in each iteration. If the target node is
@@ -152,112 +147,56 @@ class AbstractEvaluator {
      * @return A Pair containing the new size range and the next node for the analysis
      */
     private fun handleLoop(
-        range: LatticeInterval,
         node: Node,
-        name: String,
-        type: KClass<out Value>,
-        goalNode: Node
-    ): Pair<LatticeInterval, Node> {
+        state: State<Node, LatticeInterval>,
+        worklist: Worklist<Node, Node, LatticeInterval>
+    ): IntervalState {
+        // TODO: create a new micro-evaluation of the value! To do this:
+        //  1) Determine the EOG that ends the loop
+        //  2) Create a new State with the current value as initial value
+        //  3) Set the mode of the state to WIDEN
+        //  4) Make sure the worklist terminates at the end of the loop
+        //  5) When the worklist terminates, set the mode to NARROW and start again
+        //  6) After the second termination, copy important result to the outer state
+
         val afterLoop = node.nextEOG[1]
-        // First try to determine whether the condition is applicable
-        if (node is ForStatement && evaluateCondition(node.condition) == 1) {
-            return range to afterLoop
-        }
-        val body = mutableListOf<Node>()
-        var newRange = range
-        val firstBodyStatement: Node? =
-            when (node) {
-                is ForStatement -> {
-                    when (node.statement) {
-                        // This cast is important! Otherwise, the wrong statements are returned
-                        is Block -> (node.statement as Block).statements.firstOrNull()
-                        null -> null
-                        else -> node.statement
-                    }
-                }
-                is WhileStatement -> {
-                    when (node.statement) {
-                        is Block -> (node.statement as Block).statements.firstOrNull()
-                        null -> null
-                        else -> node.statement
-                    }
-                }
-                is ForEachStatement -> {
-                    when (node.statement) {
-                        is Block -> (node.statement as Block).statements.firstOrNull()
-                        null -> null
-                        else -> node.statement
-                    }
-                }
-                is DoStatement -> {
-                    when (node.statement) {
-                        is Block -> (node.statement as Block).statements.firstOrNull()
-                        null -> null
-                        else -> node.statement
-                    }
-                }
-                else -> throw NotImplementedException()
-            }
-        var current: Node? = firstBodyStatement
-        // Preprocessing: filter for valid nodes
-        while (current != null && current != afterLoop && current != node) {
-            // Only add the Statement if it affects the range
-            if (range.applyEffect(current, name, type).second) {
-                body.add(current)
-            }
-            // get the next node, skipping nested structures
-            // we assume that the last nextEOG always points to the node after the branch!
-            current = current.nextEOG.last()
-        }
-        // Stop if the body contains no valid nodes
-        if (body.isEmpty()) {
-            return range to afterLoop
+
+        // TODO: check condition
+
+        // Create new state using widening and iterate over it
+        val operatingState = IntervalState(IntervalState.Mode.WIDEN)
+        operatingState.push(node, state[node])
+        node.nextEOG.forEach { operatingState.push(it, IntervalLattice(LatticeInterval.BOTTOM)) }
+        // We set the barrier before iterating to prevent the iteration from leaving the loop
+        pathBarrier = afterLoop
+        iterateEOG(node, operatingState, ::handleNode)
+        pathBarrier = null
+
+        // -- At this point the worklist should be exhausted so that iterateEOG returned --
+
+        // change the state to narrowing and push the loop start to the worklist again
+        operatingState.changeMode(IntervalState.Mode.NARROW)
+        worklist.push(node, operatingState)
+        node.nextEOG.forEach { operatingState.push(it, operatingState[node]) }
+        // We set the barrier before iterating to prevent the iteration from leaving the loop
+        pathBarrier = afterLoop
+        iterateEOG(node, operatingState, ::handleNode)
+        pathBarrier = null
+
+        // -- At this point the worklist should be exhausted so that iterateEOG returned --
+
+        // overwrite the entry node and goal node if it exists in the loop
+        // else push the end of the loop to the worklist
+        state[node] = operatingState[node]!!
+        if (goalNode in operatingState.keys) {
+            state[goalNode] = operatingState[node]!!
+        } else {
+            worklist.push(afterLoop, state)
         }
 
-        // Initialize the intervals for the previous loop iteration
-        val prevBodyIntervals = Array<LatticeInterval>(body.size) { range }
-        // WIDENING
-        outer@ while (true) {
-            for (index in body.indices) {
-                // First apply the effect of the next node
-                val (lRange, _) = handleNext(newRange, body[index], name, type, goalNode)
-                newRange = lRange
-                // Then widen using the previous iteration
-                // Only widen for the first effective node in the loop (loop separator)
-                if (index == 0) {
-                    newRange = prevBodyIntervals[index].widen(newRange)
-                }
-                // If nothing changed we can abort
-                if (newRange == prevBodyIntervals[index]) {
-                    break@outer
-                } else {
-                    prevBodyIntervals[index] = newRange
-                }
-            }
-        }
-        // NARROWING
-        outer@ while (true) {
-            for (index in body.indices) {
-                // First apply the effect of the next node
-                val (lRange, _) = handleNext(newRange, body[index], name, type, goalNode)
-                newRange = lRange
-                // Then narrow using the previous iteration
-                newRange = prevBodyIntervals[index].narrow(newRange)
-                // If ALL loop ranges are stable we can abort
-                if (index == body.size - 1 && newRange == prevBodyIntervals[index]) {
-                    break@outer
-                } else {
-                    prevBodyIntervals[index] = newRange
-                }
-            }
-        }
+        // -- we can return the now overwritten state --
 
-        // return goalNode as next node if it was in the loop to prevent skipping loop termination
-        // condition
-        if (body.contains(goalNode)) {
-            return newRange to goalNode
-        }
-        return newRange to afterLoop
+        return state as IntervalState
     }
 
     /**
