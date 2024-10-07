@@ -32,28 +32,37 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.helpers.State
+import de.fraunhofer.aisec.cpg.helpers.Worklist
+import de.fraunhofer.aisec.cpg.helpers.iterateEOG
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
 
 class AbstractEvaluator {
-    fun evaluate(node: Node): LatticeInterval {
-        val name = node.name.toString()
-        val type = getType(node)
-        val initializer = getInitializerOf(node, type)!!
-        var range = getInitialRange(initializer, type)
-        // evaluate effect of each operation on the list until we reach "node"
-        var current = initializer
-        do {
-            val (newRange, newCurrent) = handleNext(range, current, name, type, node)
-            range = newRange
-            current = newCurrent
-        } while (current != node)
+    lateinit var targetName: String
+    lateinit var targetType: KClass<out Value>
 
-        return range
+    fun evaluate(node: Node): LatticeInterval {
+        targetName = node.name.toString()
+        targetType = getType(node)
+        val initializer = getInitializerOf(node, targetType)!!
+        val initialRange = getInitialRange(initializer, targetType)
+
+
+        // evaluate effect of each operation on the list until we reach "node"
+        val startState = IntervalState(null)
+        startState.push(initializer, IntervalLattice(initialRange))
+        val finalState = iterateEOG(initializer, startState, ::test)
+        // TODO: null-safety
+        return finalState!![node]!!.elements
+    }
+
+    private fun test(n: Node, s: State<Node, LatticeInterval>, w: Worklist<Node, Node, LatticeInterval>): State<Node, LatticeInterval> {
+        // TODO: when the goal node is reached we must not return any more states in order to terminate!
+        return s
     }
 
     private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
@@ -141,6 +150,10 @@ class AbstractEvaluator {
         goalNode: Node
     ): Pair<LatticeInterval, Node> {
         val afterLoop = node.nextEOG[1]
+        // First try to determine whether the condition is applicable
+        if (node is ForStatement && evaluateCondition(node.condition) == 1) {
+            return range to afterLoop
+        }
         val body = mutableListOf<Node>()
         var newRange = range
         val firstBodyStatement: Node? =
@@ -315,13 +328,32 @@ class AbstractEvaluator {
     }
 
     /**
-     * Returns 0 if the condition evaluates to True and 1 if it evaluates to false.
-     * If the outcome cannot be deduced it returns -1.
+     * Returns 0 if the condition evaluates to True and 1 if it evaluates to false. If the outcome
+     * cannot be deduced it returns -1. This method is always best-effort and cannot guarantee that
+     * the outcome can be determined, but must not return a wrong result.
+     *
      * @param condition The Expression used as branch condition
      * @return 0, 1 or -1 depending on the Boolean evaluation
      */
-    private fun evaluateCondition(condition: Expression): Int {
+    private fun evaluateCondition(condition: Expression?): Int {
         // TODO: this method needs to try and evaluate branch conditions to predict the outcome
-        return 0
+//        when (condition) {
+//            is BinaryOperator -> {
+//                when (condition.operatorCode) {
+//                    "<" -> {
+//                        if (condition.lhs is Reference && condition.rhs is Literal<*> && condition.rhs.type is IntegerType) {
+//                            val leftValue = evaluate(condition.lhs)
+//                            if (
+//                                leftValue is LatticeInterval.Bounded &&
+//                                    leftValue.upper < LatticeInterval.Bound.Value((condition.rhs as Literal<*>).value as Int)
+//                            ) {
+//                                return 0
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+        return -1
     }
 }
