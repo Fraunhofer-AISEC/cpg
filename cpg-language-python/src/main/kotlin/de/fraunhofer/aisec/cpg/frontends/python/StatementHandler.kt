@@ -96,11 +96,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      *
      * We return a Block to handle the with statement, following
      * [python's documentation](https://docs.python.org/3/reference/compound_stmts.html#the-with-statement).
-     * The context manager's `__enter__` and `__exit__` methods are identified before entering the
-     * try-block. `__enter__()` is called before the try-block. We simplify this a bit (compared to
-     * the documentation) and make the identification and the call in the same step. `__exit__()` is
-     * either called in the `except`-block or in the `finally`-block. In fact, the `finally` is used
-     * like an `else`-block, so we use this construction.
+     * The context manager's `__enter__` and `__exit__` methods should be identified before entering
+     * the try-block. However, we simplify the code from the documentation as follows:
+     * * `__enter__()` is called before the try-block.We make the identification and the call in the
+     *   same step.
+     * * `__exit__()` is either called in the `except`-block or in the `finally`-block but not
+     *   identified separately.
+     * * In fact, the `finally` is used like an `else`-block, so we use this construction.
      *
      * Example: We will translate the code
      *
@@ -113,16 +115,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      *
      * ```python
      * manager = ContextManager()
-     * exit = type(manager).__exit__
      * tmpVal = manager.__enter__()
      * try:
      *     cm = tmpVal # Doesn't exist if no variable is used
      *     cm.doSomething()
      * except:
-     *     if not exit(manager, *sys.exc_info()):
+     *     if not manager.__exit__(*sys.exc_info()):
      *         raise
      * else:
-     *     exit(manager, None, None, None)
+     *     manager.__exit__(None, None, None)
      * ```
      */
     private fun handleWithStatement(node: Python.AST.With): Block {
@@ -148,30 +149,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             mainBlock.statements.add(managerAssignment)
 
-            // Identifies the `__exit__()`-method without calling it. Is assigned to another random
-            // variable.
-            // Represents the line "exit = type(manager).__exit__"
-            val tempExitName = Name.random(prefix = CONTEXT_MANAGER + "Exit")
-            val exitRef = newReference(name = tempExitName).implicit()
-            val typeOfMgrExit = newCallExpression(newReference("type"), "type").implicit()
-            typeOfMgrExit.addArgument(newReference(managerName).implicit())
-            val exitMemberRef = newMemberExpression("__exit__", typeOfMgrExit).implicit()
-            val exitAssignment =
-                newAssignExpression(
-                        operatorCode = "=",
-                        lhs = listOf(exitRef),
-                        rhs = listOf(exitMemberRef)
-                    )
-                    .implicit()
-            mainBlock.statements.add(exitAssignment)
-
             // calls __enter__() and assign to another random variable.
             // Represents the line "tmpVal = manager.__enter__()"
             val enterVarName = Name.random(prefix = CONTEXT_MANAGER + "Enter")
             val enterVar = newReference(name = enterVarName).implicit()
             val enterCall =
                 newMemberCallExpression(
-                        callee = newMemberExpression(name = "__enter__", base = manager),
+                        callee = newMemberExpression(name = "__enter__", base = manager).implicit(),
                         rawNode = withItem
                     )
                     .implicit()
@@ -201,7 +185,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Prepare the __exit__(manager, None, None, None) call for the else-block.
             val exitCallWithNone =
                 newMemberCallExpression(
-                        callee = newReference(name = tempExitName).implicit(),
+                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
                         rawNode = withItem
                     )
                     .implicit()
@@ -214,7 +198,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Prepare the __exit__(manager, *sys.exc_info()) call for the catch-block.
             val exitCallWithSysExec =
                 newMemberCallExpression(
-                        callee = newReference(name = tempExitName).implicit(),
+                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
                         rawNode = withItem
                     )
                     .implicit()
