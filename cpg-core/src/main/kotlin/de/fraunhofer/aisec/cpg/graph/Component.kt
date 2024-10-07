@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.passes.ImportDependencyMap
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
@@ -49,8 +49,7 @@ open class Component : Node() {
 
     @Transient
     @PopulatedByPass(ImportResolver::class)
-    var importDependencies: ImportDependencyMap =
-        mutableMapOf<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>()
+    var importDependencies = ImportDependencies(translationUnits)
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {

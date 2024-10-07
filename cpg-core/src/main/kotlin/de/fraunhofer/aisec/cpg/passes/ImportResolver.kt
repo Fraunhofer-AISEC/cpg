@@ -37,8 +37,115 @@ import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 
-typealias ImportDependencyMap =
-    MutableMap<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>
+class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
+    HashMap<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>() {
+
+    init {
+        // Populate the map with all translation units so that we have an entry in our list
+        // for all
+        this += tus.map { Pair(it, mutableSetOf()) }
+    }
+
+    /**
+     * The list of [TranslationUnitDeclaration] nodes, sorted by their position in the dependency
+     * graph. TUs without dependencies are first in the list, following by TUs that import TUs
+     * without dependencies, and so on.
+     */
+    val sortedTranslationUnits: List<TranslationUnitDeclaration> by lazy {
+        WorkList(this).resolveDependencies()
+    }
+
+    fun add(importer: TranslationUnitDeclaration, imported: TranslationUnitDeclaration): Boolean {
+        var list = this.computeIfAbsent(importer) { mutableSetOf<TranslationUnitDeclaration>() }
+        return list.add(imported)
+    }
+
+    /**
+     * A work-list, which contains a local copy of our dependency map, so that we can remove items
+     * from it while determining the order.
+     */
+    class WorkList(start: ImportDependencies) :
+        HashMap<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>() {
+
+        init {
+            // Populate the work-list with a copy of the import dependency map
+            this += start.map { Pair(it.key, it.value.toMutableSet()) }
+        }
+
+        /**
+         * Resolves the import dependencies and returns the list in which translation units should
+         * be processed. The algorithm is as follows:
+         * - We loop through all translation units in the map
+         * - We try to fetch the next translation unit without any dependencies
+         * - If there is one, we add it to the list and call [markAsDone]. This will remove the TU
+         *   as dependency from the map
+         * - If there is none, we are either finished (if no TUs are left) -- or we ran into a
+         *   problem
+         * - If we ran into a problem, we add all leftover TUs in a nondeterministic order to the
+         *   list
+         */
+        fun resolveDependencies(): List<TranslationUnitDeclaration> {
+            var list = mutableListOf<TranslationUnitDeclaration>()
+
+            while (true) {
+                // Try to get the next TU
+                var tu = nextTranslationUnitWithoutDependencies()
+                if (tu != null) {
+                    // Add tu
+                    list += tu
+                    // Mark it as done, this will retrieve any dependencies to this TU from the map
+                    markAsDone(tu)
+                } else {
+                    var remaining = keys
+                    // No translation units without dependencies found. If there are no translation
+                    // units left, this means we are done
+                    if (remaining.isEmpty()) {
+                        break
+                    } else {
+                        log.warn(
+                            "We still have {} translation units with import dependency problems. We will just process them in any order",
+                            remaining.size
+                        )
+                        // If there are still translation units left, we have a problem. This might
+                        // be cyclic imports or other cases we did not think of yet. We still want
+                        // to handle all the TUs, so we just process them in any order
+                        remaining.forEach { list += it }
+                        break
+                    }
+                }
+            }
+
+            return list
+        }
+
+        /**
+         * Retrieves the next [TranslationUnitDeclaration] without any dependencies to others.
+         * Returns null if only translation units WITH dependencies are left.
+         */
+        fun nextTranslationUnitWithoutDependencies(): TranslationUnitDeclaration? {
+            // Loop through all entries to find one without a dependency
+            for (entry in entries) {
+                if (entry.value.isEmpty()) {
+                    return entry.key
+                }
+            }
+
+            return null
+        }
+
+        /**
+         * Marks the processing of this [TranslationUnitDeclaration] as done. It removes it from the
+         * map and also removes it from the dependencies of all other TUs.
+         */
+        private fun markAsDone(tu: TranslationUnitDeclaration) {
+            // Remove it from the map
+            remove(tu)
+
+            // And also remove it from all lists
+            values.forEach { it.remove(tu) }
+        }
+    }
+}
 
 /**
  * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
@@ -53,13 +160,7 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(t: Component) {
         currentComponent = t
 
-        // Populate the importedBy with all translation units so that we have an entry in our list
-        // for all
-        t.importDependencies =
-            t.translationUnits
-                .map { Pair(it, mutableSetOf<TranslationUnitDeclaration>()) }
-                .associate { it }
-                .toMutableMap()
+        t.importDependencies = ImportDependencies(t.translationUnits)
 
         // In order to resolve imports as good as possible, we need the information which namespace
         // does an import on which other
@@ -78,7 +179,7 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 handleImportDeclaration(node)
             }
         }
-        t.importDependencies.resolveDependencies {
+        t.importDependencies.sortedTranslationUnits.forEach {
             log.debug("Resolving imports for translation unit {}", it.name)
             walker.iterate(it)
         }
@@ -122,11 +223,7 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             // Lastly, store the namespace TU as an import dependency of the TU where the import was
-            var list =
-                currentComponent.importDependencies.computeIfAbsent(importTu) {
-                    mutableSetOf<TranslationUnitDeclaration>()
-                }
-            var added = list.add(namespaceTu)
+            var added = currentComponent.importDependencies.add(importTu, namespaceTu)
             if (added) {
                 log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
             }
@@ -162,76 +259,4 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun cleanup() {
         // Nothing to do
     }
-}
-
-/**
- * This function calls [callback] in the order of the dependency map. The algorithm is as follows:
- * - We loop through all translation units in the map
- * - We try to fetch the next translation unit without any dependencies
- * - If there is one, we call the [callback] and call [markAsDone]. This will remove the TU as
- *   dependency from the map
- * - If there is none, we are either finished (if no TUs are left) -- or we ran into a problem
- * - If we ran into a problem, we just execute [callback] for all leftover TUs in a nondeterministic
- *   order
- */
-fun ImportDependencyMap.resolveDependencies(callback: (tu: TranslationUnitDeclaration) -> Unit) {
-    // We do not want to operate on the original map, since we remove values, so we make a copy in a
-    // rather complicated way
-    var dependencies: ImportDependencyMap =
-        this.map { Pair(it.key, it.value.toMutableSet()) }.associate { it }.toMutableMap()
-
-    while (true) {
-        // Try to get the next TU
-        var tu = dependencies.nextTranslationUnitWithoutDependencies()
-        if (tu != null) {
-            // Handle tu
-            callback(tu)
-            // Mark it as done, this will retrieve any dependencies to this TU from the map
-            dependencies.markAsDone(tu)
-        } else {
-            var remaining = dependencies.keys
-            // No translation units without dependencies found. If there are no translation
-            // units left, this means we are done
-            if (remaining.isEmpty()) {
-                break
-            } else {
-                log.warn(
-                    "We still have {} translation units with import dependency problems. We will just process them in any order",
-                    remaining.size
-                )
-                // If there are still translation units left, we have a problem. This might be
-                // cyclic imports or other cases we did not think of yet. We still want to
-                // handle all the TUs, so we just process them in any order
-                remaining.forEach { callback(it) }
-                break
-            }
-        }
-    }
-}
-
-/**
- * Retrieves the next [TranslationUnitDeclaration] without any dependencies to others. Returns null
- * if only translation units WITH dependencies are left.
- */
-fun ImportDependencyMap.nextTranslationUnitWithoutDependencies(): TranslationUnitDeclaration? {
-    // Loop through all entries to find one without a dependency
-    for (entry in this.entries) {
-        if (entry.value.isEmpty()) {
-            return entry.key
-        }
-    }
-
-    return null
-}
-
-/**
- * Marks the processing of this [TranslationUnitDeclaration] as done. It removes it from the map and
- * also removes it from the dependencies of all other TUs.
- */
-private fun ImportDependencyMap.markAsDone(tu: TranslationUnitDeclaration) {
-    // Remove it from the map
-    this.remove(tu)
-
-    // And also remove it from all lists
-    this.values.forEach { it.remove(tu) }
 }

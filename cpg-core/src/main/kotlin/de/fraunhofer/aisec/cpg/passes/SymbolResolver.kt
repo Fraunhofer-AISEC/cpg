@@ -102,7 +102,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Resolve symbols in our translation units in the order depending on their import
         // dependencies
-        component.importDependencies.resolveDependencies {
+        component.importDependencies.sortedTranslationUnits.forEach {
             log.debug("Resolving symbols of translation unit {}", it.name)
             currentTU = it
             // Gather all resolution EOG starters; and make sure they really do not have a
