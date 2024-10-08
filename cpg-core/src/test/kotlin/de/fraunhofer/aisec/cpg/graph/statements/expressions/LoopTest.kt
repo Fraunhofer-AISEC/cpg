@@ -46,7 +46,7 @@ class LoopTest {
         assertNotNull(whileStmt)
         assertTrue { func.body.statements.contains(whileStmt) }
         val breakStmt = whileStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
-        val elseCall = whileTest.callsByName("elseCall").getOrNull(0)
+        val elseCall = whileTest.calls["elseCall"]
         val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
