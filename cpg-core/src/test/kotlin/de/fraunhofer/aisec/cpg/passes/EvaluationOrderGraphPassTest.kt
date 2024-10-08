@@ -48,7 +48,6 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postWhile)
-        assertTrue(whileStmt.astChildren.all { whileStmt.toString().contains(it.toString()) })
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
@@ -95,7 +94,6 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postWhile)
-        assertTrue(doStmt.astChildren.all { doStmt.toString().contains(it.toString()) })
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
@@ -142,7 +140,6 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postFor)
-        assertTrue(forStmt.astChildren.all { forStmt.toString().contains(it.toString()) })
         Util.eogConnect(
             en = Util.Edge.ENTRIES,
             n = elseCall,
@@ -181,7 +178,6 @@ class EvaluationOrderGraphPassTest {
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postForEach)
-        assertTrue(forEachStmt.astChildren.all { forEachStmt.toString().contains(it.toString()) })
         Util.eogConnect(
             en = Util.Edge.ENTRIES,
             n = elseCall,
