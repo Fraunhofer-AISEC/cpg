@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.body
 import de.fraunhofer.aisec.cpg.graph.builder.call
 import de.fraunhofer.aisec.cpg.graph.builder.declare
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.literal
+import de.fraunhofer.aisec.cpg.graph.builder.ref
 import de.fraunhofer.aisec.cpg.graph.builder.t
 import de.fraunhofer.aisec.cpg.graph.builder.`throw`
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
@@ -128,7 +128,7 @@ class DataflowTest {
                         function("foo", t("void")) {
                             body {
                                 declare { variable("a", t("short")) { literal(42) } }
-                                `throw` { call("SomeError") { /* TODO parameter a */} }
+                                `throw` { call("SomeError") { ref("a") } }
                             }
                         }
                     }
