@@ -140,7 +140,7 @@ class DataflowTest {
         val body = main.body
         assertIs<Block>(body)
 
-        val throwStmt = body.statements.getOrNull(0)
+        val throwStmt = body.statements.getOrNull(1)
         assertIs<ThrowStatement>(throwStmt)
         assertNotNull(throwStmt.exception)
         val throwCall = throwStmt.exception
