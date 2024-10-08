@@ -31,6 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
+/**
+ * This [Node] is a generalization of all looping statements and serves duplication reduction.
+ * All Looping statements can be identified by if they inherit from this class. Loops deviate
+ * from other nods in the way they change a programs control flow, and do so in combination
+ * with other nodes, e.g. [BreakStatement].
+ */
 abstract class LoopStatement : Statement() {
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
