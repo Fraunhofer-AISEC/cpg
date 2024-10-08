@@ -31,7 +31,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
-import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -114,7 +114,6 @@ class DFGFunctionSummaries {
     private fun findFunctionDeclarationEntry(functionDecl: FunctionDeclaration): List<DFGEntry>? {
         if (functionToDFGEntryMap.isEmpty()) return null
 
-        val provider = functionDecl
         val language = functionDecl.language
         val languageName = language?.javaClass?.name
         val methodName = functionDecl.name
@@ -191,58 +190,49 @@ class DFGFunctionSummaries {
                         Pair(
                             language.parseName(it.methodName).parent?.let { it1 ->
                                 typeManager.lookupResolvedType(it1, language = language)
-                            },
+                            } ?: language.unknownType(),
                             it
                         )
                     }
-            var mostPreciseClassEntries = mutableListOf<FunctionDeclarationEntry>()
-            var mostPreciseType = typeEntryList.first().first
-            var superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-            for (typeEntry in typeEntryList) {
-                if (typeEntry.first == mostPreciseType) {
-                    mostPreciseClassEntries.add(typeEntry.second)
-                } else if (typeEntry.first in superTypes) {
-                    mostPreciseClassEntries.clear()
-                    mostPreciseClassEntries.add(typeEntry.second)
-                    mostPreciseType = typeEntry.first
-                    superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-                }
-            }
-            val maxSignature = mostPreciseClassEntries.mapNotNull { it.signature?.size }.max()
-            if (mostPreciseClassEntries.size > 1) {
-                mostPreciseClassEntries =
-                    mostPreciseClassEntries
-                        .filter { it.signature?.size == maxSignature }
-                        .toMutableList()
-            }
-            // Filter parameter types. We start with parameter 0 and continue. Let's hope we remove
-            // some entries here.
-            var argIndex = 0
-            while (mostPreciseClassEntries.size > 1 && argIndex < maxSignature) {
-                mostPreciseType =
-                    mostPreciseClassEntries.first().signature?.get(argIndex)?.let {
-                        typeManager.lookupResolvedType(it, language = language)
+            val uniqueTypes = typeEntryList.map { it.first }.distinct()
+            val targetType =
+                language.parseName(functionDecl.name).parent?.let { it1 ->
+                    typeManager.lookupResolvedType(it1, language = language)
+                } ?: language.unknownType()
+
+            var mostPreciseType =
+                uniqueTypes
+                    .map { Pair(it, language?.tryCast(targetType, it)) }
+                    .sortedBy { it.second?.depthDistance }
+                    .firstOrNull()
+                    ?.first
+
+            var mostPreciseClassEntries =
+                typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
+
+            var signatureResults =
+                mostPreciseClassEntries
+                    .map {
+                        Pair(
+                            it,
+                            functionDecl.matchesSignature(
+                                it.signature?.map {
+                                    typeManager.lookupResolvedType(it, language = language)
+                                        ?: language.unknownType()
+                                } ?: listOf()
+                            )
+                        )
                     }
-                superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-                val newMostPrecise = mutableListOf<FunctionDeclarationEntry>()
-                for (entry in mostPreciseClassEntries) {
-                    val currentType =
-                        entry.signature?.get(argIndex)?.let {
-                            typeManager.lookupResolvedType(it, language = language)
-                        }
-                    if (currentType == mostPreciseType) {
-                        newMostPrecise.add(entry)
-                    } else if (currentType in superTypes) {
-                        newMostPrecise.clear()
-                        newMostPrecise.add(entry)
-                        mostPreciseType = currentType
-                        superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-                    }
-                }
-                argIndex++
-                mostPreciseClassEntries = newMostPrecise
-            }
-            functionToDFGEntryMap[mostPreciseClassEntries.first()]
+                    .filter { it.second is SignatureMatches }
+                    .associate { it }
+
+            val rankings = signatureResults.entries.map { Pair(it.value.ranking, it.key) }
+
+            // Find the best (lowest) rank and find functions with the specific rank
+            val bestRanking = rankings.minBy { it.first }.first
+            val list = rankings.filter { it.first == bestRanking }.map { it.second }
+
+            functionToDFGEntryMap[list.first()]
         } else {
             null
         }
