@@ -98,29 +98,32 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
             while (true) {
                 // Try to get the next TU
                 var tu = nextTranslationUnitWithoutDependencies()
-                if (tu != null) {
-                    // Add tu
-                    list += tu
-                    // Mark it as done, this will retrieve any dependencies to this TU from the map
-                    markAsDone(tu)
-                } else {
+                if (tu == null) {
                     var remaining = keys
                     // No translation units without dependencies found. If there are no translation
                     // units left, this means we are done
                     if (remaining.isEmpty()) {
                         break
                     } else {
-                        log.warn(
-                            "We still have {} translation units with import dependency problems. We will just process them in any order",
-                            remaining.size
-                        )
                         // If there are still translation units left, we have a problem. This might
                         // be cyclic imports or other cases we did not think of yet. We still want
-                        // to handle all the TUs, so we just process them in any order
-                        remaining.forEach { list += it }
-                        break
+                        // to handle all the TUs, so we pick the one with the least dependencies,
+                        // hoping that this could unlock more
+                        log.warn(
+                            "We still have {} translation units with import dependency problems. We will just pick the one with the least dependencies",
+                            remaining.size
+                        )
+                        tu = remaining.sortedBy { this[it]?.size }.firstOrNull()
+                        if (tu == null) {
+                            break
+                        }
                     }
                 }
+
+                // Add tu
+                list += tu
+                // Mark it as done, this will retrieve any dependencies to this TU from the map
+                markAsDone(tu)
             }
 
             return list
