@@ -37,7 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Represent a for statement of the form for(variable ... iterable){...} that executes the loop body
+ * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop body
  * for each instance of an element in `iterable` that is temporarily stored in `variable`.
  */
 class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
