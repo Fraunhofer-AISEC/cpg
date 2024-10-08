@@ -75,23 +75,19 @@ class ForStatement : LoopStatement(), BranchingNode {
             return false
         }
 
-        return (super.equals(other) &&
-            statement == other.statement &&
+        return super.equals(other) &&
             initializerStatement == other.initializerStatement &&
             conditionDeclaration == other.conditionDeclaration &&
             condition == other.condition &&
-            iterationStatement == other.iterationStatement &&
-            elseStatement == other.elseStatement)
+            iterationStatement == other.iterationStatement
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
-            this.statement,
             this.condition,
             this.initializerStatement,
             this.conditionDeclaration,
-            this.iterationStatement,
-            this.elseStatement
+            this.iterationStatement
         )
     }
 }

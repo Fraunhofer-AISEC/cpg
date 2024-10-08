@@ -93,11 +93,9 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
         if (other !is ForEachStatement) return false
         return super.equals(other) &&
             variable == other.variable &&
-            iterable == other.iterable &&
-            statement == other.statement &&
-            elseStatement == other.elseStatement
+            iterable == other.iterable
     }
 
     override fun hashCode() =
-        Objects.hash(super.hashCode(), variable, iterable, statement, elseStatement)
+        Objects.hash(super.hashCode(), variable, iterable)
 }

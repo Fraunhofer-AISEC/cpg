@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
+import java.util.*
 
 /**
  * This [Node] is a generalization of all looping statements and serves duplication reduction.
@@ -62,4 +63,20 @@ abstract class LoopStatement : Statement() {
             .append("statement", statement)
             .append("else", elseStatement)
             .toString()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is ForStatement) {
+            return false
+        }
+
+        return (super.equals(other) &&
+                statement == other.statement &&
+                elseStatement == other.elseStatement)
+    }
+
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), statement, elseStatement)
 }

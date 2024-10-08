@@ -57,8 +57,7 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("condition", condition)
-            .append("statement", statement)
-            .append("else", elseStatement)
+            .append("conditionDeclaration", conditionDeclaration)
             .toString()
     }
 
@@ -81,11 +80,9 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
 
         return super.equals(other) &&
             conditionDeclaration == other.conditionDeclaration &&
-            condition == other.condition &&
-            statement == other.statement &&
-            elseStatement == other.elseStatement
+            condition == other.condition
     }
 
     override fun hashCode() =
-        Objects.hash(super.hashCode(), conditionDeclaration, condition, statement, elseStatement)
+        Objects.hash(super.hashCode(), conditionDeclaration, condition)
 }

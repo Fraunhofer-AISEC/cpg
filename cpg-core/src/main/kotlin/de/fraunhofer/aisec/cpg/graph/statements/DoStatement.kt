@@ -49,8 +49,6 @@ class DoStatement : LoopStatement(), ArgumentHolder {
         ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("condition", condition)
-            .append("statement", statement)
-            .append("else", elseStatement)
             .toString()
 
     override fun addArgument(expression: Expression) {
@@ -73,10 +71,8 @@ class DoStatement : LoopStatement(), ArgumentHolder {
         if (this === other) return true
         if (other !is DoStatement) return false
         return super.equals(other) &&
-            condition == other.condition &&
-            statement == other.statement &&
-            elseStatement == other.elseStatement
+            condition == other.condition
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, statement, elseStatement)
+    override fun hashCode() = Objects.hash(super.hashCode(), condition)
 }
