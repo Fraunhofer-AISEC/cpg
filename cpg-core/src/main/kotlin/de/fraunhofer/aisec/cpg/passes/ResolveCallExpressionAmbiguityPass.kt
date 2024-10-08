@@ -116,27 +116,6 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         }
     }
 
-    /** This function checks whether our [Reference] refers to a [Type]. */
-    private fun lookupPotentialTypeFromReference(ref: Reference): Type? {
-        var name = ref.name
-        var scope = ref.scope
-
-        // First, check if it is a simple type
-        var type = ref.language?.getSimpleTypeOf(name)
-        if (type != null) {
-            return type
-        }
-
-        // This could also be a typedef
-        type = scopeManager.typedefFor(name, scope)
-        if (type != null) {
-            return type
-        }
-
-        // Lastly, check if the reference contains a symbol that points to type (declaration)
-        return scopeManager.lookupUniqueTypeSymbolByName(name, scope)?.declaredType
-    }
-
     override fun cleanup() {
         // Nothing to do
     }
