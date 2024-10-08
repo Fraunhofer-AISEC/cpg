@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -44,14 +45,16 @@ class LoopTest {
         assertNotNull(func)
         val whileStmt = whileTest.statements.filterIsInstance<WhileStatement>().firstOrNull()
         assertNotNull(whileStmt)
-        assertTrue { func.body.statements.contains(whileStmt) }
+        assertContains(func.body.statements, whileStmt)
         val breakStmt = whileStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = whileTest.calls["elseCall"]
         val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postWhile)
-        assertTrue(whileStmt.astChildren.all { whileStmt.toString().contains(it.toString()) })
+        whileStmt.astChildren.forEach {
+            assertContains(whileStmt.toString(), it.toString())
+        }
     }
 
     @Test
@@ -61,7 +64,7 @@ class LoopTest {
         assertNotNull(func)
         val doStmt = doTest.statements.filterIsInstance<DoStatement>().firstOrNull()
         assertNotNull(doStmt)
-        assertTrue { func.body.statements.contains(doStmt) }
+        assertContains(func.body.statements, doStmt)
         val breakStmt = doStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = doTest.callsByName("elseCall").getOrNull(0)
         val postWhile = doTest.callsByName("postDo").getOrNull(0)
@@ -69,6 +72,9 @@ class LoopTest {
         assertNotNull(elseCall)
         assertNotNull(postWhile)
         assertTrue(doStmt.astChildren.all { doStmt.toString().contains(it.toString()) })
+        doStmt.astChildren.forEach {
+            assertContains(doStmt.toString(), it.toString())
+        }
     }
 
     @Test
@@ -81,11 +87,13 @@ class LoopTest {
         val breakStmt = forStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postFor = forTest.callsByName("postFor").getOrNull(0)
-        assertTrue { func.body.statements.contains(forStmt) }
+        assertContains(func.body.statements, forStmt)
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postFor)
-        assertTrue(forStmt.astChildren.all { forStmt.toString().contains(it.toString()) })
+        forStmt.astChildren.forEach {
+            assertContains(forStmt.toString(), it.toString())
+        }
     }
 
     @Test
@@ -95,13 +103,15 @@ class LoopTest {
         assertNotNull(func)
         val forEachStmt = forTest.statements.filterIsInstance<ForEachStatement>().firstOrNull()
         assertNotNull(forEachStmt)
-        assertTrue { func.body.statements.contains(forEachStmt) }
+        assertContains(func.body.statements, forEachStmt)
         val breakStmt = forTest.statements.filterIsInstance<BreakStatement>().firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postForEach = forTest.callsByName("postForEach").getOrNull(0)
         assertNotNull(breakStmt)
         assertNotNull(elseCall)
         assertNotNull(postForEach)
-        assertTrue(forEachStmt.astChildren.all { forEachStmt.toString().contains(it.toString()) })
+        forEachStmt.astChildren.forEach {
+            assertContains(forEachStmt.toString(),it.toString())
+        }
     }
 }
