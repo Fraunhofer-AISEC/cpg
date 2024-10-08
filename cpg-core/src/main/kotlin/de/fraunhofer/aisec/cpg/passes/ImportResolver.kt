@@ -122,7 +122,7 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
 
                 // Add tu
                 list += tu
-                // Mark it as done, this will retrieve any dependencies to this TU from the map
+                // Mark it as done, this will remove any dependencies to this TU from the map
                 markAsDone(tu)
             }
 
