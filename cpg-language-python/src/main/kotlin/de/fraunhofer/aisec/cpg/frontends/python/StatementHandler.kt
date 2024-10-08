@@ -128,8 +128,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleWithStatement(node: Python.AST.With): Block {
         val mainBlock = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
-        val exitStatementsElse = mutableListOf<Statement>()
-        val exitStatementsCatch = mutableListOf<Statement>()
+        val exitStatementsElse = mutableListOf<Expression>()
+        val exitStatementsCatch = mutableListOf<Expression>()
         val tryBlock = newBlock().implicit()
 
         node.items.forEach { withItem ->
@@ -189,7 +189,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = withItem
                     )
                     .implicit()
-            exitCallWithNone.addArgument(newReference(name = managerName).implicit())
             exitCallWithNone.addArgument(newLiteral(null).implicit())
             exitCallWithNone.addArgument(newLiteral(null).implicit())
             exitCallWithNone.addArgument(newLiteral(null).implicit())
@@ -202,11 +201,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = withItem
                     )
                     .implicit()
-            exitCallWithNone.addArgument(newReference(name = managerName).implicit())
             val starOp = newUnaryOperator("*", false, false)
             starOp.input =
                 newMemberExpression("exec_info", newReference("sys").implicit()).implicit()
-            exitCallWithNone.addArgument(starOp)
+            exitCallWithSysExec.addArgument(starOp)
             exitStatementsCatch.add(exitCallWithSysExec)
         }
 
@@ -221,7 +219,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 // Add the catch block
                 val catchClause = newCatchClause().implicit()
                 catchClause.body =
-                    newBlock().implicit().apply { this.statements.addAll(exitStatementsCatch) }
+                    newBlock().implicit().apply {
+                        this.statements.addAll(
+                            exitStatementsCatch.map {
+                                val ifStmt = newIfStatement().implicit()
+                                // TODO: Needs #1733 or 1741, then add:
+                                //   ifStmt.thenStatement = newThrowStatement().implicit()
+                                val neg = newUnaryOperator("not", false, false).implicit()
+                                neg.input = it
+                                ifStmt.condition = neg
+                                ifStmt
+                            }
+                        )
+                    }
                 this.catchClauses.add(catchClause)
                 // Add the else-block
                 this.elseBlock =
