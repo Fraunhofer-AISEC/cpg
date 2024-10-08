@@ -33,11 +33,8 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -121,6 +118,7 @@ class DFGFunctionSummaries {
         val language = functionDecl.language
         val languageName = language?.javaClass?.name
         val methodName = functionDecl.name
+        val typeManager = functionDecl.ctx?.typeManager ?: return null
 
         // The language and the method name have to match. If a signature is specified, it also has
         // to match to the one of the FunctionDeclaration, null indicates that we accept everything.
@@ -131,7 +129,12 @@ class DFGFunctionSummaries {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
-                        entryMethodName.parent?.let { provider.lookupType(entryMethodName.parent) }
+                        entryMethodName.parent?.let {
+                            typeManager.lookupResolvedType(
+                                entryMethodName.parent,
+                                language = language
+                            )
+                        }
                     methodName.lastPartsMatch(
                         entryMethodName.localName
                     ) && // The local name has to match
@@ -148,7 +151,10 @@ class DFGFunctionSummaries {
                         (it.signature == null ||
                             functionDecl.matchesSignature(
                                 it.signature.map { signatureType ->
-                                    provider.lookupType(signatureType)
+                                    typeManager.lookupResolvedType(
+                                        signatureType,
+                                        language = language
+                                    ) ?: functionDecl.unknownType()
                                 }
                             ) != IncompatibleSignature)
                 } else {
@@ -184,7 +190,7 @@ class DFGFunctionSummaries {
                     .map {
                         Pair(
                             language.parseName(it.methodName).parent?.let { it1 ->
-                                functionDecl.objectType(it1)
+                                typeManager.lookupResolvedType(it1, language = language)
                             },
                             it
                         )
@@ -215,13 +221,15 @@ class DFGFunctionSummaries {
             while (mostPreciseClassEntries.size > 1 && argIndex < maxSignature) {
                 mostPreciseType =
                     mostPreciseClassEntries.first().signature?.get(argIndex)?.let {
-                        functionDecl.objectType(it)
+                        typeManager.lookupResolvedType(it, language = language)
                     }
                 superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
                 val newMostPrecise = mutableListOf<FunctionDeclarationEntry>()
                 for (entry in mostPreciseClassEntries) {
                     val currentType =
-                        entry.signature?.get(argIndex)?.let { functionDecl.objectType(it) }
+                        entry.signature?.get(argIndex)?.let {
+                            typeManager.lookupResolvedType(it, language = language)
+                        }
                     if (currentType == mostPreciseType) {
                         newMostPrecise.add(entry)
                     } else if (currentType in superTypes) {
@@ -355,20 +363,5 @@ class DFGFunctionSummaries {
         }
 
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
-    }
-
-    fun ContextProvider.lookupType(fqn: CharSequence): Type {
-        // Try to look up the type from the specified FQN string
-        var type =
-            ctx?.typeManager?.lookupResolvedType(
-                fqn.toString(),
-                language = (this as? LanguageProvider)?.language
-            )
-        return if (type == null) {
-            log.warn("Could not find specified type $fqn. Using UnknownType")
-            this.unknownType()
-        } else {
-            type
-        }
     }
 }
