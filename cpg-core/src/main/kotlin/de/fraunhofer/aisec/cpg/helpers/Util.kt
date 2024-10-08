@@ -94,7 +94,6 @@ object Util {
         predicate: ((EvaluationOrder) -> Boolean)? = null,
         refs: List<Node?>
     ): Boolean {
-        println("eogConnect")
         if (n == null) {
             return false
         }
