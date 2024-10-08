@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -232,13 +231,25 @@ class TypeManager {
      * This function returns the first (there should be only one) [Type] with the given [fqn] that
      * is [Type.Origin.RESOLVED].
      */
-    fun lookupResolvedType(fqn: CharSequence, language: Language<*>? = null): Type? {
+    fun lookupResolvedType(
+        fqn: CharSequence,
+        generics: List<Type>? = null,
+        language: Language<*>? = null
+    ): Type? {
         var primitiveType = language?.getSimpleTypeOf(fqn)
         if (primitiveType != null) {
             return primitiveType
         }
 
-        return declaredTypes[language.parseName(fqn)]
+        return firstOrderTypes.firstOrNull {
+            (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
+                it.root.name == fqn &&
+                if (generics != null) {
+                    (it as? ObjectType)?.generics == generics
+                } else {
+                    true
+                }
+        }
     }
 }
 
