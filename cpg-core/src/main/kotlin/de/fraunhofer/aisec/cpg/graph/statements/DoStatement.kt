@@ -70,8 +70,7 @@ class DoStatement : LoopStatement(), ArgumentHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DoStatement) return false
-        return super.equals(other) &&
-            condition == other.condition
+        return super.equals(other) && condition == other.condition
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition)

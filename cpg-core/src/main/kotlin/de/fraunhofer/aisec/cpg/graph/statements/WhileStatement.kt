@@ -83,6 +83,5 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
             condition == other.condition
     }
 
-    override fun hashCode() =
-        Objects.hash(super.hashCode(), conditionDeclaration, condition)
+    override fun hashCode() = Objects.hash(super.hashCode(), conditionDeclaration, condition)
 }

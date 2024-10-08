@@ -28,15 +28,15 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
-import java.util.*
 
 /**
- * This [Node] is a generalization of all looping statements and serves duplication reduction.
- * All Looping statements can be identified by if they inherit from this class. Loops deviate
- * from other nods in the way they change a programs control flow, and do so in combination
- * with other nodes, e.g. [BreakStatement].
+ * This [Node] is a generalization of all looping statements and serves duplication reduction. All
+ * Looping statements can be identified by if they inherit from this class. Loops deviate from other
+ * nods in the way they change a programs control flow, and do so in combination with other nodes,
+ * e.g. [BreakStatement].
  *
  * The looping criterion can be a condition or the iteration over all elements in a list and is
  * defined by the subclass.
@@ -44,17 +44,15 @@ import java.util.*
 abstract class LoopStatement : Statement() {
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    /**
-     * This field contains the body of the loop, e.g. a [Block] or single [Statement].
-     */
+    /** This field contains the body of the loop, e.g. a [Block] or single [Statement]. */
     var statement by unwrapping(LoopStatement::statementEdge)
 
     /**
-     * This represents a single or block of statements that are executed when the loop terminates regularly,
-     * e.g. the loop finishes iterating over all elements or the loop-condition evaluates to false.
-     * The exact situation when this is happening depends on the language that supports an
-     * `else`-Statement at loop level. E.g. in Python the [elseStatement] is executed when the loop was
-     * not left through a break.
+     * This represents a single or block of statements that are executed when the loop terminates
+     * regularly, e.g. the loop finishes iterating over all elements or the loop-condition evaluates
+     * to false. The exact situation when this is happening depends on the language that supports an
+     * `else`-Statement at loop level. E.g. in Python the [elseStatement] is executed when the loop
+     * was not left through a break.
      */
     @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
     var elseStatement by unwrapping(LoopStatement::elseStatementEdge)
@@ -75,10 +73,9 @@ abstract class LoopStatement : Statement() {
         }
 
         return (super.equals(other) &&
-                statement == other.statement &&
-                elseStatement == other.elseStatement)
+            statement == other.statement &&
+            elseStatement == other.elseStatement)
     }
 
-    override fun hashCode() =
-        Objects.hash(super.hashCode(), statement, elseStatement)
+    override fun hashCode() = Objects.hash(super.hashCode(), statement, elseStatement)
 }

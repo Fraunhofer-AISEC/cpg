@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class LoopTest {
 
@@ -47,9 +46,7 @@ class LoopTest {
         val whileStmt = whileTest.whileLoops.firstOrNull()
         assertNotNull(whileStmt)
         assertContains(func.body.statements, whileStmt)
-        whileStmt.astChildren.forEach {
-            assertContains(whileStmt.toString(), it.toString())
-        }
+        whileStmt.astChildren.forEach { assertContains(whileStmt.toString(), it.toString()) }
 
         val breakStmt = whileStmt.breaks.firstOrNull()
         assertNotNull(breakStmt)
@@ -70,9 +67,7 @@ class LoopTest {
         val doStmt = doTest.doLoops.firstOrNull()
         assertNotNull(doStmt)
         assertContains(func.body.statements, doStmt)
-        doStmt.astChildren.forEach {
-            assertContains(doStmt.toString(), it.toString())
-        }
+        doStmt.astChildren.forEach { assertContains(doStmt.toString(), it.toString()) }
 
         val breakStmt = doStmt.breaks.firstOrNull()
         assertNotNull(breakStmt)
@@ -93,9 +88,7 @@ class LoopTest {
         val forStmt = forTest.forLoops.firstOrNull()
         assertNotNull(forStmt)
         assertContains(func.body.statements, forStmt)
-        forStmt.astChildren.forEach {
-            assertContains(forStmt.toString(), it.toString())
-        }
+        forStmt.astChildren.forEach { assertContains(forStmt.toString(), it.toString()) }
 
         val breakStmt = forStmt.breaks.firstOrNull()
         assertNotNull(breakStmt)
@@ -116,9 +109,7 @@ class LoopTest {
         val forEachStmt = forTest.forEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
         assertContains(func.body.statements, forEachStmt)
-        forEachStmt.astChildren.forEach {
-            assertContains(forEachStmt.toString(),it.toString())
-        }
+        forEachStmt.astChildren.forEach { assertContains(forEachStmt.toString(), it.toString()) }
 
         val breakStmt = forTest.breaks.firstOrNull()
         assertNotNull(breakStmt)
