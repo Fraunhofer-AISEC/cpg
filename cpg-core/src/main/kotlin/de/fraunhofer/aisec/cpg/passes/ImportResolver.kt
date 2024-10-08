@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.namespaces
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
@@ -149,6 +150,7 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
          * map and also removes it from the dependencies of all other TUs.
          */
         private fun markAsDone(tu: TranslationUnitDeclaration) {
+            log.debug("Next suitable translation unit is {}", tu.name)
             // Remove it from the map
             remove(tu)
 
@@ -210,33 +212,54 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             name = name.parent
         }
 
-        // We collect a list of all declarations for all parts of the name and filter, whether they
-        // belong to a namespace declaration.
-        var list =
-            parts
-                .map {
-                    scopeManager
-                        .lookupSymbolByName(it, import.location, import.scope)
-                        .toMutableList()
-                }
-                .flatten()
-        var namespaces = list.filterIsInstance<NamespaceDeclaration>()
+        // We collect a list of all declarations for all parts of the name, beginning with the
+        // "largest" part and filter, whether they belong to a namespace declaration. Once we have
+        // found something, we need to abort in order to only import the most specific namespace.
+        //
+        // For example, in the Python snippet `from backend.app import db`, we first need to look
+        // whether `backend.app.db` is a namespace, if not, we look at `backend.app` and lastly at
+        // `backend`. We do this in order to make the dependency as fine-grained as possible.
+        for (part in parts) {
+            var namespaces =
+                scopeManager
+                    .lookupSymbolByName(part, import.location, import.scope)
+                    .filterIsInstance<NamespaceDeclaration>()
 
-        // Next, we loop through all namespaces in order to "connect" them to our current TU
-        for (declaration in namespaces) {
-            // Retrieve the TU of the declarations
-            var namespaceTu = declaration.translationUnit
-            var importTu = import.translationUnit
-            // Skip, if we cannot find the TU or if they belong to the same TU (we do not want
-            // self-references)
-            if (namespaceTu == null || importTu == null || namespaceTu == importTu) {
-                continue
+            // We are only interested in "leaf" namespace declarations, meaning that they do not
+            // have sub-declarations. The reason for that is that we usually need to nest namespace
+            // declarations, and thus a "parent" namespace declaration often exists in more than one
+            // file. We only want to depend on the particular translation unit that is the
+            // authoritative source of this namespace and this is the case if there is no
+            // sub-declaration.
+            namespaces =
+                namespaces.filter {
+                    // Note: the "namespaces" extension contains the starting node itself as well,
+                    // so if we have no sub-namespace declaration, the size == 1
+                    it.namespaces.size == 1
+                }
+
+            // Next, we loop through all namespaces in order to "connect" them to our current TU
+            for (declaration in namespaces) {
+                // Retrieve the TU of the declarations
+                var namespaceTu = declaration.translationUnit
+                var importTu = import.translationUnit
+                // Skip, if we cannot find the TU or if they belong to the same TU (we do not want
+                // self-references)
+                if (namespaceTu == null || importTu == null || namespaceTu == importTu) {
+                    continue
+                }
+
+                // Lastly, store the namespace TU as an import dependency of the TU where the import
+                // was
+                var added = currentComponent.importDependencies.add(importTu, namespaceTu)
+                if (added) {
+                    log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
+                }
             }
 
-            // Lastly, store the namespace TU as an import dependency of the TU where the import was
-            var added = currentComponent.importDependencies.add(importTu, namespaceTu)
-            if (added) {
-                log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
+            // If we had any imported namespaces, we break here
+            if (namespaces.isNotEmpty()) {
+                break
             }
         }
     }
