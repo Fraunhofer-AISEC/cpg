@@ -120,7 +120,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val mainBlock = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
         val exitStatementsElse = mutableListOf<Expression>()
         val exitStatementsCatch = mutableListOf<Expression>()
-        val tryBlock = newBlock().implicit()
+        val tryBlock =
+            newBlock() // We set it as implicit below because there we also have a code and
+        // location.
 
         node.items.forEach { withItem ->
             // Create a temporary reference for the context manager
@@ -201,6 +203,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Create the block for the body of the with statement
         val bodyBlock = makeBlock(node.body, parentNode = node)
         tryBlock.statements.addAll(bodyBlock.statements)
+        tryBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
 
         // Create the try statement with __exit__ calls in the finally block
         val tryStatement =
