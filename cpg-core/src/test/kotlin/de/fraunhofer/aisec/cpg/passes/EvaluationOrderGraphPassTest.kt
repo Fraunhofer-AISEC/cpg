@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.graph.callsByName
-import de.fraunhofer.aisec.cpg.graph.statements
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.test.Test
@@ -40,9 +39,9 @@ class EvaluationOrderGraphPassTest {
     fun testWhileStatement() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
 
-        val whileStmt = whileTest.statements.filterIsInstance<WhileStatement>().firstOrNull()
+        val whileStmt = whileTest.whileLoops.firstOrNull()
         assertNotNull(whileStmt)
-        val breakStmt = whileStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
+        val breakStmt = whileStmt.breaks.firstOrNull()
         val elseCall = whileTest.callsByName("elseCall").getOrNull(0)
         val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
         assertNotNull(breakStmt)
@@ -86,9 +85,9 @@ class EvaluationOrderGraphPassTest {
     fun testDoStatement() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
 
-        val doStmt = doTest.statements.filterIsInstance<DoStatement>().firstOrNull()
+        val doStmt = doTest.doLoops.firstOrNull()
         assertNotNull(doStmt)
-        val breakStmt = doStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
+        val breakStmt = doStmt.breaks.firstOrNull()
         val elseCall = doTest.callsByName("elseCall").getOrNull(0)
         val postWhile = doTest.callsByName("postDo").getOrNull(0)
         assertNotNull(breakStmt)
@@ -132,9 +131,9 @@ class EvaluationOrderGraphPassTest {
     fun testForStatement() {
         val forTest = GraphExamples.getForWithElseAndBreak()
 
-        val forStmt = forTest.statements.filterIsInstance<ForStatement>().firstOrNull()
+        val forStmt = forTest.forLoops.firstOrNull()
         assertNotNull(forStmt)
-        val breakStmt = forStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
+        val breakStmt = forStmt.breaks.firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postFor = forTest.callsByName("postFor").getOrNull(0)
         assertNotNull(breakStmt)
@@ -170,9 +169,9 @@ class EvaluationOrderGraphPassTest {
     fun testForEachStatement() {
         val forTest = GraphExamples.getForEachWithElseAndBreak()
 
-        val forEachStmt = forTest.statements.filterIsInstance<ForEachStatement>().firstOrNull()
+        val forEachStmt = forTest.forEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
-        val breakStmt = forTest.statements.filterIsInstance<BreakStatement>().firstOrNull()
+        val breakStmt = forTest.breaks.firstOrNull()
         val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         val postForEach = forTest.callsByName("postForEach").getOrNull(0)
         assertNotNull(breakStmt)
