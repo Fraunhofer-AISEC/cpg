@@ -41,12 +41,16 @@ class EvaluationOrderGraphPassTest {
 
         val whileStmt = whileTest.whileLoops.firstOrNull()
         assertNotNull(whileStmt)
+
         val breakStmt = whileStmt.breaks.firstOrNull()
-        val elseCall = whileTest.callsByName("elseCall").getOrNull(0)
-        val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
         assertNotNull(breakStmt)
+
+        val elseCall = whileTest.callsByName("elseCall").getOrNull(0)
         assertNotNull(elseCall)
+
+        val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
         assertNotNull(postWhile)
+
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
@@ -87,12 +91,16 @@ class EvaluationOrderGraphPassTest {
 
         val doStmt = doTest.doLoops.firstOrNull()
         assertNotNull(doStmt)
+
         val breakStmt = doStmt.breaks.firstOrNull()
-        val elseCall = doTest.callsByName("elseCall").getOrNull(0)
-        val postWhile = doTest.callsByName("postDo").getOrNull(0)
         assertNotNull(breakStmt)
+
+        val elseCall = doTest.callsByName("elseCall").getOrNull(0)
         assertNotNull(elseCall)
+
+        val postWhile = doTest.callsByName("postDo").getOrNull(0)
         assertNotNull(postWhile)
+
         assertTrue(
             Util.eogConnect(
                 en = Util.Edge.ENTRIES,
@@ -133,12 +141,16 @@ class EvaluationOrderGraphPassTest {
 
         val forStmt = forTest.forLoops.firstOrNull()
         assertNotNull(forStmt)
+
         val breakStmt = forStmt.breaks.firstOrNull()
-        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
-        val postFor = forTest.callsByName("postFor").getOrNull(0)
         assertNotNull(breakStmt)
+
+        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         assertNotNull(elseCall)
+
+        val postFor = forTest.callsByName("postFor").getOrNull(0)
         assertNotNull(postFor)
+
         Util.eogConnect(
             en = Util.Edge.ENTRIES,
             n = elseCall,
@@ -171,12 +183,16 @@ class EvaluationOrderGraphPassTest {
 
         val forEachStmt = forTest.forEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
+
         val breakStmt = forTest.breaks.firstOrNull()
-        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
-        val postForEach = forTest.callsByName("postForEach").getOrNull(0)
         assertNotNull(breakStmt)
+
+        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
         assertNotNull(elseCall)
+
+        val postForEach = forTest.callsByName("postForEach").getOrNull(0)
         assertNotNull(postForEach)
+
         Util.eogConnect(
             en = Util.Edge.ENTRIES,
             n = elseCall,

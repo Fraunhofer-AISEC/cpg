@@ -43,18 +43,22 @@ class LoopTest {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
         val func = whileTest.functions["someRecord.func"]
         assertNotNull(func)
+
         val whileStmt = whileTest.whileLoops.firstOrNull()
         assertNotNull(whileStmt)
         assertContains(func.body.statements, whileStmt)
-        val breakStmt = whileStmt.breaks.firstOrNull()
-        val elseCall = whileTest.calls["elseCall"]
-        val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
-        assertNotNull(breakStmt)
-        assertNotNull(elseCall)
-        assertNotNull(postWhile)
         whileStmt.astChildren.forEach {
             assertContains(whileStmt.toString(), it.toString())
         }
+
+        val breakStmt = whileStmt.breaks.firstOrNull()
+        assertNotNull(breakStmt)
+
+        val elseCall = whileTest.calls["elseCall"]
+        assertNotNull(elseCall)
+
+        val postWhile = whileTest.callsByName("postWhile").getOrNull(0)
+        assertNotNull(postWhile)
     }
 
     @Test
@@ -62,19 +66,22 @@ class LoopTest {
         val doTest = GraphExamples.getDoWithElseAndBreak()
         val func = doTest.functions["someRecord.func"]
         assertNotNull(func)
+
         val doStmt = doTest.doLoops.firstOrNull()
         assertNotNull(doStmt)
         assertContains(func.body.statements, doStmt)
-        val breakStmt = doStmt.breaks.firstOrNull()
-        val elseCall = doTest.callsByName("elseCall").getOrNull(0)
-        val postWhile = doTest.callsByName("postDo").getOrNull(0)
-        assertNotNull(breakStmt)
-        assertNotNull(elseCall)
-        assertNotNull(postWhile)
-        assertTrue(doStmt.astChildren.all { doStmt.toString().contains(it.toString()) })
         doStmt.astChildren.forEach {
             assertContains(doStmt.toString(), it.toString())
         }
+
+        val breakStmt = doStmt.breaks.firstOrNull()
+        assertNotNull(breakStmt)
+
+        val elseCall = doTest.callsByName("elseCall").getOrNull(0)
+        assertNotNull(elseCall)
+
+        val postWhile = doTest.callsByName("postDo").getOrNull(0)
+        assertNotNull(postWhile)
     }
 
     @Test
@@ -82,18 +89,22 @@ class LoopTest {
         val forTest = GraphExamples.getForWithElseAndBreak()
         val func = forTest.functions["someRecord.func"]
         assertNotNull(func)
+
         val forStmt = forTest.forLoops.firstOrNull()
         assertNotNull(forStmt)
-        val breakStmt = forStmt.breaks.firstOrNull()
-        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
-        val postFor = forTest.callsByName("postFor").getOrNull(0)
         assertContains(func.body.statements, forStmt)
-        assertNotNull(breakStmt)
-        assertNotNull(elseCall)
-        assertNotNull(postFor)
         forStmt.astChildren.forEach {
             assertContains(forStmt.toString(), it.toString())
         }
+
+        val breakStmt = forStmt.breaks.firstOrNull()
+        assertNotNull(breakStmt)
+
+        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
+        assertNotNull(elseCall)
+
+        val postFor = forTest.callsByName("postFor").getOrNull(0)
+        assertNotNull(postFor)
     }
 
     @Test
@@ -101,17 +112,21 @@ class LoopTest {
         val forTest = GraphExamples.getForEachWithElseAndBreak()
         val func = forTest.functions["someRecord.func"]
         assertNotNull(func)
+
         val forEachStmt = forTest.forEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
         assertContains(func.body.statements, forEachStmt)
-        val breakStmt = forTest.breaks.firstOrNull()
-        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
-        val postForEach = forTest.callsByName("postForEach").getOrNull(0)
-        assertNotNull(breakStmt)
-        assertNotNull(elseCall)
-        assertNotNull(postForEach)
         forEachStmt.astChildren.forEach {
             assertContains(forEachStmt.toString(),it.toString())
         }
+
+        val breakStmt = forTest.breaks.firstOrNull()
+        assertNotNull(breakStmt)
+
+        val elseCall = forTest.callsByName("elseCall").getOrNull(0)
+        assertNotNull(elseCall)
+
+        val postForEach = forTest.callsByName("postForEach").getOrNull(0)
+        assertNotNull(postForEach)
     }
 }
