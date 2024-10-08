@@ -43,7 +43,7 @@ class LoopTest {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
         val func = whileTest.functions["someRecord.func"]
         assertNotNull(func)
-        val whileStmt = whileTest.statements.filterIsInstance<WhileStatement>().firstOrNull()
+        val whileStmt = whileTest.whileLoops.firstOrNull()
         assertNotNull(whileStmt)
         assertContains(func.body.statements, whileStmt)
         val breakStmt = whileStmt.statements.filterIsInstance<BreakStatement>().firstOrNull()
