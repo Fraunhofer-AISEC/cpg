@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -37,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
-import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -61,12 +59,6 @@ class TypeManager {
 
     val firstOrderTypes = mutableListOf<Type>()
     val secondOrderTypes = mutableListOf<Type>()
-
-    /**
-     * A map of declared types by their name. Useful to check for the existence of a declared type
-     * by its fully qualified name across all scopes.
-     */
-    @PopulatedByPass(TypeResolver::class) val declaredTypes = mutableMapOf<Name, Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
