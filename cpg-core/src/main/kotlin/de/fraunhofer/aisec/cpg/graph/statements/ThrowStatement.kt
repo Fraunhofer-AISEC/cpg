@@ -70,11 +70,7 @@ class ThrowStatement : Statement(), ArgumentHolder {
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return when {
-            exception == expression -> true
-            cause == expression -> true
-            else -> false
-        }
+        return exception == expression || cause == expression
     }
 
     override fun equals(other: Any?): Boolean {
