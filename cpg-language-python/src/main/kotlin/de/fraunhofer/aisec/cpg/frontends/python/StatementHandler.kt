@@ -117,14 +117,86 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * ```
      */
     private fun handleWithStatement(node: Python.AST.With): Block {
+        /** Prepares the __exit__(manager, None, None, None) call for the else-block. */
+        fun generateExitCallWithNone(
+            manager: Expression,
+            withItem: Python.AST.withitem
+        ): Statement {
+            val exitCallWithNone =
+                newMemberCallExpression(
+                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            return exitCallWithNone
+        }
+
+        /**
+         * Prepares the if-statement which is the body of the catch block. This includes the call of
+         * `__exit__(manager, *sys.exc_info())`, the negation and the throw statement.
+         */
+        fun generateExitCallWithSysinfo(
+            manager: Expression,
+            withItem: Python.AST.withitem
+        ): Statement {
+            val exitCallWithSysExec =
+                newMemberCallExpression(
+                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            val starOp = newUnaryOperator("*", false, false)
+            starOp.input =
+                newMemberExpression("exec_info", newReference("sys").implicit()).implicit()
+            exitCallWithSysExec.addArgument(starOp)
+
+            val ifStmt = newIfStatement().implicit()
+            // TODO: Needs #1733 or 1741, then add:
+            //   ifStmt.thenStatement = newThrowStatement().implicit()
+            val neg = newUnaryOperator("not", false, false).implicit()
+            neg.input = exitCallWithSysExec
+            ifStmt.condition = neg
+            return ifStmt
+        }
+
+        /**
+         * calls __enter__() and assign to another random variable. Represents the line "tmpVal =
+         * manager.__enter__()"
+         */
+        fun generateEnterCallAndAssignment(
+            manager: Expression,
+            withItem: Python.AST.withitem
+        ): Pair<Expression, Name> {
+            val enterVarName = Name.random(prefix = CONTEXT_MANAGER + "Enter")
+            val enterVar = newReference(name = enterVarName).implicit()
+            val enterCall =
+                newMemberCallExpression(
+                        callee = newMemberExpression(name = "__enter__", base = manager).implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+
+            return Pair(
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(enterVar),
+                        rhs = listOf(enterCall)
+                    )
+                    .implicit(),
+                enterVarName
+            )
+        }
+
         val mainBlock = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
-        val exitStatementsElse = mutableListOf<Expression>()
-        val exitStatementsCatch = mutableListOf<Expression>()
-        val tryBlock =
-            newBlock() // We set it as implicit below because there we also have a code and
-        // location.
+
+        var currentBlock = mainBlock
 
         node.items.forEach { withItem ->
+            // We set it as implicit below because there we also have a code and location.
+            var tryBlock = newBlock()
             // Create a temporary reference for the context manager
             val managerName = Name.random(prefix = CONTEXT_MANAGER)
             val manager = newReference(name = managerName).implicit()
@@ -139,99 +211,58 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rhs = listOf(contextExpr)
                     )
                     .implicit()
-            mainBlock.statements.add(managerAssignment)
+            currentBlock.statements.add(managerAssignment)
 
-            // calls __enter__() and assign to another random variable.
-            // Represents the line "tmpVal = manager.__enter__()"
-            val enterVarName = Name.random(prefix = CONTEXT_MANAGER + "Enter")
-            val enterVar = newReference(name = enterVarName).implicit()
-            val enterCall =
-                newMemberCallExpression(
-                        callee = newMemberExpression(name = "__enter__", base = manager).implicit(),
-                        rawNode = withItem
-                    )
-                    .implicit()
-            val enterAssignment =
-                newAssignExpression(
-                    operatorCode = "=",
-                    lhs = listOf(enterVar),
-                    rhs = listOf(enterCall)
-                )
-            mainBlock.statements.add(enterAssignment)
+            val (enterAssignment, enterVarName) = generateEnterCallAndAssignment(manager, withItem)
+            currentBlock.statements.add(enterAssignment)
 
-            val optionalVars = withItem.optional_vars?.let { frontend.expressionHandler.handle(it) }
-            node.type_comment?.let { optionalVars?.type = frontend.typeOf(it) }
-            if (optionalVars != null) {
-                // Assign the result of __enter__() to `optionalVars`
+            withItem.optional_vars?.let {
+                val optionalVar = frontend.expressionHandler.handle(it)
+                node.type_comment?.let { optionalVar.type = frontend.typeOf(it) }
+
+                // Assign the result of __enter__() to `optionalVar`
                 // Represents the line "cm = tmpVal # Doesn't exist if no variable is used"
                 tryBlock.statements.add(
                     newAssignExpression(
                             operatorCode = "=",
-                            lhs = listOf(optionalVars),
+                            lhs = listOf(optionalVar),
                             rhs = listOf(newReference(name = enterVarName).implicit())
                         )
                         .implicit()
                 )
             }
 
-            // Prepare the __exit__(manager, None, None, None) call for the else-block.
-            val exitCallWithNone =
-                newMemberCallExpression(
-                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
-                        rawNode = withItem
-                    )
-                    .implicit()
-            exitCallWithNone.addArgument(newLiteral(null).implicit())
-            exitCallWithNone.addArgument(newLiteral(null).implicit())
-            exitCallWithNone.addArgument(newLiteral(null).implicit())
-            exitStatementsElse.add(exitCallWithNone)
+            // Create the try statement with __exit__ calls in the finally block
+            val tryStatement =
+                newTryStatement(rawNode = node).apply {
+                    this.tryBlock = tryBlock
+                    // Add the catch block
+                    val catchClause =
+                        newCatchClause().implicit().apply {
+                            this.body =
+                                newBlock().implicit().apply {
+                                    this.statements.add(
+                                        generateExitCallWithSysinfo(manager, withItem)
+                                    )
+                                }
+                        }
+                    this.catchClauses.add(catchClause)
+                    // Add the else-block
+                    this.elseBlock =
+                        newBlock().implicit().apply {
+                            this.statements.add(generateExitCallWithNone(manager, withItem))
+                        }
+                }
+            currentBlock.statements.add(tryStatement)
 
-            // Prepare the __exit__(manager, *sys.exc_info()) call for the catch-block.
-            val exitCallWithSysExec =
-                newMemberCallExpression(
-                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
-                        rawNode = withItem
-                    )
-                    .implicit()
-            val starOp = newUnaryOperator("*", false, false)
-            starOp.input =
-                newMemberExpression("exec_info", newReference("sys").implicit()).implicit()
-            exitCallWithSysExec.addArgument(starOp)
-            exitStatementsCatch.add(exitCallWithSysExec)
+            currentBlock = tryBlock
         }
 
         // Create the block for the body of the with statement
         val bodyBlock = makeBlock(node.body, parentNode = node)
-        tryBlock.statements.addAll(bodyBlock.statements)
-        tryBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
+        currentBlock.statements.addAll(bodyBlock.statements)
+        currentBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
 
-        // Create the try statement with __exit__ calls in the finally block
-        val tryStatement =
-            newTryStatement(rawNode = node).apply {
-                this.tryBlock = tryBlock
-                // Add the catch block
-                val catchClause = newCatchClause().implicit()
-                catchClause.body =
-                    newBlock().implicit().apply {
-                        this.statements.addAll(
-                            exitStatementsCatch.map {
-                                val ifStmt = newIfStatement().implicit()
-                                // TODO: Needs #1733 or 1741, then add:
-                                //   ifStmt.thenStatement = newThrowStatement().implicit()
-                                val neg = newUnaryOperator("not", false, false).implicit()
-                                neg.input = it
-                                ifStmt.condition = neg
-                                ifStmt
-                            }
-                        )
-                    }
-                this.catchClauses.add(catchClause)
-                // Add the else-block
-                this.elseBlock =
-                    newBlock().implicit().apply { this.statements.addAll(exitStatementsElse) }
-            }
-
-        mainBlock.statements.add(tryStatement)
         return mainBlock
     }
 
