@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.body
 import de.fraunhofer.aisec.cpg.graph.builder.call
 import de.fraunhofer.aisec.cpg.graph.builder.declare
@@ -135,7 +136,7 @@ class DataflowTest {
             }
 
         // Let's assert that we did this correctly
-        val main = result.functions[0] // TODO: why can't I use "foo" like with the other tests?
+        val main = result.functions[0]
         assertNotNull(main)
         val body = main.body
         assertIs<Block>(body)
