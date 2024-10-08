@@ -37,6 +37,13 @@ import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 
+/**
+ * This class holds the information about import dependencies between [TranslationUnitDeclaration]
+ * nodes. The dependency is based on which translation unit imports symbols of another translation
+ * unit (usually in the form of a [NamespaceDeclaration]). The idea is to provide a sorted list of
+ * TUs in which to resolve symbols and imports ideally. This is stored in [sortedTranslationUnits]
+ * and is automatically computed the fist time someone accesses the property.
+ */
 class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
     HashMap<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>() {
 
@@ -55,6 +62,7 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
         WorkList(this).resolveDependencies()
     }
 
+    /** Adds a dependency from [importer] to [imported]. */
     fun add(importer: TranslationUnitDeclaration, imported: TranslationUnitDeclaration): Boolean {
         var list = this.computeIfAbsent(importer) { mutableSetOf<TranslationUnitDeclaration>() }
         return list.add(imported)

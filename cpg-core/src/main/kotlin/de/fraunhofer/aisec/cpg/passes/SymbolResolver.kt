@@ -83,7 +83,6 @@ import org.slf4j.LoggerFactory
 open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected lateinit var walker: ScopedWalker
-    lateinit var currentTU: TranslationUnitDeclaration
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
@@ -104,10 +103,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // dependencies
         component.importDependencies.sortedTranslationUnits.forEach {
             log.debug("Resolving symbols of translation unit {}", it.name)
-            currentTU = it
+
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = currentTU.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -150,8 +149,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             target =
-                (scope?.astNode ?: currentTU)
-                    .startInference(ctx)
+                (scope?.astNode ?: reference.translationUnit)
+                    ?.startInference(ctx)
                     ?.inferFunctionDeclaration(
                         reference.name,
                         null,
@@ -423,7 +422,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     call,
                     true,
                     ctx,
-                    currentTU,
+                    call.translationUnit,
                     false
                 )
             if (ok) {
