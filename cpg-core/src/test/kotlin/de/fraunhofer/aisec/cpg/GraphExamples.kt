@@ -92,6 +92,17 @@ class GraphExamples {
                                         loopElseStmt { call("elseCall") }
                                     }
                                     call("postWhile")
+                                    whileStmt {
+                                        whileCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
                                 }
                             }
                         }
@@ -124,6 +135,17 @@ class GraphExamples {
                                         loopElseStmt { call("elseCall") }
                                     }
                                     call("postDo")
+                                    doStmt {
+                                        doCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
                                 }
                             }
                         }
@@ -157,6 +179,18 @@ class GraphExamples {
                                         call("postIf")
                                     }
                                     call("postFor")
+                                    forStmt(
+                                        initializer = declare { variable("a") },
+                                        condition = literal(true, t("bool")),
+                                        iteration = newUnaryOperator("++", true, false),
+                                        elseStmt = call("elseCall")
+                                    ) {
+                                        ifStmt {
+                                            condition { literal(true, t("bool")) }
+                                            thenStmt { breakStmt() }
+                                        }
+                                        call("postIf")
+                                    }
                                 }
                             }
                         }
@@ -190,6 +224,18 @@ class GraphExamples {
                                         loopElseStmt { call("elseCall") }
                                     }
                                     call("postForEach")
+                                    forEachStmt {
+                                        iterable { call("listOf") }
+                                        variable { declare { variable("a") } }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
                                 }
                             }
                         }
