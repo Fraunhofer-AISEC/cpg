@@ -33,20 +33,10 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
@@ -76,9 +66,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
-            is Python.AST.Global,
+            is Python.AST.Global -> handleGlobal(node)
+            is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Match,
-            is Python.AST.Nonlocal,
             is Python.AST.Raise,
             is Python.AST.TryStar,
             is Python.AST.With,
@@ -527,6 +517,43 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.addDeclaration(result)
 
         return wrapDeclarationToStatement(result)
+    }
+
+    /**
+     * Translates a Python [`Global`](https://docs.python.org/3/library/ast.html#ast.Global) into a
+     * [LookupScopeStatement].
+     */
+    private fun handleGlobal(global: Python.AST.Global): LookupScopeStatement {
+        // Technically, our global scope is not identical to the python "global" scope. The reason
+        // behind that is that we wrap each file in a namespace (as defined in the python spec). So
+        // the "global" scope is actually our current namespace scope.
+        var pythonGlobalScope =
+            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
+
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            pythonGlobalScope,
+            rawNode = global
+        )
+    }
+
+    /**
+     * Translates a Python [`Nonlocal`](https://docs.python.org/3/library/ast.html#ast.Nonlocal)
+     * into a [LookupScopeStatement].
+     */
+    private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
+        // We need to find the first outer function scope, or rather the block scope belonging to
+        // the function
+        var outerFunctionScope =
+            frontend.scopeManager.firstScopeOrNull {
+                it is BlockScope && it != frontend.scopeManager.currentScope
+            }
+
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            outerFunctionScope,
+            rawNode = global
+        )
     }
 
     /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */

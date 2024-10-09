@@ -256,8 +256,12 @@ interface RawNodeTypeProvider<T> : MetadataProvider
  * This also sets [Node.isImplicit] to true.
  */
 fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = null): T {
-    this.code = code
-    this.location = location
+    if (code != null) {
+        this.code = code
+    }
+    if (location != null) {
+        this.location = location
+    }
     this.isImplicit = true
 
     return this
