@@ -117,14 +117,38 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * ```
      */
     private fun handleWithStatement(node: Python.AST.With): Block {
-        /** Prepares the __exit__(manager, None, None, None) call for the else-block. */
-        fun generateExitCallWithNone(
-            manager: Expression,
-            withItem: Python.AST.withitem
-        ): Statement {
+        /**
+         * Prepares the `manager = ContextManager()` and returns the random name for the "manager"
+         * as well as the assignment.
+         */
+        fun generateManagerAssignment(withItem: Python.AST.withitem): Pair<AssignExpression, Name> {
+            // Create a temporary reference for the context manager
+            val managerName = Name.random(prefix = CONTEXT_MANAGER)
+            val manager = newReference(name = managerName).implicit()
+
+            // Handle the 'context expression' (the part before 'as') and assign to tempRef
+            // Represents the line `manager = ContextManager()`
+            val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
+            val managerAssignment =
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(manager),
+                        rhs = listOf(contextExpr)
+                    )
+                    .implicit()
+            return Pair(managerAssignment, managerName)
+        }
+
+        /** Prepares the `__exit__(manager, None, None, None)` call for the else-block. */
+        fun generateExitCallWithNone(managerName: Name, withItem: Python.AST.withitem): Statement {
             val exitCallWithNone =
                 newMemberCallExpression(
-                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
+                        callee =
+                            newMemberExpression(
+                                    name = "__exit__",
+                                    base = newReference(name = managerName).implicit()
+                                )
+                                .implicit(),
                         rawNode = withItem
                     )
                     .implicit()
@@ -138,13 +162,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * Prepares the if-statement which is the body of the catch block. This includes the call of
          * `__exit__(manager, *sys.exc_info())`, the negation and the throw statement.
          */
-        fun generateExitCallWithSysinfo(
-            manager: Expression,
+        fun generateExitCallWithSysExcInfo(
+            managerName: Name,
             withItem: Python.AST.withitem
         ): Statement {
             val exitCallWithSysExec =
                 newMemberCallExpression(
-                        callee = newMemberExpression(name = "__exit__", base = manager).implicit(),
+                        callee =
+                            newMemberExpression(
+                                    name = "__exit__",
+                                    base = newReference(name = managerName).implicit()
+                                )
+                                .implicit(),
                         rawNode = withItem
                     )
                     .implicit()
@@ -163,18 +192,26 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         /**
-         * calls __enter__() and assign to another random variable. Represents the line "tmpVal =
-         * manager.__enter__()"
+         * calls __enter__() and assign to another random variable. Represents the line
+         *
+         * ```python
+         * tmpVal = manager.__enter__()
+         * ```
          */
         fun generateEnterCallAndAssignment(
-            manager: Expression,
+            managerName: Name,
             withItem: Python.AST.withitem
         ): Pair<Expression, Name> {
-            val enterVarName = Name.random(prefix = CONTEXT_MANAGER + "Enter")
-            val enterVar = newReference(name = enterVarName).implicit()
+            val tmpValName = Name.random(prefix = WITH_TMP_VAL)
+            val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
                 newMemberCallExpression(
-                        callee = newMemberExpression(name = "__enter__", base = manager).implicit(),
+                        callee =
+                            newMemberExpression(
+                                    name = "__enter__",
+                                    base = newReference(name = managerName).implicit()
+                                )
+                                .implicit(),
                         rawNode = withItem
                     )
                     .implicit()
@@ -186,37 +223,25 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rhs = listOf(enterCall)
                     )
                     .implicit(),
-                enterVarName
+                tmpValName
             )
         }
 
-        val mainBlock = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
+        val result = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
 
         // If there are multiple elements in node.items, we have to nest the try statements.
         // We start with a generic block for the outer context manager.
         // For i > 1, we add context_manager[i] to the try-block of item[i-1]
         val currentBlock =
-            node.items.fold(mainBlock) { currentBlock, withItem ->
+            node.items.fold(result) { currentBlock, withItem ->
                 // We set it as implicit below because there we also have a code and location.
                 var tryBlock = newBlock()
-                // Create a temporary reference for the context manager
-                val managerName = Name.random(prefix = CONTEXT_MANAGER)
-                val manager = newReference(name = managerName).implicit()
+                val (managerAssignment, managerName) = generateManagerAssignment(withItem)
 
-                // Handle the 'context expression' (the part before 'as') and assign to tempRef
-                // Represents the line "manager = ContextManager()"
-                val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
-                val managerAssignment =
-                    newAssignExpression(
-                            operatorCode = "=",
-                            lhs = listOf(manager),
-                            rhs = listOf(contextExpr)
-                        )
-                        .implicit()
                 currentBlock.statements.add(managerAssignment)
 
-                val (enterAssignment, enterVarName) =
-                    generateEnterCallAndAssignment(manager, withItem)
+                val (enterAssignment, tmpValName) =
+                    generateEnterCallAndAssignment(managerName, withItem)
                 currentBlock.statements.add(enterAssignment)
 
                 withItem.optional_vars?.let {
@@ -229,7 +254,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         newAssignExpression(
                                 operatorCode = "=",
                                 lhs = listOf(optionalVar),
-                                rhs = listOf(newReference(name = enterVarName).implicit())
+                                rhs = listOf(newReference(name = tmpValName).implicit())
                             )
                             .implicit()
                     )
@@ -245,7 +270,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 this.body =
                                     newBlock().implicit().apply {
                                         this.statements.add(
-                                            generateExitCallWithSysinfo(manager, withItem)
+                                            generateExitCallWithSysExcInfo(managerName, withItem)
                                         )
                                     }
                             }
@@ -253,7 +278,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         // Add the else-block
                         this.elseBlock =
                             newBlock().implicit().apply {
-                                this.statements.add(generateExitCallWithNone(manager, withItem))
+                                this.statements.add(generateExitCallWithNone(managerName, withItem))
                             }
                     }
                 currentBlock.statements.add(tryStatement)
@@ -262,12 +287,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
 
         // Create the block of the with statement and add it to the inner try-block
-        val bodyBlock = makeBlock(node.body, parentNode = node)
+        val bodyBlock = makeBlock(node.body, parentNode = node) // represents `cm.doSomething()`
         currentBlock.statements.addAll(bodyBlock.statements)
         currentBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
 
         // The result is the outer block
-        return mainBlock
+        return result
     }
 
     /**

@@ -61,5 +61,10 @@ abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
          * statements.
          */
         const val CONTEXT_MANAGER = "contextManager"
+        /**
+         * A prefix to add to random names representing implicit `tmpVal` nodes in `with`
+         * statements.
+         */
+        const val WITH_TMP_VAL = "withTmpVal"
     }
 }

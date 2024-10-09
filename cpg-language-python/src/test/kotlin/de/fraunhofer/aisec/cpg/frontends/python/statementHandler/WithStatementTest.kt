@@ -101,7 +101,7 @@ class WithStatementTest : BaseTest() {
 
         val tmpEnterVar = enterCallAssign.lhs.firstOrNull()
         assertIs<Reference>(tmpEnterVar)
-        assertTrue(tmpEnterVar.name.localName.startsWith(PythonHandler.CONTEXT_MANAGER + "Enter"))
+        assertTrue(tmpEnterVar.name.localName.startsWith(PythonHandler.WITH_TMP_VAL))
 
         val tmpEnterVarAssignRhs = enterCallAssign.rhs.firstOrNull()
         assertIs<MemberCallExpression>(tmpEnterVarAssignRhs)
@@ -193,7 +193,7 @@ class WithStatementTest : BaseTest() {
 
         val tmpEnterVar = enterCallAssign.lhs.firstOrNull()
         assertIs<Reference>(tmpEnterVar)
-        assertTrue(tmpEnterVar.name.localName.startsWith(PythonHandler.CONTEXT_MANAGER + "Enter"))
+        assertTrue(tmpEnterVar.name.localName.startsWith(PythonHandler.WITH_TMP_VAL))
 
         val tmpEnterVarAssignRhs = enterCallAssign.rhs.firstOrNull()
         assertIs<MemberCallExpression>(tmpEnterVarAssignRhs)
@@ -268,7 +268,7 @@ class WithStatementTest : BaseTest() {
 
         val tmpEnterVar = enterCallAssign.lhs.firstOrNull()
         assertIs<Reference>(tmpEnterVar)
-        assertTrue(tmpEnterVar.name.localName.startsWith(PythonHandler.CONTEXT_MANAGER + "Enter"))
+        assertTrue(tmpEnterVar.name.localName.startsWith(PythonHandler.WITH_TMP_VAL))
 
         val tmpEnterVarAssignRhs = enterCallAssign.rhs.firstOrNull()
         assertIs<MemberCallExpression>(tmpEnterVarAssignRhs)
@@ -362,7 +362,7 @@ class WithStatementTest : BaseTest() {
 
         val tmpEnterVarA = enterCallAssignA.lhs.firstOrNull()
         assertIs<Reference>(tmpEnterVarA)
-        assertTrue(tmpEnterVarA.name.localName.startsWith(PythonHandler.CONTEXT_MANAGER + "Enter"))
+        assertTrue(tmpEnterVarA.name.localName.startsWith(PythonHandler.WITH_TMP_VAL))
 
         val tmpEnterVarAssignARhs = enterCallAssignA.rhs.firstOrNull()
         assertIs<MemberCallExpression>(tmpEnterVarAssignARhs)
@@ -433,7 +433,7 @@ class WithStatementTest : BaseTest() {
 
         val tmpEnterVarB = enterCallAssignB.lhs.firstOrNull()
         assertIs<Reference>(tmpEnterVarB)
-        assertTrue(tmpEnterVarB.name.localName.startsWith(PythonHandler.CONTEXT_MANAGER + "Enter"))
+        assertTrue(tmpEnterVarB.name.localName.startsWith(PythonHandler.WITH_TMP_VAL))
 
         val tmpEnterVarBAssignRhs = enterCallAssignB.rhs.firstOrNull()
         assertIs<MemberCallExpression>(tmpEnterVarBAssignRhs)
@@ -501,7 +501,7 @@ class WithStatementTest : BaseTest() {
 
         val tmpEnterVarC = enterCallAssignC.lhs.firstOrNull()
         assertIs<Reference>(tmpEnterVarC)
-        assertTrue(tmpEnterVarC.name.localName.startsWith(PythonHandler.CONTEXT_MANAGER + "Enter"))
+        assertTrue(tmpEnterVarC.name.localName.startsWith(PythonHandler.WITH_TMP_VAL))
 
         val tmpEnterVarCAssignRhs = enterCallAssignC.rhs.firstOrNull()
         assertIs<MemberCallExpression>(tmpEnterVarCAssignRhs)
