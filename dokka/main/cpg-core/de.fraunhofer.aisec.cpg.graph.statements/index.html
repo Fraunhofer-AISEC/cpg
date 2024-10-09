@@ -199,7 +199,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-do-statement/index.html">DoStatement</a> : <a href="-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">Represents a conditional loop statement of the form: <code class="lang-kotlin">do{...}while(...)</code>.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-do-statement/index.html">DoStatement</a> : <a href="-loop-statement/index.html">LoopStatement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">Represents a conditional loop statement of the form: <code class="lang-kotlin">do{...}while(...)</code>. Where the body, usually a <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-block/index.html">Block</a>, is executed and re-executed if the <a href="-do-statement/condition.html">condition</a> evaluates to true.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -229,7 +229,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-for-each-statement/index.html">ForEachStatement</a> : <a href="-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-for-each-statement/index.html">ForEachStatement</a> : <a href="-loop-statement/index.html">LoopStatement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-statement-holder/index.html">StatementHolder</a></div><div class="brief "><p class="paragraph">Represent a for statement of the form <code class="lang-kotlin">for(variable ... iterable){...}</code> that executes the loop body for each instance of an element in <code class="lang-kotlin">iterable</code> that is temporarily stored in <code class="lang-kotlin">variable</code>.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -244,7 +244,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-for-statement/index.html">ForStatement</a> : <a href="-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-for-statement/index.html">ForStatement</a> : <a href="-loop-statement/index.html">LoopStatement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a></div><div class="brief "><p class="paragraph">Represents an iterating loop statement of the form <code class="lang-kotlin">for(initializer; condition; iteration){...}</code> that declares variables, can change them in an iteration statement and is executed until the condition evaluates to false.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -305,6 +305,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-lookup-scope-statement/index.html">LookupScopeStatement</a> : <a href="-statement/index.html">Statement</a></div><div class="brief "><p class="paragraph">This statement modifies the lookup scope of one or more <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a> nodes (or more precise it's symbols) within the current <a href="../de.fraunhofer.aisec.cpg.graph.scopes/-scope/index.html">Scope</a>. The most prominent example of this are the Python <code class="lang-kotlin">global</code> and <code class="lang-kotlin">nonlocal</code> keywords.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1788918603%2FClasslikes%2F1556141526" anchor-label="LoopStatement" id="-1788918603%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-loop-statement/index.html"><span>Loop</span><wbr><span><span>Statement</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1788918603%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-loop-statement/index.html">LoopStatement</a> : <a href="-statement/index.html">Statement</a></div><div class="brief "><p class="paragraph">This Node is a generalization of all looping statements and serves duplication reduction. All Looping statements can be identified by if they inherit from this class. Loops deviate from other nods in the way they change a programs control flow, and do so in combination with other nodes, e.g. <a href="-break-statement/index.html">BreakStatement</a>.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -394,7 +409,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-while-statement/index.html">WhileStatement</a> : <a href="-statement/index.html">Statement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">Represents a conditional loop statement of the form: <code class="lang-kotlin">while(...){...}</code>.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-while-statement/index.html">WhileStatement</a> : <a href="-loop-statement/index.html">LoopStatement</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-branching-node/index.html">BranchingNode</a>, <a href="../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a></div><div class="brief "><p class="paragraph">Represents a conditional loop statement of the form: <code class="lang-kotlin">while(...){...}</code>. The loop body is executed until condition evaluates to false for the first time.</p></div></div></div>
                 </div>
               </div>
             </div>
