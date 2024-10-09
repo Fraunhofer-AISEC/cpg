@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -203,9 +204,106 @@ class CXXDeclarationTest {
 
         val manipulateString = result.functions["manipulateString"]
         assertNotNull(manipulateString)
+        assertFalse(manipulateString.isInferred)
+
+        val size = result.functions["size"]
+        assertNotNull(size)
+        assertFalse(size.isInferred)
 
         // We should be able to resolve all calls to manipulateString
-        val calls = result.calls("manipulateString")
+        var calls = result.calls("manipulateString")
         calls.forEach { assertContains(it.invokes, manipulateString) }
+
+        // We should be able to resolve all calls to size
+        calls = result.calls("size")
+        calls.forEach { assertContains(it.invokes, size) }
+    }
+
+    @Test
+    fun testAliasLoop() {
+        val file = File("src/test/resources/cxx/alias_loop.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+        with(result) {
+            val a = result.variables["a"]
+            assertNotNull(a)
+            assertEquals(assertResolvedType("ABC::A"), a.type)
+        }
+    }
+
+    @Test
+    fun testArithmeticOperator() {
+        val file = File("src/test/resources/cxx/operators/arithmetic.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        val integer = result.records["Integer"]
+        assertNotNull(integer)
+
+        val plusplus = integer.operators["operator++"]
+        assertNotNull(plusplus)
+        assertEquals("++", plusplus.operatorCode)
+
+        val plus = integer.operators("operator+")
+        assertEquals(2, plus.size)
+        assertEquals("+", plus.map { it.operatorCode }.distinct().singleOrNull())
+
+        val main = result.functions["main"]
+        assertNotNull(main)
+
+        val unaryOp = main.operatorCalls["++"]
+        assertNotNull(unaryOp)
+        assertInvokes(unaryOp, plusplus)
+
+        val binaryOp0 = main.operatorCalls("+").getOrNull(0)
+        assertNotNull(binaryOp0)
+        assertInvokes(binaryOp0, plus.getOrNull(0))
+
+        val binaryOp1 = main.operatorCalls("+").getOrNull(1)
+        assertNotNull(binaryOp1)
+        assertInvokes(binaryOp1, plus.getOrNull(1))
+    }
+
+    @Test
+    fun testMemberAccessOperator() {
+        val file = File("src/test/resources/cxx/operators/member_access.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var proxy = result.records["Proxy"]
+        assertNotNull(proxy)
+
+        var op = proxy.operators["operator->"]
+        assertNotNull(op)
+
+        var data = result.records["Data"]
+        assertNotNull(data)
+
+        var size = data.fields["size"]
+        assertNotNull(size)
+
+        val p = result.refs["p"]
+        assertNotNull(p)
+        assertEquals(proxy.toType(), p.type)
+
+        var sizeRef = result.memberExpressions["size"]
+        assertNotNull(sizeRef)
+        assertRefersTo(sizeRef, size)
+
+        // we should now have an implicit call to our operator in-between "p" and "size"
+        val opCall = sizeRef.base
+        assertNotNull(opCall)
+        assertIs<OperatorCallExpression>(opCall)
+        assertEquals(p, opCall.base)
+        assertInvokes(opCall, op)
     }
 }

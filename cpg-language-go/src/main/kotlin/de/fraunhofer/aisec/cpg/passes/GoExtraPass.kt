@@ -81,20 +81,6 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
  * In the frontend we only do the assignment, therefore we need to create a new
  * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
  *
- * ## Converting Call Expressions into Cast Expressions
- *
- * In Go, it is possible to convert compatible types by "calling" the type name as a function, such
- * as
- *
- * ```go
- * var i = int(2.0)
- * ```
- *
- * This is also possible with more complex types, such as interfaces or aliased types, as long as
- * they are compatible. Because types in the same package can be defined in multiple files, we
- * cannot decide during the frontend run. Therefore, we need to execute this pass before the
- * [SymbolResolver] and convert certain [CallExpression] nodes into a [CastExpression].
- *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
  * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
@@ -109,8 +95,8 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
  */
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(DFGPass::class)
 @DependsOn(ImportResolver::class)
+@DependsOn(TypeResolver::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker
@@ -183,7 +169,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         return with(builtin) {
             val len = newFunctionDeclaration("len", localNameOnly = true)
-            len.parameters = listOf(newParameterDeclaration("v", autoType()))
+            len.parameters = mutableListOf(newParameterDeclaration("v", autoType()))
             len.returnTypes = listOf(primitiveType("int"))
             addBuiltInFunction(len)
 
@@ -194,7 +180,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              */
             val append = newFunctionDeclaration("append", localNameOnly = true)
             append.parameters =
-                listOf(
+                mutableListOf(
                     newParameterDeclaration("slice", autoType().array()),
                     newParameterDeclaration("elems", autoType(), variadic = true),
                 )
@@ -207,7 +193,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * ```
              */
             val panic = newFunctionDeclaration("panic", localNameOnly = true)
-            panic.parameters = listOf(newParameterDeclaration("v", primitiveType("any")))
+            panic.parameters = mutableListOf(newParameterDeclaration("v", primitiveType("any")))
             addBuiltInFunction(panic)
 
             /**
@@ -403,13 +389,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.findSymbols(import.name, null).filter {
+            scopeManager.lookupSymbolByName(import.name, null).filter {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
-
-        scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
-            it.name == import.name && it.path == import.importURL
-        }
 
         // If not, we can infer a namespace declaration, so we can bundle all inferred function
         // declarations in there

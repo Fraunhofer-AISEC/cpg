@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.IdentityHashMap
 
 /**
@@ -73,10 +73,9 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
 }
 
 /**
- * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a
- * [LatticeElement]. It provides some useful functions e.g. to check if the mapping has to be
- * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
- * one).
+ * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [Edge]) to a [LatticeElement]. It
+ * provides some useful functions e.g. to check if the mapping has to be updated (e.g. because there
+ * are new nodes or because a new lattice element is bigger than the old one).
  */
 open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
@@ -277,11 +276,12 @@ inline fun <reified K : Node, V> iterateEOG(
         // want to copy the state to avoid terminating the iteration too early by messing up with
         // the state-changing checks.
         val insideBB =
-            (nextNode.nextEOG.size == 1 && nextNode.prevEOG.singleOrNull()?.nextEOG?.size == 1)
+            (nextNode.nextEOGEdges.size == 1 &&
+                nextNode.prevEOGEdges.singleOrNull()?.start?.nextEOG?.size == 1)
         val newState =
             transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
-            nextNode.nextEOG.forEach {
+            nextNode.nextEOGEdges.forEach {
                 if (it is K) {
                     worklist.push(it, newState)
                 }
@@ -291,7 +291,7 @@ inline fun <reified K : Node, V> iterateEOG(
     return worklist.mop()
 }
 
-inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>) -> State<N, V>
@@ -299,7 +299,7 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
 }
 
-inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>

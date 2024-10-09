@@ -26,10 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -37,46 +38,35 @@ import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+open class RecordDeclaration :
+    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder, DeclaresType {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var fieldEdges: MutableList<PropertyEdge<FieldDeclaration>> = ArrayList()
-
-    var fields by PropertyEdgeDelegate(RecordDeclaration::fieldEdges)
+    var fieldEdges = astEdgesOf<FieldDeclaration>()
+    var fields by unwrapping(RecordDeclaration::fieldEdges)
 
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var methodEdges: MutableList<PropertyEdge<MethodDeclaration>> = ArrayList()
-
-    var methods by PropertyEdgeDelegate(RecordDeclaration::methodEdges)
+    var methodEdges = astEdgesOf<MethodDeclaration>()
+    var methods by unwrapping(RecordDeclaration::methodEdges)
 
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var constructorEdges: MutableList<PropertyEdge<ConstructorDeclaration>> = ArrayList()
-
-    var constructors by PropertyEdgeDelegate(RecordDeclaration::constructorEdges)
+    var constructorEdges = astEdgesOf<ConstructorDeclaration>()
+    var constructors by unwrapping(RecordDeclaration::constructorEdges)
 
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var recordEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
-
-    var records by PropertyEdgeDelegate(RecordDeclaration::recordEdges)
+    var recordEdges = astEdgesOf<RecordDeclaration>()
+    var records by unwrapping(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var templateEdges: MutableList<PropertyEdge<TemplateDeclaration>> = ArrayList()
-
-    var templates by PropertyEdgeDelegate(RecordDeclaration::templateEdges)
+    var templateEdges = astEdgesOf<TemplateDeclaration>()
+    var templates by unwrapping(RecordDeclaration::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
-
-    override var statements by PropertyEdgeDelegate(RecordDeclaration::statementEdges)
+    override var statementEdges = astEdgesOf<Statement>()
+    override var statements by unwrapping(RecordDeclaration::statementEdges)
 
     @Transient var superClasses: MutableList<Type> = ArrayList()
 
@@ -229,4 +219,7 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
         type.superTypes.addAll(this.superTypes)
         return type
     }
+
+    override val declaredType: Type
+        get() = toType()
 }

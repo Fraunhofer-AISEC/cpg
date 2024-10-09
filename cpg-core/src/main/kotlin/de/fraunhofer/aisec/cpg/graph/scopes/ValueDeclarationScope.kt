@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,11 +45,14 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
             return symbols.flatMap { it.value }.filterIsInstance<ValueDeclaration>()
         }
 
-    /** A map of typedefs keyed by their alias. */
-    @Transient val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+    /**
+     * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
+     * completely redesign the alias / typedef system.
+     */
+    @Transient val typedefs = mutableMapOf<Name, TypedefDeclaration>()
 
     fun addTypedef(typedef: TypedefDeclaration) {
-        typedefs[typedef.alias] = typedef
+        typedefs[typedef.alias.name] = typedef
     }
 
     open fun addDeclaration(declaration: Declaration, addToAST: Boolean) {

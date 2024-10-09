@@ -57,5 +57,12 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
             "fp128" to FloatingPointType("fp128", 128, this, NumericType.Modifier.SIGNED),
             "x86_fp80" to FloatingPointType("x86_fp80", 80, this, NumericType.Modifier.SIGNED),
             "ppc_fp128" to FloatingPointType("ppc_fp128", 128, this, NumericType.Modifier.SIGNED),
+
+            // these are not real LLVM-IR types, but we use them to differentiate unsigned types
+            "ui1" to IntegerType("ui1", 1, this, NumericType.Modifier.UNSIGNED),
+            "ui8" to IntegerType("ui8", 8, this, NumericType.Modifier.UNSIGNED),
+            "ui32" to IntegerType("ui32", 32, this, NumericType.Modifier.UNSIGNED),
+            "ui64" to IntegerType("ui64", 64, this, NumericType.Modifier.UNSIGNED),
+            "ui128" to IntegerType("ui128", 128, this, NumericType.Modifier.UNSIGNED),
         )
 }

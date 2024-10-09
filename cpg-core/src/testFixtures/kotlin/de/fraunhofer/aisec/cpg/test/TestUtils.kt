@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_REFERENCES
 import java.io.File
@@ -315,4 +316,9 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
  */
 fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
+}
+
+fun ContextProvider.assertResolvedType(fqn: String, generics: List<Type>? = null): Type {
+    var type = ctx?.typeManager?.lookupResolvedType(fqn, generics)
+    return assertNotNull(type)
 }

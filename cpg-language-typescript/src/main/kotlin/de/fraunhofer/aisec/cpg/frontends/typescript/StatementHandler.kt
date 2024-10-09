@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import kotlin.collections.plusAssign
 
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
@@ -63,7 +64,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         val decl = this.frontend.declarationHandler.handle(node)
 
         if (decl != null) {
-            statement.addToPropertyEdgeDeclaration(decl)
+            statement.declarationEdges += decl
         }
 
         this.frontend.scopeManager.addDeclaration(decl)
@@ -84,7 +85,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleBlock(node: TypeScriptNode): Block {
         val block = newBlock(rawNode = node)
 
-        node.children?.forEach { this.handle(it)?.let { it1 -> block.addStatement(it1) } }
+        node.children?.forEach { this.handle(it)?.let { it1 -> block.statements += it1 } }
 
         return block
     }
@@ -107,7 +108,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             val decl = this.frontend.declarationHandler.handle(variableNode)
 
             if (decl != null) {
-                statement.addToPropertyEdgeDeclaration(decl)
+                statement.declarationEdges += decl
             }
 
             this.frontend.scopeManager.addDeclaration(decl)

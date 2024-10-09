@@ -30,11 +30,10 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
@@ -70,9 +69,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handle(node: Node?) {
         when (node) {
-            // TODO is doubled. Whatever this means
             is AssignExpression -> handleAssignExpression(node)
-            is Reference -> handleReference(node)
             is ForEachStatement -> handleForEach(node)
             else -> {
                 // Nothing to do for all other types of nodes
@@ -80,67 +77,105 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /*
-     * Return null when not creating a new decl
+    /**
+     * This function will create a new dynamic [VariableDeclaration] if there is a write access to
+     * the [ref].
      */
-    private fun handleReference(node: Reference): VariableDeclaration? {
-        if (node.resolutionHelper is CallExpression) {
+    private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
+        if (ref.access != AccessValues.WRITE) {
             return null
         }
-        val resolved = scopeManager.resolveReference(node)
+
+        // Look for a potential scope modifier for this reference
+        // lookupScope
+        var targetScope =
+            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
+
+        // There are a couple of things to consider now
+        var symbol =
+            // Since this is a WRITE access, we need
+            //   - to look for a local symbol, unless
+            //   - a global keyword is present for this symbol and scope
+            if (targetScope != null) {
+                scopeManager.lookupSymbolByName(ref.name, ref.location, targetScope)
+            } else {
+                scopeManager.lookupSymbolByName(ref.name, ref.location) {
+                    it.scope == scopeManager.currentScope
+                }
+            }
 
         // Nothing to create
-        if (resolved != null) return null
+        if (symbol.isNotEmpty()) return null
 
-        val decl =
-            if (scopeManager.isInRecord) {
-                if (scopeManager.isInFunction) {
-                    if (
-                        node is MemberExpression &&
-                            node.base.name ==
-                                (scopeManager.currentFunction as? MethodDeclaration)?.receiver?.name
-                    ) {
-                        // We need to temporarily jump into the scope of the current record to
-                        // add the field
-                        val field =
-                            scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                                newFieldDeclaration(node.name)
-                            }
-                        field
-                    } else {
-                        val v = newVariableDeclaration(node.name)
-                        v
+        // First, check if we need to create a field
+        var field: FieldDeclaration? =
+            when {
+                // Check, whether we are referring to a "self.X", which would create a field
+                scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
+                    // We need to temporarily jump into the scope of the current record to
+                    // add the field. These are instance attributes
+                    scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
+                        newFieldDeclaration(ref.name)
                     }
-                } else {
-                    val field =
-                        scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                            newFieldDeclaration(node.name)
-                        }
-                    field
                 }
-            } else {
-                newVariableDeclaration(node.name)
+                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
+                    // If this is any other member expression, we are usually not interested in
+                    // creating fields, except if this is a receiver
+                    return null
+                }
+                scopeManager.isInRecord -> {
+                    // We end up here for fields declared directly in the class body. These are
+                    // class attributes; more or less static fields.
+                    newFieldDeclaration(ref.name)
+                }
+                else -> {
+                    null
+                }
             }
 
-        decl.code = node.code
-        decl.location = node.location
+        // If we didn't create any field up to this point and if we are still have not returned, we
+        // can create a normal variable. We need to take scope modifications into account.
+        var decl =
+            if (field == null && targetScope != null) {
+                scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
+            } else if (field == null) {
+                newVariableDeclaration(ref.name)
+            } else {
+                field
+            }
+
+        decl.code = ref.code
+        decl.location = ref.location
         decl.isImplicit = true
 
-        if (decl is FieldDeclaration) {
-            scopeManager.currentRecord?.addField(decl)
-            scopeManager.withScope(scopeManager.currentRecord?.scope) {
-                scopeManager.addDeclaration(decl)
-            }
-        } else {
-            scopeManager.addDeclaration(decl)
-        }
+        log.debug(
+            "Creating dynamic {} {} in {}",
+            if (decl is FieldDeclaration) {
+                "field"
+            } else {
+                "variable"
+            },
+            decl.name,
+            decl.scope
+        )
+
+        // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
+        // creation time
+        scopeManager.withScope(decl.scope) { scopeManager.addDeclaration(decl) }
+
         return decl
     }
+
+    private val Reference.refersToReceiver: Boolean
+        get() {
+            return this is MemberExpression &&
+                this.base.name == scopeManager.currentMethod?.receiver?.name
+        }
 
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
             (target as? Reference)?.let {
-                val handled = handleReference(target)
+                val handled = handleWriteToReference(target)
                 if (handled is Declaration) {
                     // We cannot assign an initializer here because this will lead to duplicate
                     // DFG edges, but we need to propagate the type information from our value
@@ -158,16 +193,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    // TODO document why this is necessary and implement for other possible places
+    // New variables can also be declared as `variable` in a [ForEachStatement]
     private fun handleForEach(node: ForEachStatement) {
-        when (node.variable) {
+        when (val forVar = node.variable) {
             is Reference -> {
-                val handled = handleReference(node.variable as Reference)
+                val handled = handleWriteToReference(forVar)
                 if (handled is Declaration) {
                     handled.let { node.addDeclaration(it) }
                 }
             }
-            else -> TODO()
         }
     }
 }

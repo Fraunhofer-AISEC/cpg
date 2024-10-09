@@ -120,7 +120,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val initializer = frontend.initializerHandler.handle(node.initializer)
             if (initializer is InitializerListExpression) {
                 val construct = newConstructExpression(rawNode = node)
-                construct.arguments = initializer.initializers.toList()
+                construct.arguments = initializer.initializers
                 construct
             } else initializer ?: newProblemExpression("could not parse initializer")
         }
@@ -261,10 +261,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters?.isNotEmpty() == true) {
-                newExpression.templateParameters?.let {
-                    addImplicitTemplateParametersToCall(it, initializer as ConstructExpression)
-                }
+            if (newExpression.templateParameters.isNotEmpty() == true) {
+                addImplicitTemplateParametersToCall(
+                    newExpression.templateParameters,
+                    initializer as ConstructExpression
+                )
             }
 
             // our initializer, such as a construct expression, will have the non-pointer type
@@ -281,8 +282,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * @param template
      * @return List of Nodes containing the all the arguments the template was instantiated with.
      */
-    private fun getTemplateArguments(template: CPPASTTemplateId): List<Node> {
-        val templateArguments: MutableList<Node> = ArrayList()
+    private fun getTemplateArguments(template: CPPASTTemplateId): MutableList<Node> {
+        val templateArguments = mutableListOf<Node>()
         for (argument in template.templateArguments) {
             when (argument) {
                 is IASTTypeId -> {
@@ -320,7 +321,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (name in ctx.implicitDestructorNames) {
             log.debug("Implicit constructor name {}", name)
         }
-        deleteExpression.operand = handle(ctx.operand)
+        handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
         return deleteExpression
     }
 
@@ -409,9 +410,17 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
         if (operatorCode == "&") {
-            return newPointerReference(ctx.operand.toString(), unknownType(), rawNode = ctx)
+            return newPointerReference(
+                handle(ctx.operand)?.name,
+                unknownType(),
+                rawNode = ctx
+            ) // TODO
         } else if (operatorCode == "*") {
-            return newPointerDereference(ctx.operand.toString(), unknownType(), rawNode = ctx)
+            return newPointerDereference(
+                handle(ctx.operand)?.name,
+                unknownType(),
+                rawNode = ctx
+            ) // TODO(@morbitzer): integrate stuff as input
         } else {
             val unaryOperator =
                 newUnaryOperator(
@@ -536,7 +545,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
         val expressionList = newExpressionList(rawNode = exprList)
         for (expr in exprList.expressions) {
-            handle(expr)?.let { expressionList.addExpression(it) }
+            handle(expr)?.let { expressionList.expressions += it }
         }
         return expressionList
     }
@@ -874,7 +883,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // The only supported initializer is an initializer list
         (ctx.initializer as? IASTInitializerList)?.let {
             construct.arguments =
-                it.clauses.map { handle(it) ?: newProblemExpression("could not parse argument") }
+                it.clauses
+                    .map { handle(it) ?: newProblemExpression("could not parse argument") }
+                    .toMutableList()
         }
 
         return construct

@@ -26,71 +26,74 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
-class ForEachStatement : Statement(), BranchingNode, StatementHolder {
+/**
+ * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
+ * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
+ */
+class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
+
+    @Relationship("VARIABLE")
+    var variableEdge =
+        astOptionalEdgeOf<Statement>(
+            onChanged = { _, new ->
+                val end = new?.end
+                if (end is Reference) {
+                    end.access = AccessValues.WRITE
+                    end.dfgHandlerHint = true
+                }
+            }
+        )
+
     /**
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    @AST
-    var variable: Statement? = null
-        set(value) {
-            if (value is Reference) {
-                value.access = AccessValues.WRITE
-                value.dfgHandlerHint = true
-            }
-            field = value
-        }
+    var variable by unwrapping(ForEachStatement::variableEdge)
 
+    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the iteration subject of the loop. */
-    @AST var iterable: Statement? = null
-
-    /** This field contains the body of the loop. */
-    @AST var statement: Statement? = null
+    var iterable by unwrapping(ForEachStatement::iterableEdge)
 
     override val branchedBy: Node?
         get() = iterable
 
-    override var statementEdges: MutableList<PropertyEdge<Statement>>
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
-            val statements = mutableListOf<PropertyEdge<Statement>>()
-            variable?.let { statements.add(PropertyEdge(this, it)) }
-            iterable?.let { statements.add(PropertyEdge(this, it)) }
-            statement?.let { statements.add(PropertyEdge(this, it)) }
+            val statements = astEdgesOf<Statement>()
+            variable?.let { statements.add(AstEdge(this, it)) }
+            iterable?.let { statements.add(AstEdge(this, it)) }
+            statement?.let { statements.add(AstEdge(this, it)) }
+            elseStatement?.let { statements.add(AstEdge(this, it)) }
             return statements
         }
-        set(value) {
+        set(_) {
             // Nothing to do here
         }
 
-    override fun addStatement(s: Statement) {
-        when {
-            variable == null -> variable = s
-            iterable == null -> iterable = s
-            statement == null -> statement = s
-            statement !is Block -> {
-                val block = Block()
-                block.language = this.language
-                statement?.let { block.addStatement(it) }
-                block.addStatement(s)
-                statement = block
-            }
-            else -> (statement as? Block)?.addStatement(s)
-        }
-    }
+    override var statements by unwrapping(ForEachStatement::statementEdges)
+
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("variable", variable)
+            .append("iterable", iterable)
+            .toString()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ForEachStatement) return false
-        return super.equals(other) &&
-            variable == other.variable &&
-            iterable == other.iterable &&
-            statement == other.statement
+        return super.equals(other) && variable == other.variable && iterable == other.iterable
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
 }

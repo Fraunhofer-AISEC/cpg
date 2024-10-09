@@ -27,21 +27,11 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.astParent
 import kotlin.math.absoluteValue
 
 /**
@@ -341,20 +331,14 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         val currentPath = worklist.removeFirst()
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (
-            currentPath.last().nextEOGEdges.none { it.getProperty(Properties.UNREACHABLE) != true }
-        ) {
+        if (currentPath.last().nextEOGEdges.none { it.unreachable != true }) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
             continue // Don't add this path anymore. The requirement is satisfied.
         }
 
         for (next in
-            currentPath
-                .last()
-                .nextEOGEdges
-                .filter { it.getProperty(Properties.UNREACHABLE) != true }
-                .map { it.end }) {
+            currentPath.last().nextEOGEdges.filter { it.unreachable != true }.map { it.end }) {
             // Copy the path for each outgoing DFG edge and add the next node
             val nextPath = mutableListOf<Node>()
             nextPath.addAll(currentPath)
@@ -399,20 +383,14 @@ fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
         val currentPath = worklist.removeFirst()
         // The last node of the path is where we continue. We get all of its outgoing DFG edges and
         // follow them
-        if (
-            currentPath.last().prevEOGEdges.none { it.getProperty(Properties.UNREACHABLE) != true }
-        ) {
+        if (currentPath.last().prevEOGEdges.none { it.unreachable != true }) {
             // No further nodes in the path and the path criteria are not satisfied.
             failedPaths.add(currentPath)
             continue // Don't add this path anymore. The requirement is satisfied.
         }
 
         for (next in
-            currentPath
-                .last()
-                .prevEOGEdges
-                .filter { it.getProperty(Properties.UNREACHABLE) != true }
-                .map { it.start }) {
+            currentPath.last().prevEOGEdges.filter { it.unreachable != true }.map { it.start }) {
             // Copy the path for each outgoing DFG edge and add the next node
             val nextPath = mutableListOf<Node>()
             nextPath.addAll(currentPath)
@@ -440,10 +418,10 @@ fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
-    val path = mutableListOf<PropertyEdge<*>>()
+fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
+    val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.nextEOGEdges.filter { it.getProperty(Properties.UNREACHABLE) != true }) {
+    for (edge in this.nextEOGEdges.filter { it.unreachable != true }) {
         val target = edge.end
 
         path.add(edge)
@@ -470,10 +448,10 @@ fun Node.followNextEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEd
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
-    val path = mutableListOf<PropertyEdge<*>>()
+fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
+    val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.prevEOGEdges.filter { it.getProperty(Properties.UNREACHABLE) != true }) {
+    for (edge in this.prevEOGEdges.filter { it.unreachable != true }) {
         val source = edge.start
 
         path.add(edge)
@@ -529,6 +507,10 @@ val Node?.nodes: List<Node>
 val Node?.calls: List<CallExpression>
     get() = this.allChildren()
 
+/** Returns all [OperatorCallExpression] children in this graph, starting with this [Node]. */
+val Node?.operatorCalls: List<OperatorCallExpression>
+    get() = this.allChildren()
+
 /** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
 val Node?.mcalls: List<MemberCallExpression>
     get() = this.allChildren()
@@ -539,6 +521,10 @@ val Node?.casts: List<CastExpression>
 
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
 val Node?.methods: List<MethodDeclaration>
+    get() = this.allChildren()
+
+/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
+val Node?.operators: List<OperatorDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
@@ -605,8 +591,20 @@ val Node?.forEachLoops: List<ForEachStatement>
 val Node?.switches: List<SwitchStatement>
     get() = this.allChildren()
 
-/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+/** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
 val Node?.whileLoops: List<WhileStatement>
+    get() = this.allChildren()
+
+/** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
+val Node?.doLoops: List<DoStatement>
+    get() = this.allChildren()
+
+/** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
+val Node?.breaks: List<BreakStatement>
+    get() = this.allChildren()
+
+/** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
+val Node?.continues: List<ContinueStatement>
     get() = this.allChildren()
 
 /** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
@@ -624,6 +622,29 @@ val Node?.returns: List<ReturnStatement>
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
 val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
+
+/**
+ * Return all [ProblemNode] children in this graph (either stored directly or in
+ * [Node.additionalProblems]), starting with this [Node].
+ */
+val Node?.problems: List<ProblemNode>
+    get() {
+        val relevantNodes =
+            this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
+
+        val result = mutableListOf<ProblemNode>()
+
+        relevantNodes.forEach {
+            if (it.additionalProblems.isNotEmpty()) {
+                result += it.additionalProblems
+            }
+            if (it is ProblemNode) {
+                result += it
+            }
+        }
+
+        return result
+    }
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
 val Node?.assignments: List<Assignment>
@@ -757,7 +778,7 @@ private fun Node.eogDistanceTo(to: Node): Int {
  *
  * When called on the right-hand side of this assignment, this function will return `a`.
  */
-fun Expression?.unwrapReference(): Node? {
+fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
         this is PointerReference -> this

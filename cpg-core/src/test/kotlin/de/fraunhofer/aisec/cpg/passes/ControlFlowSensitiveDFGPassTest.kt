@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.edge.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edge.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edge.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference

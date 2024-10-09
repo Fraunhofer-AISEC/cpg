@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
@@ -82,7 +81,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     parameter.isVarArgs,
                     rawNode = parameter
                 )
-            declaration.addParameter(param)
+            declaration.parameterEdges += param
             frontend.scopeManager.addDeclaration(param)
         }
 
@@ -136,7 +135,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     parameter.isVarArgs,
                     rawNode = parameter
                 )
-            functionDeclaration.addParameter(param)
+            functionDeclaration.parameterEdges += param
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
         }
@@ -314,7 +313,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstantDeclaration? }
         entries.forEach { it.type = this.objectType(enumDeclaration.name) }
-        enumDeclaration.entries = entries
+        enumDeclaration.entries = entries.toMutableList()
 
         frontend.scopeManager.leaveScope(enumDeclaration)
 
@@ -361,7 +360,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                         val initializerBlock =
                             frontend.statementHandler.handleBlockStatement(decl.body)
                         initializerBlock.isStaticBlock = decl.isStatic
-                        recordDeclaration.addStatement(initializerBlock)
+                        recordDeclaration.statements += initializerBlock
                     }
                     else -> {
                         log.debug(

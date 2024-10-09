@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.processing.strategy
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.getAstChildren
 import java.util.*
 
 /** Strategies (iterators) for traversing graphs to be used by visitors. */
@@ -88,6 +87,6 @@ object Strategy {
      * @return
      */
     fun AST_FORWARD(x: Node): Iterator<Node> {
-        return getAstChildren(x).iterator()
+        return x.astChildren.iterator()
     }
 }

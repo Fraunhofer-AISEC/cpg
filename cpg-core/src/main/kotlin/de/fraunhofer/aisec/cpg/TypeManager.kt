@@ -32,7 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -139,8 +142,7 @@ class TypeManager {
             val node = scope.astNode
 
             // We need an additional check here, because of parsing or other errors, the AST node
-            // might
-            // not necessarily be a template declaration.
+            // might not necessarily be a template declaration.
             if (node is TemplateDeclaration) {
                 val parameterizedType = getTypeParameter(node, name)
                 if (parameterizedType != null) {
@@ -223,14 +225,40 @@ class TypeManager {
         return t
     }
 
-    fun typeExists(name: String): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
+    /** Checks, whether a [Type] with the given [name] exists. */
+    fun typeExists(name: CharSequence): Boolean {
+        return firstOrderTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable = scopeManager.typedefFor(finalToCheck)
+        val applicable = scopeManager.typedefFor(finalToCheck.name, alias.scope)
         return applicable ?: alias
+    }
+
+    /**
+     * This function returns the first (there should be only one) [Type] with the given [fqn] that
+     * is [Type.Origin.RESOLVED].
+     */
+    fun lookupResolvedType(
+        fqn: CharSequence,
+        generics: List<Type>? = null,
+        language: Language<*>? = null
+    ): Type? {
+        var primitiveType = language?.getSimpleTypeOf(fqn)
+        if (primitiveType != null) {
+            return primitiveType
+        }
+
+        return firstOrderTypes.firstOrNull {
+            (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
+                it.root.name == fqn &&
+                if (generics != null) {
+                    (it as? ObjectType)?.generics == generics
+                } else {
+                    true
+                }
+        }
     }
 }
 
@@ -242,17 +270,7 @@ val Type.ancestors: Set<Type.Ancestor>
 internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
-    // Recursively call ourselves on our super types. There is a little hack here that we need to do
-    // for object types created from RecordDeclaration::toType() because their supertypes might not
-    // be set correctly. This would be better, if we change a RecordDeclaration to a
-    // ValueDeclaration and set the corresponding object type to its type.
-    val superTypes =
-        if (this is ObjectType) {
-            this.recordDeclaration?.superTypes ?: setOf()
-        } else {
-            superTypes
-        }
-
+    // Recursively call ourselves on our super types.
     types += superTypes.flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
@@ -338,3 +356,29 @@ val Collection<Type>.commonType: Type?
         // root node is 0) and re-wrap the final common type back into the original wrap state
         return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
+
+/**
+ * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
+ * passes that replace certain [Reference] nodes with other nodes, e.g., the
+ * [ResolveCallExpressionAmbiguityPass].
+ *
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupUniqueTypeSymbolByName]), so
+ * this can only be used in passes.
+ */
+context(Pass<*>)
+fun Reference.nameIsType(): Type? {
+    // First, check if it is a simple type
+    var type = language?.getSimpleTypeOf(name)
+    if (type != null) {
+        return type
+    }
+
+    // This could also be a typedef
+    type = scopeManager.typedefFor(name, scope)
+    if (type != null) {
+        return type
+    }
+
+    // Lastly, check if the reference contains a symbol that points to type (declaration)
+    return scopeManager.lookupUniqueTypeSymbolByName(name, scope)?.declaredType
+}

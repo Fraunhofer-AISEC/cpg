@@ -26,24 +26,40 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver, HasAliases {
+class UnaryOperator :
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver, HasAliases {
+    @Relationship("INPUT")
+    var inputEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse input"),
+            onChanged = { old, new ->
+                exchangeTypeObserver(old, new)
+                changeExpressionAccess()
+            }
+        )
     /** The expression on which the operation is applied. */
-    @AST
-    var input: Expression = ProblemExpression("could not parse input")
-        set(value) {
-            field.unregisterTypeObserver(this)
-            field = value
-            input.registerTypeObserver(this)
-            changeExpressionAccess()
-        }
+    var input by unwrapping(UnaryOperator::inputEdge)
+
+    /**
+     * The unary operator does not have any arguments, since [input] is already the [operatorBase].
+     */
+    override val operatorArguments: List<Expression>
+        get() = listOf()
+
+    /** The unary operator operates on [input]. */
+    override val operatorBase
+        get() = input
 
     /** The operator code. */
-    var operatorCode: String? = null
+    override var operatorCode: String? = null
         set(value) {
             field = value
             changeExpressionAccess()
@@ -124,7 +140,12 @@ class UnaryOperator : Expression(), ArgumentHolder, HasType.TypeObserver, HasAli
         return false
     }
 
-    override var aliases = mutableSetOf<HasAliases>()
+    override var aliases =
+        mutableSetOf<HasAliases>() // TODO can this be removed? also HasAliases interface
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.input == expression
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

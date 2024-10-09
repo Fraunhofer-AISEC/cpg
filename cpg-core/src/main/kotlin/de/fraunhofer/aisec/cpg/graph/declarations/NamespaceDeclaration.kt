@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
@@ -48,12 +48,12 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
      */
-    @AST override val declarations: MutableList<Declaration> = ArrayList()
+    val declarationEdges = astEdgesOf<Declaration>()
+    override val declarations by unwrapping(NamespaceDeclaration::declarationEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
+    override var statementEdges = astEdgesOf<Statement>()
 
     /**
      * In some languages, there is a relationship between paths / directories and the package
@@ -73,8 +73,7 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
         addIfNotContains(declarations, declaration)
     }
 
-    override var statements: List<Statement> by
-        PropertyEdgeDelegate(NamespaceDeclaration::statementEdges)
+    override var statements by unwrapping(NamespaceDeclaration::statementEdges)
 
     override val eogStarters: List<Node>
         get() {

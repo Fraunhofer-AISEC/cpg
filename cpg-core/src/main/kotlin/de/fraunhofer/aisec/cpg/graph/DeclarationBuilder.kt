@@ -96,6 +96,29 @@ fun MetadataProvider.newMethodDeclaration(
 }
 
 /**
+ * Creates a new [OperatorDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newOperatorDeclaration(
+    name: CharSequence,
+    operatorCode: String,
+    recordDeclaration: RecordDeclaration? = null,
+    rawNode: Any? = null
+): OperatorDeclaration {
+    val node = OperatorDeclaration()
+    node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
+
+    node.operatorCode = operatorCode
+    node.recordDeclaration = recordDeclaration
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
@@ -118,10 +141,10 @@ fun MetadataProvider.newConstructorDeclaration(
 }
 
 /**
- * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [ParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newParameterDeclaration(
@@ -183,7 +206,7 @@ fun LanguageProvider.newTupleDeclaration(
 
     // Also all our elements need to have an auto-type
     elements.forEach { it.type = autoType() }
-    node.elements = elements
+    node.elements = elements.toMutableList()
 
     node.initializer = initializer
 
@@ -204,10 +227,12 @@ fun MetadataProvider.newTypedefDeclaration(
     rawNode: Any? = null
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
-    node.applyMetadata(this, alias.typeName, rawNode, true)
+    node.applyMetadata(this, alias.typeName, rawNode)
 
     node.type = targetType
     node.alias = alias
+    // litle bit of a hack to make the type FQN
+    node.alias.name = node.name
 
     log(node)
     return node
