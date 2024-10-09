@@ -350,9 +350,7 @@ fun MetadataProvider.newLookupScopeStatement(
 
     // Add it to our scope
     for (symbol in symbols) {
-        if (targetScope != null) {
-            node.scope?.predefinedLookupScopes[symbol] = Pair(targetScope, node)
-        }
+        node.scope?.predefinedLookupScopes[symbol] = node
     }
 
     log(node)

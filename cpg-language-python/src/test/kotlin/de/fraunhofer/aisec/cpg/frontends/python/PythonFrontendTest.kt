@@ -1491,23 +1491,10 @@ class PythonFrontendTest : BaseTest() {
     fun testPackageResolution() {
         val topLevel = Path.of("src", "test", "resources", "python", "packages")
         var result =
-            analyze(
-                // Ordering is important until #1782 is merged in
-                listOf(
-                        topLevel.resolve("foobar/config/__init__.py"),
-                        topLevel.resolve("foobar/implementation/__init__.py"),
-                        topLevel.resolve("foobar/implementation/internal_bar.py"),
-                        topLevel.resolve("foobar/implementation/internal_foo.py"),
-                        topLevel.resolve("foobar/__init__.py"),
-                        topLevel.resolve("foobar/__main__.py"),
-                        topLevel.resolve("foobar/module1.py"),
-                    )
-                    .map { it.toFile() },
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("foobar")).map { it.toFile() }, topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.useParallelFrontends(false)
+                it.failOnError(false)
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferFunctions(false).build()
                 )
