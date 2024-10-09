@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -60,6 +61,182 @@ class GraphExamples {
                                     }
                                 }
                                 returnStmt { ref("i") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getWhileWithElseAndBreak(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("whileWithBreakAndElse.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    whileStmt {
+                                        whileCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                    call("postWhile")
+                                    whileStmt {
+                                        whileCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getDoWithElseAndBreak(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("whileWithBreakAndElse.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    doStmt {
+                                        doCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                    call("postDo")
+                                    doStmt {
+                                        doCondition { literal(true, t("bool")) }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getForWithElseAndBreak(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("whileWithBreakAndElse.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    forStmt(
+                                        initializer = declare { variable("a") },
+                                        condition = literal(true, t("bool")),
+                                        iteration = newUnaryOperator("++", true, false),
+                                        elseStmt = call("elseCall")
+                                    ) {
+                                        ifStmt {
+                                            condition { literal(true, t("bool")) }
+                                            thenStmt { breakStmt() }
+                                        }
+                                        call("postIf")
+                                    }
+                                    call("postFor")
+                                    forStmt(
+                                        initializer = declare { variable("a") },
+                                        condition = literal(true, t("bool")),
+                                        iteration = newUnaryOperator("++", true, false),
+                                        elseStmt = call("elseCall")
+                                    ) {
+                                        ifStmt {
+                                            condition { literal(true, t("bool")) }
+                                            thenStmt { breakStmt() }
+                                        }
+                                        call("postIf")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getForEachWithElseAndBreak(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("whileWithBreakAndElse.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    forEachStmt {
+                                        iterable { call("listOf") }
+                                        variable { declare { variable("a") } }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                    call("postForEach")
+                                    forEachStmt {
+                                        iterable { call("listOf") }
+                                        variable { declare { variable("a") } }
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                }
                             }
                         }
                     }

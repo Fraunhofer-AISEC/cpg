@@ -514,7 +514,7 @@ class GraphExamples {
                                             memberCall("finish", ref("p6"))
                                         }
 
-                                        whileCondition {
+                                        doCondition {
                                             memberCall("nextUInt", ref("URandomKt")) gt
                                                 literal(5, t("int"))
                                         }

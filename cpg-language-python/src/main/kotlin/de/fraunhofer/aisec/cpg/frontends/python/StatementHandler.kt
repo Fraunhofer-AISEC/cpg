@@ -418,11 +418,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
         if (node.orelse.isNotEmpty()) {
-            ret.additionalProblems +=
-                newProblemExpression(
-                    problem = "Cannot handle \"orelse\" in while loops.",
-                    rawNode = node
-                )
+            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
         }
         return ret
     }
@@ -488,11 +484,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         if (node.orelse.isNotEmpty()) {
-            ret.additionalProblems +=
-                newProblemExpression(
-                    problem = "handleFor: Cannot handle \"orelse\" in for loops.",
-                    rawNode = node
-                )
+            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
         }
         return ret
     }
