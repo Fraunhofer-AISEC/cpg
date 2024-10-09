@@ -192,77 +192,81 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         val mainBlock = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
 
-        var currentBlock = mainBlock
+        // If there are multiple elements in node.items, we have to nest the try statements.
+        // We start with a generic block for the outer context manager.
+        // For i > 1, we add context_manager[i] to the try-block of item[i-1]
+        val currentBlock =
+            node.items.fold(mainBlock) { currentBlock, withItem ->
+                // We set it as implicit below because there we also have a code and location.
+                var tryBlock = newBlock()
+                // Create a temporary reference for the context manager
+                val managerName = Name.random(prefix = CONTEXT_MANAGER)
+                val manager = newReference(name = managerName).implicit()
 
-        node.items.forEach { withItem ->
-            // We set it as implicit below because there we also have a code and location.
-            var tryBlock = newBlock()
-            // Create a temporary reference for the context manager
-            val managerName = Name.random(prefix = CONTEXT_MANAGER)
-            val manager = newReference(name = managerName).implicit()
-
-            // Handle the 'context expression' (the part before 'as') and assign to tempRef
-            // Represents the line "manager = ContextManager()"
-            val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
-            val managerAssignment =
-                newAssignExpression(
-                        operatorCode = "=",
-                        lhs = listOf(manager),
-                        rhs = listOf(contextExpr)
-                    )
-                    .implicit()
-            currentBlock.statements.add(managerAssignment)
-
-            val (enterAssignment, enterVarName) = generateEnterCallAndAssignment(manager, withItem)
-            currentBlock.statements.add(enterAssignment)
-
-            withItem.optional_vars?.let {
-                val optionalVar = frontend.expressionHandler.handle(it)
-                node.type_comment?.let { optionalVar.type = frontend.typeOf(it) }
-
-                // Assign the result of __enter__() to `optionalVar`
-                // Represents the line "cm = tmpVal # Doesn't exist if no variable is used"
-                tryBlock.statements.add(
+                // Handle the 'context expression' (the part before 'as') and assign to tempRef
+                // Represents the line "manager = ContextManager()"
+                val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
+                val managerAssignment =
                     newAssignExpression(
                             operatorCode = "=",
-                            lhs = listOf(optionalVar),
-                            rhs = listOf(newReference(name = enterVarName).implicit())
+                            lhs = listOf(manager),
+                            rhs = listOf(contextExpr)
                         )
                         .implicit()
-                )
+                currentBlock.statements.add(managerAssignment)
+
+                val (enterAssignment, enterVarName) =
+                    generateEnterCallAndAssignment(manager, withItem)
+                currentBlock.statements.add(enterAssignment)
+
+                withItem.optional_vars?.let {
+                    val optionalVar = frontend.expressionHandler.handle(it)
+                    node.type_comment?.let { optionalVar.type = frontend.typeOf(it) }
+
+                    // Assign the result of __enter__() to `optionalVar`
+                    // Represents the line "cm = tmpVal # Doesn't exist if no variable is used"
+                    tryBlock.statements.add(
+                        newAssignExpression(
+                                operatorCode = "=",
+                                lhs = listOf(optionalVar),
+                                rhs = listOf(newReference(name = enterVarName).implicit())
+                            )
+                            .implicit()
+                    )
+                }
+
+                // Create the try statement with __exit__ calls in the finally block
+                val tryStatement =
+                    newTryStatement(rawNode = node).apply {
+                        this.tryBlock = tryBlock
+                        // Add the catch block
+                        val catchClause =
+                            newCatchClause().implicit().apply {
+                                this.body =
+                                    newBlock().implicit().apply {
+                                        this.statements.add(
+                                            generateExitCallWithSysinfo(manager, withItem)
+                                        )
+                                    }
+                            }
+                        this.catchClauses.add(catchClause)
+                        // Add the else-block
+                        this.elseBlock =
+                            newBlock().implicit().apply {
+                                this.statements.add(generateExitCallWithNone(manager, withItem))
+                            }
+                    }
+                currentBlock.statements.add(tryStatement)
+
+                tryBlock
             }
 
-            // Create the try statement with __exit__ calls in the finally block
-            val tryStatement =
-                newTryStatement(rawNode = node).apply {
-                    this.tryBlock = tryBlock
-                    // Add the catch block
-                    val catchClause =
-                        newCatchClause().implicit().apply {
-                            this.body =
-                                newBlock().implicit().apply {
-                                    this.statements.add(
-                                        generateExitCallWithSysinfo(manager, withItem)
-                                    )
-                                }
-                        }
-                    this.catchClauses.add(catchClause)
-                    // Add the else-block
-                    this.elseBlock =
-                        newBlock().implicit().apply {
-                            this.statements.add(generateExitCallWithNone(manager, withItem))
-                        }
-                }
-            currentBlock.statements.add(tryStatement)
-
-            currentBlock = tryBlock
-        }
-
-        // Create the block for the body of the with statement
+        // Create the block of the with statement and add it to the inner try-block
         val bodyBlock = makeBlock(node.body, parentNode = node)
         currentBlock.statements.addAll(bodyBlock.statements)
         currentBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
 
+        // The result is the outer block
         return mainBlock
     }
 
