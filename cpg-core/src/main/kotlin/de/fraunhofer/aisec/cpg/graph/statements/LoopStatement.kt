@@ -68,7 +68,7 @@ abstract class LoopStatement : Statement() {
         if (this === other) {
             return true
         }
-        if (other !is ForStatement) {
+        if (other !is LoopStatement) {
             return false
         }
 
