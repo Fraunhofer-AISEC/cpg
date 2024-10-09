@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
-// @DependsOn(TypeResolver::class)
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
@@ -89,7 +88,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Look for a potential scope modifier for this reference
         // lookupScope
         var targetScope =
-            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.first
+            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // There are a couple of things to consider now
         var symbol =
