@@ -25,10 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -42,6 +46,10 @@ open class Component : Node() {
     val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
+
+    @Transient
+    @PopulatedByPass(ImportResolver::class)
+    var importDependencies = ImportDependencies(translationUnits)
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {

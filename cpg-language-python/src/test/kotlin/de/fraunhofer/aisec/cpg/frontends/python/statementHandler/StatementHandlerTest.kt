@@ -231,4 +231,82 @@ class StatementHandlerTest : BaseTest() {
             assertEquals(assertResolvedType("str"), b.type)
         }
     }
+
+    @Test
+    fun testGlobal() {
+        var file = topLevel.resolve("global.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        // There should be three variable declarations, two local and one global
+        var cVariables = result.variables("c")
+        assertEquals(3, cVariables.size)
+
+        // Our scopes do not match 1:1 to python scopes, but rather the python "global" scope is a
+        // name space with the name of the file and the function scope is a block scope of the
+        // function body
+        var pythonGlobalScope = result.finalCtx.scopeManager.lookupScope(file.nameWithoutExtension)
+
+        var globalC = cVariables.firstOrNull { it.scope == pythonGlobalScope }
+        assertNotNull(globalC)
+
+        var localC1 =
+            cVariables.firstOrNull {
+                it.scope?.astNode?.astParent?.name?.localName == "local_write"
+            }
+        assertNotNull(localC1)
+
+        var localC2 =
+            cVariables.firstOrNull {
+                it.scope?.astNode?.astParent?.name?.localName == "error_write"
+            }
+        assertNotNull(localC2)
+
+        // In global_write, all references should point to global c
+        var cRefs = result.functions["global_write"]?.refs("c")
+        assertNotNull(cRefs)
+        cRefs.forEach { assertRefersTo(it, globalC) }
+
+        // In global_read, all references should point to global c
+        cRefs = result.functions["global_read"]?.refs("c")
+        assertNotNull(cRefs)
+        cRefs.forEach { assertRefersTo(it, globalC) }
+
+        // In local_write, all references should point to local c
+        cRefs = result.functions["local_write"]?.refs("c")
+        assertNotNull(cRefs)
+        cRefs.forEach { assertRefersTo(it, localC1) }
+
+        // In error_write, all references will point to local c; even though the c on the right side
+        // SHOULD be unresolved - but this a general shortcoming because the resolving will not take
+        // the EOG into consideration (yet)
+        cRefs = result.functions["error_write"]?.refs("c")
+        assertNotNull(cRefs)
+        cRefs.forEach { assertRefersTo(it, localC2) }
+    }
+
+    @Test
+    fun testNonlocal() {
+        var file = topLevel.resolve("nonlocal.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        // There will be only 1 variable declarations because we are currently not adding nested
+        // functions to the AST properly :(
+        var cVariables = result.variables("c")
+        assertEquals(1, cVariables.size)
+    }
+
+    // TODO(oxisto): Re-renable this once we parse nested functions
+    @Ignore
+    @Test
+    fun testNonLocal() {
+        var file = topLevel.resolve("nonlocal.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        // There should be three variable declarations, two local and one global
+        var cVariables = result.variables("c")
+        assertEquals(3, cVariables.size)
+    }
 }
