@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.expressions
+
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
+
+/**
+ * Represent a list/set/map comprehension or similar expression. It contains four major components:
+ * The statement, the variable, the iterable and a predicate which are combined to something like
+ * `[statement(variable) : variable in iterable if predicate(variable)]`.
+ *
+ * Some languages provide a way to have multiple variables, iterables and predicates. For this
+ * reason, we represent the `variable, iterable and predicate in its own class
+ * [CollectionComprehension.ComprehensionExpression].
+ */
+class CollectionComprehension : Expression() {
+
+    /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
+    class ComprehensionExpression : Expression() {
+        @Relationship("VARIABLE")
+        var variableEdge =
+            astOptionalEdgeOf<Statement>(
+                onChanged = { _, new ->
+                    val end = new?.end
+                    if (end is Reference) {
+                        end.access = AccessValues.WRITE
+                    }
+                }
+            )
+
+        /**
+         * This field contains the iteration variable of the comprehension. It can be either a new
+         * variable declaration or a reference (probably to a new variable).
+         */
+        var variable by unwrapping(ComprehensionExpression::variableEdge)
+
+        @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
+
+        /** This field contains the iteration subject of the loop. */
+        var iterable by unwrapping(ComprehensionExpression::iterableEdge)
+
+        @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>()
+
+        /**
+         * This field contains the predicate which has to hold to evaluate `statement(variable)` and
+         * include it in the result.
+         */
+        var predicate by unwrapping(ComprehensionExpression::predicateEdge)
+
+        override fun toString() =
+            ToStringBuilder(this, TO_STRING_STYLE)
+                .appendSuper(super.toString())
+                .append("variable", variable)
+                .append("iterable", iterable)
+                .append("predicate", predicate)
+                .toString()
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ComprehensionExpression) return false
+            return super.equals(other) &&
+                variable == other.variable &&
+                iterable == other.iterable &&
+                predicate == other.predicate
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
+    }
+
+    @Relationship("COMPREHENSION_EXPRESSIONS")
+    var comprehensionExpressionEdges = astEdgesOf<ComprehensionExpression>()
+    /**
+     * This field contains one or multiple [ComprehensionExpression]s.
+     *
+     * Note: Instead of having a list here, we could also enforce that the frontend nests the
+     * expressions in a meaningful way (in particular this would help us to satisfy dependencies
+     * between the comprehensions' variables).
+     */
+    var comprehensionExpressions by
+        unwrapping(CollectionComprehension::comprehensionExpressionEdges)
+
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
+    /**
+     * This field contains the statement which is applied to each element of the input for which the
+     * predicate returned `true`.
+     */
+    var statement by unwrapping(CollectionComprehension::statementEdge)
+
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("statement", statement)
+            .append("comprehensions", comprehensionExpressions)
+            .toString()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CollectionComprehension) return false
+        return super.equals(other) &&
+            statement == other.statement &&
+            comprehensionExpressions == other.comprehensionExpressions
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
+}
