@@ -183,7 +183,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
-            // TODO: Needs #1733 or 1741, then add:
+            // TODO: Needs #1733 and 1741, then add:
             //   ifStmt.thenStatement = newThrowStatement().implicit()
             val neg = newUnaryOperator("not", false, false).implicit()
             neg.input = exitCallWithSysExec
