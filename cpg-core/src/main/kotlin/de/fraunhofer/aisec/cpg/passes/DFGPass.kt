@@ -147,7 +147,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleThrowStatement(node: ThrowStatement) {
         node.exception?.let { node.prevDFGEdges += it }
-        node.cause?.let { node.prevDFGEdges += it }
+        node.parentException?.let { node.prevDFGEdges += it }
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {

@@ -40,18 +40,19 @@ class ThrowStatement : Statement(), ArgumentHolder {
     var exception by unwrapping(ThrowStatement::exceptionEdge)
 
     /**
-     * Some languages (Python) can add a cause to indicate that an exception was raised while
-     * handling another exception. This is stored in the graph, but has no further implications like
-     * EOG or DFG connections, as it is only of informational purpose, but it doesn't change the
-     * program behavior.
+     * Some languages (Python) can add a parent exception (or `cause`) to indicate that an exception
+     * was raised while handling another exception. This is stored in the graph, but has no further
+     * implications like EOG or DFG connections, as it is only of informational purpose, but it
+     * doesn't change the program behavior.
      */
-    @Relationship(value = "CAUSE") var causeEdge = astOptionalEdgeOf<Expression>()
-    var cause by unwrapping(ThrowStatement::causeEdge)
+    @Relationship(value = "PARENT_EXCEPTION")
+    var parentExceptionEdge = astOptionalEdgeOf<Expression>()
+    var parentException by unwrapping(ThrowStatement::parentExceptionEdge)
 
     override fun addArgument(expression: Expression) {
         when {
             exception == null -> exception = expression
-            cause == null -> cause = expression
+            parentException == null -> parentException = expression
         }
     }
 
@@ -61,8 +62,8 @@ class ThrowStatement : Statement(), ArgumentHolder {
                 exception = new
                 true
             }
-            cause == old -> {
-                cause = new
+            parentException == old -> {
+                parentException = new
                 true
             }
             else -> false
@@ -70,14 +71,16 @@ class ThrowStatement : Statement(), ArgumentHolder {
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return exception == expression || cause == expression
+        return exception == expression || parentException == expression
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ThrowStatement) return false
-        return super.equals(other) && exception == other.exception && cause == other.cause
+        return super.equals(other) &&
+            exception == other.exception &&
+            parentException == other.parentException
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), exception, cause)
+    override fun hashCode() = Objects.hash(super.hashCode(), exception, parentException)
 }
