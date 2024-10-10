@@ -225,12 +225,16 @@ abstract class Node :
         ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
         protected set
 
+    var nextPDG by unwrapping(Node::nextPDGEdges)
+
     /** Incoming Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
     var prevPDGEdges: ProgramDependences<Node> =
         ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
         protected set
+
+    var prevPDG by unwrapping(Node::prevDFGEdges)
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
