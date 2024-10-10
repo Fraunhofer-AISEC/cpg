@@ -71,9 +71,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Starred -> handleStarred(node)
             is Python.AST.NamedExpr -> handleNamedExpr(node)
             is Python.AST.ListComp -> handleListComprehension(node)
+            is Python.AST.SetComp -> handleSetComprehension(node)
+            is Python.AST.DictComp -> handleDictComprehension(node)
             is Python.AST.GeneratorExp,
-            is Python.AST.SetComp,
-            is Python.AST.DictComp,
             is Python.AST.Await,
             is Python.AST.Yield,
             is Python.AST.YieldFrom ->
@@ -95,8 +95,22 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
-        return newCollectionComprehension().apply {
+        return newCollectionComprehension(node).apply {
             this.statement = handle(node.elt)
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+        }
+    }
+
+    private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
+        return newCollectionComprehension(node).apply {
+            this.statement = handle(node.elt)
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+        }
+    }
+
+    private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
+        return newCollectionComprehension(node).apply {
+            this.statement = newKeyValueExpression(handle(node.key), handle(node.value), node)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
         }
     }
