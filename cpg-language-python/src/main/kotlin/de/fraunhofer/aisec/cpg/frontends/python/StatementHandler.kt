@@ -160,7 +160,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         /**
          * Prepares the if-statement which is the body of the catch block. This includes the call of
-         * `__exit__(manager, *sys.exc_info())`, the negation and the throw statement.
+         * `manager.__exit__(*sys.exc_info())`, the negation and the throw statement.
          */
         fun generateExitCallWithSysExcInfo(
             managerName: Name,
