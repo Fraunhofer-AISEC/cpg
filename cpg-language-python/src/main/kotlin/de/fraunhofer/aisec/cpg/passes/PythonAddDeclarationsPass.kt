@@ -38,11 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
-@DependsOn(TypeResolver::class)
+@ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
