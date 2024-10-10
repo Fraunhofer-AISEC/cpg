@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a `throw` or `raise` statement. */
@@ -83,4 +84,12 @@ class ThrowStatement : Statement(), ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), exception, parentException)
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("exception", exception)
+            .append("parentException", parentException)
+            .toString()
+    }
 }
