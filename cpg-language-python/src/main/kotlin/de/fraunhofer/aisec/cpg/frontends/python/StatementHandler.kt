@@ -179,7 +179,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             val starOp = newUnaryOperator("*", false, false)
             starOp.input =
-                newMemberExpression("exec_info", newReference("sys").implicit()).implicit()
+                newMemberExpression(name = "exec_info", base = newReference("sys").implicit()).implicit()
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
