@@ -25,21 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
+import de.fraunhofer.aisec.cpg.GraphExamples.Companion.prepareThrowDFGTest
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.body
-import de.fraunhofer.aisec.cpg.graph.builder.call
-import de.fraunhofer.aisec.cpg.graph.builder.declare
-import de.fraunhofer.aisec.cpg.graph.builder.function
-import de.fraunhofer.aisec.cpg.graph.builder.literal
-import de.fraunhofer.aisec.cpg.graph.builder.ref
-import de.fraunhofer.aisec.cpg.graph.builder.t
-import de.fraunhofer.aisec.cpg.graph.builder.`throw`
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.builder.variable
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.ThrowStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -121,19 +109,7 @@ class DataflowTest {
 
     @Test
     fun testThrow() {
-        val result =
-            TestLanguageFrontend().build {
-                translationResult {
-                    translationUnit("some.file") {
-                        function("foo", t("void")) {
-                            body {
-                                declare { variable("a", t("short")) { literal(42) } }
-                                `throw` { call("SomeError") { ref("a") } }
-                            }
-                        }
-                    }
-                }
-            }
+        val result = prepareThrowDFGTest()
 
         // Let's assert that we did this correctly
         val main = result.functions[0]
@@ -147,6 +123,8 @@ class DataflowTest {
         val throwCall = throwStmt.exception
         assertIs<CallExpression>(throwCall)
 
-        // TODO dataflow var to call
+        val someError = result.calls["SomeError"]
+        assertIs<CallExpression>(someError)
+        assertContains(throwStmt.prevDFG, someError)
     }
 }

@@ -1033,10 +1033,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(stmt)
     }
 
-    /** This is copied & pasted from [handleThrowOperator]. TODO: To be merged in a later PR. */
+    /**
+     * This is copied & pasted with minimal adjustments from [handleThrowOperator]. TODO: To be
+     * merged in a later PR.
+     */
     protected fun handleThrowStatement(statement: ThrowStatement) {
         val input = statement.exception
         createEOG(input)
+        statement.parentException?.let { createEOG(it) }
 
         val catchingScope =
             scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
