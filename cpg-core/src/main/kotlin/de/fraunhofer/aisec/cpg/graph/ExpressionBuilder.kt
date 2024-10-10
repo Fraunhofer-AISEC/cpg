@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
@@ -520,6 +521,26 @@ fun MetadataProvider.newInitializerListExpression(
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.type = targetType
+
+    log(node)
+    return node
+}
+
+@JvmOverloads
+fun MetadataProvider.newComprehensionExpression(
+    rawNode: Any? = null
+): CollectionComprehension.ComprehensionExpression {
+    val node = CollectionComprehension.ComprehensionExpression()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    log(node)
+    return node
+}
+
+@JvmOverloads
+fun MetadataProvider.newCollectionComprehension(rawNode: Any? = null): CollectionComprehension {
+    val node = CollectionComprehension()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
     return node
