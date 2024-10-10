@@ -140,7 +140,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
-        fun generateExitCallWithNone(managerName: Name, withItem: Python.AST.withitem): MemberCallExpression {
+        fun generateExitCallWithNone(
+            managerName: Name,
+            withItem: Python.AST.withitem
+        ): MemberCallExpression {
             val exitCallWithNone =
                 newMemberCallExpression(
                         callee =
@@ -179,7 +182,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             val starOp = newUnaryOperator("*", false, false)
             starOp.input =
-                newMemberExpression(name = "exec_info", base = newReference("sys").implicit()).implicit()
+                newMemberExpression(name = "exec_info", base = newReference("sys").implicit())
+                    .implicit()
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
@@ -234,8 +238,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // For i > 1, we add context_manager[i] to the try-block of item[i-1]
         val currentBlock =
             node.items.fold(result) { currentBlock, withItem ->
-                // We set it as implicit below because there we also have a code and location.
-                var tryBlock = newBlock()
                 val (managerAssignment, managerName) = generateManagerAssignment(withItem)
 
                 currentBlock.statements.add(managerAssignment)
@@ -244,28 +246,41 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     generateEnterCallAndAssignment(managerName, withItem)
                 currentBlock.statements.add(enterAssignment)
 
-                withItem.optional_vars?.let {
-                    val optionalVar = frontend.expressionHandler.handle(it)
-                    node.type_comment?.let { optionalVar.type = frontend.typeOf(it) }
-
-                    // Assign the result of __enter__() to `optionalVar`
-                    // Represents the line "cm = tmpVal # Doesn't exist if no variable is used"
-                    tryBlock.statements.add(
-                        newAssignExpression(
-                                operatorCode = "=",
-                                lhs = listOf(optionalVar),
-                                rhs = listOf(newReference(name = tmpValName).implicit())
-                            )
-                            .implicit()
-                    )
-                }
-
                 // Create the try statement with __exit__ calls in the finally block
                 val tryStatement =
                     newTryStatement(rawNode = node).apply {
-                        this.tryBlock = tryBlock
+                        // We set it as implicit below because there we also have a code and
+                        // location.
+                        this.tryBlock =
+                            newBlock()
+                                .apply {
+                                    withItem.optional_vars?.let {
+                                        val optionalVar = frontend.expressionHandler.handle(it)
+                                        node.type_comment?.let {
+                                            optionalVar.type = frontend.typeOf(it)
+                                        }
+
+                                        // Assign the result of __enter__() to `optionalVar`
+                                        // Represents the line "cm = tmpVal # Doesn't exist if no
+                                        // variable is used"
+                                        this.statements.add(
+                                            newAssignExpression(
+                                                    operatorCode = "=",
+                                                    lhs = listOf(optionalVar),
+                                                    rhs =
+                                                        listOf(
+                                                            newReference(name = tmpValName)
+                                                                .implicit()
+                                                        )
+                                                )
+                                                .implicit()
+                                        )
+                                    }
+                                }
+                                .codeAndLocationFromOtherRawNode(node)
+                                .implicit()
                         // Add the catch block
-                        val catchClause =
+                        this.catchClauses.add(
                             newCatchClause().implicit().apply {
                                 this.body =
                                     newBlock().implicit().apply {
@@ -274,7 +289,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                         )
                                     }
                             }
-                        this.catchClauses.add(catchClause)
+                        )
                         // Add the else-block
                         this.elseBlock =
                             newBlock().implicit().apply {
@@ -283,7 +298,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     }
                 currentBlock.statements.add(tryStatement)
 
-                tryBlock
+                tryStatement.tryBlock ?: throw NullPointerException("This should never happen!")
             }
 
         // Create the block of the with statement and add it to the inner try-block
