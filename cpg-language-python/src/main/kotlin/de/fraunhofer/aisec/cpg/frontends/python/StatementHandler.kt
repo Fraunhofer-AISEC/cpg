@@ -68,8 +68,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Delete -> handleDelete(node)
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
+            is Python.AST.Raise -> handleRaise(node)
             is Python.AST.Match,
-            is Python.AST.Raise,
             is Python.AST.TryStar,
             is Python.AST.With,
             is Python.AST.AsyncWith ->
@@ -78,6 +78,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
+     * [ThrowStatement].
+     */
+    private fun handleRaise(node: Python.AST.Raise): ThrowStatement {
+        val ret = newThrowStatement(rawNode = node)
+        node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
+        node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
+        return ret
     }
 
     /**

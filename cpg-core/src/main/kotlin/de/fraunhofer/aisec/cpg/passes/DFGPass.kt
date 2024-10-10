@@ -130,12 +130,24 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
+            is ThrowStatement -> handleThrowStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
         }
+    }
+
+    /**
+     * Handle a [ThrowStatement]. Currently, we support two types of [ThrowStatement.exception],
+     * which are then forwarded to the appropriate handlers:
+     * - [CallExpression]
+     * - [Reference]
+     */
+    protected fun handleThrowStatement(node: ThrowStatement) {
+        node.exception?.let { node.prevDFGEdges += it }
+        node.parentException?.let { node.prevDFGEdges += it }
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
