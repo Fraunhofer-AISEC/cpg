@@ -124,6 +124,15 @@ interface HasSuperClasses : LanguageTrait {
 }
 
 /**
+ * A language trait, that specifies that this language has support for implicit receiver, e.g., that
+ * one can omit references to a base such as `this`.
+ */
+interface HasImplicitReceiver : LanguageTrait {
+
+    val receiverName: String
+}
+
+/**
  * A language trait, that specifies that this language has certain qualifiers. If so, we should
  * consider them when parsing the types.
  */

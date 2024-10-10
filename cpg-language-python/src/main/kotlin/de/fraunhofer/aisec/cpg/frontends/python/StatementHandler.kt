@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -64,10 +66,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
+            is Python.AST.Global -> handleGlobal(node)
+            is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Raise -> handleRaise(node)
-            is Python.AST.Global,
             is Python.AST.Match,
-            is Python.AST.Nonlocal,
             is Python.AST.TryStar,
             is Python.AST.With,
             is Python.AST.AsyncWith ->
@@ -85,7 +87,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleRaise(node: Python.AST.Raise): ThrowStatement {
         val ret = newThrowStatement(rawNode = node)
         node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
-        node.cause?.let { ret.cause = frontend.expressionHandler.handle(it) }
+        node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
         return ret
     }
 
@@ -237,11 +239,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
         if (node.orelse.isNotEmpty()) {
-            ret.additionalProblems +=
-                newProblemExpression(
-                    problem = "Cannot handle \"orelse\" in while loops.",
-                    rawNode = node
-                )
+            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
         }
         return ret
     }
@@ -307,11 +305,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         if (node.orelse.isNotEmpty()) {
-            ret.additionalProblems +=
-                newProblemExpression(
-                    problem = "handleFor: Cannot handle \"orelse\" in for loops.",
-                    rawNode = node
-                )
+            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
         }
         return ret
     }
@@ -526,8 +520,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Make sure we open a new (block) scope for the function body. This is not a 1:1
             // mapping to python scopes, since python only has a "function scope", but in the CPG
             // the function scope only comprises the function arguments, and we need a block scope
-            // to
-            // hold all local variables within the function body.
+            // to hold all local variables within the function body.
             result.body = makeBlock(s.body, parentNode = s, enterScope = true)
         }
 
@@ -535,6 +528,43 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         frontend.scopeManager.addDeclaration(result)
 
         return wrapDeclarationToStatement(result)
+    }
+
+    /**
+     * Translates a Python [`Global`](https://docs.python.org/3/library/ast.html#ast.Global) into a
+     * [LookupScopeStatement].
+     */
+    private fun handleGlobal(global: Python.AST.Global): LookupScopeStatement {
+        // Technically, our global scope is not identical to the python "global" scope. The reason
+        // behind that is that we wrap each file in a namespace (as defined in the python spec). So
+        // the "global" scope is actually our current namespace scope.
+        var pythonGlobalScope =
+            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
+
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            pythonGlobalScope,
+            rawNode = global
+        )
+    }
+
+    /**
+     * Translates a Python [`Nonlocal`](https://docs.python.org/3/library/ast.html#ast.Nonlocal)
+     * into a [LookupScopeStatement].
+     */
+    private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
+        // We need to find the first outer function scope, or rather the block scope belonging to
+        // the function
+        var outerFunctionScope =
+            frontend.scopeManager.firstScopeOrNull {
+                it is BlockScope && it != frontend.scopeManager.currentScope
+            }
+
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            outerFunctionScope,
+            rawNode = global
+        )
     }
 
     /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */
@@ -682,47 +712,60 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            if (decorator !is Python.AST.Call) {
-                log.warn(
-                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
-            if (decFuncParsed !is MemberExpression) {
-                log.warn(
-                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val annotation =
-                newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
-                    )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
+            var annotation =
+                when (decorator) {
+                    is Python.AST.Name -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
+                    }
+                    is Python.AST.Attribute -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        newAnnotation(name = name, rawNode = decorator)
+                    }
+                    is Python.AST.Call -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        val annotation = newAnnotation(name = name, rawNode = decorator)
+                        for (arg in decorator.args) {
+                            val argParsed = frontend.expressionHandler.handle(arg)
+                            annotation.members +=
+                                newAnnotationMember(
+                                    "annotationArg" + decorator.args.indexOf(arg), // TODO
+                                    argParsed,
+                                    rawNode = arg
+                                )
+                        }
+                        for (keyword in decorator.keywords) {
+                            annotation.members +=
+                                newAnnotationMember(
+                                    name = keyword.arg,
+                                    value = frontend.expressionHandler.handle(keyword.value),
+                                    rawNode = keyword
+                                )
+                        }
+                        annotation
+                    }
+                    else -> {
+                        Util.warnWithFileLocation(
+                            frontend,
+                            decorator,
+                            log,
+                            "Decorator is of type ${decorator::class}, cannot handle this (yet)."
+                        )
+                        continue
+                    }
+                }
 
             annotations += annotation
         }
@@ -758,16 +801,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt
-        var baseStmt = parentNode as? Python.AST.BaseStmt
-        return if (baseStmt != null) {
-            result.codeAndLocationFromChildren(baseStmt)
-        } else {
-            // Otherwise, continue without setting the location
-            log.warn(
-                "Could not set location on wrapped block because the parent node is not a python statement"
-            )
-            result
+        val ast = parentNode as? Python.AST.AST
+        if (ast != null) {
+            // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+            // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+            // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+            // other nodes that are not "statements", but also handled as part of this handler,
+            // e.g., the Python.AST.ExceptHandler.
+            with(frontend) { result.codeAndLocationFromChildren(ast) }
         }
+
+        return result
     }
 
     /**

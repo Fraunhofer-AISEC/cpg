@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -39,10 +38,10 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
-import de.fraunhofer.aisec.cpg.passes.inference.inferFunction
-import de.fraunhofer.aisec.cpg.passes.inference.inferMethod
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryFieldInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -84,7 +83,6 @@ import org.slf4j.LoggerFactory
 open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected lateinit var walker: ScopedWalker
-    lateinit var currentTU: TranslationUnitDeclaration
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
@@ -101,11 +99,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
 
-        for (tu in component.translationUnits) {
-            currentTU = tu
+        // Resolve symbols in our translation units in the order depending on their import
+        // dependencies
+        component.importDependencies.sortedTranslationUnits.forEach {
+            log.debug("Resolving symbols of translation unit {}", it.name)
+
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -148,8 +149,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             target =
-                (scope?.astNode ?: currentTU)
-                    .startInference(ctx)
+                (scope?.astNode ?: reference.translationUnit)
+                    ?.startInference(ctx)
                     ?.inferFunctionDeclaration(
                         reference.name,
                         null,
@@ -162,23 +163,53 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return target
     }
 
-    protected fun handleReference(currentClass: RecordDeclaration?, current: Node?) {
-        val language = current?.language
-
-        if (current !is Reference || current is MemberExpression) return
+    /**
+     * This function handles symbol resolving for a [Reference]. After a successful lookup of the
+     * symbol contained in [Reference.name], the property [Reference.refersTo] is set to the best
+     * (or only) candidate.
+     *
+     * On a high-level, it performs the following steps:
+     * - Use [ScopeManager.lookupSymbolByName] to retrieve [Declaration] candidates based on the
+     *   [Reference.name]. This can either result in an "unqualified" or "qualified" lookup,
+     *   depending on the name.
+     * - The results of the lookup are stored in [Reference.candidates]. The purpose of this is
+     *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
+     *   is used by other functions, for example [handleCallExpression], which then picks the best
+     *   viable option out of the candidates (if the reference is part of the
+     *   [CallExpression.callee]).
+     * - In the next step, we need to decide whether we are resolving a standalone reference (which
+     *   most likely points to a [VariableDeclaration]) or if we are part of a
+     *   [CallExpression.callee]. In the first case, we can directly assign [Reference.refersTo]
+     *   based on the candidates (at the moment we only assign it if we have exactly one candidate).
+     *   In the second case, we are finished and let [handleCallExpression] take care of the rest
+     *   once the EOG reaches the appropriate [CallExpression] (which should actually be just be the
+     *   next EOG node).
+     */
+    protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
+        val language = ref.language
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
         if (
-            language is HasAnonymousIdentifier &&
-                current.name.localName == language.anonymousIdentifier
+            language is HasAnonymousIdentifier && ref.name.localName == language.anonymousIdentifier
         ) {
+            return
+        }
+
+        // Ignore references to "super" if the language has super expressions, because they will be
+        // handled separately in handleMemberExpression
+        if (language is HasSuperClasses && ref.name.localName == language.superClassKeyword) {
             return
         }
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        current.candidates = scopeManager.findSymbols(current.name, current.location).toSet()
+        ref.candidates = scopeManager.lookupSymbolByName(ref.name, ref.location).toSet()
+
+        // Preparation for a future without legacy call resolving. Taking the first candidate is not
+        // ideal since we are running into an issue with function pointers here (see workaround
+        // below).
+        var wouldResolveTo = ref.candidates.singleOrNull()
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -189,106 +220,58 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // of this call expression back to its original variable declaration. In the future, we want
         // to extend this particular code to resolve all callee references to their declarations,
         // i.e., their function definitions and get rid of the separate CallResolver.
-        var wouldResolveTo: Declaration? = null
-        if (current.resolutionHelper is CallExpression) {
+        if (ref.resolutionHelper is CallExpression) {
             // Peek into the declaration, and if it is only one declaration and a variable, we can
             // proceed normally, as we are running into the special case explained above. Otherwise,
             // we abort here (for now).
-            wouldResolveTo = current.candidates.singleOrNull()
             if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
                 return
+            }
+        }
+
+        // Some stupid C++ workaround to use the legacy call resolver when we try to resolve targets
+        // for function pointers. At least we are only invoking the legacy resolver for a very small
+        // percentage of references now.
+        if (wouldResolveTo is FunctionDeclaration) {
+            // We need to invoke the legacy resolver, just to be sure
+            var legacy = scopeManager.resolveReference(ref)
+
+            // This is just for us to catch these differences in symbol resolving in the future. The
+            // difference is pretty much only that the legacy system takes parameters of the
+            // function-pointer-type into account and the new system does not (yet), because it just
+            // takes the first match. This will be needed to solve in the future.
+            if (legacy != wouldResolveTo) {
+                log.warn(
+                    "The legacy symbol resolution and the new system produced different results here. This needs to be investigated in the future. For now, we take the legacy result."
+                )
+                wouldResolveTo = legacy
             }
         }
 
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
-        var refersTo = current.refersTo ?: wouldResolveTo ?: scopeManager.resolveReference(current)
+        var refersTo = ref.refersTo ?: wouldResolveTo
 
         var recordDeclType: Type? = null
         if (currentClass != null) {
             recordDeclType = currentClass.toType()
         }
 
-        val helperType = current.resolutionHelper?.type
+        val helperType = ref.resolutionHelper?.type
         if (helperType is FunctionPointerType && refersTo == null) {
-            refersTo = resolveMethodFunctionPointer(current, helperType)
+            refersTo = resolveMethodFunctionPointer(ref, helperType)
         }
 
-        // only add new nodes for non-static unknown
-        if (
-            refersTo == null &&
-                !current.isStaticAccess &&
-                recordDeclType != null &&
-                recordDeclType.recordDeclaration != null
-        ) {
-            // Maybe we are referring to a field instead of a local var
-            val field = resolveMember(recordDeclType, current)
-            if (field != null) {
-                refersTo = field
-            }
-        }
-
-        // TODO: we need to do proper scoping (and merge it with the code above), but for now
-        //  this just enables CXX static fields
-        if (refersTo == null && language != null && current.name.isQualified()) {
-            recordDeclType = getEnclosingTypeOf(current)
-            val field = resolveMember(recordDeclType, current)
-            if (field != null) {
-                refersTo = field
-            }
-        }
-
+        // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
-            // We can try to infer a possible global variable, if the language supports this
-            refersTo = tryGlobalVariableInference(current)
+            refersTo = tryVariableInference(ref)
         }
 
         if (refersTo != null) {
-            current.refersTo = refersTo
+            ref.refersTo = refersTo
         } else {
-            Util.warnWithFileLocation(
-                current,
-                log,
-                "Did not find a declaration for ${current.name}"
-            )
-        }
-    }
-
-    /**
-     * Tries to infer a global variable from an unresolved [Reference]. This will return `null`, if
-     * inference was not possible, or if it was turned off in the [InferenceConfiguration].
-     */
-    private fun tryGlobalVariableInference(ref: Reference): Declaration? {
-        if (ref.language !is HasGlobalVariables) {
-            return null
-        }
-
-        // For now, we only infer globals at the top-most global level, i.e., no globals in
-        // namespaces
-        if (ref.name.isQualified()) {
-            return null
-        }
-
-        // Forward this to our inference system. This will also check whether and how inference is
-        // configured.
-        return scopeManager.globalScope?.astNode?.startInference(ctx)?.inferVariableDeclaration(ref)
-    }
-
-    /**
-     * We get the type of the "scope" this node is in. (e.g. for a field, we drop the field's name
-     * and have the class)
-     */
-    protected fun getEnclosingTypeOf(current: Node): Type {
-        val language = current.language
-
-        return if (language != null && language.namespaceDelimiter.isNotEmpty()) {
-            val parentName = (current.name.parent ?: current.name).toString()
-            var type = current.objectType(parentName)
-            TypeResolver.resolveType(type)
-            type
-        } else {
-            current.unknownType()
+            Util.warnWithFileLocation(ref, log, "Did not find a declaration for ${ref.name}")
         }
     }
 
@@ -334,17 +317,22 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         val baseType = base.type.root
-        current.refersTo = resolveMember(baseType, current)
+        if (baseType is ObjectType) {
+            current.refersTo = resolveMember(baseType, current)
+        }
     }
 
-    protected fun resolveMember(containingClass: Type, reference: Reference): ValueDeclaration? {
+    protected fun resolveMember(
+        containingClass: ObjectType,
+        reference: Reference
+    ): ValueDeclaration? {
         if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
             // this in the call resolver instead
             return null
         }
         var member: ValueDeclaration? = null
-        var type = containingClass
+        var type: Type = containingClass
 
         // Check for a possible overloaded operator->
         if (
@@ -368,6 +356,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         val record = type.recordDeclaration
         if (record != null) {
+            // TODO(oxisto): This should use symbols rather than the AST fields
             member =
                 record.fields
                     .filter { it.name.lastPartsMatch(reference.name) }
@@ -382,87 +371,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     .map { it.definition }
                     .firstOrNull()
         }
+
         if (member == null && record is EnumDeclaration) {
             member = record.entries[reference.name.localName]
         }
 
-        if (member != null) {
-            return member
+        if (member == null) {
+            member = tryFieldInference(reference, containingClass)
         }
 
-        // This is a little bit of a workaround, but at least this makes sure we are not inferring a
-        // record, where a namespace already exist
-        val (scope, _) = scopeManager.extractScope(reference, null)
-        return if (scope == null) {
-            handleUnknownField(containingClass, reference)
-        } else {
-            // Workaround needed for Java. If we already have a record scope, use the "old"
-            // inference function
-            when (scope) {
-                is RecordScope -> handleUnknownField(containingClass, reference)
-                is NameScope -> {
-                    log.warn(
-                        "We should infer a namespace variable ${reference.name} at this point, but this is not yet implemented."
-                    )
-                    null
-                }
-                else -> {
-                    log.warn(
-                        "We should infer a variable ${reference.name} in ${scope}, but this is not yet implemented."
-                    )
-                    null
-                }
-            }
-        }
-    }
-
-    // TODO(oxisto): Move to inference class
-    protected fun handleUnknownField(base: Type, ref: Reference): FieldDeclaration? {
-        val name = ref.name
-
-        // unwrap a potential pointer-type
-        if (base is PointerType) {
-            return handleUnknownField(base.elementType, ref)
-        }
-
-        var record = base.recordDeclaration
-        if (record == null) {
-            // We access an unknown field of an unknown record. so we need to handle that along the
-            // way as well
-            record = ctx.tryRecordInference(base, locationHint = ref)
-        }
-
-        if (record == null) {
-            log.error(
-                "There is no matching record in the record map. Can't identify which field is used."
-            )
-            return null
-        }
-
-        val target = record.fields.firstOrNull { it.name.lastPartsMatch(name) }
-
-        return if (target != null) {
-            target
-        } else {
-            val declaration =
-                newFieldDeclaration(
-                    name.localName,
-                    // we will set the type later through the type inference observer
-                    record.unknownType(),
-                    listOf(),
-                    null,
-                    false,
-                )
-            record.addField(declaration)
-            declaration.language = record.language
-            declaration.isInferred = true
-
-            // We might be able to resolve the type later (or better), if a type is
-            // assigned to our reference later
-            ref.registerTypeObserver(TypeInferenceObserver(declaration))
-
-            declaration
-        }
+        return member
     }
 
     protected fun handle(node: Node?, currClass: RecordDeclaration?) {
@@ -504,7 +422,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     call,
                     true,
                     ctx,
-                    currentTU,
+                    call.translationUnit,
                     false
                 )
             if (ok) {
@@ -657,7 +575,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         var candidates = mutableSetOf<Declaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
-            candidates.addAll(ctx.scopeManager.findSymbols(record.name.fqn(symbol)))
+            candidates.addAll(ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol)))
         }
 
         // Find invokes by supertypes
@@ -675,36 +593,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         )
 
         return candidates
-    }
-
-    /**
-     * Creates an inferred element for each RecordDeclaration
-     *
-     * @param possibleContainingTypes
-     * @param call
-     */
-    protected fun createMethodDummies(
-        possibleContainingTypes: Set<Type>,
-        bestGuess: Type?,
-        call: CallExpression
-    ): List<FunctionDeclaration> {
-        var records =
-            possibleContainingTypes.mapNotNull {
-                val root = it.root as? ObjectType
-                root?.recordDeclaration
-            }
-
-        // We access an unknown method of an unknown record. so we need to handle that
-        // along the way as well. We prefer the base type
-        if (records.isEmpty()) {
-            records =
-                listOfNotNull(
-                    ctx.tryRecordInference(bestGuess?.root ?: unknownType(), locationHint = call)
-                )
-        }
-        records = records.distinct()
-
-        return records.mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
     }
 
     protected fun handleConstructExpression(constructExpression: ConstructExpression) {
@@ -788,32 +676,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
 
-    /**
-     * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
-     * returns a [Pair], where the first element is the set of types and the second is our best
-     * guess.
-     */
-    protected fun getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
-        val possibleTypes = mutableSetOf<Type>()
-        var bestGuess: Type? = null
-        if (call is MemberCallExpression) {
-            call.base?.let { base ->
-                bestGuess = base.type
-                possibleTypes.add(base.type)
-                possibleTypes.addAll(base.assignedTypes)
-            }
-        } else {
-            // This could be a C++ member call with an implicit this (which we do not create), so
-            // let's add the current class to the possible list
-            scopeManager.currentRecord?.toType()?.let {
-                bestGuess = it
-                possibleTypes.add(it)
-            }
-        }
-
-        return Pair(possibleTypes, bestGuess)
-    }
-
     protected fun getInvocationCandidatesFromParents(
         name: Symbol,
         possibleTypes: Set<RecordDeclaration>,
@@ -823,7 +685,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             listOf()
         } else {
             val firstLevelCandidates =
-                possibleTypes.map { scopeManager.findSymbols(it.name.fqn(name)) }.flatten()
+                possibleTypes.map { scopeManager.lookupSymbolByName(it.name.fqn(name)) }.flatten()
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
             // FunctionDeclaration with the same name as the function in the CallExpression we have
@@ -887,48 +749,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 ?.createInferredConstructor(constructExpression.signature)
     }
 
-    fun tryFunctionInference(
-        call: CallExpression,
-        result: CallResolutionResult,
-    ): List<FunctionDeclaration> {
-        // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
-        // main cases
-        // a) we have a member expression -> easy
-        // b) we have a call expression -> not so easy. This could be a member call with an implicit
-        //    this (in which case we want to explore the base type). But that is only possible if
-        //    the callee is not qualified, because otherwise we are in a static call like
-        //    MyClass::doSomething() or in a namespace call (in case we do not want to explore the
-        //    base type here yet). This will change in a future PR.
-        val (suitableBases, bestGuess) =
-            if (call.callee is MemberExpression || !call.callee.name.isQualified()) {
-                getPossibleContainingTypes(call)
-            } else {
-                Pair(setOf(), null)
-            }
-
-        return if (suitableBases.isEmpty()) {
-            // Resolution has provided no result, we can forward this to the inference system,
-            // if we want. While this is definitely a function, it could still be a function
-            // inside a namespace. We therefore have two possible start points, a namespace
-            // declaration or a translation unit. Nothing else is allowed (fow now). We can
-            // re-use the information in the ResolutionResult, since this already contains the
-            // actual start scope (e.g. in case the callee has an FQN).
-            var scope = result.actualStartScope
-            if (scope !is NameScope) {
-                scope = scopeManager.globalScope
-            }
-            val func =
-                when (val start = scope?.astNode) {
-                    is TranslationUnitDeclaration -> start.inferFunction(call, ctx = ctx)
-                    is NamespaceDeclaration -> start.inferFunction(call, ctx = ctx)
-                    else -> null
-                }
-            listOfNotNull(func)
-        } else {
-            createMethodDummies(suitableBases, bestGuess, call)
-        }
-    }
-
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
@@ -954,67 +774,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 }
 
-fun TranslationContext.tryNamespaceInference(
-    name: Name,
-    locationHint: Node?
-): NamespaceDeclaration? {
-    return scopeManager.globalScope
-        ?.astNode
-        ?.startInference(this)
-        ?.inferNamespaceDeclaration(name, null, locationHint)
-}
-
 /**
- * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
- * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
+ * returns a [Pair], where the first element is the set of types and the second is our best guess.
  */
-fun TranslationContext.tryRecordInference(
-    type: Type,
-    locationHint: Node? = null
-): RecordDeclaration? {
-    val kind =
-        if (type.language is HasStructs) {
-            "struct"
-        } else {
-            "class"
+internal fun Pass<*>.getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
+    val possibleTypes = mutableSetOf<Type>()
+    var bestGuess: Type? = null
+    if (call is MemberCallExpression) {
+        call.base?.let { base ->
+            bestGuess = base.type
+            possibleTypes.add(base.type)
+            possibleTypes.addAll(base.assignedTypes)
         }
-    // Determine the scope where we want to start our inference
-    var (scope, _) = scopeManager.extractScope(type)
-
-    if (scope !is NameScope) {
-        scope = null
+    } else if (call.language is HasImplicitReceiver) {
+        // This could be a member call with an implicit receiver, so let's add the current class
+        // to the possible list
+        scopeManager.currentRecord?.toType()?.let {
+            bestGuess = it
+            possibleTypes.add(it)
+        }
     }
 
-    var holder = scope?.astNode
-
-    // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
-    // parent record)
-    var parentName = type.name.parent
-    if (scope == null && parentName != null) {
-        // At this point, we need to check whether we have any type reference to our parent
-        // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
-        // have a high chance that this is actually a parent record and not a namespace
-        var parentType = typeManager.lookupResolvedType(parentName)
-        holder =
-            if (parentType != null) {
-                tryRecordInference(parentType, locationHint = locationHint)
-            } else {
-                tryNamespaceInference(parentName, locationHint = locationHint)
-            }
-    }
-
-    val record =
-        (holder ?: this.scopeManager.globalScope?.astNode)
-            ?.startInference(this)
-            ?.inferRecordDeclaration(type, kind, locationHint)
-
-    // update the type's record. Because types are only unique per scope, we potentially need to
-    // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record
-    if (record != null) {
-        typeManager.firstOrderTypes
-            .filter { it.name == record.name }
-            .forEach { it.recordDeclaration = record }
-    }
-
-    return record
+    return Pair(possibleTypes, bestGuess)
 }

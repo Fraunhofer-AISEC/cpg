@@ -28,15 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -588,8 +580,20 @@ val Node?.forEachLoops: List<ForEachStatement>
 val Node?.switches: List<SwitchStatement>
     get() = this.allChildren()
 
-/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+/** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
 val Node?.whileLoops: List<WhileStatement>
+    get() = this.allChildren()
+
+/** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
+val Node?.doLoops: List<DoStatement>
+    get() = this.allChildren()
+
+/** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
+val Node?.breaks: List<BreakStatement>
+    get() = this.allChildren()
+
+/** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
+val Node?.continues: List<ContinueStatement>
     get() = this.allChildren()
 
 /** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
@@ -772,3 +776,17 @@ fun Expression?.unwrapReference(): Reference? {
         else -> null
     }
 }
+
+/** Returns the [TranslationUnitDeclaration] where this node is located in. */
+val Node.translationUnit: TranslationUnitDeclaration?
+    get() {
+        var node: Node? = this
+        while (node != null) {
+            if (node is TranslationUnitDeclaration) {
+                return node
+            }
+            node = node.astParent
+        }
+
+        return null
+    }

@@ -17,11 +17,9 @@ on:
 
 jobs:
   build:
-    runs-on: [ubuntu-latest]
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - run: |
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v4
@@ -41,11 +39,6 @@ jobs:
       - name: Setup neo4j
         run: |
           docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j || true
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
       - name: Determine Version
         run: |
           # determine version from tag
@@ -67,23 +60,21 @@ jobs:
           if [ -d "/opt/hostedtoolcache/Python" ]; then
             find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
           fi
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
       - name: Build ${{ env.version }}
         run: |
-          if [ "$SONAR_TOKEN" != "" ]
-          then
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar sonar performanceTest integrationTest \
-            -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
-            -Dsonar.organization=fraunhofer-aisec \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=$SONAR_TOKEN
-          else
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar performanceTest integrationTest
-          fi
+          ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
           VERSION: ${{ env.version }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Code Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          files: ./cpg-all/build/reports/kover/report.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |

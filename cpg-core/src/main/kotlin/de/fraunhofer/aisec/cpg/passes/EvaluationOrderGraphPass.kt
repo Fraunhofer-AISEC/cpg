@@ -157,6 +157,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
+        map[LookupScopeStatement::class.java] = {
+            handleLookupScopeStatement(it as LookupScopeStatement)
+        }
         map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
@@ -881,6 +884,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = true
         connectCurrentToLoopStart()
         nextEdgeBranch = false
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
@@ -901,13 +905,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.statement)
         connectCurrentToLoopStart()
         currentPredecessors.clear()
+        currentPredecessors.addAll(tmpEOGNodes)
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
         }
-        currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
     }
 
@@ -927,13 +932,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         connectCurrentToLoopStart()
 
         currentPredecessors.clear()
+        currentPredecessors.addAll(tmpEOGNodes)
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit for loop, but no loop scope: $node")
         }
-        currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
     }
 
@@ -1010,18 +1016,46 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // Replace current EOG nodes without triggering post setEOG ... processing
         currentPredecessors.clear()
+        currentPredecessors.addAll(tmpEOGNodes)
+        nextEdgeBranch = false
+        node.elseStatement?.let { createEOG(it) }
         val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
         if (currentLoopScope != null) {
             exitLoop(currentLoopScope)
         } else {
             LOGGER.error("Trying to exit while loop, but no loop scope: $node")
         }
-        currentPredecessors.addAll(tmpEOGNodes)
-        nextEdgeBranch = false
     }
 
+    private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
+        // Include the node as part of the EOG itself, but we do not need to go into any children or
+        // properties here
+        pushToEOG(stmt)
+    }
+
+    /**
+     * This is copied & pasted with minimal adjustments from [handleThrowOperator]. TODO: To be
+     * merged in a later PR.
+     */
     protected fun handleThrowStatement(statement: ThrowStatement) {
-        TODO("Needs implementing")
+        val input = statement.exception
+        createEOG(input)
+        statement.parentException?.let { createEOG(it) }
+
+        val catchingScope =
+            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
+
+        val throwType = input?.type
+        if (throwType == null) {
+            TODO("???")
+        }
+        pushToEOG(statement)
+        if (catchingScope is TryScope) {
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        } else if (catchingScope is FunctionScope) {
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        }
+        currentPredecessors.clear()
     }
 
     companion object {

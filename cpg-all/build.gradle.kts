@@ -34,7 +34,3 @@ dependencies {
     kover(projects.cpgAnalysis)
     kover(projects.cpgNeo4j)
 }
-
-val sonar = tasks.getByPath(":sonar")
-sonar.dependsOn(tasks.named("koverHtmlReport"))
-sonar.dependsOn(tasks.named("koverXmlReport"))
