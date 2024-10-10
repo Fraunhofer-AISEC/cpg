@@ -165,7 +165,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         fun generateExitCallWithSysExcInfo(
             managerName: Name,
             withItem: Python.AST.withitem
-        ): Statement {
+        ): IfStatement {
             val exitCallWithSysExec =
                 newMemberCallExpression(
                         callee =
