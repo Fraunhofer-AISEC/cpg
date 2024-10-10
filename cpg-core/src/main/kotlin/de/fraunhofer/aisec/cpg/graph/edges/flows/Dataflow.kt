@@ -27,14 +27,22 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.PointerAccess
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.*
+import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -50,6 +58,15 @@ sealed interface Granularity
  * [Dataflow.end].
  */
 data object FullDataflowGranularity : Granularity
+
+/**
+ * This dataflow granularity denotes that the value or address of a pointer is flowing from
+ * [Dataflow.start] to [Dataflow.end].
+ */
+class PointerDataflowGranularity(
+    /** Does the Dataflow affect the pointer's address or its value? */
+    val pointerTarget: PointerAccess
+) : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -76,6 +93,14 @@ fun default() = full()
  */
 fun partial(target: Declaration?): PartialDataflowGranularity {
     return PartialDataflowGranularity(target)
+}
+
+/**
+ * Creates a new [PointerDataflowGranularity]. The [ValueAccess] is specifies if the pointer's value
+ * is accessed, or its address.
+ */
+fun pointer(access: PointerAccess): PointerDataflowGranularity {
+    return PointerDataflowGranularity(access)
 }
 
 /**

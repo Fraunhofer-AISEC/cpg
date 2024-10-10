@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -113,11 +116,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node)
-            is Reference -> handleReference(node)
+            // The ControlFlowSensitiveDFGPass will draw the DFG Edges for these
+            // is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
-            // We keep the logic for the InitializerListExpression in that class because the
-            // performance would decrease too much.
             is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
@@ -150,7 +152,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.nextDFGEdges += target }
+                targets.forEach { target ->
+                    val granularity =
+                        if (target is PointerDereference)
+                            PointerDataflowGranularity(PointerAccess.VALUE)
+                        else default()
+                    it.nextDFGEdges += Dataflow(start = it, end = target, granularity = granularity)
+                }
             }
         }
 
@@ -328,14 +336,17 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * case of the operators "++" and "--" also from the node back to the input.
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
-        node.input.let {
-            node.prevDFGEdges += it
-            if (node.operatorCode == "++" || node.operatorCode == "--") {
-                node.nextDFGEdges += it
+        if ((node.input as? Reference)?.access == AccessValues.WRITE) {
+            node.input.let { node.nextDFGEdges += it }
+        } else {
+            node.input.let {
+                node.prevDFGEdges += it
+                if (node.operatorCode == "++" || node.operatorCode == "--") {
+                    node.nextDFGEdges += it
+                }
             }
         }
     }
-
     /**
      * Adds the DFG edge for a [LambdaExpression]. The data flow from the function representing the
      * lambda to the expression.
@@ -384,12 +395,17 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleReference(node: Reference) {
         node.refersTo?.let {
+            val granularity =
+                if (node is PointerReference) PointerDataflowGranularity(PointerAccess.ADDRESS)
+                else if (node is PointerDereference) PointerDataflowGranularity(PointerAccess.VALUE)
+                else default()
             when (node.access) {
                 AccessValues.WRITE -> node.nextDFGEdges += it
-                AccessValues.READ -> node.prevDFGEdges += it
+                AccessValues.READ ->
+                    node.prevDFGEdges += Dataflow(start = it, end = node, granularity = granularity)
                 else -> {
                     node.nextDFGEdges += it
-                    node.prevDFGEdges += it
+                    node.prevDFGEdges += Dataflow(start = it, end = node, granularity = granularity)
                 }
             }
         }

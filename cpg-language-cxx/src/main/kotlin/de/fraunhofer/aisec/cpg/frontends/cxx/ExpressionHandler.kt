@@ -409,17 +409,31 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             else ->
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
-        val unaryOperator =
-            newUnaryOperator(
-                operatorCode,
-                ctx.isPostfixOperator,
-                !ctx.isPostfixOperator,
+        if (operatorCode == "&") {
+            return newPointerReference(
+                handle(ctx.operand)?.name,
+                unknownType(),
                 rawNode = ctx
-            )
-        if (input != null) {
-            unaryOperator.input = input
+            ) // TODO
+        } else if (operatorCode == "*") {
+            return newPointerDereference(
+                handle(ctx.operand)?.name,
+                unknownType(),
+                rawNode = ctx
+            ) // TODO(@morbitzer): integrate stuff as input
+        } else {
+            val unaryOperator =
+                newUnaryOperator(
+                    operatorCode,
+                    ctx.isPostfixOperator,
+                    !ctx.isPostfixOperator,
+                    rawNode = ctx
+                )
+            if (input != null) {
+                unaryOperator.input = input
+            }
+            return unaryOperator
         }
-        return unaryOperator
     }
 
     private fun handleFunctionCallExpression(ctx: IASTFunctionCallExpression): Expression {
