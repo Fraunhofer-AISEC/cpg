@@ -1033,10 +1033,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(stmt)
     }
 
-    /*
-    TODO: doc
-    Copy & paste from [handleThrowOperator]
-     */
+    /** This is copied & pasted from [handleThrowOperator]. TODO: To be merged in a later PR. */
     protected fun handleThrowStatement(statement: ThrowStatement) {
         val input = statement.exception
         createEOG(input)
