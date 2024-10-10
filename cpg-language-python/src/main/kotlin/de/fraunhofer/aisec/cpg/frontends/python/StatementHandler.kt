@@ -139,7 +139,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             return Pair(managerAssignment, managerName)
         }
 
-        /** Prepares the `__exit__(manager, None, None, None)` call for the else-block. */
+        /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
         fun generateExitCallWithNone(managerName: Name, withItem: Python.AST.withitem): Statement {
             val exitCallWithNone =
                 newMemberCallExpression(
