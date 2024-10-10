@@ -1400,6 +1400,7 @@ infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
 
     return node
 }
+
 /**
  * Creates a new [AssignExpression] with a `=` [AssignExpression.operatorCode] in the Fluent Node
  * DSL and adds it to the nearest enclosing [StatementHolder].
@@ -1410,6 +1411,23 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
     rhs(node)
 
     node.usedAsExpression = true
+
+    return node
+}
+
+/**
+ * Creates a new [ThrowStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.`throw`(init: (ThrowStatement.() -> Unit)?): ThrowStatement {
+    val node = (this@LanguageFrontend).newThrowStatement()
+    if (init != null) init(node)
+
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    }
 
     return node
 }
