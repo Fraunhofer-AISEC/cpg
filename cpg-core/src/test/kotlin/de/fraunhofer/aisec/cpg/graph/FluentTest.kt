@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
@@ -167,9 +168,12 @@ class FluentTest {
         assertNotNull(lit2.scope)
         assertEquals(2, lit2.value)
 
-        EvaluationOrderGraphPass(result.finalCtx)
-            .accept(result.components.first().translationUnits.first())
-        SymbolResolver(result.finalCtx).accept(result.components.first())
+        var app = result.components.firstOrNull()
+        assertNotNull(app)
+
+        ImportResolver(result.finalCtx).accept(app)
+        EvaluationOrderGraphPass(result.finalCtx).accept(app.translationUnits.first())
+        SymbolResolver(result.finalCtx).accept(app)
 
         // Now the reference should be resolved and the MCE name set
         assertRefersTo(ref, variable)

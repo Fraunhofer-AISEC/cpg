@@ -787,3 +787,17 @@ fun Expression?.unwrapReference(): Reference? {
         else -> null
     }
 }
+
+/** Returns the [TranslationUnitDeclaration] where this node is located in. */
+val Node.translationUnit: TranslationUnitDeclaration?
+    get() {
+        var node: Node? = this
+        while (node != null) {
+            if (node is TranslationUnitDeclaration) {
+                return node
+            }
+            node = node.astParent
+        }
+
+        return null
+    }

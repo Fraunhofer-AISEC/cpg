@@ -46,8 +46,8 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     /**
-     * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
-     * this expression.
+     * The [Declaration]s this expression might refer to. This will influence the [type] of this
+     * expression.
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "REFERS_TO")
