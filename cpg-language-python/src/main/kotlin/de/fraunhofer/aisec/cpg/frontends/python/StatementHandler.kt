@@ -201,7 +201,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         fun generateEnterCallAndAssignment(
             managerName: Name,
             withItem: Python.AST.withitem
-        ): Pair<Expression, Name> {
+        ): Pair<AssignExpression, Name> {
             val tmpValName = Name.random(prefix = WITH_TMP_VAL)
             val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
