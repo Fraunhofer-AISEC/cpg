@@ -26,7 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.KeyValueExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -34,6 +40,114 @@ import java.nio.file.Path
 import kotlin.test.*
 
 class ExpressionHandlerTest {
+    @Test
+    fun testListComprehensions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val listComp = result.functions["listComp"]
+        assertNotNull(listComp)
+
+        val body = listComp.body as? Block
+        assertNotNull(body)
+        val singleWithIfAssignment = body.statements[0] as? AssignExpression
+        assertNotNull(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(singleWithIf)
+        assertIs<CallExpression>(singleWithIf.statement)
+
+        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
+        assertNotNull(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(singleWithoutIf)
+        assertIs<CallExpression>(singleWithoutIf.statement)
+
+        val doubleAssignment = body.statements[2] as? AssignExpression
+        assertNotNull(doubleAssignment)
+        val double = doubleAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(double)
+        assertIs<CallExpression>(double.statement)
+    }
+
+    @Test
+    fun testSetComprehensions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val listComp = result.functions["setComp"]
+        assertNotNull(listComp)
+
+        val body = listComp.body as? Block
+        assertNotNull(body)
+        val singleWithIfAssignment = body.statements[0] as? AssignExpression
+        assertNotNull(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(singleWithIf)
+        assertIs<CallExpression>(singleWithIf.statement)
+
+        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
+        assertNotNull(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(singleWithoutIf)
+        assertIs<CallExpression>(singleWithoutIf.statement)
+
+        val doubleAssignment = body.statements[2] as? AssignExpression
+        assertNotNull(doubleAssignment)
+        val double = doubleAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(double)
+        assertIs<CallExpression>(double.statement)
+    }
+
+    @Test
+    fun testDictComprehensions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val listComp = result.functions["dictComp"]
+        assertNotNull(listComp)
+
+        val body = listComp.body as? Block
+        assertNotNull(body)
+        val singleWithIfAssignment = body.statements[0] as? AssignExpression
+        assertNotNull(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(singleWithIf)
+        var statement = singleWithIf.statement
+        assertIs<KeyValueExpression>(statement)
+        assertIs<Reference>(statement.key)
+        assertLocalName("i", statement.key)
+        assertIs<CallExpression>(statement.value)
+
+        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
+        assertNotNull(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(singleWithoutIf)
+        statement = singleWithIf.statement
+        assertIs<KeyValueExpression>(statement)
+        assertIs<Reference>(statement.key)
+        assertLocalName("i", statement.key)
+        assertIs<CallExpression>(statement.value)
+
+        val doubleAssignment = body.statements[2] as? AssignExpression
+        assertNotNull(doubleAssignment)
+        val double = doubleAssignment.rhs[0] as? CollectionComprehension
+        assertNotNull(double)
+        statement = singleWithIf.statement
+        assertIs<KeyValueExpression>(statement)
+        assertIs<Reference>(statement.key)
+        assertLocalName("i", statement.key)
+        assertIs<CallExpression>(statement.value)
+    }
+
     @Test
     fun testBoolOps() {
         val topLevel = Path.of("src", "test", "resources", "python")
