@@ -71,20 +71,20 @@ class CollectionComprehension : Expression() {
         /** This field contains the iteration subject of the loop. */
         var iterable by unwrapping(ComprehensionExpression::iterableEdge)
 
-        @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>()
+        @Relationship("PREDICATE") var predicateEdges = astEdgesOf<Statement>()
 
         /**
-         * This field contains the predicate which has to hold to evaluate `statement(variable)` and
-         * include it in the result.
+         * This field contains the predicates which have to hold to evaluate `statement(variable)`
+         * and include it in the result.
          */
-        var predicate by unwrapping(ComprehensionExpression::predicateEdge)
+        var predicates by unwrapping(ComprehensionExpression::predicateEdges)
 
         override fun toString() =
             ToStringBuilder(this, TO_STRING_STYLE)
                 .appendSuper(super.toString())
                 .append("variable", variable)
                 .append("iterable", iterable)
-                .append("predicate", predicate)
+                .append("predicate", predicates)
                 .toString()
 
         override fun equals(other: Any?): Boolean {
@@ -93,10 +93,10 @@ class CollectionComprehension : Expression() {
             return super.equals(other) &&
                 variable == other.variable &&
                 iterable == other.iterable &&
-                predicate == other.predicate
+                predicates == other.predicates
         }
 
-        override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
+        override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicates)
     }
 
     @Relationship("COMPREHENSION_EXPRESSIONS")

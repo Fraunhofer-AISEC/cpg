@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
 
@@ -69,8 +70,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.JoinedStr -> handleJoinedStr(node)
             is Python.AST.Starred -> handleStarred(node)
             is Python.AST.NamedExpr -> handleNamedExpr(node)
+            is Python.AST.ListComp -> handleListComprehension(node)
             is Python.AST.GeneratorExp,
-            is Python.AST.ListComp,
             is Python.AST.SetComp,
             is Python.AST.DictComp,
             is Python.AST.Await,
@@ -80,6 +81,23 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     "The expression of class ${node.javaClass} is not supported yet",
                     rawNode = node
                 )
+        }
+    }
+
+    private fun handleComprehension(
+        node: Python.AST.comprehension
+    ): CollectionComprehension.ComprehensionExpression {
+        return newComprehensionExpression(node).apply {
+            this.variable = handle(node.target)
+            this.iterable = handle(node.iter)
+            this.predicates += node.ifs.map { handle(it) }.filterIsInstance<Expression>()
+        }
+    }
+
+    private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
+        return newCollectionComprehension().apply {
+            this.statement = handle(node.elt)
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
         }
     }
 
