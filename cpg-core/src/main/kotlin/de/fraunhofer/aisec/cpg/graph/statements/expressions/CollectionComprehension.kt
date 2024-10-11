@@ -45,10 +45,10 @@ import org.neo4j.ogm.annotation.Relationship
  * reason, we represent the `variable, iterable and predicate in its own class
  * [CollectionComprehension.ComprehensionExpression].
  */
-class CollectionComprehension : Expression() {
+class CollectionComprehension : Expression(), ArgumentHolder {
 
     /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
-    class ComprehensionExpression : Expression() {
+    class ComprehensionExpression : Expression(), ArgumentHolder {
         @Relationship("VARIABLE")
         var variableEdge =
             astOptionalEdgeOf<Statement>(
@@ -97,6 +97,46 @@ class CollectionComprehension : Expression() {
         }
 
         override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicates)
+
+        override fun addArgument(expression: Expression) {
+            if (this.variable == null) {
+                this.variable = expression
+            } else if (this.iterable == null) {
+                this.iterable = expression
+            } else {
+                this.predicates += expression
+            }
+        }
+
+        override fun replaceArgument(old: Expression, new: Expression): Boolean {
+            if (this.variable == old) {
+                this.variable = new
+                return true
+            }
+
+            if (this.iterable == old) {
+                this.iterable = new
+                return true
+            }
+
+            var changedSomething = false
+            val newPredicates =
+                this.predicates.map {
+                    if (it == old) {
+                        changedSomething = true
+                        new
+                    } else it
+                }
+            this.predicates.clear()
+            this.predicates.addAll(newPredicates)
+            return changedSomething
+        }
+
+        override fun hasArgument(expression: Expression): Boolean {
+            return this.variable == expression ||
+                this.iterable == expression ||
+                expression in this.predicates
+        }
     }
 
     @Relationship("COMPREHENSION_EXPRESSIONS")
@@ -134,4 +174,35 @@ class CollectionComprehension : Expression() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
+
+    override fun addArgument(expression: Expression) {
+        if (this.statement == null) {
+            this.statement = expression
+        } else if (expression is ComprehensionExpression) {
+            this.comprehensionExpressions += expression
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (this.statement == old) {
+            this.statement = new
+            return true
+        }
+        if (new !is ComprehensionExpression) return false
+        var changedSomething = false
+        val newCompExp =
+            this.comprehensionExpressions.map {
+                if (it == old) {
+                    changedSomething = true
+                    new
+                } else it
+            }
+        this.comprehensionExpressions.clear()
+        this.comprehensionExpressions.addAll(newCompExp)
+        return changedSomething
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.statement == expression || expression in this.comprehensionExpressions
+    }
 }

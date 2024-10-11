@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -178,5 +179,53 @@ class FluentTest {
         // Now the reference should be resolved and the MCE name set
         assertRefersTo(ref, variable)
         assertFullName("SomeClass::func", mce)
+    }
+
+    @Test
+    fun testCollectionComprehensions() {
+        val result =
+            TestLanguageFrontend().build {
+                translationResult {
+                    translationUnit("File") {
+                        function("main", t("list")) {
+                            param("argc", t("int"))
+                            body {
+                                declare {
+                                    variable("some") {
+                                        listComp {
+                                            ref("i")
+                                            compExpr {
+                                                ref("i")
+                                                ref("someIterable")
+                                                ref("i") gt
+                                                    literal(
+                                                        5,
+                                                        t("int")
+                                                    ) // TODO: This line doesn't work as expected
+                                            }
+                                        }
+                                    }
+                                }
+
+                                returnStmt { ref("some") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        val listComp = result.variables["some"]?.initializer
+        print(listComp?.toString()) // This is only here to get a better test coverage
+        assertIs<CollectionComprehension>(listComp)
+        assertIs<Reference>(listComp.statement)
+        assertLocalName("i", listComp.statement)
+        assertEquals(1, listComp.comprehensionExpressions.size)
+        val compExpr = listComp.comprehensionExpressions.single()
+        assertIs<CollectionComprehension.ComprehensionExpression>(compExpr)
+        assertIs<Reference>(compExpr.variable)
+        assertLocalName("i", compExpr.variable)
+        assertIs<Reference>(compExpr.iterable)
+        assertLocalName("someIterable", compExpr.iterable)
+        // assertEquals(1, compExpr.predicates.size)
     }
 }
