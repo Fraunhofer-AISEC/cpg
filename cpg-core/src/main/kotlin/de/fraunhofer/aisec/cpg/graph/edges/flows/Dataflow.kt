@@ -75,9 +75,11 @@ class PointerDataflowGranularity(
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
+        /*var result = super.hashCode()
+        println("Result from super.hashcode: $result")
         result = 31 * result + pointerTarget.hashCode()
-        return result
+        return result*/
+        return pointerTarget.hashCode()
     }
 }
 
@@ -97,9 +99,10 @@ class PartialDataflowGranularity(
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
+        /*var result = super.hashCode()
         result = 31 * result + partialTarget.hashCode()
-        return result
+        return result*/
+        return partialTarget.hashCode()
     }
 }
 
