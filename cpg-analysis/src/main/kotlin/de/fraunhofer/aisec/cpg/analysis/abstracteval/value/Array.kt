@@ -35,11 +35,7 @@ import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
 class Array<T> : Value {
-    override fun applyEffect(
-        current: LatticeInterval,
-        node: Node,
-        name: String
-    ): LatticeInterval {
+    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // There are no functions that change the size of a Java array without destroying it
         return current
     }

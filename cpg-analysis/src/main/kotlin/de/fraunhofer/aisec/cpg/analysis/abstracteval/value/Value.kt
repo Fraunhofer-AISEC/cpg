@@ -31,14 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
 interface Value {
-    /**
-     * Applies the effect of a Node to the Interval describing possible values of a collection.
-     */
-    fun applyEffect(
-        current: LatticeInterval,
-        node: Node,
-        name: String
-    ): LatticeInterval
+    /** Applies the effect of a Node to the Interval describing possible values of a collection. */
+    fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval
 
     fun getInitializer(node: Node?): Node? {
         return when (node) {

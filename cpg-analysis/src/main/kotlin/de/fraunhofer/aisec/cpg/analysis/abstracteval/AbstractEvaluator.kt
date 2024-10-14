@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Array
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Integer
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.MutableList
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -43,11 +42,17 @@ import org.apache.commons.lang3.NotImplementedException
 class AbstractEvaluator {
     // The node for which we want to get the value
     lateinit var goalNode: Node
+
     // The name of the value we are analyzing
     lateinit var targetName: String
+
     // The type of the value we are analyzing
     lateinit var targetType: KClass<out Value>
-    // A barrier that is used to block the evaluation from progressing until it is cleared
+
+    // The call stack to memorize the starting points of nested analysis
+    var callStack = mutableListOf<Node>()
+
+    // A Barrier node that blocks the EOG iteration
     var pathBarrier: Node? = null
 
     fun evaluate(node: Node): LatticeInterval {
@@ -58,9 +63,9 @@ class AbstractEvaluator {
         val initialRange = getInitialRange(initializer, targetType)
 
         // evaluate effect of each operation on the list until we reach "node"
-        val startState = IntervalState(IntervalState.Mode.OVERWRITE)
+        val startState = IntervalState()
         startState.push(initializer, IntervalLattice(initialRange))
-        val finalState = iterateEOG(initializer, startState, ::handleNode)
+        val finalState = iterateEOG(initializer, startState, ::handleNode, goalNode)
         // TODO: null-safety
         return finalState!![node]!!.elements
     }
@@ -79,19 +84,89 @@ class AbstractEvaluator {
         state: State<Node, LatticeInterval>,
         worklist: Worklist<Node, Node, LatticeInterval>
     ): State<Node, LatticeInterval> {
-        // Do not add perform any operation or add new nodes if we reached a barrier
-        if (currentNode == pathBarrier) {
+        // If the current node is already done
+        // (prevents infinite loop and unnecessary double-checking)
+        if (worklist.isDone(currentNode)) {
+            // Mark following nodes as DONE if they only have this as previous EOG or all are DONE
+            // In other cases, converging branches may still change the node
+            currentNode.nextEOG.forEach { next ->
+                if (
+                    next.prevEOG.singleOrNull() == currentNode ||
+                        next.prevEOG.all { worklist.isDone(it) }
+                ) {
+                    worklist.evaluationStateMap[next] = Worklist.EvaluationState.DONE
+                }
+            }
             return state
         }
-        // TODO: handle the different cases
-        return when (currentNode) {
-            is ForStatement,
-            is WhileStatement,
-            is ForEachStatement,
-            is DoStatement -> handleLoop(currentNode, state, worklist)
-            is BranchingNode -> handleBranch(currentNode, state, worklist)
-            else -> state.applyEffect(currentNode).first
+
+        // First calculate the effect
+        val previousInterval = state[currentNode]?.elements
+        val newInterval = state.calculateEffect(currentNode)
+
+        // If it was already seen exactly once or is known to need widening
+        if (worklist.needsWidening(currentNode)) {
+            // Widen the interval
+            val widenedInterval = previousInterval!!.widen(newInterval)
+            // Check if the widening caused a change
+            if (widenedInterval != previousInterval) {
+                // YES: mark next nodes as needs widening, add them to worklist
+                // Overwrite current interval, mark this node as needs narrowing
+                state[currentNode] = IntervalLattice(widenedInterval)
+                currentNode.nextEOG.forEach {
+                    worklist.evaluationStateMap[it] = Worklist.EvaluationState.WIDENING
+                    worklist.push(it, state)
+                }
+                worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.NARROWING
+            } else {
+                // NO: mark the current node as DONE
+                worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.DONE
+            }
         }
+
+        // If it is marked as in need of narrowing
+        else if (worklist.needsNarrowing(currentNode)) {
+            // Narrow the interval
+            val narrowedInterval = previousInterval!!.narrow(newInterval)
+            // Check if the narrowing caused a change
+            if (narrowedInterval != previousInterval) {
+                // YES: overwrite and keep this node marked
+                // Mark next nodes as need narrowing and add to worklist
+                state[currentNode] = IntervalLattice(narrowedInterval)
+                currentNode.nextEOG.forEach {
+                    worklist.evaluationStateMap[it] = Worklist.EvaluationState.NARROWING
+                    worklist.push(it, state)
+                }
+            } else {
+                // NO: mark the node as DONE
+                worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.DONE
+            }
+        }
+
+        // If it was seen for the first time apply the effect and mark it as "NEEDS WIDENING"
+        // We cannot use the "already_seen" field as it is set before this handler is called
+        else {
+            state[currentNode] = IntervalLattice(newInterval)
+            worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.WIDENING
+        }
+
+        // If the current node is not DONE we need to push it to the worklist again
+        if (!worklist.isDone(currentNode)) {
+            worklist.push(currentNode, state)
+        }
+
+        // We propagate the current Interval to all successors which are empty
+        // Push all the next EOG nodes to the state with BOTTOM (unknown) value
+        // Only do this if we have not reached the goal node
+        if (currentNode != goalNode) {
+            currentNode.nextEOG.forEach {
+                if (state[it]?.elements == null) {
+                    state.push(it, state[currentNode])
+                }
+            }
+        }
+
+        return state
     }
 
     private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
@@ -102,19 +177,10 @@ class AbstractEvaluator {
         return type.createInstance().getInitialRange(initializer)
     }
 
-    private fun State<Node, LatticeInterval>.applyEffect(
+    private fun State<Node, LatticeInterval>.calculateEffect(
         node: Node,
-    ): Pair<State<Node, LatticeInterval>, Boolean> {
-        // TODO: do we really need the knowledge if it had an effect from this method?
-        val (newInterval, hadEffect) =
-            targetType.createInstance().applyEffect(this[node]!!.elements, node, targetName)
-        this.push(node, IntervalLattice(newInterval))
-        // Push all the next EOG nodes to the state with BOTTOM (unknown) value
-        // Only do this if we have not reached the goal node
-        if (node != goalNode) {
-            node.nextEOG.forEach { this.push(it, IntervalLattice(LatticeInterval.BOTTOM)) }
-        }
-        return this to hadEffect
+    ): LatticeInterval {
+        return targetType.createInstance().applyEffect(this[node]!!.elements, node, targetName)
     }
 
     /**
@@ -136,177 +202,5 @@ class AbstractEvaluator {
             name == "int" -> Integer::class
             else -> MutableList::class // throw NotImplementedException()
         }
-    }
-
-    /**
-     * Handles the analysis of a Looping statement. It does so by iterating over the loop twice,
-     * widening the arrays the first time and narrowing them the second time. Only the value of the
-     * head node ond the goal node (if it is in the loop) are updated. If the goal node is not in
-     * the loop, the first node after the loop will be pushed to the worklist to continue.
-     *
-     * @param node The BranchingNode as head of the loop
-     * @param state The current analysis state
-     * @param worklist The current worklist used for blocking off the loop from the outer analysis
-     * @return The new state after incorporating the loop analysis
-     */
-    private fun handleLoop(
-        node: Node,
-        state: State<Node, LatticeInterval>,
-        worklist: Worklist<Node, Node, LatticeInterval>
-    ): State<Node, LatticeInterval> {
-        // TODO: create a new micro-evaluation of the value! To do this:
-        //  1) Determine the EOG that ends the loop
-        //  2) Create a new State with the current value as initial value
-        //  3) Set the mode of the state to WIDEN
-        //  4) Make sure the worklist terminates at the end of the loop
-        //  5) When the worklist terminates, set the mode to NARROW and start again
-        //  6) After the second termination, copy important result to the outer state
-
-        val afterLoop = node.nextEOG[1]
-
-        // TODO: make sure we only include loop head once
-
-        // TODO: apply widening until the current node does not change and stop then
-        // Create new state using widening and iterate over it
-        val operatingState = IntervalState(IntervalState.Mode.WIDEN)
-        node.nextEOG.forEach { operatingState.push(it, IntervalLattice(LatticeInterval.BOTTOM)) }
-        // We set the barrier before iterating to prevent the iteration from leaving the loop
-        pathBarrier = afterLoop
-        iterateEOG(node, operatingState, ::handleNode)
-        pathBarrier = null
-
-        // -- At this point the worklist should be exhausted so that iterateEOG returned --
-
-        // TODO: apply narrowing until no more nodes change and stop then
-        // Change the state to narrowing and push the loop start to the worklist again
-        operatingState.changeMode(IntervalState.Mode.NARROW)
-        worklist.push(node, operatingState)
-        node.nextEOG.forEach { operatingState.push(it, operatingState[node]) }
-        // We set the barrier before iterating to prevent the iteration from leaving the loop
-        pathBarrier = afterLoop
-        iterateEOG(node, operatingState, ::handleNode)
-        pathBarrier = null
-
-        // -- At this point the worklist should be exhausted so that iterateEOG returned --
-
-        // overwrite the entry node and goal node if it exists in the loop
-        // else push the end of the loop to the worklist
-        state[node] = operatingState[node]!!
-        if (goalNode in operatingState.keys) {
-            state[goalNode] = operatingState[node]!!
-        } else {
-            worklist.push(afterLoop, state)
-        }
-
-        // -- we can return the now overwritten state --
-
-        return state
-    }
-
-    /**
-     * Handles the analysis of a Branching statement. It does so by evaluating the final ranges of
-     * each branch and taking the join over all of them. If the target node is included in any
-     * branch, the evaluation only uses this branch.
-     *
-     * @param node The BranchingNode as head of the loop
-     * @param state The current analysis state
-     * @param worklist The current worklist used for blocking off the loop from the outer analysis
-     * @return The new state after incorporating the branch analysis
-     */
-    private fun handleBranch(
-        node: Node,
-        state: State<Node, LatticeInterval>,
-        worklist: Worklist<Node, Node, LatticeInterval>
-    ): IntervalState {
-        val mergeNode = findMergeNode(node)
-
-        // TODO: optimization -> if goal node is in one of the branches abort immediately and report
-        // its value
-
-        // push all branches as new states
-        val operatingState = IntervalState(IntervalState.Mode.OVERWRITE)
-        node.nextEOG.forEach { operatingState.push(it, IntervalLattice(LatticeInterval.BOTTOM)) }
-
-        // iterate over all branches without passing the merge node
-        pathBarrier = mergeNode
-        iterateEOG(node, operatingState, ::handleNode)
-        pathBarrier = null
-
-        // overwrite the entry node and goal node if it exists in the loop
-        // else push the end of the loop to the worklist
-        state[node] = operatingState[node]!!
-        if (goalNode in operatingState.keys) {
-            state[goalNode] = operatingState[node]!!
-        } else {
-            worklist.push(mergeNode, state)
-        }
-
-        return state as IntervalState
-    }
-
-    /**
-     * Finds the "MergeNode" as the first common node of all branches.
-     *
-     * @param node The BranchingNode that is the head of the branching statement
-     * @return The Node that is the end of the branching statement
-     */
-    private fun findMergeNode(node: Node): Node {
-        if (node !is BranchingNode) {
-            return node.nextEOG.first()
-        }
-
-        val branchNumber = node.nextEOG.size
-        val branches = Array(branchNumber) { Node() }
-        val visited = Array(branchNumber) { mutableSetOf<Node>() }
-        for (index in 0 until branchNumber) {
-            branches[index] = node.nextEOG[index]
-        }
-        while (true) {
-            for (index in 0 until branchNumber) {
-                val current = branches[index]
-                if (current in visited[index]) {
-                    continue
-                }
-                visited[index].add(current)
-                // If all paths contain the current node it merges all branches
-                if (visited.all { it.contains(current) }) {
-                    return current
-                }
-                val next = current.nextEOG.firstOrNull() ?: break
-                branches[index] = next
-            }
-        }
-    }
-
-    /**
-     * Returns 0 if the condition evaluates to True and 1 if it evaluates to false. If the outcome
-     * cannot be deduced it returns -1. This method is always best-effort and cannot guarantee that
-     * the outcome can be determined, but must not return a wrong result.
-     *
-     * @param condition The Expression used as branch condition
-     * @return 0, 1 or -1 depending on the Boolean evaluation
-     */
-    private fun evaluateCondition(condition: Expression?): Int {
-        // TODO: this method needs to try and evaluate branch conditions to predict the outcome
-        //        when (condition) {
-        //            is BinaryOperator -> {
-        //                when (condition.operatorCode) {
-        //                    "<" -> {
-        //                        if (condition.lhs is Reference && condition.rhs is Literal<*> &&
-        // condition.rhs.type is IntegerType) {
-        //                            val leftValue = evaluate(condition.lhs)
-        //                            if (
-        //                                leftValue is LatticeInterval.Bounded &&
-        //                                    leftValue.upper <
-        // LatticeInterval.Bound.Value((condition.rhs as Literal<*>).value as Int)
-        //                            ) {
-        //                                return 0
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        return -1
     }
 }

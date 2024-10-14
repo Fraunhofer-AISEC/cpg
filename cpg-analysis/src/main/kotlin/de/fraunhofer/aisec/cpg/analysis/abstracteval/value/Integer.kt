@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -34,11 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import org.apache.commons.lang3.NotImplementedException
 
 class Integer : Value {
-    override fun applyEffect(
-        current: LatticeInterval,
-        node: Node,
-        name: String
-    ): LatticeInterval {
+    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // TODO: recursively evaluate right-hand-side to narrow down results
         if (node is UnaryOperator) {
             if (node.input.code == name) {

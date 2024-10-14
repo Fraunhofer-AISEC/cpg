@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -35,11 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import org.apache.commons.lang3.NotImplementedException
 
 class MutableList : Value {
-    override fun applyEffect(
-        current: LatticeInterval,
-        node: Node,
-        name: String
-    ): LatticeInterval{
+    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // TODO: state can also be estimated by conditions! (if (l.size < 3) ...)
         // TODO: assignment -> new size
         // State can only be directly changed via MemberCalls (add, clear, ...)
