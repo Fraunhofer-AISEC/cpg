@@ -76,7 +76,7 @@ data class PointerDataflowGranularity(
 data class PartialDataflowGranularity(
     /** The target that is affected by this partial dataflow. */
     val partialTarget: Declaration?
-) : Granularity 
+) : Granularity
 
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {

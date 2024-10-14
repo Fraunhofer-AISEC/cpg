@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -126,31 +125,22 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
-                    val granularity =
-                        if (
-                            (key is PointerReference || key is PointerDereference) &&
-                                (it is VariableDeclaration || it is ParameterDeclaration)
-                        )
-                            PointerDataflowGranularity(PointerAccess.ADDRESS)
-                        else if (key is PointerDereference)
-                            PointerDataflowGranularity(PointerAccess.VALUE)
-                        else default()
-
                     val edgePropertyMapElement = edgePropertiesMap[Triple(it, key, true)]
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
                     } else if (edgePropertyMapElement is CallingContext) {
                         key.prevDFGEdges.addContextSensitive(
                             it,
-                            granularity,
                             callingContext = edgePropertyMapElement
                         )
+                    } else if (edgePropertyMapElement is PointerDataflowGranularity) {
+                        key.prevDFGEdges +=
+                            Dataflow(start = it, end = key, granularity = edgePropertyMapElement)
                     } else {
                         key.prevDFGEdges +=
                             Dataflow(
                                 start = it,
                                 end = key,
-                                granularity = granularity
                             ) // TODO: seriously think about this and re-write the api
                     }
                 }

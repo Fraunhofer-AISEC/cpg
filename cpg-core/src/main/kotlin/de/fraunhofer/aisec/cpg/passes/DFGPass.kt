@@ -30,8 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -152,13 +150,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target ->
-                    val granularity =
-                        if (target is PointerDereference)
-                            PointerDataflowGranularity(PointerAccess.VALUE)
-                        else default()
-                    it.nextDFGEdges += Dataflow(start = it, end = target, granularity = granularity)
-                }
+                targets.forEach { target -> it.nextDFGEdges += Dataflow(start = it, end = target) }
             }
         }
 
@@ -395,17 +387,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleReference(node: Reference) {
         node.refersTo?.let {
-            val granularity =
-                if (node is PointerReference) PointerDataflowGranularity(PointerAccess.ADDRESS)
-                else if (node is PointerDereference) PointerDataflowGranularity(PointerAccess.VALUE)
-                else default()
             when (node.access) {
                 AccessValues.WRITE -> node.nextDFGEdges += it
-                AccessValues.READ ->
-                    node.prevDFGEdges += Dataflow(start = it, end = node, granularity = granularity)
+                AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
                 else -> {
                     node.nextDFGEdges += it
-                    node.prevDFGEdges += Dataflow(start = it, end = node, granularity = granularity)
+                    node.prevDFGEdges += Dataflow(start = it, end = node)
                 }
             }
         }
