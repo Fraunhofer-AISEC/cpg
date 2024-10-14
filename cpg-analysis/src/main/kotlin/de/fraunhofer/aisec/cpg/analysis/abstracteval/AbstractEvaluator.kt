@@ -58,7 +58,7 @@ class AbstractEvaluator {
         val initialRange = getInitialRange(initializer, targetType)
 
         // evaluate effect of each operation on the list until we reach "node"
-        val startState = IntervalState(null)
+        val startState = IntervalState(IntervalState.Mode.OVERWRITE)
         startState.push(initializer, IntervalLattice(initialRange))
         val finalState = iterateEOG(initializer, startState, ::handleNode)
         // TODO: null-safety
@@ -153,7 +153,7 @@ class AbstractEvaluator {
         node: Node,
         state: State<Node, LatticeInterval>,
         worklist: Worklist<Node, Node, LatticeInterval>
-    ): IntervalState {
+    ): State<Node, LatticeInterval> {
         // TODO: create a new micro-evaluation of the value! To do this:
         //  1) Determine the EOG that ends the loop
         //  2) Create a new State with the current value as initial value
@@ -164,12 +164,11 @@ class AbstractEvaluator {
 
         val afterLoop = node.nextEOG[1]
 
-        // TODO: check condition
+        // TODO: make sure we only include loop head once
 
         // TODO: apply widening until the current node does not change and stop then
         // Create new state using widening and iterate over it
         val operatingState = IntervalState(IntervalState.Mode.WIDEN)
-        operatingState.push(node, state[node])
         node.nextEOG.forEach { operatingState.push(it, IntervalLattice(LatticeInterval.BOTTOM)) }
         // We set the barrier before iterating to prevent the iteration from leaving the loop
         pathBarrier = afterLoop
@@ -201,7 +200,7 @@ class AbstractEvaluator {
 
         // -- we can return the now overwritten state --
 
-        return state as IntervalState
+        return state
     }
 
     /**

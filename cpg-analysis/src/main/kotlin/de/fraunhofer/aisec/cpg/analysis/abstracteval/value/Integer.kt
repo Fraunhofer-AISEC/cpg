@@ -60,13 +60,21 @@ class Integer : Value {
             }
         } else if (node is AssignExpression) {
             if (node.lhs.any { it.code == name }) {
+                // TODO: we need to evaluate the right hand side!
                 return when (node.operatorCode) {
+                    "=" -> {
+                        TODO()
+                    }
                     "+=" -> {
                         val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.INFINITE)
                         current + openUpper to true
                     }
                     "-=" -> {
-                        val zeroInterval = LatticeInterval.Bounded(0, 0)
+                        val zeroInterval =
+                            LatticeInterval.Bounded(
+                                LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                LatticeInterval.Bound.NEGATIVE_INFINITE
+                            )
                         current.join(zeroInterval) to true
                     }
                     "*=" -> {

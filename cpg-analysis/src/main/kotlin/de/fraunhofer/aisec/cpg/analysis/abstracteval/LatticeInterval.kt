@@ -252,7 +252,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
 class IntervalLattice(override val elements: LatticeInterval) :
     LatticeElement<LatticeInterval>(elements) {
     override fun compareTo(other: LatticeElement<LatticeInterval>): Int {
-        return this.compareTo(other)
+        return elements.compareTo(other.elements)
     }
 
     // Returns true whenever other is fully within this
@@ -292,14 +292,16 @@ class IntervalLattice(override val elements: LatticeInterval) :
     }
 }
 
-class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
+class IntervalState(private var mode: Mode?) : State<Node, LatticeInterval>() {
     var function: (IntervalLattice, IntervalLattice) -> IntervalLattice
 
     /**
      * An enum that holds the current mode of operation as this State may be used to apply either
      * widening or narrowing
      */
+    // TODO: should this control the whole state?
     enum class Mode {
+        OVERWRITE,
         WIDEN,
         NARROW
     }
@@ -308,7 +310,8 @@ class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
         function =
             when (mode) {
                 Mode.WIDEN -> IntervalLattice::widen
-                else -> IntervalLattice::narrow
+                Mode.NARROW -> IntervalLattice::narrow
+                else -> { a, _ -> a }
             }
     }
 
@@ -332,14 +335,19 @@ class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
         return update
     }
 
+    /**
+     * This method checks whether an interval needs to be updated depending on the mode of the
+     * state. If the state does not operate in a mode it will always return true.
+     */
     private fun intervalNeedsUpdate(
         current: IntervalLattice?,
         newLattice: IntervalLattice,
-        mode: Mode
+        mode: Mode?
     ): Boolean {
         return when (mode) {
             Mode.WIDEN -> current == null || !current.contains(newLattice)
-            else -> current == null || !newLattice.contains(current)
+            Mode.NARROW -> current == null || !newLattice.contains(current)
+            else -> true
         }
     }
 
@@ -360,10 +368,7 @@ class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
         newLatticeElement as IntervalLattice
         // here we use our "intervalNeedsUpdate" function to determine if we have to do something
         if (current != null && intervalNeedsUpdate(current, newLatticeElement, mode)) {
-            when (mode) {
-                Mode.WIDEN -> this[newNode] = current.widen(newLatticeElement)
-                else -> this[newNode] = current.narrow(newLatticeElement)
-            }
+            function(current, newLatticeElement)
         } else if (current != null) {
             return false
         } else {
