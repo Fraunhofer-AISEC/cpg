@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Integer
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.MutableList
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.State
 import de.fraunhofer.aisec.cpg.helpers.Worklist
@@ -48,12 +47,6 @@ class AbstractEvaluator {
 
     // The type of the value we are analyzing
     lateinit var targetType: KClass<out Value>
-
-    // The call stack to memorize the starting points of nested analysis
-    var callStack = mutableListOf<Node>()
-
-    // A Barrier node that blocks the EOG iteration
-    var pathBarrier: Node? = null
 
     fun evaluate(node: Node): LatticeInterval {
         goalNode = node
@@ -174,10 +167,6 @@ class AbstractEvaluator {
 
     private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
         return type.createInstance().getInitializer(node)
-    }
-
-    private fun getInitialRange(initializer: Node, type: KClass<out Value>): LatticeInterval {
-        return type.createInstance().getInitialRange(initializer)
     }
 
     private fun State<Node, LatticeInterval>.calculateEffect(
