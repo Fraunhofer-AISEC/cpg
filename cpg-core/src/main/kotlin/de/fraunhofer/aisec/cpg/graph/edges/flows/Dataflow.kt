@@ -66,7 +66,20 @@ data object FullDataflowGranularity : Granularity
 class PointerDataflowGranularity(
     /** Does the Dataflow affect the pointer's address or its value? */
     val pointerTarget: PointerAccess
-) : Granularity
+) : Granularity {
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PointerDataflowGranularity) return false
+        return this.pointerTarget == other.pointerTarget && super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + pointerTarget.hashCode()
+        return result
+    }
+}
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -76,7 +89,19 @@ class PointerDataflowGranularity(
 class PartialDataflowGranularity(
     /** The target that is affected by this partial dataflow. */
     val partialTarget: Declaration?
-) : Granularity
+) : Granularity {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PartialDataflowGranularity) return false
+        return this.partialTarget == other.partialTarget && super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + partialTarget.hashCode()
+        return result
+    }
+}
 
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
