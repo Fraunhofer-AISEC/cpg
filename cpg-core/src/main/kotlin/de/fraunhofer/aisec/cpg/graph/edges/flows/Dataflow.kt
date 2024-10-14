@@ -63,48 +63,20 @@ data object FullDataflowGranularity : Granularity
  * This dataflow granularity denotes that the value or address of a pointer is flowing from
  * [Dataflow.start] to [Dataflow.end].
  */
-class PointerDataflowGranularity(
+data class PointerDataflowGranularity(
     /** Does the Dataflow affect the pointer's address or its value? */
     val pointerTarget: PointerAccess
-) : Granularity {
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is PointerDataflowGranularity) return false
-        return this.pointerTarget == other.pointerTarget && super.equals(other)
-    }
-
-    override fun hashCode(): Int {
-        /*var result = super.hashCode()
-        println("Result from super.hashcode: $result")
-        result = 31 * result + pointerTarget.hashCode()
-        return result*/
-        return pointerTarget.hashCode()
-    }
-}
+) : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
  * [Dataflow.end] but only parts of it. Common examples include [MemberExpression] nodes, where we
  * model a dataflow to the base, but only partially scoped to a particular field.
  */
-class PartialDataflowGranularity(
+data class PartialDataflowGranularity(
     /** The target that is affected by this partial dataflow. */
     val partialTarget: Declaration?
-) : Granularity {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is PartialDataflowGranularity) return false
-        return this.partialTarget == other.partialTarget && super.equals(other)
-    }
-
-    override fun hashCode(): Int {
-        /*var result = super.hashCode()
-        result = 31 * result + partialTarget.hashCode()
-        return result*/
-        return partialTarget.hashCode()
-    }
-}
+) : Granularity 
 
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
