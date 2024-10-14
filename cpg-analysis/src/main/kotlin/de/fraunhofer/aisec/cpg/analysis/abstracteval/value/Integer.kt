@@ -38,24 +38,20 @@ class Integer : Value {
         current: LatticeInterval,
         node: Node,
         name: String
-    ): Pair<LatticeInterval, Boolean> {
-        // Branching nodes have to be assumed to have an effect
-        if (node is BranchingNode) {
-            return current to true
-        }
+    ): LatticeInterval {
         // TODO: recursively evaluate right-hand-side to narrow down results
         if (node is UnaryOperator) {
             if (node.input.code == name) {
                 return when (node.operatorCode) {
                     "++" -> {
                         val oneInterval = LatticeInterval.Bounded(1, 1)
-                        current + oneInterval to true
+                        current + oneInterval
                     }
                     "--" -> {
                         val oneInterval = LatticeInterval.Bounded(1, 1)
-                        current - oneInterval to true
+                        current - oneInterval
                     }
-                    else -> current to false
+                    else -> current
                 }
             }
         } else if (node is AssignExpression) {
@@ -63,11 +59,11 @@ class Integer : Value {
                 // TODO: we need to evaluate the right hand side!
                 return when (node.operatorCode) {
                     "=" -> {
-                        TODO()
+                        current // TODO()
                     }
                     "+=" -> {
                         val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.INFINITE)
-                        current + openUpper to true
+                        current + openUpper
                     }
                     "-=" -> {
                         val zeroInterval =
@@ -75,7 +71,7 @@ class Integer : Value {
                                 LatticeInterval.Bound.NEGATIVE_INFINITE,
                                 LatticeInterval.Bound.NEGATIVE_INFINITE
                             )
-                        current.join(zeroInterval) to true
+                        current.join(zeroInterval)
                     }
                     "*=" -> {
                         TODO()
@@ -86,11 +82,11 @@ class Integer : Value {
                     "%=" -> {
                         TODO()
                     }
-                    else -> current to false
+                    else -> current
                 }
             }
         }
-        return current to false
+        return current
     }
 
     override fun getInitialRange(initializer: Node): LatticeInterval {

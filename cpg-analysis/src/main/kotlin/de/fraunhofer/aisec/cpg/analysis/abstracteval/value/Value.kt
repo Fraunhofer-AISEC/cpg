@@ -32,19 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
 interface Value {
     /**
-     * Applies the effect of a Node to the Interval describing possible values of a collection. Also
-     * returns true if the node was "valid" node that could have an influence on the Interval.
-     *
-     * Examples:
-     * - list.add(x) on [0, 0] -> ([1, 1], true)
-     * - list.clear(x) on [0, 0] -> ([0, 0], true)
-     * - println(list) on [0, 0] -> ([0, 0], false)
+     * Applies the effect of a Node to the Interval describing possible values of a collection.
      */
     fun applyEffect(
         current: LatticeInterval,
         node: Node,
         name: String
-    ): Pair<LatticeInterval, Boolean>
+    ): LatticeInterval
 
     fun getInitializer(node: Node?): Node? {
         return when (node) {

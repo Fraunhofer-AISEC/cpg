@@ -39,45 +39,41 @@ class MutableList : Value {
         current: LatticeInterval,
         node: Node,
         name: String
-    ): Pair<LatticeInterval, Boolean> {
+    ): LatticeInterval{
         // TODO: state can also be estimated by conditions! (if (l.size < 3) ...)
         // TODO: assignment -> new size
-        // Branching nodes have to be assumed to have an effect
-        if (node is BranchingNode) {
-            return current to true
-        }
         // State can only be directly changed via MemberCalls (add, clear, ...)
         if (node !is MemberCallExpression) {
-            return current to false
+            return current
         }
         // Only consider calls that have the subject as base
         if ((node.callee as? MemberExpression)?.base?.code != name) {
-            return current to false
+            return current
         }
         return when (node.name.localName) {
             "add" -> {
                 val oneInterval = LatticeInterval.Bounded(1, 1)
-                current + oneInterval to true
+                current + oneInterval
             }
             // TODO: this should trigger another List size evaluation for the argument!
             //  also check and prevent -1 result
             "addAll" -> {
                 val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.INFINITE)
-                current + openUpper to true
+                current + openUpper
             }
             "clear" -> {
-                LatticeInterval.Bounded(0, 0) to true
+                LatticeInterval.Bounded(0, 0)
             }
             "remove" -> {
                 // We have to differentiate between remove with index or object argument
                 // Latter may do nothing if the element is not in the list
                 if (node.arguments.first().type is IntegerType) {
                     val oneInterval = LatticeInterval.Bounded(1, 1)
-                    current - oneInterval to true
+                    current - oneInterval
                 } else {
                     // TODO: If we know the list is empty, we know the operation has no effect
                     val oneZeroInterval = LatticeInterval.Bounded(1, 0)
-                    current - oneZeroInterval to true
+                    current - oneZeroInterval
                 }
             }
             // TODO: as optimization we could check whether the argument list is empty.
@@ -85,9 +81,9 @@ class MutableList : Value {
             // possible outcomes
             "removeAll" -> {
                 val zeroInterval = LatticeInterval.Bounded(0, 0)
-                current.join(zeroInterval) to true
+                current.join(zeroInterval)
             }
-            else -> current to false
+            else -> current
         }
     }
 

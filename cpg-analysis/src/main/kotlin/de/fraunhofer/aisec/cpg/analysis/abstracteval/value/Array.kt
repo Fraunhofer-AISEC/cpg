@@ -39,9 +39,9 @@ class Array<T> : Value {
         current: LatticeInterval,
         node: Node,
         name: String
-    ): Pair<LatticeInterval, Boolean> {
+    ): LatticeInterval {
         // There are no functions that change the size of a Java array without destroying it
-        return current to false
+        return current
     }
 
     override fun getInitialRange(initializer: Node): LatticeInterval {
