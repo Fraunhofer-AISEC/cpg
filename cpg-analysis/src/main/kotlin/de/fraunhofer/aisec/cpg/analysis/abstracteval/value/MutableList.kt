@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
@@ -35,6 +36,19 @@ import org.apache.commons.lang3.NotImplementedException
 
 class MutableList : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
+        if (node is VariableDeclaration && node.initializer != null) {
+            when (val init = node.initializer) {
+                is MemberCallExpression -> {
+                    val size = init.arguments.size
+                    return LatticeInterval.Bounded(size, size)
+                }
+                is NewExpression -> {
+                    // TODO: could have a collection as argument!
+                    return LatticeInterval.Bounded(0, 0)
+                }
+                else -> throw NotImplementedException()
+            }
+        }
         // TODO: state can also be estimated by conditions! (if (l.size < 3) ...)
         // TODO: assignment -> new size
         // State can only be directly changed via MemberCalls (add, clear, ...)
@@ -79,20 +93,6 @@ class MutableList : Value {
                 current.join(zeroInterval)
             }
             else -> current
-        }
-    }
-
-    override fun getInitialRange(initializer: Node): LatticeInterval {
-        when (initializer) {
-            is MemberCallExpression -> {
-                val size = initializer.arguments.size
-                return LatticeInterval.Bounded(size, size)
-            }
-            is NewExpression -> {
-                // TODO: could have a collection as argument!
-                return LatticeInterval.Bounded(0, 0)
-            }
-            else -> throw NotImplementedException()
         }
     }
 }

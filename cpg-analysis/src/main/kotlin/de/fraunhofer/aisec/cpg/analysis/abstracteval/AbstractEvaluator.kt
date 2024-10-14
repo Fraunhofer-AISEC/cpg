@@ -60,11 +60,12 @@ class AbstractEvaluator {
         targetName = node.name.toString()
         targetType = getType(node)
         val initializer = getInitializerOf(node, targetType)!!
-        val initialRange = getInitialRange(initializer, targetType)
 
         // evaluate effect of each operation on the list until we reach "node"
         val startState = IntervalState()
-        startState.push(initializer, IntervalLattice(initialRange))
+        startState.push(initializer, IntervalLattice(LatticeInterval.BOTTOM))
+        // TODO: terminates too early since it already knows the state of the first node
+        //  -> mark declarations as node with effect in Integer and start with BOTTOM node!
         val finalState = iterateEOG(initializer, startState, ::handleNode, goalNode)
         // TODO: null-safety
         return finalState!![node]!!.elements
@@ -84,6 +85,8 @@ class AbstractEvaluator {
         state: State<Node, LatticeInterval>,
         worklist: Worklist<Node, Node, LatticeInterval>
     ): State<Node, LatticeInterval> {
+        // TODO: we must not override the current state before they are checked by the worklist!
+        //  otherwise it will seem as if nothing changed
         // If the current node is already done
         // (prevents infinite loop and unnecessary double-checking)
         if (worklist.isDone(currentNode)) {

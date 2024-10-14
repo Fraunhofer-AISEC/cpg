@@ -38,10 +38,8 @@ interface Value {
         return when (node) {
             null -> null!!
             is Reference -> getInitializer(node.refersTo)
-            is VariableDeclaration -> node.initializer!!
+            is VariableDeclaration -> node
             else -> getInitializer(node.prevDFG.firstOrNull())
         }
     }
-
-    fun getInitialRange(initializer: Node): LatticeInterval
 }

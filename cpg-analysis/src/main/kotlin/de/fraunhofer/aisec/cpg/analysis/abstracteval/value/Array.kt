@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
@@ -37,13 +38,11 @@ import org.apache.commons.lang3.NotImplementedException
 class Array<T> : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // There are no functions that change the size of a Java array without destroying it
+        if (node is VariableDeclaration && node.initializer != null) {
+            val initValue = getSize(node.initializer!!)
+            return LatticeInterval.Bounded(initValue, initValue)
+        }
         return current
-    }
-
-    override fun getInitialRange(initializer: Node): LatticeInterval {
-        // Consider multi-dimensional arrays (matrices)
-        val size = getSize(initializer)
-        return LatticeInterval.Bounded(size, size)
     }
 
     private fun getSize(node: Node): Int {

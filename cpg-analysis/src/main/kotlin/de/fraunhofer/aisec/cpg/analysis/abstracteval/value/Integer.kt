@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -34,7 +35,14 @@ import org.apache.commons.lang3.NotImplementedException
 
 class Integer : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
-        // TODO: recursively evaluate right-hand-side to narrow down results
+        if (node is VariableDeclaration && node.initializer != null) {
+            val initValue =
+                when (val init = node.initializer) {
+                    is Literal<*> -> init.value as? Int ?: throw NotImplementedException()
+                    else -> throw NotImplementedException()
+                }
+            return LatticeInterval.Bounded(initValue, initValue)
+        }
         if (node is UnaryOperator) {
             if (node.input.code == name) {
                 return when (node.operatorCode) {
@@ -82,14 +90,5 @@ class Integer : Value {
             }
         }
         return current
-    }
-
-    override fun getInitialRange(initializer: Node): LatticeInterval {
-        val value =
-            when (initializer) {
-                is Literal<*> -> initializer.value as? Int ?: throw NotImplementedException()
-                else -> throw NotImplementedException()
-            }
-        return LatticeInterval.Bounded(value, value)
     }
 }
