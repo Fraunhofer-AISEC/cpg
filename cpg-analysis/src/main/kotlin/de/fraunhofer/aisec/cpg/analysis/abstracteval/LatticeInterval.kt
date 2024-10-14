@@ -292,65 +292,7 @@ class IntervalLattice(override val elements: LatticeInterval) :
     }
 }
 
-class IntervalState(private var mode: Mode?) : State<Node, LatticeInterval>() {
-    var function: (IntervalLattice, IntervalLattice) -> IntervalLattice
-
-    /**
-     * An enum that holds the current mode of operation as this State may be used to apply either
-     * widening or narrowing
-     */
-    // TODO: should this control the whole state?
-    enum class Mode {
-        OVERWRITE,
-        WIDEN,
-        NARROW
-    }
-
-    init {
-        function =
-            when (mode) {
-                Mode.WIDEN -> IntervalLattice::widen
-                Mode.NARROW -> IntervalLattice::narrow
-                else -> { a, _ -> a }
-            }
-    }
-
-    /**
-     * Checks if an update is necessary. This applies in the following cases:
-     * - If [other] contains nodes which are not present in `this`
-     * - If we want to apply widening and any new interval is not fully contained within the old
-     *   interval
-     * - If we want to apply narrowing and any old interval is not fully contained within the new
-     *   interval Otherwise, it does not modify anything.
-     */
-    override fun needsUpdate(
-        other: State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>
-    ): Boolean {
-        var update = false
-        for ((node, newLattice) in other) {
-            newLattice as IntervalLattice // TODO: does this cast make sense?
-            val current = this[node] as? IntervalLattice
-            update = update || intervalNeedsUpdate(current, newLattice, mode)
-        }
-        return update
-    }
-
-    /**
-     * This method checks whether an interval needs to be updated depending on the mode of the
-     * state. If the state does not operate in a mode it will always return true.
-     */
-    private fun intervalNeedsUpdate(
-        current: IntervalLattice?,
-        newLattice: IntervalLattice,
-        mode: Mode?
-    ): Boolean {
-        return when (mode) {
-            Mode.WIDEN -> current == null || !current.contains(newLattice)
-            Mode.NARROW -> current == null || !newLattice.contains(current)
-            else -> true
-        }
-    }
-
+class IntervalState : State<Node, LatticeInterval>() {
     /**
      * Adds a new mapping from [newNode] to (a copy of) [newLatticeElement] to this object if
      * [newNode] does not exist in this state yet. If it already exists, it computes either widening
@@ -365,19 +307,11 @@ class IntervalState(private var mode: Mode?) : State<Node, LatticeInterval>() {
             return false
         }
         val current = this[newNode] as? IntervalLattice
-        newLatticeElement as IntervalLattice
-        // here we use our "intervalNeedsUpdate" function to determine if we have to do something
-        if (current != null && intervalNeedsUpdate(current, newLatticeElement, mode)) {
-            function(current, newLatticeElement)
-        } else if (current != null) {
+        if (current != null) {
             return false
         } else {
             this[newNode] = newLatticeElement
         }
         return true
-    }
-
-    fun changeMode(mode: Mode) {
-        this.mode = mode
     }
 }
