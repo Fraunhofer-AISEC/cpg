@@ -358,9 +358,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         return newMemberExpression(
             name,
-            base,
+            if (ctx.isPointerDereference)
+                newPointerDereference(base.name, rawNode = ctx).apply { this.input = base }
+            else base,
             unknownType(),
-            if (ctx.isPointerDereference) "->" else ".",
+            /*if (ctx.isPointerDereference) "->" else */ ".",
             rawNode = ctx
         )
     }
@@ -410,17 +412,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
         if (operatorCode == "&") {
-            return newPointerReference(
-                handle(ctx.operand)?.name,
-                unknownType(),
-                rawNode = ctx
-            ) // TODO
+            return newPointerReference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
+                .apply {
+                    if (input != null) {
+                        this.input = input
+                    }
+                }
         } else if (operatorCode == "*") {
-            return newPointerDereference(
-                handle(ctx.operand)?.name,
-                unknownType(),
-                rawNode = ctx
-            ) // TODO(@morbitzer): integrate stuff as input
+            return newPointerDereference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
+                .apply {
+                    if (input != null) {
+                        this.input = input
+                    }
+                }
         } else {
             val unaryOperator =
                 newUnaryOperator(

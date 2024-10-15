@@ -25,5 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-/** A c-style dereference, such as *i. */
-open class PointerDereference : Reference() {}
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import org.neo4j.ogm.annotation.Relationship
+
+/** A c-style dereference, such as *i->f. */
+open class PointerDereference : Reference() {
+    @Relationship("INPUT")
+    var inputEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse input"),
+            onChanged = { old, new -> exchangeTypeObserver(old, new) }
+        )
+    /** The expression on which the operation is applied. */
+    var input by unwrapping(PointerDereference::inputEdge)
+}

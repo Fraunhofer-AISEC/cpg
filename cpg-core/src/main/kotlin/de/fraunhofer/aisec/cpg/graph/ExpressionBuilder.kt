@@ -485,7 +485,7 @@ fun MetadataProvider.newPointerReference(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null
-): Reference {
+): PointerReference {
     val node = PointerReference()
     node.applyMetadata(this, name, rawNode, true)
 
@@ -506,7 +506,7 @@ fun MetadataProvider.newPointerDereference(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null
-): Reference {
+): PointerDereference {
     val node = PointerDereference()
     node.applyMetadata(this, name, rawNode, true)
 
