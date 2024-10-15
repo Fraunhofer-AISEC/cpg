@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import java.util.function.Predicate
@@ -251,7 +250,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected open fun handleRecordDeclaration(node: RecordDeclaration) {
-        scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
         for (constructor in node.constructors) {
@@ -266,7 +264,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         for (records in node.records) {
             createEOG(records)
         }
-        scopeManager.leaveScope(node)
     }
 
     protected fun handleStatementHolder(statementHolder: StatementHolder) {
@@ -314,43 +311,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // reset EOG
         currentPredecessors.clear()
-        var needToLeaveRecord = false
-        if (
-            node is MethodDeclaration &&
-                node.recordDeclaration != null &&
-                (node.recordDeclaration !== scopeManager.currentRecord)
-        ) {
-            // This is a method declaration outside the AST of the record, as its possible in
-            // languages, such as C++. Therefore, we need to enter the record scope as well
-            scopeManager.enterScope(node.recordDeclaration!!)
-            needToLeaveRecord = true
-        }
-        scopeManager.enterScope(node)
         // push the function declaration
         pushToEOG(node)
 
         // analyze the body
         createEOG(node.body)
 
-        val currentScope = scopeManager.currentScope
-        if (currentScope !is FunctionScope) {
-            Util.errorWithFileLocation(
-                node,
-                log,
-                "Scope of function declaration is not a function scope. EOG of function might be incorrect."
-            )
-            // try to recover at least a little bit
-            scopeManager.leaveScope(node)
-            currentPredecessors.clear()
-            return
-        }
         val uncaughtEOGThrows = nodesToInternalThrows[node]?.values?.flatten() ?: listOf()
         // Connect uncaught throws to block node
         node.body?.let { addMultipleIncomingEOGEdges(uncaughtEOGThrows, it) }
-        scopeManager.leaveScope(node)
-        if (node is MethodDeclaration && node.recordDeclaration != null && needToLeaveRecord) {
-            scopeManager.leaveScope(node.recordDeclaration!!)
-        }
 
         // Set default argument evaluation nodes
         val funcDeclNextEOG = node.nextEOG
@@ -534,16 +503,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleBlock(node: Block) {
-        // not all language handle compound statements as scoping blocks, so we need to avoid
-        // creating new scopes here
-        scopeManager.enterScopeIfExists(node)
 
         // analyze the contained statements
         for (child in node.statements) {
             createEOG(child)
-        }
-        if (scopeManager.currentScope is BlockScope) {
-            scopeManager.leaveScope(node)
         }
         pushToEOG(node)
     }
@@ -568,8 +531,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             firstParentOrNull(node) { parent ->
                 parent is TryStatement || parent is FunctionDeclaration
             }
-        nodesToInternalThrows[catchingParent]?.let {
-            it[throwType] = currentPredecessors.toMutableList()
+        if (catchingParent != null) {
+            val throwByTypeMap = nodesToInternalThrows.getOrPut(catchingParent) { mutableMapOf() }
+            val throws = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
+            throws.addAll(currentPredecessors.toMutableList())
+        } else {
+            LOGGER.error(
+                "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
+            )
         }
         currentPredecessors.clear()
     }
@@ -954,7 +923,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     protected fun handleIfStatement(node: IfStatement) {
         val openBranchNodes = mutableListOf<Node>()
-        scopeManager.enterScopeIfExists(node)
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
@@ -971,7 +939,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         } else {
             openBranchNodes.addAll(openConditionEOGs)
         }
-        scopeManager.leaveScope(node)
         setCurrentEOGs(openBranchNodes)
     }
 
@@ -1034,8 +1001,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         scopeManager.enterScopeOfNearestParent(node)
         val labelStatement = scopeManager.getLabelStatement(label)
         labelStatement?.subStatement?.let {
-            val scope = scopeManager.lookupScope(it)
-            return scope?.astNode
+            return it
         }
         return null
     }
