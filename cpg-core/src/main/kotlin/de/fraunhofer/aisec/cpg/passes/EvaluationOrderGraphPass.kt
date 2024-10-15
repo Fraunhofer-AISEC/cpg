@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
+import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
 /**
@@ -75,6 +76,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     protected var currentPredecessors = mutableListOf<Node>()
     protected var nextEdgeBranch: Boolean? = null
+
+    // TODO very precisely doc what this map is for
+    val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
+
+    val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
 
     /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
@@ -338,7 +344,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             currentPredecessors.clear()
             return
         }
-        val uncaughtEOGThrows = currentScope.catchesOrRelays.values.flatten()
+        val uncaughtEOGThrows = nodesToInternalThrows[node]?.values?.flatten() ?: listOf()
         // Connect uncaught throws to block node
         node.body?.let { addMultipleIncomingEOGEdges(uncaughtEOGThrows, it) }
         scopeManager.leaveScope(node)
@@ -555,16 +561,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleThrowOperator(node: UnaryOperator) {
         val input = node.input
         createEOG(input)
-
-        val catchingScope =
-            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
-
         val throwType = input.type
         pushToEOG(node)
-        if (catchingScope is TryScope) {
-            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
-        } else if (catchingScope is FunctionScope) {
-            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+
+        val catchingParent =
+            firstParentOrNull(node) { parent ->
+                parent is TryStatement || parent is FunctionDeclaration
+            }
+        nodesToInternalThrows[catchingParent]?.let {
+            it[throwType] = currentPredecessors.toMutableList()
         }
         currentPredecessors.clear()
     }
@@ -595,15 +600,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleTryStatement(node: TryStatement) {
-        scopeManager.enterScope(node)
-        val tryScope = scopeManager.currentScope as TryScope?
 
         node.resources.forEach { createEOG(it) }
 
         createEOG(node.tryBlock)
         val tmpEOGNodes = currentPredecessors.toMutableList()
         val catchEnds = mutableListOf<Node>()
-        val catchesOrRelays = tryScope?.catchesOrRelays
+        val catchesOrRelays = nodesToInternalThrows[node]
         for (catchClause in node.catchClauses) {
             currentPredecessors.clear()
             // Try to catch all internally thrown exceptions under the catching clause and remove
@@ -658,21 +661,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
-        val outerScope =
-            scopeManager.firstScopeOrNull(scopeManager.currentScope?.parent) { scope: Scope? ->
-                scope is TryScope || scope is FunctionScope
-            }
-        if (outerScope != null) {
-            val outerCatchesOrRelays =
-                if (outerScope is TryScope) outerScope.catchesOrRelays
-                else (outerScope as FunctionScope).catchesOrRelays
-            for ((key, value) in catchesOrRelays ?: mapOf()) {
-                val catches = outerCatchesOrRelays[key] ?: mutableListOf<Node>()
-                catches.addAll(value)
-                outerCatchesOrRelays[key] = catches
+        val outerCatchingNode =
+            firstParentOrNull(node) { parent -> parent is TryStatement || parent is LoopStatement }
+        if (outerCatchingNode != null) {
+            val outerCatchesOrRelays = nodesToInternalThrows[outerCatchingNode] ?: mutableMapOf()
+            if (!nodesToInternalThrows.contains(outerCatchingNode))
+                nodesToInternalThrows[outerCatchingNode] = outerCatchesOrRelays
+            for ((exceptionType, exceptionSources) in catchesOrRelays ?: mapOf()) {
+                val catches = outerCatchesOrRelays[exceptionType] ?: mutableListOf()
+                catches.addAll(exceptionSources)
+                outerCatchesOrRelays[exceptionType] = catches
             }
         }
-        scopeManager.leaveScope(node)
         // To Avoid edges out of the "finally" block to the next regular statement.
         if (!canTerminateExceptionfree) {
             currentPredecessors.clear()
@@ -682,7 +682,20 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     protected fun handleContinueStatement(node: ContinueStatement) {
         pushToEOG(node)
-        scopeManager.addContinueStatement(node)
+        val continuableNode =
+            if (node.label == null) firstParentOrNull(node) { it.isContinuable() }
+            else getLabeledASTNode(node, node.label!!)
+        if (continuableNode != null) {
+            if (!nodesWithContinuesAndBreaks.contains(continuableNode)) {
+                nodesWithContinuesAndBreaks[continuableNode] = mutableListOf()
+            }
+            nodesWithContinuesAndBreaks[continuableNode]?.add(node)
+        } else {
+            LOGGER.error(
+                "I am unexpectedly not in a continuable subtree, cannot add continue statement"
+            )
+        }
+
         currentPredecessors.clear()
     }
 
@@ -695,12 +708,25 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     protected fun handleBreakStatement(node: BreakStatement) {
         pushToEOG(node)
-        scopeManager.addBreakStatement(node)
+        val breakableNode =
+            if (node.label == null) firstParentOrNull(node) { it.isBreakable() }
+            else getLabeledASTNode(node, node.label!!)
+        if (breakableNode != null) {
+            if (!nodesWithContinuesAndBreaks.contains(breakableNode)) {
+                nodesWithContinuesAndBreaks[breakableNode] = mutableListOf()
+            }
+            nodesWithContinuesAndBreaks[breakableNode]?.add(node)
+        } else {
+            LOGGER.error("I am unexpectedly not in a breakable subtree, cannot add break statement")
+        }
+
         currentPredecessors.clear()
     }
 
     protected fun handleLabelStatement(node: LabelStatement) {
-        scopeManager.addLabelStatement(node)
+        node.scope?.addLabelStatement(node)
+        // TODO here we have to check if adding to the label scope is the same as adding a label to
+        // the current scope
         createEOG(node.subStatement)
     }
 
@@ -806,28 +832,30 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      *
      * @param loopScope the loop scope
      */
-    protected fun exitLoop(loopScope: LoopScope) {
+    protected fun handleContainedBreaksAndContinues(loopStatement: LoopStatement) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
         // context is destroyed
-        currentPredecessors.addAll(loopScope.breakStatements)
-        val continues = loopScope.continueStatements.toMutableList()
-        if (continues.isNotEmpty()) {
-            val conditions =
-                loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
-            conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
+        val cfNode = nodesWithContinuesAndBreaks[loopStatement]
+        cfNode?.let {
+            currentPredecessors.addAll(cfNode.filterIsInstance<BreakStatement>())
+            val continues = cfNode.filterIsInstance<ContinueStatement>().toMutableList()
+            if (continues.isNotEmpty()) {
+                val conditions =
+                    loopStatement.conditions
+                        .map { SubgraphWalker.getEOGPathEdges(it).entries }
+                        .flatten()
+                conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
+            }
         }
     }
 
     /**
      * Connects current EOG nodes to the previously saved loop start to mimic control flow of loops
      */
-    protected fun connectCurrentToLoopStart() {
-        val loopScope = scopeManager.firstScopeOrNull { it is LoopScope } as? LoopScope
-        if (loopScope == null) {
-            LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
-            return
+    protected fun connectCurrentEOGToLoopStart(loopStatement: LoopStatement) {
+        loopStatement.starts.forEach { node ->
+            addMultipleIncomingEOGEdges(currentPredecessors, node)
         }
-        loopScope.starts.forEach { node -> addMultipleIncomingEOGEdges(currentPredecessors, node) }
     }
 
     /**
@@ -874,26 +902,19 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleDoStatement(node: DoStatement) {
-        scopeManager.enterScope(node)
         createEOG(node.statement)
         createEOG(node.condition)
         // TODO(oxisto): Do we really want to set DFG edges here?
         node.condition?.let { node.prevDFGEdges += it }
         pushToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
-        connectCurrentToLoopStart()
+        connectCurrentEOGToLoopStart(node)
         nextEdgeBranch = false
         node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit do loop, but no loop scope: $node")
-        }
+        handleContainedBreaksAndContinues(node)
     }
 
     protected fun handleForEachStatement(node: ForEachStatement) {
-        scopeManager.enterScope(node)
         createEOG(node.iterable)
         createEOG(node.variable)
         // TODO(oxisto): Do we really want to set DFG edges here?
@@ -902,21 +923,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
         createEOG(node.statement)
-        connectCurrentToLoopStart()
+        connectCurrentEOGToLoopStart(node)
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
         node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
-        }
+        handleContainedBreaksAndContinues(node)
         nextEdgeBranch = false
     }
 
     protected fun handleForStatement(node: ForStatement) {
-        scopeManager.enterScope(node)
         createEOG(node.initializerStatement)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
@@ -928,17 +943,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         createEOG(node.statement)
         createEOG(node.iterationStatement)
 
-        connectCurrentToLoopStart()
+        connectCurrentEOGToLoopStart(node)
 
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
         node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit for loop, but no loop scope: $node")
-        }
+        handleContainedBreaksAndContinues(node)
         nextEdgeBranch = false
     }
 
@@ -966,7 +976,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleSwitchStatement(node: SwitchStatement) {
-        scopeManager.enterScopeIfExists(node)
         createEOG(node.initializerStatement)
         createEOG(node.selectorDeclaration)
         createEOG(node.selector)
@@ -995,41 +1004,40 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
 
         pushToEOG(compound)
-        val switchScope = scopeManager.leaveScope(node) as SwitchScope?
-        if (switchScope != null) {
-            currentPredecessors.addAll(switchScope.breakStatements)
-        } else {
-            LOGGER.error("Handling switch statement, but not in switch scope: $node")
-        }
+        currentPredecessors.addAll(nodesWithContinuesAndBreaks[node] ?: mutableListOf())
     }
 
     protected fun handleWhileStatement(node: WhileStatement) {
-        scopeManager.enterScope(node)
         createEOG(node.conditionDeclaration)
         createEOG(node.condition)
         pushToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
         createEOG(node.statement)
-        connectCurrentToLoopStart()
+        connectCurrentEOGToLoopStart(node)
 
         // Replace current EOG nodes without triggering post setEOG ... processing
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
         node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit while loop, but no loop scope: $node")
-        }
+        handleContainedBreaksAndContinues(node)
     }
 
     private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
         // Include the node as part of the EOG itself, but we do not need to go into any children or
         // properties here
         pushToEOG(stmt)
+    }
+
+    fun getLabeledASTNode(node: Node, label: String): Node? {
+        scopeManager.enterScopeOfNearestParent(node)
+        val labelStatement = scopeManager.getLabelStatement(label)
+        labelStatement?.subStatement?.let {
+            val scope = scopeManager.lookupScope(it)
+            return scope?.astNode
+        }
+        return null
     }
 
     companion object {
@@ -1094,6 +1102,102 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
             }
             return ret
+        }
+
+        /**
+         * This function tries to find the first parent node that satisfies the condition specified
+         * in [predicate]. It starts searching in the [searchNode], moving up-wards using the
+         * [Node.astParent] attribute.
+         *
+         * @param searchNode the child node that we start the search from
+         * @param predicate the search predicate
+         */
+        @JvmOverloads
+        fun firstParentOrNull(searchNode: Node, predicate: Predicate<Node>): Node? {
+
+            // start at searchNodes parent
+            var node: Node? = searchNode.astParent
+
+            while (node != null) {
+                if (predicate.test(node)) {
+                    return node
+                }
+
+                // go up-wards in the ast tree
+                node = node.astParent
+            }
+
+            return null
+        }
+    }
+
+    /**
+     * Statements that constitute the start of the Loop depending on the used pass, mostly of size 1
+     */
+    val LoopStatement.starts: List<Node>
+        get() =
+            when (this) {
+                is WhileStatement -> {
+                    if (this.conditionDeclaration != null)
+                        SubgraphWalker.getEOGPathEdges(this.conditionDeclaration).entries
+                    else if (this.condition != null)
+                        SubgraphWalker.getEOGPathEdges(this.condition).entries
+                    else SubgraphWalker.getEOGPathEdges(this.statement).entries
+                }
+                is ForStatement -> {
+                    if (this.conditionDeclaration != null)
+                        SubgraphWalker.getEOGPathEdges(this.conditionDeclaration).entries
+                    else if (this.condition != null)
+                        SubgraphWalker.getEOGPathEdges(this.condition).entries
+                    else SubgraphWalker.getEOGPathEdges(this.statement).entries
+                }
+                is ForEachStatement -> {
+                    SubgraphWalker.getEOGPathEdges(this).entries
+                }
+                is DoStatement -> {
+                    SubgraphWalker.getEOGPathEdges(this.statement).entries
+                }
+                else -> {
+                    LOGGER.error(
+                        "Currently the component {} does not have a defined loop start.",
+                        this?.javaClass
+                    )
+                    ArrayList()
+                }
+            }
+
+    /** Statements that constitute the start of the condition evaluation, mostly of size 1 */
+    val Node.conditions: List<Node>
+        get() =
+            when (this) {
+                is WhileStatement ->
+                    mutableListOf(this.condition, this.conditionDeclaration).filterNotNull()
+                is ForStatement -> mutableListOf(this.condition).filterNotNull()
+                is ForEachStatement -> mutableListOf(this.variable).filterNotNull()
+                is DoStatement -> mutableListOf(this.condition).filterNotNull()
+                is AssertStatement -> mutableListOf(this.condition).filterNotNull()
+                else -> {
+                    LOGGER.error(
+                        "Currently the component {} does not have defined conditions",
+                        this.javaClass
+                    )
+                    mutableListOf()
+                }
+            }
+
+    fun Node.isBreakable(): Boolean {
+        return when (this) {
+            is LoopStatement -> true
+            is TryStatement -> true
+            is SwitchStatement -> true
+            else -> false
+        }
+    }
+
+    fun Node.isContinuable(): Boolean {
+        return when (this) {
+            is LoopStatement -> true
+            else -> false
         }
     }
 }
