@@ -40,13 +40,13 @@ import org.apache.commons.lang3.NotImplementedException
 
 class AbstractEvaluator {
     // The node for which we want to get the value
-    lateinit var goalNode: Node
+    private lateinit var goalNode: Node
 
     // The name of the value we are analyzing
-    lateinit var targetName: String
+    private lateinit var targetName: String
 
     // The type of the value we are analyzing
-    lateinit var targetType: KClass<out Value>
+    private lateinit var targetType: KClass<out Value>
 
     fun evaluate(node: Node): LatticeInterval {
         goalNode = node
@@ -158,10 +158,22 @@ class AbstractEvaluator {
         // We propagate the current Interval to all successors which are empty
         // Push all the next EOG nodes to the state with BOTTOM (unknown) value
         // Only do this if we have not reached the goal node
+        // TODO: do we really push states here?
         if (currentNode != goalNode) {
             currentNode.nextEOG.forEach {
                 if (newState[it]?.elements == null) {
                     newState.push(it, newState[currentNode])
+                } else {
+                    // If the next EOG already has a value we need to join all of its predecessors
+                    val joinedBranchInterval =
+                        it.prevEOG
+                            .filter { predecessor ->
+                                predecessor != currentNode && newState[predecessor] != null
+                            }
+                            .fold(newState[currentNode]!!.elements) { acc, predecessor ->
+                                acc.join(newState[predecessor]!!.elements)
+                            }
+                    newState.push(it, IntervalLattice(joinedBranchInterval))
                 }
             }
         }
@@ -173,9 +185,7 @@ class AbstractEvaluator {
         return type.createInstance().getInitializer(node)
     }
 
-    private fun State<Node, LatticeInterval>.calculateEffect(
-        node: Node,
-    ): LatticeInterval {
+    private fun State<Node, LatticeInterval>.calculateEffect(node: Node): LatticeInterval {
         return targetType.createInstance().applyEffect(this[node]!!.elements, node, targetName)
     }
 
