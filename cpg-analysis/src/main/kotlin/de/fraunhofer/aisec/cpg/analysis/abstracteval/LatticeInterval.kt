@@ -252,7 +252,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
 class IntervalLattice(override val elements: LatticeInterval) :
     LatticeElement<LatticeInterval>(elements) {
     override fun compareTo(other: LatticeElement<LatticeInterval>): Int {
-        return this.compareTo(other)
+        return elements.compareTo(other.elements)
     }
 
     // Returns true whenever other is fully within this
@@ -267,12 +267,9 @@ class IntervalLattice(override val elements: LatticeInterval) :
             thisInterval.upper >= otherInterval.upper)
     }
 
-    // TODO: What is the LUB and why does a single Element need to implement this operation?
-    //  is seems to just be the operation performed by the worklist... in our case widening (and
-    // then narrowing)
-    // Use widening as the operation in question
+    // The least upper bound of two Intervals is given by the join operation
     override fun lub(other: LatticeElement<LatticeInterval>): LatticeElement<LatticeInterval> {
-        return IntervalLattice(this.elements.widen(other.elements))
+        return IntervalLattice(this.elements.join(other.elements))
     }
 
     fun widen(other: IntervalLattice): IntervalLattice {
@@ -292,62 +289,11 @@ class IntervalLattice(override val elements: LatticeInterval) :
     }
 }
 
-class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
-    var function: (IntervalLattice, IntervalLattice) -> IntervalLattice
-
-    /**
-     * An enum that holds the current mode of operation as this State may be used to apply either
-     * widening or narrowing
-     */
-    enum class Mode {
-        WIDEN,
-        NARROW
-    }
-
-    init {
-        function =
-            when (mode) {
-                Mode.WIDEN -> IntervalLattice::widen
-                else -> IntervalLattice::narrow
-            }
-    }
-
-    /**
-     * Checks if an update is necessary. This applies in the following cases:
-     * - If [other] contains nodes which are not present in `this`
-     * - If we want to apply widening and any new interval is not fully contained within the old
-     *   interval
-     * - If we want to apply narrowing and any old interval is not fully contained within the new
-     *   interval Otherwise, it does not modify anything.
-     */
-    override fun needsUpdate(
-        other: State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>
-    ): Boolean {
-        var update = false
-        for ((node, newLattice) in other) {
-            newLattice as IntervalLattice // TODO: does this cast make sense?
-            val current = this[node] as? IntervalLattice
-            update = update || intervalNeedsUpdate(current, newLattice, mode)
-        }
-        return update
-    }
-
-    private fun intervalNeedsUpdate(
-        current: IntervalLattice?,
-        newLattice: IntervalLattice,
-        mode: Mode
-    ): Boolean {
-        return when (mode) {
-            Mode.WIDEN -> current == null || !current.contains(newLattice)
-            else -> current == null || !newLattice.contains(current)
-        }
-    }
-
+class IntervalState : State<Node, LatticeInterval>() {
     /**
      * Adds a new mapping from [newNode] to (a copy of) [newLatticeElement] to this object if
-     * [newNode] does not exist in this state yet. If it already exists, it computes either widening
-     * or narrowing between the `current` and the new interval. It returns whether the state has
-     * changed.
+     * [newNode] does not exist in this state yet. If it already exists, it will compute the lub
+     * over the new lattice Element and all predecessors. It returns whether the state has changed.
      */
     override fun push(
         newNode: de.fraunhofer.aisec.cpg.graph.Node,
@@ -357,14 +303,19 @@ class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
             return false
         }
         val current = this[newNode] as? IntervalLattice
-        newLatticeElement as IntervalLattice
-        // here we use our "intervalNeedsUpdate" function to determine if we have to do something
-        if (current != null && intervalNeedsUpdate(current, newLatticeElement, mode)) {
-            when (mode) {
-                Mode.WIDEN -> this[newNode] = current.widen(newLatticeElement)
-                else -> this[newNode] = current.narrow(newLatticeElement)
+        if (current != null) {
+            val joinedElement =
+                newNode.prevEOG.fold(newLatticeElement) { acc, predecessor ->
+                    if (this[predecessor]?.elements != null) {
+                        acc.lub(this[predecessor]!!)
+                    } else {
+                        acc
+                    }
+                }
+            if (joinedElement != this[newNode]) {
+                this[newNode] = joinedElement
+                return true
             }
-        } else if (current != null) {
             return false
         } else {
             this[newNode] = newLatticeElement
@@ -372,7 +323,29 @@ class IntervalState(private var mode: Mode) : State<Node, LatticeInterval>() {
         return true
     }
 
-    fun changeMode(mode: Mode) {
-        this.mode = mode
+    /**
+     * Performs the same duplication as the parent function, but returns a [IntervalState] object
+     * instead.
+     */
+    override fun duplicate(): State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval> {
+        val clone = IntervalState()
+        for ((key, value) in this) {
+            clone[key] = value.duplicate()
+        }
+        return clone
+    }
+
+    /**
+     * Performs the same lub function as the parent, but uses the [push] function from
+     * [LatticeInterval]
+     */
+    override fun lub(
+        other: State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>
+    ): Pair<State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>, Boolean> {
+        var update = false
+        for ((node, newLattice) in other) {
+            update = push(node, newLattice) || update
+        }
+        return Pair(this, update)
     }
 }

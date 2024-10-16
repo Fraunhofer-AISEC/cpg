@@ -26,48 +26,96 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
 class Integer : Value {
-    override fun applyEffect(
-        current: LatticeInterval,
-        node: Node,
-        name: String
-    ): Pair<LatticeInterval, Boolean> {
-        // Branching nodes have to be assumed to have an effect
-        if (node is BranchingNode) {
-            return current to true
+    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
+        if (node is VariableDeclaration && node.initializer != null) {
+            val initValue =
+                when (val init = node.initializer) {
+                    is Literal<*> -> init.value as? Int ?: throw NotImplementedException()
+                    else -> throw NotImplementedException()
+                }
+            return LatticeInterval.Bounded(initValue, initValue)
         }
-        // TODO: recursively evaluate right-hand-side to narrow down results
         if (node is UnaryOperator) {
             if (node.input.code == name) {
                 return when (node.operatorCode) {
                     "++" -> {
                         val oneInterval = LatticeInterval.Bounded(1, 1)
-                        current + oneInterval to true
+                        current + oneInterval
                     }
                     "--" -> {
                         val oneInterval = LatticeInterval.Bounded(1, 1)
-                        current - oneInterval to true
+                        current - oneInterval
                     }
-                    else -> current to false
+                    else -> current
                 }
             }
         } else if (node is AssignExpression) {
             if (node.lhs.any { it.code == name }) {
+                // TODO: we need to evaluate the right hand side for all cases!
                 return when (node.operatorCode) {
+                    "=" -> {
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal use this exact value
+                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
+                            val value = node.rhs[0].value.value as? Int
+                            if (value != null) {
+                                newInterval = LatticeInterval.Bounded(value, value)
+                            }
+                        } else {
+                            TODO()
+                        }
+                        newInterval
+                    }
                     "+=" -> {
-                        val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.INFINITE)
-                        current + openUpper to true
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
+                            val value = node.rhs[0].value.value as? Int
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                newInterval = current.plus(valueInterval)
+                            }
+                        }
+                        // Per default set upper bound to infinite
+                        else {
+                            val joinInterval: LatticeInterval =
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.INFINITE,
+                                    LatticeInterval.Bound.INFINITE
+                                )
+                            newInterval = current.join(joinInterval)
+                        }
+                        newInterval
                     }
                     "-=" -> {
-                        val zeroInterval = LatticeInterval.Bounded(0, 0)
-                        current.join(zeroInterval) to true
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
+                            val value = node.rhs[0].value.value as? Int
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                newInterval = current.minus(valueInterval)
+                            }
+                        }
+                        // Per default set lower bound to negative infinite
+                        else {
+                            val joinInterval: LatticeInterval =
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE
+                                )
+                            newInterval = current.join(joinInterval)
+                        }
+                        newInterval
                     }
                     "*=" -> {
                         TODO()
@@ -78,19 +126,10 @@ class Integer : Value {
                     "%=" -> {
                         TODO()
                     }
-                    else -> current to false
+                    else -> current
                 }
             }
         }
-        return current to false
-    }
-
-    override fun getInitialRange(initializer: Node): LatticeInterval {
-        val value =
-            when (initializer) {
-                is Literal<*> -> initializer.value as? Int ?: throw NotImplementedException()
-                else -> throw NotImplementedException()
-            }
-        return LatticeInterval.Bounded(value, value)
+        return current
     }
 }

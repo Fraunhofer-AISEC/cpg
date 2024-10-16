@@ -31,29 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
 interface Value {
-    /**
-     * Applies the effect of a Node to the Interval describing possible values of a collection. Also
-     * returns true if the node was "valid" node that could have an influence on the Interval.
-     *
-     * Examples:
-     * - list.add(x) on [0, 0] -> ([1, 1], true)
-     * - list.clear(x) on [0, 0] -> ([0, 0], true)
-     * - println(list) on [0, 0] -> ([0, 0], false)
-     */
-    fun applyEffect(
-        current: LatticeInterval,
-        node: Node,
-        name: String
-    ): Pair<LatticeInterval, Boolean>
+    /** Applies the effect of a Node to the Interval describing possible values of a collection. */
+    fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval
 
     fun getInitializer(node: Node?): Node? {
         return when (node) {
             null -> null!!
             is Reference -> getInitializer(node.refersTo)
-            is VariableDeclaration -> node.initializer!!
+            is VariableDeclaration -> node
             else -> getInitializer(node.prevDFG.firstOrNull())
         }
     }
-
-    fun getInitialRange(initializer: Node): LatticeInterval
 }

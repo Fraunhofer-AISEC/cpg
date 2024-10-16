@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.analysis.collectioneval.CollectionSizeEvaluator
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractEvaluator
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -624,13 +624,12 @@ class Application : Callable<Int> {
         val targetNodes = nodes.filter { it.name.localName == "a" }
         val focusNode =
             targetNodes.first {
-                it.location?.region?.startLine == 53 &&
+                it.location?.region?.startLine == 101 &&
                     it is Reference &&
                     it.type.name.toString() ==
-                        "java.util.LinkedList<java.lang.Integer>" // "int[]" //
-                // "java.util.LinkedList<java.lang.Integer>"
+                        "int" // "java.util.LinkedList<java.lang.Integer>" // "int[]"
             }
-        val size = CollectionSizeEvaluator().evaluate(focusNode)
+        val size = AbstractEvaluator().evaluate(focusNode)
         println(size)
         return EXIT_SUCCESS
 
