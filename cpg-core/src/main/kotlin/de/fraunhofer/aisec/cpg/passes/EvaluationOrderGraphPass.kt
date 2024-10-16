@@ -155,6 +155,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[Literal::class.java] = { handleDefault(it) }
         map[DefaultStatement::class.java] = { handleDefault(it) }
         map[TypeIdExpression::class.java] = { handleDefault(it) }
+        map[PointerReference::class.java] = { handlePointerReference(it as PointerReference) }
+        map[PointerDereference::class.java] = { handlePointerDereference(it as PointerDereference) }
         map[Reference::class.java] = { handleDefault(it) }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
         map[LookupScopeStatement::class.java] = {
@@ -395,6 +397,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
+    protected fun handlePointerReference(node: PointerReference) {
+        createEOG(node.input)
+
+        pushToEOG(node)
+    }
+
+    protected fun handlePointerDereference(node: PointerDereference) {
+        createEOG(node.input)
+
+        pushToEOG(node)
+    }
+
     protected fun handleDefault(node: Node) {
         pushToEOG(node)
     }
@@ -404,7 +418,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // find out for java, but impossible for c++)
 
         // evaluate the call target first, optional base should be the callee or in its subtree
-        node.callee?.let { createEOG(it) }
+        createEOG(node.callee)
 
         // then the arguments
         for (arg in node.arguments) {
@@ -513,10 +527,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             createEOG(declaration)
         }
 
-        // Handle left hand side(s) first
+        // First the left hand side(s)
         node.lhs.forEach { createEOG(it) }
 
-        // Then the right side(s). Avoid creating the EOG twice if it's already part of the
+        // Then, handle the right side(s). Avoid creating the EOG twice if it's already part of the
         // initializer of a declaration
         node.rhs.forEach {
             if (it !in node.declarations.map { decl -> decl.initializer }) {

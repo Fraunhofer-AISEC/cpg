@@ -46,7 +46,7 @@ fun LanguageProvider.autoType(): Type {
 }
 
 fun MetadataProvider?.incompleteType(): Type {
-    return IncompleteType()
+    return IncompleteType((this as? LanguageProvider)?.language)
 }
 
 /** Returns a [PointerType] that describes an array reference to the current type. */
