@@ -41,10 +41,8 @@ import org.apache.commons.lang3.NotImplementedException
 class AbstractEvaluator {
     // The node for which we want to get the value
     private lateinit var goalNode: Node
-
     // The name of the value we are analyzing
     private lateinit var targetName: String
-
     // The type of the value we are analyzing
     private lateinit var targetType: KClass<out Value>
 
@@ -57,8 +55,6 @@ class AbstractEvaluator {
         // evaluate effect of each operation on the list until we reach "node"
         val startState = IntervalState()
         startState.push(initializer, IntervalLattice(LatticeInterval.BOTTOM))
-        // TODO: terminates too early since it already knows the state of the first node
-        //  -> mark declarations as node with effect in Integer and start with BOTTOM node!
         val finalState = iterateEOG(initializer, startState, ::handleNode, goalNode)
         // TODO: null-safety
         return finalState!![node]!!.elements
@@ -78,8 +74,6 @@ class AbstractEvaluator {
         state: State<Node, LatticeInterval>,
         worklist: Worklist<Node, Node, LatticeInterval>
     ): State<Node, LatticeInterval> {
-        // TODO: we must not override the current state before they are checked by the worklist!
-        //  otherwise it will seem as if nothing changed
         // If the current node is already done
         // (prevents infinite loop and unnecessary double-checking)
         if (worklist.isDone(currentNode)) {
@@ -97,9 +91,6 @@ class AbstractEvaluator {
         }
 
         // First calculate the effect
-        // TODO: for merging node (multiple previous EOGs) we need to calculate the join of both
-        //  Currently the previous node populates the next node with information
-        //  But we may check here whether there are actually multiple parents
         val previousInterval = state[currentNode]?.elements
         val newInterval = state.calculateEffect(currentNode)
         val newState = state.duplicate()
@@ -115,7 +106,6 @@ class AbstractEvaluator {
                 newState[currentNode] = IntervalLattice(widenedInterval)
                 currentNode.nextEOG.forEach {
                     worklist.evaluationStateMap[it] = Worklist.EvaluationState.WIDENING
-                    worklist.push(it, newState)
                 }
                 worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.NARROWING
             } else {
@@ -135,7 +125,6 @@ class AbstractEvaluator {
                 newState[currentNode] = IntervalLattice(narrowedInterval)
                 currentNode.nextEOG.forEach {
                     worklist.evaluationStateMap[it] = Worklist.EvaluationState.NARROWING
-                    worklist.push(it, newState)
                 }
             } else {
                 // NO: mark the node as DONE
@@ -150,31 +139,13 @@ class AbstractEvaluator {
             worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.WIDENING
         }
 
-        // If the current node is not DONE we need to push it to the worklist again
-        if (!worklist.isDone(currentNode)) {
-            worklist.push(currentNode, newState)
-        }
-
-        // We propagate the current Interval to all successors which are empty
-        // Push all the next EOG nodes to the state with BOTTOM (unknown) value
+        // We propagate the current Interval to all successor nodes which are empty
+        // If the next EOG already has a value we need to join all of its predecessors
+        // This is implemented in IntervalState.push
         // Only do this if we have not reached the goal node
-        // TODO: do we really push states here?
         if (currentNode != goalNode) {
             currentNode.nextEOG.forEach {
-                if (newState[it]?.elements == null) {
-                    newState.push(it, newState[currentNode])
-                } else {
-                    // If the next EOG already has a value we need to join all of its predecessors
-                    val joinedBranchInterval =
-                        it.prevEOG
-                            .filter { predecessor ->
-                                predecessor != currentNode && newState[predecessor] != null
-                            }
-                            .fold(newState[currentNode]!!.elements) { acc, predecessor ->
-                                acc.join(newState[predecessor]!!.elements)
-                            }
-                    newState.push(it, IntervalLattice(joinedBranchInterval))
-                }
+                newState.push(it, newState[currentNode])
             }
         }
 
