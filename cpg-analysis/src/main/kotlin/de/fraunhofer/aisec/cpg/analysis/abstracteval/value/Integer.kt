@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
 class Integer : Value {
@@ -59,22 +60,62 @@ class Integer : Value {
             }
         } else if (node is AssignExpression) {
             if (node.lhs.any { it.code == name }) {
-                // TODO: we need to evaluate the right hand side!
+                // TODO: we need to evaluate the right hand side for all cases!
                 return when (node.operatorCode) {
                     "=" -> {
-                        current // TODO()
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal use this exact value
+                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
+                            val value = node.rhs[0].value.value as? Int
+                            if (value != null) {
+                                newInterval = LatticeInterval.Bounded(value, value)
+                            }
+                        } else {
+                            TODO()
+                        }
+                        newInterval
                     }
                     "+=" -> {
-                        val openUpper = LatticeInterval.Bounded(0, LatticeInterval.Bound.INFINITE)
-                        current + openUpper
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
+                            val value = node.rhs[0].value.value as? Int
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                newInterval = current.plus(valueInterval)
+                            }
+                        }
+                        // Per default set upper bound to infinite
+                        else {
+                            val joinInterval: LatticeInterval =
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.INFINITE,
+                                    LatticeInterval.Bound.INFINITE
+                                )
+                            newInterval = current.join(joinInterval)
+                        }
+                        newInterval
                     }
                     "-=" -> {
-                        val zeroInterval =
-                            LatticeInterval.Bounded(
-                                LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                LatticeInterval.Bound.NEGATIVE_INFINITE
-                            )
-                        current.join(zeroInterval)
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
+                            val value = node.rhs[0].value.value as? Int
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                newInterval = current.minus(valueInterval)
+                            }
+                        }
+                        // Per default set lower bound to negative infinite
+                        else {
+                            val joinInterval: LatticeInterval =
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE
+                                )
+                            newInterval = current.join(joinInterval)
+                        }
+                        newInterval
                     }
                     "*=" -> {
                         TODO()
