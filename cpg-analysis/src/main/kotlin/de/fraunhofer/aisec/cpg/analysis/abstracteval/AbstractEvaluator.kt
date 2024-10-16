@@ -97,8 +97,12 @@ class AbstractEvaluator {
         }
 
         // First calculate the effect
+        // TODO: for merging node (multiple previous EOGs) we need to calculate the join of both
+        //  Currently the previous node populates the next node with information
+        //  But we may check here whether there are actually multiple parents
         val previousInterval = state[currentNode]?.elements
         val newInterval = state.calculateEffect(currentNode)
+        val newState = state.duplicate()
 
         // If it was already seen exactly once or is known to need widening
         if (worklist.needsWidening(currentNode)) {
@@ -108,10 +112,10 @@ class AbstractEvaluator {
             if (widenedInterval != previousInterval) {
                 // YES: mark next nodes as needs widening, add them to worklist
                 // Overwrite current interval, mark this node as needs narrowing
-                state[currentNode] = IntervalLattice(widenedInterval)
+                newState[currentNode] = IntervalLattice(widenedInterval)
                 currentNode.nextEOG.forEach {
                     worklist.evaluationStateMap[it] = Worklist.EvaluationState.WIDENING
-                    worklist.push(it, state)
+                    worklist.push(it, newState)
                 }
                 worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.NARROWING
             } else {
@@ -128,10 +132,10 @@ class AbstractEvaluator {
             if (narrowedInterval != previousInterval) {
                 // YES: overwrite and keep this node marked
                 // Mark next nodes as need narrowing and add to worklist
-                state[currentNode] = IntervalLattice(narrowedInterval)
+                newState[currentNode] = IntervalLattice(narrowedInterval)
                 currentNode.nextEOG.forEach {
                     worklist.evaluationStateMap[it] = Worklist.EvaluationState.NARROWING
-                    worklist.push(it, state)
+                    worklist.push(it, newState)
                 }
             } else {
                 // NO: mark the node as DONE
@@ -142,13 +146,13 @@ class AbstractEvaluator {
         // If it was seen for the first time apply the effect and mark it as "NEEDS WIDENING"
         // We cannot use the "already_seen" field as it is set before this handler is called
         else {
-            state[currentNode] = IntervalLattice(newInterval)
+            newState[currentNode] = IntervalLattice(newInterval)
             worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.WIDENING
         }
 
         // If the current node is not DONE we need to push it to the worklist again
         if (!worklist.isDone(currentNode)) {
-            worklist.push(currentNode, state)
+            worklist.push(currentNode, newState)
         }
 
         // We propagate the current Interval to all successors which are empty
@@ -156,13 +160,13 @@ class AbstractEvaluator {
         // Only do this if we have not reached the goal node
         if (currentNode != goalNode) {
             currentNode.nextEOG.forEach {
-                if (state[it]?.elements == null) {
-                    state.push(it, state[currentNode])
+                if (newState[it]?.elements == null) {
+                    newState.push(it, newState[currentNode])
                 }
             }
         }
 
-        return state
+        return newState
     }
 
     private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
