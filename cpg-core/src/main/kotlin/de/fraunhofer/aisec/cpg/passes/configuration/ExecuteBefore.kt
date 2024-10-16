@@ -30,9 +30,10 @@ import kotlin.reflect.KClass
 
 /**
  * Register a dependency for the annotated pass. This ensures that the annotated pass is executed
- * before [other] pass.
+ * before [other] pass. The [softDependency] flag decides whether to treat this as a hard dependency
+ * (resulting in the pass being registered if not present) or not.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class ExecuteBefore(val other: KClass<out Pass<*>>)
+annotation class ExecuteBefore(val other: KClass<out Pass<*>>, val softDependency: Boolean = true)

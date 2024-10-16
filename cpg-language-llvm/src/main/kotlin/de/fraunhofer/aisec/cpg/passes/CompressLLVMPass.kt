@@ -155,7 +155,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // This is the most generic one
                 val clauseToAdd = caseBody?.statements?.get(0) as CatchClause
                 catchClauses.add(clauseToAdd)
-                caseBody.statements = caseBody.statements.drop(1)
+                caseBody.statements = caseBody.statements.drop(1).toMutableList()
                 catchClauses[0].body = caseBody
                 if (node.catchClauses[0].parameter != null) {
                     catchClauses[0].parameter = node.catchClauses[0].parameter
@@ -227,7 +227,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
             alreadyChecked.add(currentNode)
             // We exclude sub-try statements as they would mess up with the results
             val toAdd =
-                SubgraphWalker.getAstChildren(currentNode).filter { n ->
+                currentNode.astChildren.filter { n ->
                     n !is TryStatement && !alreadyChecked.contains(n) && !worklist.contains(n)
                 }
             worklist.addAll(toAdd)

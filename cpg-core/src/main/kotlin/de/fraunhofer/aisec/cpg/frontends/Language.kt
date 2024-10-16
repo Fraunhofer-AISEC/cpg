@@ -34,9 +34,12 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -118,7 +121,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    fun getSimpleTypeOf(typeString: String) = builtInTypes[typeString]
+    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     fun handlesFile(file: File): Boolean {
@@ -278,9 +281,9 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
     /**
      * This functions gives the language a chance to refine the results of a
-     * [ScopeManager.resolveCall] by choosing the best viable function(s) out of the set of viable
-     * functions. It can also influence the [CallResolutionResult.SuccessKind] of the resolution,
-     * e.g., if the result is ambiguous.
+     * [SymbolResolver.resolveWithArguments] by choosing the best viable function(s) out of the set
+     * of viable functions. It can also influence the [CallResolutionResult.SuccessKind] of the
+     * resolution, e.g., if the result is ambiguous.
      *
      * The default implementation will follow the following heuristic:
      * - If the list of [CallResolutionResult.viableFunctions] is empty, we can directly return.
@@ -318,14 +321,15 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         // We need to check, whether this language has special handling of templates. In this
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
-        if (this is HasTemplates) {
-            result.call.templateParameterEdges = mutableListOf()
+        val source = result.source
+        if (this is HasTemplates && source is CallExpression) {
+            source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
                     null,
-                    result.call,
+                    source,
                     false,
-                    result.call.ctx!!,
+                    source.ctx!!,
                     null,
                     needsExactMatch = true
                 )
@@ -333,7 +337,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
             }
 
-            result.call.templateParameterEdges = null
+            source.templateArgumentEdges = null
         }
 
         // If the list of viable functions is still empty at this point, the call is unresolved

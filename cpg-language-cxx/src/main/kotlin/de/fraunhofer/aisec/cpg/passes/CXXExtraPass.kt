@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
@@ -45,7 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ReplaceCallCastPass::class)
+@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
@@ -76,14 +77,14 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
-        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name.toString())) {
+        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name)) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
             //
             // In theory, we could just keep this meaningless unary expression, but it in order
             // to reduce nodes, we unwrap the reference and exchange it in the arguments of the
             // binary op
-            walker.replaceArgument(parent, node, node.input)
+            walker.replace(parent, node, node.input)
         }
     }
 
@@ -92,9 +93,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * operator where some arguments are wrapped in parentheses. This function tries to resolve
      * this.
      *
-     * Note: This is done especially for the C++ frontend. [ReplaceCallCastPass.handleCall] handles
-     * the more general case (which also applies to C++), in which a cast and a call are
-     * indistinguishable and need to be resolved once all types are known.
+     * Note: This is done especially for the C++ frontend.
+     * [ResolveCallExpressionAmbiguityPass.handleCall] handles the more general case (which also
+     * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
+     * once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
         val fakeUnaryOp = binOp.lhs
@@ -107,7 +109,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             language != null &&
                 fakeUnaryOp is UnaryOperator &&
                 fakeUnaryOp.operatorCode == "()" &&
-                typeManager.typeExists(fakeUnaryOp.input.name.toString())
+                typeManager.typeExists(fakeUnaryOp.input.name)
         ) {
             // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
             // is really a cast and our binary operator is really a unary operator `&addr`.
@@ -116,7 +118,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             //   referred to in the op.
             val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
             cast.language = language
-            cast.castType = language.objectType(fakeUnaryOp.input.name)
+            cast.castType = fakeUnaryOp.objectType(fakeUnaryOp.input.name)
 
             // * create a unary operator with the rhs of the binary operator (and the same
             //   operator code).
@@ -143,7 +145,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // * replace the binary operator with the cast expression in the parent argument
             //   holder
-            walker.replaceArgument(parent, binOp, cast)
+            walker.replace(parent, binOp, cast)
         }
     }
 

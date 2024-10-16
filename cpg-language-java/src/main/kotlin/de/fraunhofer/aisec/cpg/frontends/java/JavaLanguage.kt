@@ -39,13 +39,13 @@ import org.neo4j.ogm.annotation.Transient
 /** The Java language. */
 open class JavaLanguage :
     Language<JavaLanguageFrontend>(),
-    // HasComplexCallResolution,
     HasClasses,
     HasSuperClasses,
     HasGenerics,
     HasQualifier,
     HasUnknownType,
-    HasShortCircuitOperators {
+    HasShortCircuitOperators,
+    HasFunctionOverloading {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
     @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
@@ -108,11 +108,11 @@ open class JavaLanguage :
         } else super.propagateTypeOfBinaryOperation(operation)
     }
 
-    override fun handleSuperCall(
-        callee: MemberExpression,
+    override fun handleSuperExpression(
+        memberExpression: MemberExpression,
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
-    ) = JavaCallResolverHelper.handleSuperCall(callee, curClass, scopeManager)
+    ) = JavaCallResolverHelper.handleSuperExpression(memberExpression, curClass, scopeManager)
 
     override val startCharacter = '<'
     override val endCharacter = '>'

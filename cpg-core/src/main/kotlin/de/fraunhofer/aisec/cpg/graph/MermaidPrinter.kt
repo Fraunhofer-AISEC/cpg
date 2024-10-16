@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.edge.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edge.PartialDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import kotlin.reflect.KProperty1
 
@@ -51,11 +51,11 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  * https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/).
  *
  * The edge type can be specified with the [nextEdgeGetter] and [prevEdgeGetter] functions, that
- * need to return a list of edges (as a [PropertyEdge]) beginning from this node.
+ * need to return a list of edges (as a [Edge]) beginning from this node.
  */
-fun <T : PropertyEdge<Node>> Node.printGraph(
-    nextEdgeGetter: KProperty1<Node, MutableList<T>>,
-    prevEdgeGetter: KProperty1<Node, MutableList<T>>,
+fun <T : Edge<Node>> Node.printGraph(
+    nextEdgeGetter: KProperty1<Node, MutableCollection<T>>,
+    prevEdgeGetter: KProperty1<Node, MutableCollection<T>>,
     maxConnections: Int = 25
 ): String {
     val builder = StringBuilder()
@@ -65,8 +65,8 @@ fun <T : PropertyEdge<Node>> Node.printGraph(
 
     // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
     // ordering of statements in the mermaid file.
-    val worklist = LinkedHashSet<PropertyEdge<Node>>()
-    val alreadySeen = identitySetOf<PropertyEdge<Node>>()
+    val worklist = LinkedHashSet<Edge<Node>>()
+    val alreadySeen = identitySetOf<Edge<Node>>()
     var conns = 0
 
     worklist.addAll(nextEdgeGetter.get(this))
@@ -106,14 +106,15 @@ fun <T : PropertyEdge<Node>> Node.printGraph(
     return builder.toString()
 }
 
-private fun PropertyEdge<Node>.label(): String {
+private fun Edge<Node>.label(): String {
     val builder = StringBuilder()
     builder.append("\"")
     builder.append(this.label)
 
     if (this is Dataflow) {
-        if (this.granularity is PartialDataflowGranularity) {
-            builder.append(" (partial, ${this.granularity.partialTarget?.name})")
+        var granularity = this.granularity
+        if (granularity is PartialDataflowGranularity) {
+            builder.append(" (partial, ${granularity.partialTarget?.name})")
         } else {
             builder.append(" (full)")
         }

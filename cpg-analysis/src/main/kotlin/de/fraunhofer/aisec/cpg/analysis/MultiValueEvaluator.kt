@@ -32,16 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
-import de.fraunhofer.aisec.cpg.passes.astParent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/**
- * This [ValueEvaluator] can resolve multiple possible values of a node.
- *
- * It requires running the [EdgeCachePass] after the translation to add all necessary edges.
- */
+/** This [ValueEvaluator] can resolve multiple possible values of a node. */
 class MultiValueEvaluator : ValueEvaluator() {
     companion object {
         const val MAX_DEPTH: Int = 20
@@ -268,7 +262,8 @@ class MultiValueEvaluator : ValueEvaluator() {
             forStatement.initializerStatement == node || // The node is the initialization
             (initializerDecl != null &&
                 initializerDecl ==
-                    node.astParent) || // The parent of the node is the initializer of the loop
+                    node.astParent) || // The parent of the node is the initializer of the
+            // loop
             // variable
             forStatement.iterationStatement ==
                 node || // The node or its parent are the iteration statement of the loop

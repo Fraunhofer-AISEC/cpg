@@ -15,8 +15,8 @@ build/install/cpg-console/bin/cpg-console
 The following example snippet can be used:
 
 ```kotlin
-:tr src/test/resources/array.cpp
-var main = tu.byName<FunctionDeclaration>("main")
+:tr cpg-console/bin/test/array.cpp
+var main = tu.functions["main"]
 :code main?
 var decl = main?.body<DeclarationStatement>(0)
 var v = decl?.singleDeclaration as? VariableDeclaration

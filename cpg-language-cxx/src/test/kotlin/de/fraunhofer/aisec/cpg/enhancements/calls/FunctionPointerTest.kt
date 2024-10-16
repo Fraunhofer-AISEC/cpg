@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.test.*
@@ -165,7 +164,7 @@ internal class FunctionPointerTest : BaseTest() {
         }
         if (functions.size == 0) {
             variable.usageEdges
-                .filter { it.getProperty(Properties.ACCESS) == AccessValues.WRITE }
+                .filter { it.access == AccessValues.WRITE }
                 .forEach { worklist.push(it.end) }
             while (!worklist.isEmpty()) {
                 val curr = worklist.pop()

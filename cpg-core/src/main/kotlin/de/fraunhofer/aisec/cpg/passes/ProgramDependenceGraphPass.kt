@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(ControlDependenceGraphPass::class)
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@DependsOn(DynamicInvokeResolver::class)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val visitor =
         object : IVisitor<Node>() {
@@ -55,7 +56,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                 if (t is Reference) {
                     // We filter all prevDFGEdges if the condition affects the variable of t and
                     // if there's a flow from the prevDFGEdge's node through the condition to t.
-                    val prevDFGToConsider = mutableListOf<PropertyEdge<Node>>()
+                    val prevDFGToConsider = mutableListOf<Dataflow>()
                     t.prevDFGEdges.forEach { prevDfgEdge ->
                         val prevDfgNode = prevDfgEdge.start
                         // The prevDfgNode also flows into the condition. This is suspicious because
@@ -86,11 +87,18 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                             prevDFGToConsider.add(prevDfgEdge)
                         }
                     }
-                    t.addAllPrevPDGEdges(prevDFGToConsider, DependenceType.DATA)
-                    t.addAllPrevPDGEdges(t.prevCDGEdges, DependenceType.CONTROL)
+
+                    prevDFGToConsider.forEach {
+                        it.dependence = DependenceType.DATA
+                        t.prevPDGEdges.add(it)
+                    }
+                    t.prevPDGEdges += t.prevCDGEdges
                 } else {
-                    t.addAllPrevPDGEdges(t.prevDFGEdges, DependenceType.DATA)
-                    t.addAllPrevPDGEdges(t.prevCDGEdges, DependenceType.CONTROL)
+                    t.prevDFGEdges.forEach {
+                        it.dependence = DependenceType.DATA
+                        t.prevPDGEdges.add(it)
+                    }
+                    t.prevPDGEdges += t.prevCDGEdges
                 }
             }
         }

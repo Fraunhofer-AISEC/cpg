@@ -31,11 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -60,7 +59,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     }
 
     /**
-     * Computes the CDG for the given [functionDeclaration]. It performs the following steps:
+     * Computes the CDG for the given [startNode]. It performs the following steps:
      * 1) Compute the "parent branching node" for each node and through which path the node is
      *    reached
      * 2) Find out which branch of a [BranchingNode] is actually conditional. The other ones aren't.
@@ -165,8 +164,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             }
                             else -> {
                                 // Not sure what to do, there seems to be a cycle but this entry is
-                                // not
-                                // in finalDominators for some reason. Add to finalDominators now.
+                                // not in finalDominators for some reason. Add to finalDominators
+                                // now.
                                 finalDominators.add(Pair(newK, newV.toMutableSet()))
                             }
                         }
@@ -183,30 +182,29 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             finalDominators
                 .filter { (k, _) -> k != node }
                 .forEach { (k, v) ->
-                    val properties = EnumMap<Properties, Any?>(Properties::class.java)
                     val branchesSet =
                         k.nextEOGEdges
                             .filter { edge -> edge.end in v }
-                            .mapNotNull { it.getProperty(Properties.BRANCH) }
+                            .mapNotNull { it.branch }
                             .toSet()
 
-                    when {
-                        branchesSet.size == 1 -> {
-                            properties[Properties.BRANCH] = branchesSet.single()
-                        }
-                        branchesSet.isNotEmpty() -> {
-                            properties[Properties.BRANCH] = branchesSet
-                        }
-                        k is IfStatement &&
-                            (branchingNodeConditionals[k]?.size ?: 0) >
-                                1 -> { // Note: branchesSet must be empty here
-                            // The if statement has only a then branch but there's a way to "jump
-                            // out" of this branch. In this case, we want to set the false property
-                            // here.
-                            properties[Properties.BRANCH] = setOf(false)
-                        }
+                    node.prevCDGEdges.add(k) {
+                        branches =
+                            when {
+                                branchesSet.isNotEmpty() -> {
+                                    branchesSet
+                                }
+                                k is IfStatement &&
+                                    (branchingNodeConditionals[k]?.size ?: 0) >
+                                        1 -> { // Note: branchesSet must be empty here The if
+                                    // statement has only a then branch but there's a way
+                                    // to "jump out" of this branch. In this case, we
+                                    // want to set the false property here.
+                                    setOf(false)
+                                }
+                                else -> setOf()
+                            }
                     }
-                    node.addPrevCDG(k, properties)
                 }
         }
     }
@@ -226,27 +224,23 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             Pair(functionDeclaration, setOf(functionDeclaration)),
             *functionDeclaration
                 .allChildren<BranchingNode>()
+                .filterIsInstance<Node>()
                 .map { branchingNode ->
                     val mergingPoints =
-                        if (
-                            (branchingNode as? Node)?.nextEOGEdges?.any {
-                                !it.isConditionalBranch()
-                            } == true
-                        ) {
+                        if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
                             // There's an unconditional path (case 1), so when reaching this branch,
                             // we're done. Collect all (=1) unconditional branches.
-                            (branchingNode as? Node)
-                                ?.nextEOGEdges
-                                ?.filter { !it.isConditionalBranch() }
-                                ?.map { it.end }
-                                ?.toSet()
+                            branchingNode.nextEOGEdges
+                                .filter { !it.isConditionalBranch() }
+                                .map { it.end }
+                                .toSet()
                         } else {
                             // All branches are executed based on some condition (case 2), so we
                             // collect all these branches.
-                            (branchingNode as Node).nextEOGEdges.map { it.end }.toSet()
+                            branchingNode.nextEOGEdges.map { it.end }.toSet()
                         }
                     // Map this branching node to its merging points
-                    Pair(branchingNode as Node, mergingPoints)
+                    Pair(branchingNode, mergingPoints)
                 }
                 .toTypedArray()
         )
@@ -265,7 +259,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  * Returns the updated state and true because we always expect an update of the state.
  */
 fun handleEdge(
-    currentEdge: PropertyEdge<Node>,
+    currentEdge: Edge<Node>,
     currentState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>
 ): State<Node, IdentityHashMap<Node, IdentitySet<Node>>> {
     // Check if we start in a branching node and if this edge leads to the conditional
@@ -317,13 +311,13 @@ fun handleEdge(
  * change this if we do not want this behavior (just remove the condition on the start node of the
  * "false" branch).
  */
-private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
-    return if (this.getProperty(Properties.BRANCH) == true) {
+private fun EvaluationOrder.isConditionalBranch(): Boolean {
+    return if (branch == true) {
         true
     } else
         (this.start is IfStatement ||
             this.start is ConditionalExpression ||
-            this.start is ShortCircuitOperator) && this.getProperty(Properties.BRANCH) == false ||
+            this.start is ShortCircuitOperator) && branch == false ||
             (this.start is IfStatement &&
                 !(this.start as IfStatement).allBranchesFromMyThenBranchGoThrough(
                     (this.start as IfStatement).nextUnconditionalNode
@@ -331,7 +325,7 @@ private fun <T : Node> PropertyEdge<T>.isConditionalBranch(): Boolean {
 }
 
 private val IfStatement.nextUnconditionalNode: Node?
-    get() = this.nextEOGEdges.firstOrNull { it.getProperty(Properties.BRANCH) == null }?.end
+    get() = this.nextEOGEdges.firstOrNull { it.branch == null }?.end
 
 private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
     if (this.thenStatement.allChildren<ReturnStatement>().isNotEmpty()) return false
@@ -339,11 +333,7 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
     if (node == null) return true
 
     val alreadySeen = mutableSetOf<Node>()
-    val nextNodes =
-        this.nextEOGEdges
-            .filter { it.getProperty(Properties.BRANCH) == true }
-            .map { it.end }
-            .toMutableList()
+    val nextNodes = this.nextEOGEdges.filter { it.branch == true }.map { it.end }.toMutableList()
 
     while (nextNodes.isNotEmpty()) {
         val nextNode = nextNodes.removeFirst()
@@ -397,7 +387,7 @@ class PrevEOGLattice(override val elements: IdentityHashMap<Node, IdentitySet<No
 }
 
 /**
- * A state which actually holds a state for all [PropertyEdge]s. It maps the node to its
+ * A state which actually holds a state for all [Edge]s. It maps the node to its
  * [BranchingNode]-parent and the path through which it is reached.
  */
 class PrevEOGState : State<Node, IdentityHashMap<Node, IdentitySet<Node>>>()

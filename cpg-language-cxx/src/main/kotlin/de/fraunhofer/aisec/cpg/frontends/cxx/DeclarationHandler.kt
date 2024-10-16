@@ -218,7 +218,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (lastStatement !is ReturnStatement) {
                     val returnStatement = newReturnStatement()
                     returnStatement.isImplicit = true
-                    bodyStatement.addStatement(returnStatement)
+                    bodyStatement.statements += returnStatement
                 }
                 declaration.body = bodyStatement
             }
@@ -314,7 +314,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
                     typeParamDecl.default = defaultType
                 }
-                templateDeclaration.addParameter(typeParamDecl)
+                templateDeclaration.parameters += typeParamDecl
             } else if (templateParameter is CPPASTParameterDeclaration) {
                 // Handle Value Parameters
                 val nonTypeTemplateParamDeclaration =
@@ -329,11 +329,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             )
                         nonTypeTemplateParamDeclaration.default = defaultExpression
                         defaultExpression?.let {
-                            nonTypeTemplateParamDeclaration.addPrevDFG(it)
-                            it.addNextDFG(nonTypeTemplateParamDeclaration)
+                            nonTypeTemplateParamDeclaration.prevDFGEdges += it
+                            it.nextDFGEdges += nonTypeTemplateParamDeclaration
                         }
                     }
-                    templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
+                    templateDeclaration.parameters += nonTypeTemplateParamDeclaration
                     frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
                 }
             }
@@ -422,7 +422,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             handleDeclarationSpecifier(declSpecifier, ctx, sequence)
 
         // Fill template params, if needed
-        val templateParams: List<Node>? = extractTemplateParams(ctx, declSpecifier)
+        val templateParams = extractTemplateParams(ctx, declSpecifier)
 
         // Loop through all declarators, as we can potentially have multiple declarations here
         for (declarator in ctx.declarators) {
@@ -484,7 +484,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 //   initializer.
                 if (declaration is VariableDeclaration) {
                     // Set template parameters of the variable (if any)
-                    declaration.templateParameters = templateParams
+                    if (templateParams != null) {
+                        declaration.templateParameters = templateParams
+                    }
 
                     // Parse the initializer, if we have one
                     declarator.initializer?.let {
@@ -786,9 +788,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 val problems = problematicIncludes[includeString]
                 val includeDeclaration = newIncludeDeclaration(includeString ?: "")
-                if (problems != null) {
-                    includeDeclaration.addProblems(problems)
-                }
+                problems?.forEach { includeDeclaration.problems += it }
                 includeMap[includeString] = includeDeclaration
             }
         }
@@ -801,8 +801,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // attach to remaining nodes
         for ((key, value) in allIncludes) {
             val includeDeclaration = includeMap[key]
+            if (includeDeclaration == null) {
+                continue
+            }
             for (s in value) {
-                includeDeclaration?.addInclude(includeMap[s])
+                includeMap[s]?.let { includeDeclaration.includes += it }
             }
         }
     }

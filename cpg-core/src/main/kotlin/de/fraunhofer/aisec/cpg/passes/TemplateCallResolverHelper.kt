@@ -56,7 +56,7 @@ fun addRecursiveDefaultTemplateArgs(
     var templateParameters: Int
     do {
         // Handle Explicit Template Arguments
-        templateParameters = constructExpression.templateParameters.size
+        templateParameters = constructExpression.templateArguments.size
         val templateParametersExplicitInitialization = mutableMapOf<Node, Node>()
         handleExplicitTemplateParameters(
             constructExpression,
@@ -76,7 +76,7 @@ fun addRecursiveDefaultTemplateArgs(
             templateParameterRealDefaultInitialization,
             scopeManager
         )
-    } while (templateParameters != constructExpression.templateParameters.size)
+    } while (templateParameters != constructExpression.templateArguments.size)
 }
 
 /**
@@ -92,8 +92,8 @@ fun handleExplicitTemplateParameters(
     template: RecordTemplateDeclaration,
     templateParametersExplicitInitialization: MutableMap<Node, Node>
 ) {
-    for (i in constructExpression.templateParameters.indices) {
-        val explicit = constructExpression.templateParameters[i]
+    for (i in constructExpression.templateArguments.indices) {
+        val explicit = constructExpression.templateArguments[i]
         if (template.parameters[i] is TypeParameterDeclaration) {
             templateParametersExplicitInitialization[
                 (template.parameters[i] as TypeParameterDeclaration).type] = explicit
@@ -123,7 +123,7 @@ fun applyMissingParams(
     with(constructExpression) {
         val missingParams: List<Node?> =
             template.parameterDefaults.subList(
-                constructExpression.templateParameters.size,
+                constructExpression.templateArguments.size,
                 template.parameterDefaults.size
             )
         for (m in missingParams) {

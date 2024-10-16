@@ -25,16 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.CallResolutionResult
+import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
+import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
@@ -42,15 +51,62 @@ open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
-    HasComplexCallResolution,
     HasStructs,
     HasClasses,
     HasUnknownType,
-    HasFunctionalCasts,
-    HasFunctionOverloading {
+    HasFunctionStyleCasts,
+    HasFunctionOverloading,
+    HasOperatorOverloading {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
+
+    @Transient
+    override val overloadedOperatorNames:
+        Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
+        mapOf(
+            // Arithmetic operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_arithmetic
+            UnaryOperator::class of "+" to "operator+",
+            UnaryOperator::class of "-" to "operator-",
+            BinaryOperator::class of "+" to "operator+",
+            BinaryOperator::class of "-" to "operator-",
+            BinaryOperator::class of "*" to "operator*",
+            BinaryOperator::class of "/" to "operator/",
+            BinaryOperator::class of "%" to "operator%",
+            UnaryOperator::class of "~" to "operator~",
+            BinaryOperator::class of "&" to "operator&",
+            BinaryOperator::class of "|" to "operator|",
+            BinaryOperator::class of "^" to "operator^",
+            BinaryOperator::class of "<<" to "operator<<",
+            BinaryOperator::class of ">>" to "operator>>",
+
+            // Increment/decrement operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_incdec
+            UnaryOperator::class of "++" to "operator++",
+            UnaryOperator::class of "--" to "operator--",
+
+            // Comparison operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_comparison
+            BinaryOperator::class of "==" to "operator==",
+            BinaryOperator::class of "!=" to "operator!=",
+            BinaryOperator::class of "<" to "operator<",
+            BinaryOperator::class of ">" to "operator>",
+            BinaryOperator::class of "<=" to "operator<=",
+            BinaryOperator::class of "=>" to "operator=>",
+
+            // Member access operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_member_access
+            MemberExpression::class of "[]" to "operator[]",
+            UnaryOperator::class of "*" to "operator*",
+            UnaryOperator::class of "&" to "operator&",
+            MemberExpression::class of "->" to "operator->",
+            MemberExpression::class of "->*" to "operator->*",
+
+            // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
+            MemberCallExpression::class of "()" to "operator()",
+            BinaryOperator::class of "," to "operator,",
+        )
 
     /**
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
@@ -107,43 +163,6 @@ open class CPPLanguage :
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
-    /**
-     * @param call
-     * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
-     *   resolution techniques
-     */
-    override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
-        possibleContainingTypes: Set<Type>,
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
-        callResolver: SymbolResolver
-    ): List<FunctionDeclaration> {
-        var invocationCandidates = mutableListOf<FunctionDeclaration>()
-        val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
-        for (record in records) {
-            invocationCandidates.addAll(
-                callResolver.getInvocationCandidatesFromRecord(record, call.name.localName, call)
-            )
-        }
-        if (invocationCandidates.isEmpty()) {
-            // This could be a regular function call that somehow ends up here because of weird
-            // complexity of the old call resolver
-            val result = ctx.scopeManager.resolveCall(call)
-            invocationCandidates.addAll(result.bestViable)
-        }
-
-        // Make sure, that our invocation candidates for member call expressions are really METHODS,
-        // otherwise this will lead to false positives. This is a hotfix until we rework the call
-        // resolver completely.
-        if (call is MemberCallExpression) {
-            invocationCandidates =
-                invocationCandidates.filterIsInstance<MethodDeclaration>().toMutableList()
-        }
-        return invocationCandidates
-    }
-
     override fun tryCast(
         type: Type,
         targetType: Type,
@@ -153,6 +172,17 @@ open class CPPLanguage :
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {
             return match
+        }
+
+        // Another special rule is that if we have a (const) reference (e.g. const T&) in a function
+        // call, this will match the type T because this means that the parameter is given by
+        // reference rather than by value.
+        if (
+            targetType is ReferenceType &&
+                targetType.elementType == type &&
+                targetHint is ParameterDeclaration
+        ) {
+            return DirectMatch
         }
 
         // In C++, it is possible to have conversion constructors. We will not have full support for
@@ -167,6 +197,29 @@ open class CPPLanguage :
         }
 
         return CastNotPossible
+    }
+
+    override fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+        // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
+        // increment and decrement operators. See
+        // https://en.cppreference.com/w/cpp/language/operator_incdec. If it is a postfix, we need
+        // to match for a function with a fake "int" parameter
+        val expr = result.source
+        if (
+            expr is UnaryOperator &&
+                (expr.operatorCode == "++" || expr.operatorCode == "--") &&
+                expr.isPostfix
+        ) {
+            result.signatureResults =
+                result.candidateFunctions
+                    .map { Pair(it, it.matchesSignature(listOf(primitiveType("int")))) }
+                    .filter { it.second is SignatureMatches }
+                    .associate { it }
+        }
+
+        return super.bestViableResolution(result)
     }
 
     override val startCharacter = '<'
@@ -197,7 +250,7 @@ open class CPPLanguage :
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
-                (templateCall.templateParameters.size <=
+                (templateCall.templateArguments.size <=
                     functionTemplateDeclaration.parameters.size) &&
                     (templateCall.arguments.size <=
                         functionTemplateDeclaration.realization[0].parameters.size)
@@ -249,13 +302,10 @@ open class CPPLanguage :
             val functionTemplateDeclaration =
                 holder?.startInference(ctx)?.inferFunctionTemplate(templateCall)
             templateCall.templateInstantiation = functionTemplateDeclaration
-            val edges = templateCall.templateParameterEdges
+            val edges = templateCall.templateArgumentEdges
             // Set instantiation propertyEdges
-            for (instantiationParameter in edges ?: listOf()) {
-                instantiationParameter.addProperty(
-                    Properties.INSTANTIATION,
-                    TemplateDeclaration.TemplateInitialization.EXPLICIT
-                )
+            for (edge in edges ?: listOf()) {
+                edge.instantiation = TemplateDeclaration.TemplateInitialization.EXPLICIT
             }
 
             if (functionTemplateDeclaration == null) {

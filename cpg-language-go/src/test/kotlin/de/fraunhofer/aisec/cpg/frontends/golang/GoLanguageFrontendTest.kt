@@ -25,17 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.nio.file.Path
@@ -1173,7 +1170,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val funcy = result.calls["funcy"]
         assertNotNull(funcy)
-        funcy.invokeEdges.all { it.getProperty(Properties.DYNAMIC_INVOKE) == true }
+        funcy.invokeEdges.all { it.dynamicInvoke == true }
 
         // We should be able to resolve the call from our stored "do" function to funcy
         assertInvokes(funcy, result.functions["do"])
@@ -1208,7 +1205,6 @@ class GoLanguageFrontendTest : BaseTest() {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("eval.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.registerPass<EdgeCachePass>()
             }
         assertNotNull(tu)
 

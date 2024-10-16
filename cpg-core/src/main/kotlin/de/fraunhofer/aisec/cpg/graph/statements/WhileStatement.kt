@@ -25,28 +25,35 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a conditional loop statement of the form: `while(...){...}`. */
 class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
+    @Relationship(value = "CONDITION_DECLARATION")
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    @AST var conditionDeclaration: Declaration? = null
+    var conditionDeclaration by unwrapping(WhileStatement::conditionDeclarationEdge)
 
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition that decides if the block is executed. */
-    @AST var condition: Expression? = null
+    var condition by unwrapping(WhileStatement::conditionEdge)
 
+    @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The statement that is going to be executed, until the condition evaluates to false for the
      * first time. Usually a [Block].
      */
-    @AST var statement: Statement? = null
+    var statement by unwrapping(WhileStatement::statementEdge)
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
@@ -66,6 +73,10 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         this.condition = new
         return true
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.condition == expression
     }
 
     override fun equals(other: Any?): Boolean {

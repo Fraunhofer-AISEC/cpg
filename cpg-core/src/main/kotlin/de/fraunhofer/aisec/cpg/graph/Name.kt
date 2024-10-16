@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
+import kotlin.uuid.Uuid
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
@@ -48,6 +49,18 @@ class Name(
         parent: Name? = null,
         language: Language<*>?
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
+
+    companion object {
+        /**
+         * Creates a random name starting with a prefix plus a random UUID (version 4). The Name is
+         * prefixed by [prefix], followed by a separator character [separatorChar] and finalized by
+         * a random UUID ("-" separators also replaced with [separatorChar]).
+         */
+        fun random(prefix: String, separatorChar: Char = '_'): Name {
+            val randomPart = Uuid.random().toString().replace('-', separatorChar)
+            return Name(localName = prefix + separatorChar + randomPart)
+        }
+    }
 
     /**
      * The full string representation of this name. Since [localName] and [parent] are immutable,
@@ -70,11 +83,13 @@ class Name(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Name) return false
+        if (other is String) return this.fullName == other
+        if (other is Name)
+            return localName == other.localName &&
+                parent == other.parent &&
+                delimiter == other.delimiter
 
-        return localName == other.localName &&
-            parent == other.parent &&
-            delimiter == other.delimiter
+        return false
     }
 
     override fun get(index: Int) = fullName[index]
@@ -153,9 +168,9 @@ internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimit
 }
 
 /** Returns a new [Name] based on the [localName] and the current name as parent. */
-fun Name?.fqn(localName: String) =
+fun Name?.fqn(localName: String, delimiter: String = this?.delimiter ?: ".") =
     if (this == null) {
-        Name(localName)
+        Name(localName, null, delimiter)
     } else {
-        Name(localName, this, this.delimiter)
+        Name(localName, this, delimiter)
     }

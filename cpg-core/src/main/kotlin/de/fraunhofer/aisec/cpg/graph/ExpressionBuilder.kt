@@ -25,12 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
-import de.fraunhofer.aisec.cpg.graph.edge.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
@@ -129,8 +127,8 @@ fun MetadataProvider.newAssignExpression(
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
     node.operatorCode = operatorCode
-    node.lhs = lhs
-    node.rhs = rhs
+    node.lhs = lhs.toMutableList()
+    node.rhs = rhs.toMutableList()
 
     log(node)
 
@@ -184,8 +182,8 @@ fun MetadataProvider.newConstructExpression(
 @JvmOverloads
 fun MetadataProvider.newConditionalExpression(
     condition: Expression,
-    thenExpression: Expression?,
-    elseExpression: Expression?,
+    thenExpression: Expression? = null,
+    elseExpression: Expression? = null,
     type: Type = unknownType(),
     rawNode: Any? = null
 ): ConditionalExpression {
@@ -209,8 +207,8 @@ fun MetadataProvider.newConditionalExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newKeyValueExpression(
-    key: Expression? = null,
-    value: Expression? = null,
+    key: Expression,
+    value: Expression,
     rawNode: Any? = null
 ): KeyValueExpression {
     val node = KeyValueExpression()
@@ -273,8 +271,34 @@ fun MetadataProvider.newCallExpression(
         callee.resolutionHelper = node
     }
 
-    node.callee = callee
+    if (callee != null) {
+        node.callee = callee
+    }
     node.template = template
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [MemberCallExpression]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newOperatorCallExpression(
+    operatorCode: String,
+    callee: Expression?,
+    rawNode: Any? = null
+): OperatorCallExpression {
+    val node = OperatorCallExpression()
+    node.applyMetadata(this, operatorCode, rawNode)
+
+    node.operatorCode = operatorCode
+    if (callee != null) {
+        node.callee = callee
+    }
 
     log(node)
     return node
@@ -304,7 +328,9 @@ fun MetadataProvider.newMemberCallExpression(
         callee.resolutionHelper = node
     }
 
-    node.callee = callee
+    if (callee != null) {
+        node.callee = callee
+    }
     node.isStatic = isStatic
 
     log(node)
@@ -562,23 +588,34 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.comment = this.comment
     duplicate.file = this.file
     duplicate.name = this.name.clone()
-    for (next in this.nextDFGEdges) {
-        duplicate.addNextDFG(
-            next.end,
-            next.granularity,
-            (next as? ContextSensitiveDataflow)?.callingContext
-        )
+    for (edge in this.nextDFGEdges) {
+        if (edge is ContextSensitiveDataflow) {
+            duplicate.nextDFGEdges.addContextSensitive(
+                edge.end,
+                edge.granularity,
+                edge.callingContext
+            )
+        } else {
+            duplicate.nextDFGEdges += edge
+        }
     }
-    for (next in this.prevDFGEdges) {
-        duplicate.addPrevDFG(
-            next.start,
-            next.granularity,
-            (next as? ContextSensitiveDataflow)?.callingContext
-        )
+    for (edge in this.prevDFGEdges) {
+        if (edge is ContextSensitiveDataflow) {
+            duplicate.prevDFGEdges.addContextSensitive(
+                edge.start,
+                edge.granularity,
+                edge.callingContext
+            )
+        } else {
+            duplicate.prevDFGEdges += edge
+        }
     }
-    // TODO: This loses the properties of the edges.
-    duplicate.nextEOG = this.nextEOG
-    duplicate.prevEOG = this.prevEOG
+    for (edge in this.prevEOGEdges) {
+        duplicate.prevEOGEdges += edge
+    }
+    for (edge in this.nextEOGEdges) {
+        duplicate.nextEOGEdges += edge
+    }
     duplicate.isImplicit = implicit
     return duplicate
 }

@@ -52,7 +52,7 @@ internal class SuperCallTest : BaseTest() {
         val target = findByUniqueName(methods, "target")
         val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "super.target();" == it.code }
-        assertEquals(listOf(superTarget), superCall.invokes)
+        assertInvokes(superCall, superTarget)
     }
 
     @Test
@@ -74,8 +74,8 @@ internal class SuperCallTest : BaseTest() {
             findByUniquePredicate(calls) { "Interface1.super.target();" == it.code }
         val interface2Call =
             findByUniquePredicate(calls) { "Interface2.super.target();" == it.code }
-        assertEquals(listOf(interface1Target), interface1Call.invokes)
-        assertEquals(listOf(interface2Target), interface2Call.invokes)
+        assertInvokes(interface1Call, interface1Target)
+        assertInvokes(interface2Call, interface2Target)
     }
 
     @Test

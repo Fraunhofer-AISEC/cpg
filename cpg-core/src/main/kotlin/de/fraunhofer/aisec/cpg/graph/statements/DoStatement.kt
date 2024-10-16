@@ -25,24 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a conditional loop statement of the form: `do{...}while(...)`. */
 class DoStatement : Statement(), ArgumentHolder {
+    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
-    @AST var condition: Expression? = null
+    var condition by unwrapping(DoStatement::conditionEdge)
+
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
 
     /**
      * The statement that is going to be executed and re-executed, until the condition evaluates to
      * false for the first time. Usually a [Block].
      */
-    @AST var statement: Statement? = null
+    var statement by unwrapping(DoStatement::statementEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
@@ -61,6 +67,10 @@ class DoStatement : Statement(), ArgumentHolder {
             return true
         }
         return false
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return condition == expression
     }
 
     override fun equals(other: Any?): Boolean {

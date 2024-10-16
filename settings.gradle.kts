@@ -37,6 +37,10 @@ val enableRubyFrontend: Boolean by extra {
     val enableRubyFrontend: String? by settings
     enableRubyFrontend.toBoolean()
 }
+val enableJVMFrontend: Boolean by extra {
+    val enableJVMFrontend: String? by settings
+    enableJVMFrontend.toBoolean()
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableCXXFrontend) include(":cpg-language-cxx")
@@ -45,3 +49,4 @@ if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")
 if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
+if (enableJVMFrontend) include(":cpg-language-jvm")

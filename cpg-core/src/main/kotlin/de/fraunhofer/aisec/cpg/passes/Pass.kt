@@ -35,6 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import java.util.concurrent.CompletableFuture
@@ -42,8 +47,10 @@ import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
+import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -152,6 +159,47 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
 
     fun <T : PassConfiguration> passConfig(): T? {
         return this.config.passConfigurations[this::class] as? T
+    }
+
+    override fun toString(): String {
+        val builder =
+            ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", this::class.simpleName)
+
+        if (this::class.softDependencies.isNotEmpty()) {
+            builder.append("soft dependencies:", this::class.softDependencies.map { it.simpleName })
+        }
+
+        if (this::class.hardDependencies.isNotEmpty()) {
+            builder.append("hard dependencies:", this::class.hardDependencies.map { it.simpleName })
+        }
+
+        if (this::class.softExecuteBefore.isNotEmpty()) {
+            builder.append(
+                "execute before (soft): ",
+                this::class.softExecuteBefore.map { it.simpleName }
+            )
+        }
+
+        if (this::class.hardExecuteBefore.isNotEmpty()) {
+            builder.append(
+                "execute before (hard): ",
+                this::class.hardExecuteBefore.map { it.simpleName }
+            )
+        }
+
+        if (this::class.isFirstPass) {
+            builder.append("firstPass")
+        }
+
+        if (this::class.isLastPass) {
+            builder.append("lastPass")
+        }
+
+        if (this::class.isLatePass) {
+            builder.append("latePass")
+        }
+
+        return builder.toString()
     }
 }
 
@@ -318,3 +366,50 @@ fun <T : Node> checkForReplacement(
     @Suppress("UNCHECKED_CAST")
     return config.replacedPasses[Pair(cls, language::class)] as? KClass<out Pass<T>> ?: cls
 }
+
+val KClass<out Pass<*>>.isFirstPass: Boolean
+    get() {
+        return this.hasAnnotation<ExecuteFirst>()
+    }
+
+val KClass<out Pass<*>>.isLastPass: Boolean
+    get() {
+        return this.hasAnnotation<ExecuteLast>()
+    }
+
+val KClass<out Pass<*>>.isLatePass: Boolean
+    get() {
+        return this.hasAnnotation<ExecuteLate>()
+    }
+
+val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<DependsOn>()
+            .filter { it.softDependency == true }
+            .map { it.value }
+            .toSet()
+    }
+
+val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<DependsOn>()
+            .filter { it.softDependency == false }
+            .map { it.value }
+            .toSet()
+    }
+
+val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<ExecuteBefore>()
+            .filter { it.softDependency == true }
+            .map { it.other }
+            .toSet()
+    }
+
+val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<ExecuteBefore>()
+            .filter { it.softDependency == false }
+            .map { it.other }
+            .toSet()
+    }
