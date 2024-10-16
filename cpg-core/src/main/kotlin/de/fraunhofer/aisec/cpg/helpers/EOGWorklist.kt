@@ -218,7 +218,7 @@ class Worklist<K : Any, N : Any, V>() {
 
     /** Removes a [Node] from the worklist and returns the [Node] together with its [State] */
     fun pop(): Pair<K, State<N, V>> {
-        val node = nodeOrder.removeLast()
+        val node = nodeOrder.removeFirst()
         alreadySeen.add(node.first)
         return node
     }
