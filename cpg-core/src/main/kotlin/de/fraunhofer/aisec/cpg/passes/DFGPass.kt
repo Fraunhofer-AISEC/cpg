@@ -105,6 +105,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     ) {
         when (node) {
             // Expressions
+            is CollectionComprehension -> handleCollectionComprehension(node)
+            is CollectionComprehension.ComprehensionExpression ->
+                handleComprehensionExpression(node)
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
@@ -136,6 +139,41 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
         }
+    }
+
+    /**
+     * Handles a collection comprehension. The data flow from
+     * `comprehension.comprehensionExpressions[i]` to `comprehension.comprehensionExpressions[i+1]`
+     * and for the last `comprehension.comprehensionExpressions[i]`, it flows to the
+     * `comprehension.statement`.
+     */
+    protected fun handleCollectionComprehension(comprehension: CollectionComprehension) {
+        if (comprehension.comprehensionExpressions.size > 1) {
+            comprehension.comprehensionExpressions
+                .subList(0, comprehension.comprehensionExpressions.size - 2)
+                .forEachIndexed { i, expr ->
+                    expr.nextDFG += comprehension.comprehensionExpressions[i + 1]
+                }
+        }
+        if (comprehension.comprehensionExpressions.isNotEmpty())
+            comprehension.statement?.let {
+                comprehension.comprehensionExpressions.last().nextDFG += it
+            }
+        comprehension.statement?.let { comprehension.prevDFG += it }
+    }
+
+    /**
+     * The iterable flows to the variable which flows into the whole expression together with the
+     * predicate(s).
+     */
+    protected fun handleComprehensionExpression(
+        comprehension: CollectionComprehension.ComprehensionExpression
+    ) {
+        comprehension.variable?.let { variable ->
+            comprehension.iterable?.let { iterable -> iterable.nextDFG += variable }
+            comprehension.prevDFG += variable
+        }
+        comprehension.predicates.forEach { comprehension.prevDFG += it }
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {

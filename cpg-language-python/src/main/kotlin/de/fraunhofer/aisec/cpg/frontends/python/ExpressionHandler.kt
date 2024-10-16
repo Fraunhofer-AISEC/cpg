@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -90,7 +90,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return newComprehensionExpression(node).apply {
             this.variable = handle(node.target)
             this.iterable = handle(node.iter)
-            this.predicates += node.ifs.map { handle(it) }.filterIsInstance<Expression>()
+            this.predicates += node.ifs.map { handle(it) }
         }
     }
 
@@ -437,7 +437,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.currentScope
                 ?.lookupSymbol(name.localName, replaceImports = false)
                 ?.filterIsInstance<ImportDeclaration>()
-        return decl?.isNotEmpty() ?: false
+        return decl?.isNotEmpty() == true
     }
 
     private fun handleName(node: Python.AST.Name): Expression {
