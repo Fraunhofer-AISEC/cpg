@@ -144,9 +144,7 @@ class AbstractEvaluator {
         // This is implemented in IntervalState.push
         // Only do this if we have not reached the goal node
         if (currentNode != goalNode) {
-            currentNode.nextEOG.forEach {
-                newState.push(it, newState[currentNode])
-            }
+            currentNode.nextEOG.forEach { newState.push(it, newState[currentNode]) }
         }
 
         return newState

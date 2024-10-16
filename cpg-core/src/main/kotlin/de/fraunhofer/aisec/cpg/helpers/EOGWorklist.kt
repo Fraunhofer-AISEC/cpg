@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.IdentityHashMap
 
 /**
@@ -273,7 +273,7 @@ inline fun <reified K : Node, V> iterateEOG(
     return iterateEOG(startNode, startState, transformation, null)
 }
 
-inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>) -> State<N, V>
@@ -281,7 +281,7 @@ inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
     return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
 }
 
-inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>

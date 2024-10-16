@@ -624,7 +624,7 @@ class Application : Callable<Int> {
         val targetNodes = nodes.filter { it.name.localName == "a" }
         val focusNode =
             targetNodes.first {
-                it.location?.region?.startLine == 87 &&
+                it.location?.region?.startLine == 101 &&
                     it is Reference &&
                     it.type.name.toString() ==
                         "int" // "java.util.LinkedList<java.lang.Integer>" // "int[]"
