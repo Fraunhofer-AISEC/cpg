@@ -267,12 +267,9 @@ class IntervalLattice(override val elements: LatticeInterval) :
             thisInterval.upper >= otherInterval.upper)
     }
 
-    // TODO: What is the LUB and why does a single Element need to implement this operation?
-    //  is seems to just be the operation performed by the worklist... in our case widening (and
-    // then narrowing)
-    // Use widening as the operation in question
+    // The least upper bound of two Intervals is given by the join operation
     override fun lub(other: LatticeElement<LatticeInterval>): LatticeElement<LatticeInterval> {
-        return IntervalLattice(this.elements.widen(other.elements))
+        return IntervalLattice(this.elements.join(other.elements))
     }
 
     fun widen(other: IntervalLattice): IntervalLattice {
@@ -295,9 +292,8 @@ class IntervalLattice(override val elements: LatticeInterval) :
 class IntervalState : State<Node, LatticeInterval>() {
     /**
      * Adds a new mapping from [newNode] to (a copy of) [newLatticeElement] to this object if
-     * [newNode] does not exist in this state yet. If it already exists, it computes either widening
-     * or narrowing between the `current` and the new interval. It returns whether the state has
-     * changed.
+     * [newNode] does not exist in this state yet. If it already exists, it will compute the lub
+     * over the new lattice Element and all predecessors. It returns whether the state has changed.
      */
     override fun push(
         newNode: de.fraunhofer.aisec.cpg.graph.Node,
@@ -308,10 +304,48 @@ class IntervalState : State<Node, LatticeInterval>() {
         }
         val current = this[newNode] as? IntervalLattice
         if (current != null) {
+            val joinedElement =
+                newNode.prevEOG.fold(newLatticeElement) { acc, predecessor ->
+                    if (this[predecessor]?.elements != null) {
+                        acc.lub(this[predecessor]!!)
+                    } else {
+                        acc
+                    }
+                }
+            if (joinedElement != this[newNode]) {
+                this[newNode] = joinedElement
+                return true
+            }
             return false
         } else {
             this[newNode] = newLatticeElement
         }
         return true
+    }
+
+    /**
+     * Performs the same duplication as the parent function, but returns a [IntervalState] object
+     * instead.
+     */
+    override fun duplicate(): State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval> {
+        val clone = IntervalState()
+        for ((key, value) in this) {
+            clone[key] = value.duplicate()
+        }
+        return clone
+    }
+
+    /**
+     * Performs the same lub function as the parent, but uses the [push] function from
+     * [LatticeInterval]
+     */
+    override fun lub(
+        other: State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>
+    ): Pair<State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>, Boolean> {
+        var update = false
+        for ((node, newLattice) in other) {
+            update = push(node, newLattice) || update
+        }
+        return Pair(this, update)
     }
 }
