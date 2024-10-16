@@ -96,7 +96,7 @@ fun partial(target: Declaration?): PartialDataflowGranularity {
 }
 
 /**
- * Creates a new [PointerDataflowGranularity]. The [ValueAccess] is specifies if the pointer's value
+ * Creates a new [PointerDataflowGranularity]. The [ValueAccess] is specified if the pointer's value
  * is accessed, or its address.
  */
 fun pointer(access: PointerAccess): PointerDataflowGranularity {
