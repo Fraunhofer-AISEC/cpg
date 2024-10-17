@@ -160,6 +160,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
+        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
     protected fun doNothing() {
@@ -1030,6 +1031,31 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Include the node as part of the EOG itself, but we do not need to go into any children or
         // properties here
         pushToEOG(stmt)
+    }
+
+    /**
+     * This is copied & pasted with minimal adjustments from [handleThrowOperator]. TODO: To be
+     * merged in a later PR.
+     */
+    protected fun handleThrowStatement(statement: ThrowStatement) {
+        val input = statement.exception
+        createEOG(input)
+        statement.parentException?.let { createEOG(it) }
+
+        val catchingScope =
+            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
+
+        val throwType = input?.type
+        if (throwType == null) {
+            TODO("???")
+        }
+        pushToEOG(statement)
+        if (catchingScope is TryScope) {
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        } else if (catchingScope is FunctionScope) {
+            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        }
+        currentPredecessors.clear()
     }
 
     companion object {
