@@ -221,7 +221,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<CollectionComprehension.ComprehensionExpression>(compExpr)
+        assertIs<ComprehensionExpression>(compExpr)
         assertIs<Reference>(compExpr.variable)
         assertLocalName("i", compExpr.variable)
         assertIs<Reference>(compExpr.iterable)

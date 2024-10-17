@@ -94,7 +94,12 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return newComprehensionExpression(node).apply {
             this.variable = handle(node.target)
             this.iterable = handle(node.iter)
-            this.predicates += node.ifs.map { handle(it) }
+            val predicates = node.ifs.map { handle(it) }
+            if (predicates.size == 1) {
+                this.predicate = predicates.single()
+            } else if (predicates.size > 1) {
+                this.predicate = joinListWithBinOp("and", predicates, node)
+            }
         }
     }
 
@@ -210,15 +215,23 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         } else if (values.size == 1) {
             values.first()
         } else {
-            val lastTwo = newBinaryOperator("+", rawNode = node)
-            lastTwo.rhs = values.last()
-            lastTwo.lhs = values[values.size - 2]
-            values.subList(0, values.size - 2).foldRight(lastTwo) { newVal, start ->
-                val nextValue = newBinaryOperator("+")
-                nextValue.rhs = start
-                nextValue.lhs = newVal
-                nextValue
-            }
+            joinListWithBinOp("+", values, node)
+        }
+    }
+
+    private fun joinListWithBinOp(
+        operatorCode: String,
+        nodes: List<Expression>,
+        rawNode: Python.AST.AST? = null
+    ): BinaryOperator {
+        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
+        lastTwo.rhs = nodes.last()
+        lastTwo.lhs = nodes[nodes.size - 2]
+        return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
+            val nextValue = newBinaryOperator(operatorCode)
+            nextValue.rhs = start
+            nextValue.lhs = newVal
+            nextValue
         }
     }
 

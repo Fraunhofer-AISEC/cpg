@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -60,20 +59,20 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ComprehensionExpression::iterableEdge)
 
-    @Relationship("PREDICATE") var predicateEdges = astEdgesOf<Statement>()
+    @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>()
 
     /**
-     * This field contains the predicates which have to hold to evaluate `statement(variable)` and
+     * This field contains the predicate which has to hold to evaluate `statement(variable)` and
      * include it in the result.
      */
-    var predicates by unwrapping(ComprehensionExpression::predicateEdges)
+    var predicate by unwrapping(ComprehensionExpression::predicateEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("variable", variable)
             .append("iterable", iterable)
-            .append("predicate", predicates)
+            .append("predicate", predicate)
             .toString()
 
     override fun equals(other: Any?): Boolean {
@@ -82,10 +81,10 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
         return super.equals(other) &&
             variable == other.variable &&
             iterable == other.iterable &&
-            predicates == other.predicates
+            predicate == other.predicate
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicates)
+    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
 
     override fun addArgument(expression: Expression) {
         if (this.variable == null) {
@@ -93,7 +92,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
         } else if (this.iterable == null) {
             this.iterable = expression
         } else {
-            this.predicates += expression
+            this.predicate = expression
         }
     }
 
@@ -108,22 +107,16 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
             return true
         }
 
-        var changedSomething = false
-        val newPredicates =
-            this.predicates.map {
-                if (it == old) {
-                    changedSomething = true
-                    new
-                } else it
-            }
-        this.predicates.clear()
-        this.predicates.addAll(newPredicates)
-        return changedSomething
+        if (this.predicate == old) {
+            this.predicate = new
+            return true
+        }
+        return false
     }
 
     override fun hasArgument(expression: Expression): Boolean {
         return this.variable == expression ||
             this.iterable == expression ||
-            expression in this.predicates
+            expression == this.predicate
     }
 }

@@ -170,7 +170,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             comprehension.iterable?.let { iterable -> iterable.nextDFG += variable }
             comprehension.prevDFG += variable
         }
-        comprehension.predicates.forEach { comprehension.prevDFG += it }
+        comprehension.predicate?.let { comprehension.prevDFG += it }
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
