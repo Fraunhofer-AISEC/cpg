@@ -66,14 +66,14 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
             // Push the node itself to the EOG, not its "input" (the deferred call). However, it
             // seems that the arguments of the deferred call are evaluated at the point of the
             // deferred statement, duh!
-            pushToEOG(node)
+            attachToEOG(node)
 
             // Evaluate the callee
-            input.callee?.let { createEOG(it) }
+            input.callee?.let { handleEOG(it) }
 
             // Then the arguments
             for (arg in input.arguments) {
-                createEOG(arg)
+                handleEOG(arg)
             }
         } else {
             log.error(
