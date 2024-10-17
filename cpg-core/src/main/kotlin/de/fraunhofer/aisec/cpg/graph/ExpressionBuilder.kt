@@ -527,10 +527,8 @@ fun MetadataProvider.newInitializerListExpression(
 }
 
 @JvmOverloads
-fun MetadataProvider.newComprehensionExpression(
-    rawNode: Any? = null
-): CollectionComprehension.ComprehensionExpression {
-    val node = CollectionComprehension.ComprehensionExpression()
+fun MetadataProvider.newComprehensionExpression(rawNode: Any? = null): ComprehensionExpression {
+    val node = ComprehensionExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)

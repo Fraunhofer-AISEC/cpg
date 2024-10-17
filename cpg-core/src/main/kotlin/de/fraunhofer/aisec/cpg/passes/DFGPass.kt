@@ -106,8 +106,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (node) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
-            is CollectionComprehension.ComprehensionExpression ->
-                handleComprehensionExpression(node)
+            is ComprehensionExpression -> handleComprehensionExpression(node)
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
@@ -166,9 +165,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * The iterable flows to the variable which flows into the whole expression together with the
      * predicate(s).
      */
-    protected fun handleComprehensionExpression(
-        comprehension: CollectionComprehension.ComprehensionExpression
-    ) {
+    protected fun handleComprehensionExpression(comprehension: ComprehensionExpression) {
         comprehension.variable?.let { variable ->
             comprehension.iterable?.let { iterable -> iterable.nextDFG += variable }
             comprehension.prevDFG += variable

@@ -347,8 +347,8 @@ fun LanguageFrontend<*, *>.listComp(
 
 context(Holder<out Statement>)
 fun LanguageFrontend<*, *>.compExpr(
-    init: (CollectionComprehension.ComprehensionExpression.() -> Unit)? = null
-): CollectionComprehension.ComprehensionExpression {
+    init: (ComprehensionExpression.() -> Unit)? = null
+): ComprehensionExpression {
     val node = newComprehensionExpression()
 
     if (init != null) {

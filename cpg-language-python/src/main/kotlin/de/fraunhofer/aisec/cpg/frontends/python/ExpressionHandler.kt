@@ -86,13 +86,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
-     * [CollectionComprehension.ComprehensionExpression].
+     * [ComprehensionExpression].
      *
      * Connects multiple predicates by "AND".
      */
-    private fun handleComprehension(
-        node: Python.AST.comprehension
-    ): CollectionComprehension.ComprehensionExpression {
+    private fun handleComprehension(node: Python.AST.comprehension): ComprehensionExpression {
         return newComprehensionExpression(node).apply {
             this.variable = handle(node.target)
             this.iterable = handle(node.iter)
