@@ -44,7 +44,9 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun addAll(index: Int, elements: Collection<NodeType>): Boolean {
-        return list.addAll(index, elements)
+        val listBefore = list.toList()
+        list.addAll(index, elements)
+        return list != listBefore
     }
 
     override fun listIterator(): MutableListIterator<NodeType> {
@@ -70,7 +72,12 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<NodeType> {
-        TODO("Not yet implemented")
+        return if (list.outgoing) {
+            list.subList(fromIndex, toIndex).map { it.end }.toMutableList()
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            list.subList(fromIndex, toIndex).map { it.start as NodeType }.toMutableList()
+        }
     }
 
     override fun get(index: Int): NodeType {
