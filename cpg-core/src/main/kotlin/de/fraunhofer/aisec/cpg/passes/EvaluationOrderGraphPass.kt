@@ -156,6 +156,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[DefaultStatement::class.java] = { handleDefault(it) }
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
+        map[CollectionComprehension::class.java] = {
+            handleCollectionComprehension(it as CollectionComprehension)
+        }
+        map[ComprehensionExpression::class.java] = {
+            handleComprehensionExpression(it as ComprehensionExpression)
+        }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
@@ -890,6 +896,24 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         } else {
             LOGGER.error("Trying to exit do loop, but no loop scope: $node")
         }
+    }
+
+    private fun handleComprehensionExpression(node: ComprehensionExpression) {
+        createEOG(node.iterable)
+        createEOG(node.variable)
+        createEOG(node.predicate)
+        pushToEOG(node)
+    }
+
+    private fun handleCollectionComprehension(node: CollectionComprehension) {
+        // Process the comprehension expressions from 0 to n and connect the EOG of i to i+1.
+        node.comprehensionExpressions.forEach { createEOG(it) }
+        // TODO: Then, the EOG goes to the statement
+        createEOG(node.statement)
+        // TODO: And jumps back tot he first thing in the comprehension expressions
+
+        // Then goes to the whole node and we're done
+        pushToEOG(node)
     }
 
     protected fun handleForEachStatement(node: ForEachStatement) {
