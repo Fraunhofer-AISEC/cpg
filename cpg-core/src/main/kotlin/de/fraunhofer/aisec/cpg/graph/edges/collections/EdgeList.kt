@@ -110,20 +110,6 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return add(index, edge)
     }
 
-    /**
-     * This function creates new edges (of [EdgeType]) to/from the specified nodes in [targets]
-     * (depending on [outgoing]) and adds the first item to the specified [index] in the list. The
-     * next items will be added at the subsequent indices.
-     */
-    fun addAll(index: Int, targets: Collection<NodeType>) {
-        var i = index
-        targets.forEach { target ->
-            val edge = createEdge(target, init, this.outgoing)
-            add(i, edge)
-            i++
-        }
-    }
-
     override fun add(index: Int, element: EdgeType) {
         // Make sure, the index is always set
         element.index = this.size

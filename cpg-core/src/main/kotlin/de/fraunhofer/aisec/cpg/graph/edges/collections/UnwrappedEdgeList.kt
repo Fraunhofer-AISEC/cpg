@@ -44,9 +44,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun addAll(index: Int, elements: Collection<NodeType>): Boolean {
-        val listBefore = list.toList()
-        list.addAll(index, elements)
-        return list != listBefore
+        TODO("Not yet implemented")
     }
 
     override fun listIterator(): MutableListIterator<NodeType> {
