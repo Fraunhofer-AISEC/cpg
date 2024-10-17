@@ -73,7 +73,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.ListComp -> handleListComprehension(node)
             is Python.AST.SetComp -> handleSetComprehension(node)
             is Python.AST.DictComp -> handleDictComprehension(node)
-            is Python.AST.GeneratorExp,
+            is Python.AST.GeneratorExp -> handleGeneratorExp(node)
             is Python.AST.Await,
             is Python.AST.Yield,
             is Python.AST.YieldFrom ->
@@ -83,7 +83,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 )
         }
     }
-
+    /**
+     * Translates a Python
+     * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
+     * [CollectionComprehension.ComprehensionExpression].
+     *
+     * Connects multiple predicates by "AND".
+     */
     private fun handleComprehension(
         node: Python.AST.comprehension
     ): CollectionComprehension.ComprehensionExpression {
@@ -94,24 +100,51 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a Python
+     * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
+     * [CollectionComprehension].
+     */
+    private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
+        return newCollectionComprehension(node).apply {
+            this.statement = handle(node.elt)
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+        }
+    }
+
+    /**
+     * Translates a Python [`ListComp`](https://docs.python.org/3/library/ast.html#ast.ListComp)
+     * into a [CollectionComprehension].
+     */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
         return newCollectionComprehension(node).apply {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.type = objectType("list") // TODO: Replace this once we have dedicated types
         }
     }
 
+    /**
+     * Translates a Python [`SetComp`](https://docs.python.org/3/library/ast.html#ast.SetComp) into
+     * a [CollectionComprehension].
+     */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
         return newCollectionComprehension(node).apply {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.type = objectType("set") // TODO: Replace this once we have dedicated types
         }
     }
 
+    /**
+     * Translates a Python [`DictComp`](https://docs.python.org/3/library/ast.html#ast.DictComp)
+     * into a [CollectionComprehension].
+     */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
         return newCollectionComprehension(node).apply {
             this.statement = newKeyValueExpression(handle(node.key), handle(node.value), node)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.type = objectType("dict") // TODO: Replace this once we have dedicated types
         }
     }
 
