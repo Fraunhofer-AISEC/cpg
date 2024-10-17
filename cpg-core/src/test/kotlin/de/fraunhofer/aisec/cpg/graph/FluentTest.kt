@@ -215,8 +215,11 @@ class FluentTest {
             }
 
         val listComp = result.variables["some"]?.initializer
-        print(listComp?.toString()) // This is only here to get a better test coverage
         assertIs<CollectionComprehension>(listComp)
+        print(listComp.toString()) // This is only here to get a better test coverage
+        print(
+            listComp.comprehensionExpressions.firstOrNull()?.toString()
+        ) // This is only here to get a better test coverage
         assertIs<Reference>(listComp.statement)
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
