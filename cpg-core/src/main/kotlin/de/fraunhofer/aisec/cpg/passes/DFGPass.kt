@@ -147,17 +147,16 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * `comprehension.statement`.
      */
     protected fun handleCollectionComprehension(comprehension: CollectionComprehension) {
-        if (comprehension.comprehensionExpressions.size > 1) {
+        if (comprehension.comprehensionExpressions.isNotEmpty()) {
             comprehension.comprehensionExpressions
-                .subList(0, comprehension.comprehensionExpressions.size - 2)
+                .subList(0, comprehension.comprehensionExpressions.size - 1)
                 .forEachIndexed { i, expr ->
                     expr.nextDFG += comprehension.comprehensionExpressions[i + 1]
                 }
-        }
-        if (comprehension.comprehensionExpressions.isNotEmpty())
             comprehension.statement?.let {
                 comprehension.comprehensionExpressions.last().nextDFG += it
             }
+        }
         comprehension.statement?.let { comprehension.prevDFG += it }
     }
 
