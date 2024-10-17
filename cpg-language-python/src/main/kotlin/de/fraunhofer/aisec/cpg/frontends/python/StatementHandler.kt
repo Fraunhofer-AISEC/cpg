@@ -36,6 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -419,13 +425,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleImportFrom(node: Python.AST.ImportFrom): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         val level = node.level
-        if (level == null || level > 0) {
-            return newProblemExpression(
-                "not supporting relative paths in from (...) import syntax yet"
-            )
+        var module = parseName(node.module ?: "")
+
+        if (level != null && level > 0L) {
+            // Because the __init__ module is omitted from our current namespace, we need to check
+            // for its existence and add __init__, otherwise the relative path would be off by one
+            // level.
+            var parent =
+                if (isInitModule()) {
+                    frontend.scopeManager.currentNamespace.fqn("__init__")
+                } else {
+                    frontend.scopeManager.currentNamespace
+                }
+
+            // If the level is specified, we need to relative the module path. We basically need to
+            // move upwards in the parent namespace in the amount of dots
+            for (i in 0 until level) {
+                parent = parent?.parent
+                if (parent == null) {
+                    break
+                }
+            }
+
+            module = parent.fqn(module.localName)
         }
 
-        val module = parseName(node.module ?: "")
         for (imp in node.names) {
             // We need to differentiate between a wildcard import and an individual symbol.
             // Wildcards luckily do not have aliases
@@ -452,6 +476,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
         return declStmt
     }
+
+    /** Small utility function to check, whether we are inside an __init__ module. */
+    private fun isInitModule(): Boolean =
+        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
+                as? NamespaceDeclaration)
+            ?.path
+            ?.endsWith("__init__") == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
