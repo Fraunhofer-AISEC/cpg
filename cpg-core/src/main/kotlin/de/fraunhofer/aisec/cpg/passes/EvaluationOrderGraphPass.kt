@@ -950,21 +950,21 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     private fun handleComprehensionExpression(node: ComprehensionExpression) {
-        createEOG(node.iterable)
-        createEOG(node.variable)
-        createEOG(node.predicate)
-        pushToEOG(node)
+        handleEOG(node.iterable)
+        handleEOG(node.variable)
+        handleEOG(node.predicate)
+        attachToEOG(node)
     }
 
     private fun handleCollectionComprehension(node: CollectionComprehension) {
         // Process the comprehension expressions from 0 to n and connect the EOG of i to i+1.
-        node.comprehensionExpressions.forEach { createEOG(it) }
+        node.comprehensionExpressions.forEach { handleEOG(it) }
         // TODO: Then, the EOG goes to the statement
-        createEOG(node.statement)
-        // TODO: And jumps back tot he first thing in the comprehension expressions
+        handleEOG(node.statement)
+        // TODO: And jumps back to the first thing in the comprehension expressions
 
         // Then goes to the whole node and we're done
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleForEachStatement(node: ForEachStatement) {
