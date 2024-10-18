@@ -25,29 +25,42 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.statements.ThrowStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.test.assertLocalName
 import kotlin.test.*
 
 class ThrowStatementTest {
     @Test
     fun testThrow() {
         val result =
-            TestLanguageFrontend().build {
-                translationResult {
-                    translationUnit("some.file") {
-                        function("foo", t("void")) {
-                            body {
-                                `throw` {}
-                                `throw` { call("SomeError") }
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .defaultPasses()
+                        .registerLanguage(TestLanguage("."))
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("some.file") {
+                            function("foo", t("void")) {
+                                body {
+                                    `throw` {}
+                                    `throw` { call("SomeError") }
+                                    `throw` {
+                                        call("SomeError")
+                                        call("SomeError2")
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
         // Let's assert that we did this correctly
         val main = result.functions["foo"]
@@ -57,12 +70,32 @@ class ThrowStatementTest {
 
         val emptyThrow = body.statements.getOrNull(0)
         assertIs<ThrowStatement>(emptyThrow)
+        println(emptyThrow.toString()) // This is only here to simulate a higher test coverage
         assertNull(emptyThrow.exception)
+        assertTrue(emptyThrow.prevDFG.isEmpty())
 
         val throwWithExc = body.statements.getOrNull(1)
         assertIs<ThrowStatement>(throwWithExc)
+        println(throwWithExc.toString()) // This is only here to simulate a higher test coverage
         val throwCall = throwWithExc.exception
         assertIs<CallExpression>(throwCall)
-        assertEquals("SomeError", throwCall.name.localName)
+        assertLocalName("SomeError", throwCall)
+        assertEquals(setOf<Node>(throwCall), throwWithExc.prevDFG.toSet())
+
+        val throwWithExcAndParent = body.statements.getOrNull(2)
+        assertIs<ThrowStatement>(throwWithExcAndParent)
+        println(
+            throwWithExcAndParent.toString()
+        ) // This is only here to simulate a higher test coverage
+        val throwCallException = throwWithExcAndParent.exception
+        assertIs<CallExpression>(throwCallException)
+        assertLocalName("SomeError", throwCallException)
+        val throwCallParent = throwWithExcAndParent.parentException
+        assertIs<CallExpression>(throwCallParent)
+        assertLocalName("SomeError2", throwCallParent)
+        assertEquals(
+            setOf<Node>(throwCallException, throwCallParent),
+            throwWithExcAndParent.prevDFG.toSet()
+        )
     }
 }
