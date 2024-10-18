@@ -1044,7 +1044,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         pushToEOG(stmt)
     }
 
-    /** This is copied & pasted with minimal adjustments from [handleThrowOperator]. */
+    /** Calls [handleThrowOperator]. */
     protected fun handleThrowStatement(statement: ThrowStatement) {
         handleThrowOperator(statement, statement.exception, statement.parentException)
     }

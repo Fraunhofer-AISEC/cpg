@@ -572,6 +572,10 @@ val Node?.forLoops: List<ForStatement>
 val Node?.trys: List<TryStatement>
     get() = this.allChildren()
 
+/** Returns all [ThrowStatement] child edges in this graph, starting with this [Node]. */
+val Node?.throws: List<ThrowStatement>
+    get() = this.allChildren()
+
 /** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
 val Node?.forEachLoops: List<ForEachStatement>
     get() = this.allChildren()
