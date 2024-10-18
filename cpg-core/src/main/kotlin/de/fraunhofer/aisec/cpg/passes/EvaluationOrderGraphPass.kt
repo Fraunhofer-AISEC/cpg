@@ -184,6 +184,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[DefaultStatement::class.java] = { handleDefault(it) }
         map[TypeIdExpression::class.java] = { handleDefault(it) }
         map[Reference::class.java] = { handleDefault(it) }
+        map[CollectionComprehension::class.java] = {
+            handleCollectionComprehension(it as CollectionComprehension)
+        }
+        map[ComprehensionExpression::class.java] = {
+            handleComprehensionExpression(it as ComprehensionExpression)
+        }
         map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
@@ -941,6 +947,24 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
+    }
+
+    private fun handleComprehensionExpression(node: ComprehensionExpression) {
+        handleEOG(node.iterable)
+        handleEOG(node.variable)
+        handleEOG(node.predicate)
+        attachToEOG(node)
+    }
+
+    private fun handleCollectionComprehension(node: CollectionComprehension) {
+        // Process the comprehension expressions from 0 to n and connect the EOG of i to i+1.
+        node.comprehensionExpressions.forEach { handleEOG(it) }
+        // TODO: Then, the EOG goes to the statement
+        handleEOG(node.statement)
+        // TODO: And jumps back to the first thing in the comprehension expressions
+
+        // Then goes to the whole node and we're done
+        attachToEOG(node)
     }
 
     protected fun handleForEachStatement(node: ForEachStatement) {

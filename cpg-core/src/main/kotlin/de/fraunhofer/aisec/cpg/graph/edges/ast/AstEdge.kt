@@ -48,7 +48,7 @@ fun <NodeType : Node> Node.astEdgesOf(
 }
 
 /**
- * Creates an single optional [AstEdge] starting from this node (wrapped in a [EdgeSingletonList]
+ * Creates a single optional [AstEdge] starting from this node (wrapped in a [EdgeSingletonList]
  * container).
  */
 fun <NodeType : Node> Node.astOptionalEdgeOf(
@@ -64,7 +64,7 @@ fun <NodeType : Node> Node.astOptionalEdgeOf(
 }
 
 /**
- * Creates an single [AstEdge] starting from this node (wrapped in a [EdgeSingletonList] container).
+ * Creates a single [AstEdge] starting from this node (wrapped in a [EdgeSingletonList] container).
  */
 fun <NodeType : Node> Node.astEdgeOf(
     of: NodeType,
