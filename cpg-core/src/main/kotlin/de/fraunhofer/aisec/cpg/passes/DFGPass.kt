@@ -139,12 +139,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Handle a [ThrowStatement]. Currently, we support two types of [ThrowStatement.exception],
-     * which are then forwarded to the appropriate handlers:
-     * - [CallExpression]
-     * - [Reference]
-     */
+    /** Handle a [ThrowStatement]. The exception and parent exception flow into the node. */
     protected fun handleThrowStatement(node: ThrowStatement) {
         node.exception?.let { node.prevDFGEdges += it }
         node.parentException?.let { node.prevDFGEdges += it }
