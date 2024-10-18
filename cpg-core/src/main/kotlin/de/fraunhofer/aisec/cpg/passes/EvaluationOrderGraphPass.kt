@@ -1067,7 +1067,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         return null
     }
 
-    /** This is copied & pasted with minimal adjustments from [handleThrowOperator]. */
+    /** Calls [handleThrowOperator]. */
     protected fun handleThrowStatement(statement: ThrowStatement) {
         handleThrowOperator(
             statement,
