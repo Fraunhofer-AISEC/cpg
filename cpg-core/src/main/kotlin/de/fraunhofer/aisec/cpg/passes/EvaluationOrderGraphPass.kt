@@ -1144,7 +1144,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
          * @param predicate the search predicate
          */
         @JvmOverloads
-        fun firstParentOrNull(searchNode: Node, predicate: Predicate<Node>): Node? {
+        fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
 
             // start at searchNodes parent
             var node: Node? = searchNode.astParent
