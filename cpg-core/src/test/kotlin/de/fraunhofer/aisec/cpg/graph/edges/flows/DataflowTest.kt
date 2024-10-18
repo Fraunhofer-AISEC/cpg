@@ -112,7 +112,7 @@ class DataflowTest {
         val result = prepareThrowDFGTest()
 
         // Let's assert that we did this correctly
-        val main = result.functions[0]
+        val main = result.functions["foo"]
         assertNotNull(main)
         val body = main.body
         assertIs<Block>(body)

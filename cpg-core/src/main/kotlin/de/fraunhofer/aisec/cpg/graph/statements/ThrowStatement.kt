@@ -42,9 +42,7 @@ class ThrowStatement : Statement(), ArgumentHolder {
 
     /**
      * Some languages (Python) can add a parent exception (or `cause`) to indicate that an exception
-     * was raised while handling another exception. This is stored in the graph, but has no further
-     * implications like EOG or DFG connections, as it is only of informational purpose, but it
-     * doesn't change the program behavior.
+     * was raised while handling another exception.
      */
     @Relationship(value = "PARENT_EXCEPTION")
     var parentExceptionEdge = astOptionalEdgeOf<Expression>()
