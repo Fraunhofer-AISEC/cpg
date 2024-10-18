@@ -486,10 +486,11 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function is internal to the scope manager and primarily used by [addBreakStatement] and
-     * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
+     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts the feature of
+     * some languages to attach a label to a point in the source code and use it as the target for control flow
+     * manipulation, e.g. [BreakStatement], [GotoStatement].
      */
-    public fun getLabelStatement(labelString: String?): LabelStatement? {
+    fun getLabelStatement(labelString: String?): LabelStatement? {
         if (labelString == null) return null
         var labelStatement: LabelStatement?
         var searchScope = currentScope

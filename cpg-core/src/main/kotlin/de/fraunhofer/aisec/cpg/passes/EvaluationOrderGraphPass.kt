@@ -55,7 +55,7 @@ import org.slf4j.LoggerFactory
  * return statements. A virtual return statement with a code location of (-1,-1) is used if the
  * actual source code does not have an explicit return statement.
  *
- * How to use: When constructing the eog for a new CPG AST-node, first he EOG should be constructed
+ * How to use: When constructing the eog for a new CPG AST-node, first the EOG should be constructed
  * for its subtrees, in the order the subtrees are evaluated. This is done by invoking the handler
  * function [handleEOG] on the children of the current node in the appropriate order. After the
  * AST-subtrees of the children are attached to the EOG, the current node has to be attached with
@@ -98,8 +98,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * This maps nodes that have to handle [BreakStatement]s and [ContinueStatement]s, i.e.
-     * [LoopStatement]s and [SwitchStatement]s. An entry will only be created if the statement was
-     * identified to handle the above mentioned control flow statements.
+     * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle.
+     * An entry will only be created if the statement was identified to handle the above mentioned
+     * control flow statements.
      */
     val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
 
@@ -559,14 +560,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val throwType = input.type
         attachToEOG(node)
         // Here we identify the encapsulating ast node that can handle or relay a throw
-        val catchingParent =
+        val handlingOrRelayingParent =
             firstParentOrNull(node) { parent ->
                 parent is TryStatement || parent is FunctionDeclaration
             }
-        if (catchingParent != null) {
-            val throwByTypeMap = nodesToInternalThrows.getOrPut(catchingParent) { mutableMapOf() }
-            val throws = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
-            throws.addAll(currentPredecessors.toMutableList())
+        if (handlingOrRelayingParent != null) {
+            val throwByTypeMap = nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
+            val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
+            throwEOGExits.addAll(currentPredecessors.toMutableList())
         } else {
             LOGGER.error(
                 "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
@@ -1047,7 +1048,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /** We use the scope where the current [node] is in, to find a statement labeled with [label] */
     fun getLabeledASTNode(node: Node, label: String): Node? {
-        scopeManager.enterScopeOfNearestParent(node)
+        scopeManager.jumpTo(node.scope)
         val labelStatement = scopeManager.getLabelStatement(label)
         labelStatement?.subStatement?.let {
             return it
@@ -1147,8 +1148,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * Statements that constitute the start of the Loop depending on the used pass, mostly of
-     * size 1. THis list has to be extended if new structures are added that allow for looping.
+     * EOG entries that constitute the start of the loop, mostly of
+     * size 1. This list has to be extended if new ast nodes are added that allow for looping.
      */
     val LoopStatement.starts: List<Node>
         get() =
@@ -1175,7 +1176,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
                 else -> {
                     LOGGER.error(
-                        "Currently the component {} does not have a defined loop start.",
+                        "Currently the node type {} does not have a defined loop start.",
                         this?.javaClass
                     )
                     ArrayList()
@@ -1191,17 +1192,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         get() =
             when (this) {
                 is WhileStatement ->
-                    mutableListOf(this.condition, this.conditionDeclaration).filterNotNull()
-                is ForStatement -> mutableListOf(this.condition).filterNotNull()
-                is ForEachStatement -> mutableListOf(this.variable).filterNotNull()
-                is DoStatement -> mutableListOf(this.condition).filterNotNull()
-                is AssertStatement -> mutableListOf(this.condition).filterNotNull()
+                    listOfNotNull(this.condition, this.conditionDeclaration)
+                is ForStatement -> listOfNotNull(this.condition)
+                is ForEachStatement -> listOfNotNull(this.variable)
+                is DoStatement -> listOfNotNull(this.condition)
+                is AssertStatement -> listOfNotNull(this.condition)
                 else -> {
                     LOGGER.error(
-                        "Currently the component {} does not have defined conditions",
+                        "Currently the node type {} does not have defined conditions",
                         this.javaClass
                     )
-                    mutableListOf()
+                    listOf()
                 }
             }
 
