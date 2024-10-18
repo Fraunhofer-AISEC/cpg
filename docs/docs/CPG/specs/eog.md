@@ -394,7 +394,7 @@ flowchart LR
   prev:::outer --EOG--> child1["exception"]
   child1 --EOG--> child2["parentException"]
   child2 --EOG-->parent
-  parent(["throw"]) --EOG--> catchingContext:::outer
+  parent(["ThrowStatement"]) --EOG--> catchingContext:::outer
   parent -.-> child1
   parent -.-> child2
 
