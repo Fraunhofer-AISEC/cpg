@@ -132,6 +132,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
+            is ThrowStatement -> handleThrowStatement(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
@@ -170,6 +171,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             comprehension.prevDFG += variable
         }
         comprehension.predicate?.let { comprehension.prevDFG += it }
+    }
+
+    /** Handle a [ThrowStatement]. The exception and parent exception flow into the node. */
+    protected fun handleThrowStatement(node: ThrowStatement) {
+        node.exception?.let { node.prevDFGEdges += it }
+        node.parentException?.let { node.prevDFGEdges += it }
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {

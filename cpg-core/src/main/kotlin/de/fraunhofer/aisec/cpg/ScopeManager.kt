@@ -468,71 +468,11 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function SHOULD only be used by the
-     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [BreakStatement] to the list of break statements of the current "breakable" scope.
+     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts
+     * the feature of some languages to attach a label to a point in the source code and use it as
+     * the target for control flow manipulation, e.g. [BreakStatement], [GotoStatement].
      */
-    fun addBreakStatement(breakStatement: BreakStatement) {
-        if (breakStatement.label == null) {
-            val scope = firstScopeOrNull { scope: Scope? -> scope?.isBreakable() == true }
-            if (scope == null) {
-                Util.errorWithFileLocation(
-                    breakStatement,
-                    LOGGER,
-                    "Break inside of unbreakable scope. The break will be ignored, but may lead " +
-                        "to an incorrect graph. The source code is not valid or incomplete."
-                )
-                return
-            }
-            (scope as Breakable).addBreakStatement(breakStatement)
-        } else {
-            val labelStatement = getLabelStatement(breakStatement.label)
-            labelStatement?.subStatement?.let {
-                val scope = lookupScope(it)
-                (scope as Breakable?)?.addBreakStatement(breakStatement)
-            }
-        }
-    }
-
-    /**
-     * This function SHOULD only be used by the
-     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [ContinueStatement] to the list of continue statements of the current "continuable" scope.
-     */
-    fun addContinueStatement(continueStatement: ContinueStatement) {
-        if (continueStatement.label == null) {
-            val scope = firstScopeOrNull { scope: Scope? -> scope?.isContinuable() == true }
-            if (scope == null) {
-                LOGGER.error(
-                    "Continue inside of not continuable scope. The continue will be ignored, but may lead " +
-                        "to an incorrect graph. The source code is not valid or incomplete."
-                )
-                return
-            }
-            (scope as Continuable).addContinueStatement(continueStatement)
-        } else {
-            val labelStatement = getLabelStatement(continueStatement.label)
-            labelStatement?.subStatement?.let {
-                val scope = lookupScope(it)
-                (scope as Continuable?)?.addContinueStatement(continueStatement)
-            }
-        }
-    }
-
-    /**
-     * This function SHOULD only be used by the
-     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
-     * a [LabelStatement] to the list of label statements of the current scope.
-     */
-    fun addLabelStatement(labelStatement: LabelStatement) {
-        currentScope?.addLabelStatement(labelStatement)
-    }
-
-    /**
-     * This function is internal to the scope manager and primarily used by [addBreakStatement] and
-     * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
-     */
-    private fun getLabelStatement(labelString: String?): LabelStatement? {
+    fun getLabelStatement(labelString: String?): LabelStatement? {
         if (labelString == null) return null
         var labelStatement: LabelStatement?
         var searchScope = currentScope

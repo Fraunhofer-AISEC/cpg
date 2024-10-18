@@ -429,6 +429,23 @@ The data flow from the input to this node and, in case of the operatorCodes ++ a
 
 *Dangerous: We have to ensure that the first operation is performed before the last one (if applicable)*
 
+## ThrowStatement
+
+Interesting fields:
+
+* `exception: Expression`: The exception which is thrown
+* `parentException: Expression`: The exception which has originally caused this exception to be thrown (e.g. in a catch clause)
+
+The return value flows to the whole statement.
+
+Scheme:
+```mermaid
+  flowchart LR
+    exception -- DFG --> node([ReturnStatement]);
+    parentException -- DFG --> node;
+    exception -.- node;
+    parentException -.- node;
+```
 
 ## ReturnStatement
 
