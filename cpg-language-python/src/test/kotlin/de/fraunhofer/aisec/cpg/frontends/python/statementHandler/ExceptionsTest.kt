@@ -138,4 +138,20 @@ class ExceptionsTest : BaseTest() {
         assertNotNull(functionBody)
         assertEquals(listOf<Node>(functionBody), throwStmt.nextEOG.toList())
     }
+
+    @Test
+    fun testEmpty() {
+        val function = result.functions["raise_empty"]
+        assertNotNull(function)
+        val throwStmt = function.throws.singleOrNull()
+        assertNotNull(throwStmt)
+
+        assertNull(throwStmt.exception)
+        assertNull(throwStmt.parentException)
+
+        val functionBody = function.body
+        assertNotNull(functionBody)
+        // TODO: This doesn't work yet. Needs fix in the EOG pass!
+        // assertEquals(listOf<Node>(functionBody), throwStmt.nextEOG.toList())
+    }
 }

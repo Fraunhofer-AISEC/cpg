@@ -18,5 +18,8 @@ def raise_in_try2():
 def raise_without_try():
     raise Exception()
 
+def raise_empty():
+    raise
+
 def raise_with_parent():
     raise Exception() from A()
