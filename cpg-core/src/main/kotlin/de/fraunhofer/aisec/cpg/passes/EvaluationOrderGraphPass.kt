@@ -160,6 +160,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
+        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
     protected fun doNothing() {
@@ -546,27 +547,38 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // TODO(oxisto): These operator codes are highly language specific and might be more suited
         //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
         if (node.operatorCode == "throw") {
-            handleThrowOperator(node)
+            handleThrowOperator(node, node.input)
         } else {
             handleUnspecificUnaryOperator(node)
         }
     }
 
-    protected fun handleThrowOperator(node: UnaryOperator) {
-        val input = node.input
-        createEOG(input)
-
-        val catchingScope =
-            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
-
-        val throwType = input.type
+    /**
+     * Generates the EOG for a [node] which represents a statement/expression which throws an
+     * exception. Since some languages may accept different inputs to a throw statement (typically
+     * 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input which is
+     * evaluated first, must be the first item in the vararg! Any `null` object in `inputs` will be
+     * filtered. We connect the throw statement internally, i.e., the inputs are evaluated from
+     * index 0 to n and then the whole node is evaluated.
+     */
+    protected fun handleThrowOperator(node: Node, vararg inputs: Expression?) {
+        inputs.filterNotNull().forEach { createEOG(it) }
         pushToEOG(node)
-        if (catchingScope is TryScope) {
-            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
-        } else if (catchingScope is FunctionScope) {
-            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+
+        val input = inputs.firstOrNull()
+        val throwType = input?.type
+        if (throwType != null) {
+            val catchingScope =
+                scopeManager.firstScopeOrNull { scope ->
+                    scope is TryScope || scope is FunctionScope
+                }
+            if (catchingScope is TryScope) {
+                catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+            } else if (catchingScope is FunctionScope) {
+                catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+            }
         }
-        currentPredecessors.clear()
+        currentPredecessors.clear() // TODO: Should this be here or inside the if statement?
     }
 
     /**
@@ -1030,6 +1042,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Include the node as part of the EOG itself, but we do not need to go into any children or
         // properties here
         pushToEOG(stmt)
+    }
+
+    /** This is copied & pasted with minimal adjustments from [handleThrowOperator]. */
+    protected fun handleThrowStatement(statement: ThrowStatement) {
+        handleThrowOperator(statement, statement.exception, statement.parentException)
     }
 
     companion object {
