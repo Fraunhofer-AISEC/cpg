@@ -52,9 +52,19 @@ abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
 
     companion object {
         /**
-         * A prefix to add to random names when handling for loops with multiple variables and
-         * having to add implicit assignments for the unwrapping process.
+         * A prefix to add to random names when having to add implicit assignments. Used when
+         * handling loops with multiple variables.
          */
         const val LOOP_VAR_PREFIX = "loopMultiVarHelperVar"
+        /**
+         * A prefix to add to random names representing implicit context managers in `with`
+         * statements.
+         */
+        const val CONTEXT_MANAGER = "contextManager"
+        /**
+         * A prefix to add to random names representing implicit `tmpVal` nodes in `with`
+         * statements.
+         */
+        const val WITH_TMP_VAL = "withTmpVal"
     }
 }
