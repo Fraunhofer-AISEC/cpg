@@ -284,8 +284,8 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
  * expression handler.
  */
 context(CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
-    setCodeAndLocation(this@CodeAndLocationProvider, rawNode)
+fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T {
+    rawNode?.let { setCodeAndLocation(this@CodeAndLocationProvider, it) }
     return this
 }
 

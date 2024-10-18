@@ -72,13 +72,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
-            is Python.AST.With -> handleWithStatement(node)
+            is Python.AST.With,
+            is Python.AST.AsyncWith -> handleWithStatement(node)
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Match,
             is Python.AST.Raise,
-            is Python.AST.TryStar,
-            is Python.AST.AsyncWith ->
+            is Python.AST.TryStar ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
@@ -122,7 +122,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      *     manager.__exit__(None, None, None)
      * ```
      */
-    private fun handleWithStatement(node: Python.AST.With): Block {
+    private fun handleWithStatement(node: Python.AST.NormalOrAsyncWith): Block {
         /**
          * Prepares the `manager = ContextManager()` and returns the random name for the "manager"
          * as well as the assignment.
@@ -236,8 +236,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 tmpValName
             )
         }
-
-        val result = newBlock().codeAndLocationFromOtherRawNode(node).implicit()
+        val result =
+            newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
 
         // If there are multiple elements in node.items, we have to nest the try statements.
         // We start with a generic block for the outer context manager.
@@ -283,7 +283,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                         )
                                     }
                                 }
-                                .codeAndLocationFromOtherRawNode(node)
+                                .codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt)
                                 .implicit()
                         // Add the catch block
                         this.catchClauses.add(
