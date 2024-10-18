@@ -553,6 +553,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
+    /**
+     * Generates the EOG for a [node] which represents a statement/expression which throws an
+     * exception. Since some languages may accept different inputs to a throw statement (typically
+     * 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input which is
+     * evaluated first, must be the first item in the vararg! Any `null` object in `inputs` will be
+     * filtered. We connect the throw statement internally, i.e., the inputs are evaluated from
+     * index 0 to n and then the whole node is evaluated.
+     */
     protected fun handleThrowOperator(node: Node, vararg inputs: Expression?) {
         inputs.filterNotNull().forEach { createEOG(it) }
         pushToEOG(node)
