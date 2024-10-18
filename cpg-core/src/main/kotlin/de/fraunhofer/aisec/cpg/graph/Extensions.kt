@@ -613,6 +613,32 @@ val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
+ * This function tries to find the first parent node that satisfies the condition specified
+ * in [predicate]. It starts searching in the [searchNode], moving up-wards using the
+ * [Node.astParent] attribute.
+ *
+ * @param searchNode the child node that we start the search from
+ * @param predicate the search predicate
+ */
+fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+
+    // start at searchNodes parent
+    var node: Node? = this.astParent
+
+    while (node != null) {
+        if (predicate(node)) {
+            return node
+        }
+
+        // go up-wards in the ast tree
+        node = node.astParent
+    }
+
+    return null
+}
+}
+
+/**
  * Return all [ProblemNode] children in this graph (either stored directly or in
  * [Node.additionalProblems]), starting with this [Node].
  */

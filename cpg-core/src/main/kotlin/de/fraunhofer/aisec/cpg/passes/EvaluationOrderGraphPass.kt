@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -570,7 +571,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if(throwType != null) {
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
-                firstParentOrNull(node) { parent ->
+                node.firstParentOrNull { parent ->
                     parent is TryStatement || parent is FunctionDeclaration
                 }
             if (handlingOrRelayingParent != null) {
@@ -678,7 +679,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerCatchingNode =
-            firstParentOrNull(node) { parent -> parent is TryStatement || parent is LoopStatement }
+            node.firstParentOrNull { parent -> parent is TryStatement || parent is LoopStatement }
         if (outerCatchingNode != null) {
             // Forwarding is done by merging the currently associated throws to a type with the new
             // throws based on their type
@@ -703,7 +704,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val label = node.label
         val continuableNode =
             if (label == null) {
-                firstParentOrNull(node) { it.isContinuable() }
+                node.firstParentOrNull { it.isContinuable() }
             } else {
                 // If a label was specified, the continue is associated to a node explicitly labeled
                 // with the same label
@@ -734,7 +735,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val label = node.label
         val breakableNode =
             if (label == null) {
-                firstParentOrNull(node) { it.isBreakable() }
+                node.firstParentOrNull { it.isBreakable() }
             } else {
                 getLabeledASTNode(node, label)
             }
@@ -1133,32 +1134,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
             }
             return ret
-        }
-
-        /**
-         * This function tries to find the first parent node that satisfies the condition specified
-         * in [predicate]. It starts searching in the [searchNode], moving up-wards using the
-         * [Node.astParent] attribute.
-         *
-         * @param searchNode the child node that we start the search from
-         * @param predicate the search predicate
-         */
-        @JvmOverloads
-        fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
-
-            // start at searchNodes parent
-            var node: Node? = searchNode.astParent
-
-            while (node != null) {
-                if (predicate.test(node)) {
-                    return node
-                }
-
-                // go up-wards in the ast tree
-                node = node.astParent
-            }
-
-            return null
         }
     }
 
