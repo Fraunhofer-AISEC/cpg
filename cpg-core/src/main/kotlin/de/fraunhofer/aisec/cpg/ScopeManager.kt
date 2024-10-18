@@ -322,24 +322,6 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Enters the scope of the closest astParent that is associated to a scope. This function can be
-     * used to enter the appropriate enclosing scope of any ast node, as long as the frontend build
-     * the scope tree over the entire code base. Entering is conditional, if no parent is scoped,
-     * this function does not create a new scope, similar to [enterScopeIfExists]
-     */
-    fun enterScopeOfNearestParent(node: Node?) {
-        var currentNode = node
-        do {
-            if (scopeMap.containsKey(currentNode)) {
-                val scope = scopeMap[currentNode]
-                currentScope = scope
-                break
-            }
-            currentNode = currentNode?.astParent
-        } while (currentNode != null)
-    }
-
-    /**
      * The counter-part of [enterScope]. Language frontends need to call this function, when the
      * scope of the currently processed AST node ends. There MUST have been a corresponding
      * [enterScope] call with the same [nodeToLeave], otherwise the scope-tree might be corrupted.
