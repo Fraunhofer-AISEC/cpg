@@ -139,7 +139,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-
     /** Handle a [ThrowStatement]. The exception and parent exception flow into the node. */
     protected fun handleThrowStatement(node: ThrowStatement) {
         node.exception?.let { node.prevDFGEdges += it }
