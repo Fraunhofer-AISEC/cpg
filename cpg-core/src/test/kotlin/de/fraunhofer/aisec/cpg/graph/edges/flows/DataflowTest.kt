@@ -25,13 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
+import de.fraunhofer.aisec.cpg.GraphExamples.Companion.prepareThrowDFGTest
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.ThrowStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.collections.firstOrNull
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
 class DataflowTest {
@@ -100,5 +105,26 @@ class DataflowTest {
             // should contain 0 prevDFG edge now
             assertEquals(0, node2.prevDFGEdges.size)
         }
+    }
+
+    @Test
+    fun testThrow() {
+        val result = prepareThrowDFGTest()
+
+        // Let's assert that we did this correctly
+        val main = result.functions["foo"]
+        assertNotNull(main)
+        val body = main.body
+        assertIs<Block>(body)
+
+        val throwStmt = body.statements.getOrNull(1)
+        assertIs<ThrowStatement>(throwStmt)
+        assertNotNull(throwStmt.exception)
+        val throwCall = throwStmt.exception
+        assertIs<CallExpression>(throwCall)
+
+        val someError = result.calls["SomeError"]
+        assertIs<CallExpression>(someError)
+        assertContains(throwStmt.prevDFG, someError)
     }
 }

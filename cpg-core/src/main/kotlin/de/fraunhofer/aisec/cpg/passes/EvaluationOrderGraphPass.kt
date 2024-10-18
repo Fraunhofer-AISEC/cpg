@@ -188,6 +188,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
+        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
     protected fun doNothing() {
@@ -548,30 +549,39 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // TODO(oxisto): These operator codes are highly language specific and might be more suited
         //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
         if (node.operatorCode == "throw") {
-            handleThrowOperator(node)
+            handleThrowOperator(node, node.input.type, node.input)
         } else {
             handleUnspecificUnaryOperator(node)
         }
     }
 
-    protected fun handleThrowOperator(node: UnaryOperator) {
-        val input = node.input
-        handleEOG(input)
-        val throwType = input.type
+    /**
+     * Generates the EOG for a [node] which represents a statement/expression which throws an
+     * exception. Since some languages may accept different inputs to a throw statement (typically
+     * 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input which is
+     * evaluated first, must be the first item in the vararg! Any `null` object in `inputs` will be
+     * filtered. We connect the throw statement internally, i.e., the inputs are evaluated from
+     * index 0 to n and then the whole node is evaluated.
+     */
+    protected fun handleThrowOperator(node: Node, throwType: Type?, vararg inputs: Expression?) {
+        inputs.filterNotNull().forEach { handleEOG(it) }
         attachToEOG(node)
-        // Here we identify the encapsulating ast node that can handle or relay a throw
-        val handlingOrRelayingParent =
-            firstParentOrNull(node) { parent ->
-                parent is TryStatement || parent is FunctionDeclaration
+        
+        if(throwType != null) {
+            // Here, we identify the encapsulating ast node that can handle or relay a throw
+            val handlingOrRelayingParent =
+                firstParentOrNull(node) { parent ->
+                    parent is TryStatement || parent is FunctionDeclaration
+                }
+            if (handlingOrRelayingParent != null) {
+                val throwByTypeMap = nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
+                val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
+                throwEOGExits.addAll(currentPredecessors.toMutableList())
+            } else {
+                LOGGER.error(
+                    "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
+                )
             }
-        if (handlingOrRelayingParent != null) {
-            val throwByTypeMap = nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
-            val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
-            throwEOGExits.addAll(currentPredecessors.toMutableList())
-        } else {
-            LOGGER.error(
-                "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
-            )
         }
         // After a throw, the eog is not progressing in the following ast subtrees
         currentPredecessors.clear()
@@ -1048,12 +1058,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /** We use the scope where the current [node] is in, to find a statement labeled with [label] */
     fun getLabeledASTNode(node: Node, label: String): Node? {
-        scopeManager.jumpTo(node.scope)
+        scopeManager.enterScopeOfNearestParent(node)
         val labelStatement = scopeManager.getLabelStatement(label)
         labelStatement?.subStatement?.let {
             return it
         }
         return null
+    }
+
+    /** This is copied & pasted with minimal adjustments from [handleThrowOperator]. */
+    protected fun handleThrowStatement(statement: ThrowStatement) {
+        handleThrowOperator(statement, statement.exception?.type, statement.exception, statement.parentException)
     }
 
     companion object {
@@ -1148,8 +1163,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * EOG entries that constitute the start of the loop, mostly of
-     * size 1. This list has to be extended if new ast nodes are added that allow for looping.
+     * Statements that constitute the start of the Loop depending on the used pass, mostly of
+     * size 1. THis list has to be extended if new structures are added that allow for looping.
      */
     val LoopStatement.starts: List<Node>
         get() =
@@ -1176,7 +1191,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
                 else -> {
                     LOGGER.error(
-                        "Currently the node type {} does not have a defined loop start.",
+                        "Currently the component {} does not have a defined loop start.",
                         this?.javaClass
                     )
                     ArrayList()
@@ -1192,17 +1207,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         get() =
             when (this) {
                 is WhileStatement ->
-                    listOfNotNull(this.condition, this.conditionDeclaration)
-                is ForStatement -> listOfNotNull(this.condition)
-                is ForEachStatement -> listOfNotNull(this.variable)
-                is DoStatement -> listOfNotNull(this.condition)
-                is AssertStatement -> listOfNotNull(this.condition)
+                    mutableListOf(this.condition, this.conditionDeclaration).filterNotNull()
+                is ForStatement -> mutableListOf(this.condition).filterNotNull()
+                is ForEachStatement -> mutableListOf(this.variable).filterNotNull()
+                is DoStatement -> mutableListOf(this.condition).filterNotNull()
+                is AssertStatement -> mutableListOf(this.condition).filterNotNull()
                 else -> {
                     LOGGER.error(
-                        "Currently the node type {} does not have defined conditions",
+                        "Currently the component {} does not have defined conditions",
                         this.javaClass
                     )
-                    listOf()
+                    mutableListOf()
                 }
             }
 

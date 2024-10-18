@@ -791,10 +791,12 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang-modules")
         val result =
             analyze(
+                // the order does not matter anymore now, so we intentionally keep it in the reverse
+                // order
                 listOf(
-                    topLevel.resolve("awesome.go").toFile(),
                     topLevel.resolve("cmd/awesome/main.go").toFile(),
                     topLevel.resolve("util/stuff.go").toFile(),
+                    topLevel.resolve("awesome.go").toFile(),
                 ),
                 topLevel,
                 true
@@ -806,20 +808,20 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(app)
 
         val tus = app.translationUnits
-        val tu0 = tus[0]
-        assertNotNull(tu0)
+        val tuAwesome = tus.firstOrNull { it.name.endsWith("awesome.go") }
+        assertNotNull(tuAwesome)
 
-        val newAwesome = tu0.functions["awesome.NewAwesome"]
+        val newAwesome = tuAwesome.functions["awesome.NewAwesome"]
         assertNotNull(newAwesome)
 
-        val tu1 = tus[1]
-        assertNotNull(tu1)
+        val tuMain = tus.firstOrNull { it.name.endsWith("main.go") }
+        assertNotNull(tuMain)
 
-        val import = tu1.imports["awesome"]
+        val import = tuMain.imports["awesome"]
         assertNotNull(import)
         assertEquals("example.io/awesome", import.importURL)
 
-        val main = tu1.functions["main.main"]
+        val main = tuMain.functions["main.main"]
         assertNotNull(main)
 
         val a = main.variables["a"]
@@ -1185,8 +1187,6 @@ class GoLanguageFrontendTest : BaseTest() {
         val result =
             analyze(
                 listOf(
-                    // We need to keep them in this particular order, otherwise we will not resolve
-                    // cross-package correctly yet
                     topLevel.resolve("api/apiv1.go").toFile(),
                     topLevel.resolve("packages.go").toFile(),
                     topLevel.resolve("cmd/packages/packages.go").toFile(),
