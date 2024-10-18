@@ -613,9 +613,9 @@ val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
- * This function tries to find the first parent node that satisfies the condition specified
- * in [predicate]. It starts searching in the [searchNode], moving up-wards using the
- * [Node.astParent] attribute.
+ * This function tries to find the first parent node that satisfies the condition specified in
+ * [predicate]. It starts searching in the [searchNode], moving up-wards using the [Node.astParent]
+ * attribute.
  *
  * @param searchNode the child node that we start the search from
  * @param predicate the search predicate
@@ -635,7 +635,6 @@ fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
     }
 
     return null
-}
 }
 
 /**

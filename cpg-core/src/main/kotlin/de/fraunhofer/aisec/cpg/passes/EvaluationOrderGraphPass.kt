@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
-import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
 /**
@@ -99,8 +98,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * This maps nodes that have to handle [BreakStatement]s and [ContinueStatement]s, i.e.
-     * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle.
-     * An entry will only be created if the statement was identified to handle the above mentioned
+     * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle. An
+     * entry will only be created if the statement was identified to handle the above mentioned
      * control flow statements.
      */
     val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
@@ -567,15 +566,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleThrowOperator(node: Node, throwType: Type?, vararg inputs: Expression?) {
         inputs.filterNotNull().forEach { handleEOG(it) }
         attachToEOG(node)
-        
-        if(throwType != null) {
+
+        if (throwType != null) {
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
                 node.firstParentOrNull { parent ->
                     parent is TryStatement || parent is FunctionDeclaration
                 }
             if (handlingOrRelayingParent != null) {
-                val throwByTypeMap = nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
+                val throwByTypeMap =
+                    nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
                 val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
                 throwEOGExits.addAll(currentPredecessors.toMutableList())
             } else {
@@ -1069,7 +1069,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /** This is copied & pasted with minimal adjustments from [handleThrowOperator]. */
     protected fun handleThrowStatement(statement: ThrowStatement) {
-        handleThrowOperator(statement, statement.exception?.type, statement.exception, statement.parentException)
+        handleThrowOperator(
+            statement,
+            statement.exception?.type,
+            statement.exception,
+            statement.parentException
+        )
     }
 
     companion object {

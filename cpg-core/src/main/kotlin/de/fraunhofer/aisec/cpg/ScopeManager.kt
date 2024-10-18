@@ -486,9 +486,9 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts the feature of
-     * some languages to attach a label to a point in the source code and use it as the target for control flow
-     * manipulation, e.g. [BreakStatement], [GotoStatement].
+     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts
+     * the feature of some languages to attach a label to a point in the source code and use it as
+     * the target for control flow manipulation, e.g. [BreakStatement], [GotoStatement].
      */
     fun getLabelStatement(labelString: String?): LabelStatement? {
         if (labelString == null) return null
