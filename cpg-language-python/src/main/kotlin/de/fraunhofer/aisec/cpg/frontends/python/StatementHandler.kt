@@ -75,8 +75,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.With -> handleWithStatement(node)
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
+            is Python.AST.Raise -> handleRaise(node)
             is Python.AST.Match,
-            is Python.AST.Raise,
             is Python.AST.TryStar,
             is Python.AST.AsyncWith ->
                 newProblemExpression(
@@ -84,6 +84,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
+     * [ThrowStatement].
+     */
+    private fun handleRaise(node: Python.AST.Raise): ThrowStatement {
+        val ret = newThrowStatement(rawNode = node)
+        node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
+        node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
+        return ret
     }
 
     /**
@@ -193,8 +204,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
-            // TODO: Needs #1733 and 1741, then add:
-            //   ifStmt.thenStatement = newThrowStatement().implicit()
+            ifStmt.thenStatement = newThrowStatement().implicit()
             val neg = newUnaryOperator("not", false, false).implicit()
             neg.input = exitCallWithSysExec
             ifStmt.condition = neg
