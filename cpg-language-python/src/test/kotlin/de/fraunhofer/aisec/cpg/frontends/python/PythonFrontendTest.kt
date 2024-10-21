@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -41,6 +42,22 @@ import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
+
+    @Test
+    fun test1740EndlessCDG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("1740_endless_cdg_loop.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<ControlDependenceGraphPass>()
+            }
+        assertNotNull(tu)
+    }
+
     @Test
     fun testNestedFunctions() {
         val topLevel = Path.of("src", "test", "resources", "python")
