@@ -441,7 +441,7 @@ The return value flows to the whole statement.
 Scheme:
 ```mermaid
   flowchart LR
-    exception -- DFG --> node([ReturnStatement]);
+    exception -- DFG --> node([ThrowStatement]);
     parentException -- DFG --> node;
     exception -.- node;
     parentException -.- node;
