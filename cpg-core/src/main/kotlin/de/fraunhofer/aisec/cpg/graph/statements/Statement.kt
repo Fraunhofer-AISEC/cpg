@@ -45,9 +45,9 @@ import org.neo4j.ogm.annotation.Relationship
 @NodeEntity
 abstract class Statement : Node(), DeclarationHolder {
     /**
-     * A list of local variables associated to this statement, defined by their
-     * [VariableDeclaration] extracted from Block because for, while, if, switch can declare locals
-     * in their condition or initializers.
+     * A list of local variables (or other values) associated to this statement, defined by their
+     * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can
+     * declare locals in their condition or initializers.
      *
      * TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
      */
