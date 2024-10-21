@@ -286,18 +286,6 @@ class StatementHandlerTest : BaseTest() {
     }
 
     @Test
-    fun testNonlocal() {
-        var file = topLevel.resolve("nonlocal.py").toFile()
-        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
-        assertNotNull(result)
-
-        // There will be only 1 variable declarations because we are currently not adding nested
-        // functions to the AST properly :(
-        var cVariables = result.variables("c")
-        assertEquals(1, cVariables.size)
-    }
-
-    @Test
     fun testNonLocal() {
         var file = topLevel.resolve("nonlocal.py").toFile()
         val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
