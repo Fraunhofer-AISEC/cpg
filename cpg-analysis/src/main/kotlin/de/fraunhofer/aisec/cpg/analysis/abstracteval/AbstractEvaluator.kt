@@ -30,10 +30,12 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Integer
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.MutableList
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.State
-import de.fraunhofer.aisec.cpg.helpers.Worklist
-import de.fraunhofer.aisec.cpg.helpers.iterateEOG
+import de.fraunhofer.aisec.cpg.helpers.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
@@ -105,12 +107,17 @@ class AbstractEvaluator {
                 // Overwrite current interval, mark this node as needs narrowing
                 newState[currentNode] = IntervalLattice(widenedInterval)
                 currentNode.nextEOG.forEach {
-                    worklist.evaluationStateMap[it] = Worklist.EvaluationState.WIDENING
+                    if (!isLoopEnd(it)) {
+                        worklist.evaluationStateMap[it] = Worklist.EvaluationState.WIDENING
+                    }
                 }
                 worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.NARROWING
             } else {
                 // NO: mark the current node as DONE
-                worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.DONE
+                // We never mark loop heads as DONE as they prevent loop entering otherwise
+                if (!isLoopHead(currentNode)) {
+                    worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.DONE
+                }
             }
         }
 
@@ -128,19 +135,30 @@ class AbstractEvaluator {
                 }
             } else {
                 // NO: mark the node as DONE
-                worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.DONE
+                // We never mark loop heads as DONE as they prevent loop entering otherwise
+                if (!isLoopHead(currentNode)) {
+                    worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.DONE
+                }
             }
         }
 
-        // If it was seen for the first time apply the effect and mark it as "NEEDS WIDENING"
+        // If it was seen for the first time apply the effect and maybe mark it as "NEEDS WIDENING"
         // We cannot use the "already_seen" field as it is set before this handler is called
         else {
             newState[currentNode] = IntervalLattice(newInterval)
-            worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.WIDENING
+            // We mark the node as needs widening if it is either a loop head or any previous node
+            // is marked, but not if the current node ends a loop
+            if (
+                isLoopHead(currentNode) ||
+                    (currentNode.prevEOG.any { worklist.needsWidening(it) } &&
+                        !isLoopEnd(currentNode))
+            ) {
+                worklist.evaluationStateMap[currentNode] = Worklist.EvaluationState.WIDENING
+            }
         }
 
         // We propagate the current Interval to all successor nodes which are empty
-        // If the next EOG already has a value we need to join all of its predecessors
+        // If the next EOG already has a value we need to join them
         // This is implemented in IntervalState.push
         // Only do this if we have not reached the goal node
         if (currentNode != goalNode) {
@@ -177,5 +195,25 @@ class AbstractEvaluator {
             name == "int" -> Integer::class
             else -> MutableList::class // throw NotImplementedException()
         }
+    }
+
+    /** This method checks for known loop heads such as For, While or Do. */
+    private fun isLoopHead(node: Node): Boolean {
+        return when (node) {
+            is ForStatement,
+            is WhileStatement,
+            is ForEachStatement,
+            is DoStatement -> true
+            else -> false
+        }
+    }
+
+    /**
+     * This method checks if the current node marks the end of a loop. It assumes that nextEOG[1] of
+     * the loop head always points to the loop end.
+     */
+    private fun isLoopEnd(node: Node): Boolean {
+        val head = node.prevEOG.firstOrNull { isLoopHead(it) } ?: return false
+        return head.nextEOG[1] == node
     }
 }
