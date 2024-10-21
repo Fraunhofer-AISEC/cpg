@@ -159,6 +159,29 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    fun joinListWithBinOp(
+        operatorCode: String,
+        nodes: List<Expression>,
+        rawNode: Python.AST.AST? = null,
+        isImplicit: Boolean = true
+    ): BinaryOperator {
+        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
+        lastTwo.rhs = nodes.last()
+        lastTwo.lhs = nodes[nodes.size - 2]
+        return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
+            val nextValue = newBinaryOperator(operatorCode)
+            if (isImplicit && rawNode != null)
+                nextValue.implicit(
+                    code = frontend.codeOf(rawNode),
+                    location = frontend.locationOf(rawNode)
+                )
+            else if (isImplicit) nextValue.implicit()
+            nextValue.rhs = start
+            nextValue.lhs = newVal
+            nextValue
+        }
+    }
+
     private fun handleStarred(node: Python.AST.Starred): Expression {
         val unaryOp = newUnaryOperator("*", postfix = false, prefix = false, rawNode = node)
         unaryOp.input = handle(node.value)
@@ -203,18 +226,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 rawNode = node
             )
         } else {
-            // Start with the last two operands, then keep prepending the previous ones until the
-            // list is finished.
-            val lastTwo = newBinaryOperator(op, rawNode = node)
-            lastTwo.rhs = handle(node.values.last())
-            lastTwo.lhs = handle(node.values[node.values.size - 2])
-            return node.values.subList(0, node.values.size - 2).foldRight(lastTwo) { newVal, start
-                ->
-                val nextValue = newBinaryOperator(op, rawNode = node)
-                nextValue.rhs = start
-                nextValue.lhs = handle(newVal)
-                nextValue
-            }
+            joinListWithBinOp(op, node.values.map(::handle), node, true)
         }
     }
 
