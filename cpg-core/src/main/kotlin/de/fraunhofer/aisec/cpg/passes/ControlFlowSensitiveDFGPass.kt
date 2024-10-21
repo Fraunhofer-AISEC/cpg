@@ -361,6 +361,64 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // the other steps
                 state.push(currentNode, it)
             }
+        } else if (currentNode is ComprehensionExpression) {
+            val iterable = currentNode.iterable as? Expression
+            val (writtenTo, writtenTo2) =
+                when (val variable = currentNode.variable) {
+                    is DeclarationStatement -> {
+                        if (variable.isSingleDeclaration()) {
+                            Pair(variable.singleDeclaration, null)
+                        } else if (variable.declarations.size == 2) {
+                            Pair(variable.declarations.first(), variable.declarations.last())
+                        } else {
+                            Pair(null, null)
+                        }
+                    }
+                    else -> Pair(currentNode.variable, null)
+                }
+            // We wrote something to this variable declaration
+            writtenTo?.let {
+                writtenDeclaration =
+                    when (writtenTo) {
+                        is Declaration -> writtenTo
+                        is Reference -> writtenTo.refersTo
+                        else -> {
+                            log.error(
+                                "The variable of type ${writtenTo.javaClass} is not yet supported in the ComprehensionExpression"
+                            )
+                            null
+                        }
+                    }
+
+                iterable?.let {
+                    state.push(writtenTo, PowersetLattice(identitySetOf(iterable)))
+                    // Add the variable declaration (or the reference) to the list of previous
+                    // write nodes in this path
+                    state.declarationsState[writtenDeclaration] =
+                        PowersetLattice(identitySetOf(writtenTo))
+                }
+            }
+            writtenTo2?.let {
+                val writtenDeclaration2 =
+                    when (writtenTo2) {
+                        is Declaration -> writtenTo2
+                        is Reference -> writtenTo2.refersTo
+                        else -> {
+                            log.error(
+                                "The variable of type ${writtenTo2.javaClass} is not yet supported in the ComprehensionExpression"
+                            )
+                            null
+                        }
+                    }
+
+                iterable?.let {
+                    state.push(writtenTo2, PowersetLattice(identitySetOf(iterable)))
+                    // Add the variable declaration (or the reference) to the list of previous
+                    // write nodes in this path
+                    state.declarationsState[writtenDeclaration2] =
+                        PowersetLattice(identitySetOf(writtenTo2))
+                }
+            }
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
             // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
