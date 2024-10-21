@@ -36,7 +36,9 @@ import org.apache.commons.lang3.NotImplementedException
 
 class Integer : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
-        if (node is VariableDeclaration && node.initializer != null) {
+        if (
+            node is VariableDeclaration && node.initializer != null && node.name.localName == name
+        ) {
             val initValue =
                 when (val init = node.initializer) {
                     is Literal<*> -> init.value as? Int ?: throw NotImplementedException()
