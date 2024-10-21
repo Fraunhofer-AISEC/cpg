@@ -249,6 +249,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val result =
             newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
 
+        addAsyncWarning(node, result)
+
         // If there are multiple elements in node.items, we have to nest the try statements.
         // We start with a generic block for the outer context manager.
         // For i > 1, we add context_manager[i] to the try-block of item[i-1]
@@ -525,14 +527,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEachStatement {
         val ret = newForEachStatement(rawNode = node)
-        if (node is IsAsync) {
-            ret.addDeclaration(
-                newProblemDeclaration(
-                    problem = "The \"async\" keyword is not yet supported.",
-                    rawNode = node
-                )
-            )
-        }
+        addAsyncWarning(node, ret)
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
 
@@ -753,14 +748,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        if (s is Python.AST.AsyncFunctionDef) {
-            result.addDeclaration(
-                newProblemDeclaration(
-                    problem = "The \"async\" keyword is not yet supported.",
-                    rawNode = s
-                )
-            )
-        }
+        addAsyncWarning(s, result)
 
         // Handle decorators (which are translated into CPG "annotations")
         result.annotations += handleAnnotations(s)
@@ -1115,5 +1103,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
         return declStmt
+    }
+
+    /**
+     * Checks whether [mightBeAsync] has the [IsAsync] property and adds a warning to the
+     * corresponding [parentNode] stored in [Node.additionalProblems].
+     */
+    private fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
+        if (mightBeAsync is IsAsync) {
+            parentNode.additionalProblems +=
+                newProblemDeclaration(
+                    problem = "The \"async\" keyword is not yet supported.",
+                    rawNode = mightBeAsync
+                )
+        }
     }
 }
