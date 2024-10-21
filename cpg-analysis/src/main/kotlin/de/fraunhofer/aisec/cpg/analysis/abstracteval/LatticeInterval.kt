@@ -304,14 +304,10 @@ class IntervalState : State<Node, LatticeInterval>() {
         }
         val current = this[newNode] as? IntervalLattice
         if (current != null) {
-            val joinedElement =
-                newNode.prevEOG.fold(newLatticeElement) { acc, predecessor ->
-                    if (this[predecessor]?.elements != null) {
-                        acc.lub(this[predecessor]!!)
-                    } else {
-                        acc
-                    }
-                }
+            // Calculate the join of the new Element and the previous (propagated) value for the
+            // node
+            val joinedElement = current.lub(newLatticeElement)
+            // Use the joinedElement if it differs from before
             if (joinedElement != this[newNode]) {
                 this[newNode] = joinedElement
                 return true
