@@ -297,8 +297,6 @@ class StatementHandlerTest : BaseTest() {
         assertEquals(1, cVariables.size)
     }
 
-    // TODO(oxisto): Re-renable this once we parse nested functions
-    @Ignore
     @Test
     fun testNonLocal() {
         var file = topLevel.resolve("nonlocal.py").toFile()
