@@ -684,7 +684,6 @@ flowchart LR
   parent -.-> child1
 ```
 Alternative2:
-Alternative:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -697,6 +696,21 @@ flowchart LR
   parent --EOG:true--> child3["statement"]
   child3 --EOG--> child1
   parent --EOG:false--> next:::outer
+  parent -.-> child3
+  parent -.-> child2
+  parent -.-> child1
+```
+Alternative3:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["comprehensionExpressions[0]"]
+  child1 --EOG:true--> child2["comprehensionExpressions[n]"]
+  child2 --EOG:true--> child3["statement"]
+  child2 --EOG:false--> child1["comprehensionExpressions[0]"]
+  child1 --EOG:false--> parent(["CollectionComprehension"])
+  child3 --EOG--> child2
+  parent --EOG--> next:::outer
   parent -.-> child3
   parent -.-> child2
   parent -.-> child1
@@ -718,9 +732,9 @@ flowchart LR
   prev:::outer --EOG--> child1["iterable"]
   child1 --EOG--> child2["variable"]
   child2 --EOG--> child3["predicate"]
-  child3 --EOG:false--> child1
   child3 --EOG:true--> parent(["ComprehensionExpression"])
-  parent --EOG--> next:::outer
+  parent --EOG:true--> enter:::outer
+  parent --EOG:false--> exit:::outer
   parent -.-> child3
   parent -.-> child2
   parent -.-> child1
