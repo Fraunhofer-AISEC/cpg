@@ -151,13 +151,16 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 if (
                                     update &&
                                         alreadySeen.none {
-                                            it.first == entry.first && it.second == entry.second
+                                            it.first == entry.first &&
+                                                it.second.containsAll(entry.second)
                                         }
                                 )
                                     dominatorsList.add(entry)
                                 else finalDominators.add(entry)
                             }
-                            alreadySeen.none { it.first == newK && it.second == newV } -> {
+                            alreadySeen.none {
+                                it.first == newK && it.second.containsAll(newV)
+                            } -> {
                                 // We don't have an entry yet => add a new one
                                 val newEntry = Pair(newK, newV.toMutableSet())
                                 dominatorsList.add(newEntry)
