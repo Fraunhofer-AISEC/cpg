@@ -730,7 +730,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["iterable"]
-  child1 --EOG--> child2["variable"]
+  child1 --EOG:true--> child2["variable"]
   child2 --EOG--> child3["predicate"]
   child3 --EOG--> parent(["ComprehensionExpression"])
   parent --EOG:true--> enter:::outer
