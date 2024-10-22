@@ -732,7 +732,7 @@ flowchart LR
   prev:::outer --EOG--> child1["iterable"]
   child1 --EOG--> child2["variable"]
   child2 --EOG--> child3["predicate"]
-  child3 --EOG:true--> parent(["ComprehensionExpression"])
+  child3 --EOG--> parent(["ComprehensionExpression"])
   parent --EOG:true--> enter:::outer
   parent --EOG:false--> exit:::outer
   parent -.-> child3
