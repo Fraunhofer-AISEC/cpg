@@ -951,19 +951,54 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     private fun handleComprehensionExpression(node: ComprehensionExpression) {
         handleEOG(node.iterable)
+        // When the iterable contains another element, the variable is evaluated with the
+        // nextElement. Therefore we ad a
+        // true edge.
+        nextEdgeBranch = true
         handleEOG(node.variable)
         handleEOG(node.predicate)
         attachToEOG(node)
+
+        // If the conditions evaluated to false, we need to retrieve the next element, therefore
+        // evaluating the iterable
+        drawEOGToEntriesOf(currentPredecessors, node.iterable, branchLabel = false)
+
+        // If an element was found that fulfills the condition, we move forward
+        nextEdgeBranch = true
     }
 
     private fun handleCollectionComprehension(node: CollectionComprehension) {
         // Process the comprehension expressions from 0 to n and connect the EOG of i to i+1.
-        node.comprehensionExpressions.forEach { handleEOG(it) }
-        // TODO: Then, the EOG goes to the statement
-        handleEOG(node.statement)
-        // TODO: And jumps back to the first thing in the comprehension expressions
+        var prevComprehensionExpression: ComprehensionExpression? = null
+        var noMoreElementsEOGExits = listOf<Node>()
+        node.comprehensionExpressions.forEach {
+            handleEOG(it)
 
-        // Then goes to the whole node and we're done
+            // [ComprehensionExpression] yields no more elements => EOG:false
+            val prevComp = prevComprehensionExpression
+            if (prevComp == null) {
+                // We handle the EOG:false edges of the outermost comprehensionExpression later,
+                // they continue the
+                // path of execution when no more elements are yielded
+                noMoreElementsEOGExits = currentPredecessors.toList()
+            } else {
+                drawEOGToEntriesOf(currentPredecessors, prevComp.iterable, branchLabel = false)
+            }
+            prevComprehensionExpression = it
+
+            // [ComprehensionExpression] yields and element => EOG:true
+            nextEdgeBranch = true
+        }
+
+        handleEOG(node.statement)
+        // After evaluating the statement we
+        node.comprehensionExpressions.last().let {
+            drawEOGToEntriesOf(currentPredecessors, it.iterable)
+        }
+        currentPredecessors.clear()
+        currentPredecessors.addAll(noMoreElementsEOGExits)
+        nextEdgeBranch =
+            false // This path is followed when the comprehensions yield no more elements
         attachToEOG(node)
     }
 
@@ -1241,5 +1276,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is LoopStatement -> true
             else -> false
         }
+    }
+
+    fun drawEOGToEntriesOf(from: List<Node>, toEntriesOf: Node?, branchLabel: Boolean? = null) {
+        val tmpBranchLabel = nextEdgeBranch
+        branchLabel?.let { nextEdgeBranch = it }
+        SubgraphWalker.getEOGPathEdges(toEntriesOf).entries.forEach { entrance ->
+            addMultipleIncomingEOGEdges(from, entrance)
+        }
+        nextEdgeBranch = tmpBranchLabel
     }
 }
