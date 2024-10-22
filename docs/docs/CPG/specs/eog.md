@@ -734,7 +734,8 @@ flowchart LR
   child2 --EOG--> child3["predicate"]
   child3 --EOG--> parent(["ComprehensionExpression"])
   parent --EOG:true--> enter:::outer
-  parent --EOG:false--> exit:::outer
+  parent --EOG:false--> child1
+  child1 --EOG:false--> exit:::outer
   parent -.-> child3
   parent -.-> child2
   parent -.-> child1
