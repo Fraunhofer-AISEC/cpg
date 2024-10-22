@@ -1106,7 +1106,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Checks whether [mightBeAsync] has the [IsAsync] property and adds a warning to the
+     * Checks whether [mightBeAsync] implements the [IsAsync] interface and adds a warning to the
      * corresponding [parentNode] stored in [Node.additionalProblems].
      */
     private fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
