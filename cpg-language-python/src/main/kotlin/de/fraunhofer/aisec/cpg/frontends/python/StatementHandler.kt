@@ -1114,6 +1114,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             parentNode.additionalProblems +=
                 newProblemDeclaration(
                     problem = "The \"async\" keyword is not yet supported.",
+                    problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = mightBeAsync
                 )
         }
