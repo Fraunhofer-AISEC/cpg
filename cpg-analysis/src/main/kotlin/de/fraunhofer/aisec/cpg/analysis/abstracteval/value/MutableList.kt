@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractEvaluator
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.IntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
@@ -92,7 +95,36 @@ class MutableList : Value {
                 val zeroInterval = LatticeInterval.Bounded(0, 0)
                 current.join(zeroInterval)
             }
-            else -> current
+            else -> {
+                // This includes all functions with side effects
+                if (node.arguments.any { it.name.localName == name }) {
+                    // This is a function call that uses the variable as an argument.
+                    // To find side effects we need to create a local evaluator for this function and
+                    // return the value of the renamed variable at the last statement
+                    // TODO: this currently does not work if the variable is given for multiple parameters
+                    // TODO: error handling
+                    val function = node.invokes.first()
+                    val argPos = node.arguments.indexOfFirst { it.name.localName == name }
+
+                    // We cannot take the "first" as that refers to the Block which has no nextEOG
+                    // Also debugging is ugly because the getter of Node.statements is overwritten
+                    val functionStart = function.body.statements[1]
+                    // This could be a Location but the CPG often just hands us "null"
+                    val functionEnd = function.body.statements.last()
+                    val newTargetName = function.parameters[argPos].name.localName
+
+                    val localEvaluator = AbstractEvaluator()
+                    return localEvaluator.evaluate(
+                        newTargetName,
+                        functionStart,
+                        functionEnd,
+                        this::class,
+                        IntervalLattice(current)
+                    )
+                } else {
+                    return current
+                }
+            }
         }
     }
 }
