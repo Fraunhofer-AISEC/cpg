@@ -42,24 +42,39 @@ import org.apache.commons.lang3.NotImplementedException
 
 class AbstractEvaluator {
     // The node for which we want to get the value
-    private lateinit var goalNode: Node
+    private lateinit var targetNode: Node
     // The name of the value we are analyzing
     private lateinit var targetName: String
     // The type of the value we are analyzing
     private lateinit var targetType: KClass<out Value>
 
     fun evaluate(node: Node): LatticeInterval {
-        goalNode = node
-        targetName = node.name.toString()
-        targetType = getType(node)
-        val initializer = getInitializerOf(node, targetType)!!
+        return evaluate(
+            node.name.localName,
+            getInitializerOf(node)!!,
+            node,
+            getType(node),
+            IntervalLattice(LatticeInterval.BOTTOM)
+        )
+    }
+
+    fun evaluate(
+        name: String,
+        start: Node,
+        end: Node,
+        type: KClass<out Value>,
+        interval: IntervalLattice? = null
+    ): LatticeInterval {
+        targetNode = end
+        targetName = name
+        targetType = type
 
         // evaluate effect of each operation on the list until we reach "node"
         val startState = IntervalState()
-        startState.push(initializer, IntervalLattice(LatticeInterval.BOTTOM))
-        val finalState = iterateEOG(initializer, startState, ::handleNode, goalNode)
+        startState.push(start, interval)
+        val finalState = iterateEOG(start, startState, ::handleNode, targetNode)
         // TODO: null-safety
-        return finalState!![node]!!.elements
+        return finalState!![targetNode]!!.elements
     }
 
     /**
@@ -161,15 +176,15 @@ class AbstractEvaluator {
         // If the next EOG already has a value we need to join them
         // This is implemented in IntervalState.push
         // Only do this if we have not reached the goal node
-        if (currentNode != goalNode) {
+        if (currentNode != targetNode) {
             currentNode.nextEOG.forEach { newState.push(it, newState[currentNode]) }
         }
 
         return newState
     }
 
-    private fun getInitializerOf(node: Node, type: KClass<out Value>): Node? {
-        return type.createInstance().getInitializer(node)
+    private fun getInitializerOf(node: Node): Node? {
+        return Value.getInitializer(node)
     }
 
     private fun State<Node, LatticeInterval>.calculateEffect(node: Node): LatticeInterval {
