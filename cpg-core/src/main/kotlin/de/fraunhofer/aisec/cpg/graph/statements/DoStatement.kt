@@ -34,27 +34,21 @@ import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a conditional loop statement of the form: `do{...}while(...)`. */
-class DoStatement : Statement(), ArgumentHolder {
+/**
+ * Represents a conditional loop statement of the form: `do{...}while(...)`. Where the body, usually
+ * a [Block], is executed and re-executed if the [condition] evaluates to true.
+ */
+class DoStatement : LoopStatement(), ArgumentHolder {
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
     var condition by unwrapping(DoStatement::conditionEdge)
 
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-
-    /**
-     * The statement that is going to be executed and re-executed, until the condition evaluates to
-     * false for the first time. Usually a [Block].
-     */
-    var statement by unwrapping(DoStatement::statementEdge)
-
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("condition", condition)
-            .append("statement", statement)
             .toString()
 
     override fun addArgument(expression: Expression) {
@@ -76,8 +70,8 @@ class DoStatement : Statement(), ArgumentHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DoStatement) return false
-        return super.equals(other) && condition == other.condition && statement == other.statement
+        return super.equals(other) && condition == other.condition
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), condition)
 }

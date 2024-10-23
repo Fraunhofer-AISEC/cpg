@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
@@ -48,6 +49,14 @@ class PythonLanguage :
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
+
+    /**
+     * You can either use `=` or `:=` in Python. But the latter is only available in a "named
+     * expression" (`a = (x := 1)`). We still need to include both however, otherwise
+     * [Reference.access] will not be set correctly in "named expressions".
+     */
+    override val simpleAssignmentOperators: Set<String>
+        get() = setOf("=", ":=")
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See

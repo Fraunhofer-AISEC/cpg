@@ -31,11 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class ForStatement : Statement(), BranchingNode {
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    var statement by unwrapping(ForStatement::statementEdge)
+/**
+ * Represents an iterating loop statement of the form `for(initializer; condition; iteration){...}`
+ * that declares variables, can change them in an iteration statement and is executed until the
+ * condition evaluates to false.
+ */
+class ForStatement : LoopStatement(), BranchingNode {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
@@ -54,6 +58,15 @@ class ForStatement : Statement(), BranchingNode {
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
 
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("initializer", initializerStatement)
+            .append("condition", condition)
+            .append("conditionDeclaration", conditionDeclaration)
+            .append("iteration", iterationStatement)
+            .toString()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -62,17 +75,15 @@ class ForStatement : Statement(), BranchingNode {
             return false
         }
 
-        return (super.equals(other) &&
-            statement == other.statement &&
+        return super.equals(other) &&
             initializerStatement == other.initializerStatement &&
             conditionDeclaration == other.conditionDeclaration &&
             condition == other.condition &&
-            iterationStatement == other.iterationStatement)
+            iterationStatement == other.iterationStatement
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
-            this.statement,
             this.condition,
             this.initializerStatement,
             this.conditionDeclaration,

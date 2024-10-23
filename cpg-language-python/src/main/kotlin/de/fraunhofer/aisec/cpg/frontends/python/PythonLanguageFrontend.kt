@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -40,9 +41,11 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.pathString
+import kotlin.io.path.relativeToOrNull
 import kotlin.math.min
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
@@ -76,7 +79,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
-            val tud = pythonASTtoCPG(pyAST, file.name)
+            val tud = pythonASTtoCPG(pyAST, file.toPath())
 
             if (config.matchCommentsToNodes) {
                 it.exec("import tokenize")
@@ -251,27 +254,56 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         // will be invoked by native function
     }
 
-    private fun pythonASTtoCPG(pyAST: PyObject, path: String): TranslationUnitDeclaration {
+    private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
+        var topLevel = config.topLevel ?: path.parent.toFile()
+
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
                 ?: TODO(
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
                 ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
+        val tud = newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule)
         scopeManager.resetToGlobal(tud)
 
-        val nsdName = Path(path).nameWithoutExtension
-        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
-        tud.addDeclaration(nsd)
+        // We need to resolve the path relative to the top level to get the full module identifier
+        // with packages. Note: in reality, only directories that have __init__.py file present are
+        // actually packages, but we skip this for now
+        var relative = path.relativeToOrNull(topLevel.toPath())
+        var module = path.nameWithoutExtension
+        var modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
-        scopeManager.enterScope(nsd)
-        for (stmt in pythonASTModule.body) {
-            nsd.statements += statementHandler.handle(stmt)
+        val lastNamespace =
+            modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
+                var fqn = previous?.name.fqn(path)
+
+                // The __init__ module is very special in Python. The symbols that are declared by
+                // __init__.py are available directly under the path of the package (not module) it
+                // lies in. For example, if the contents of the file foo/bar/__init__.py are
+                // available in the module foo.bar (under the assumption that both foo and bar are
+                // packages). We therefore do not want to create an additional __init__ namespace.
+                // However, in reality, the symbols are actually available in foo.bar as well as in
+                // foo.bar.__init__, although the latter is practically not used, and therefore we
+                // do not support it because major workarounds would be needed.
+                if (path == "__init__") {
+                    previous
+                } else {
+                    val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
+                    nsd.path = relative?.parent?.pathString + "/" + module
+                    scopeManager.addDeclaration(nsd)
+                    scopeManager.enterScope(nsd)
+                    nsd
+                }
+            }
+
+        if (lastNamespace != null) {
+            for (stmt in pythonASTModule.body) {
+                lastNamespace.statements += statementHandler.handle(stmt)
+            }
         }
-        scopeManager.leaveScope(nsd)
 
-        scopeManager.addDeclaration(nsd)
+        // Leave scopes in reverse order
+        tud.allChildren<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
 
         return tud
     }

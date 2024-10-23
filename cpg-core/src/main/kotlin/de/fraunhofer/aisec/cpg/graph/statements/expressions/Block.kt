@@ -45,9 +45,9 @@ open class Block : Expression(), StatementHolder {
     override var statementEdges = astEdgesOf<Statement>()
     override var statements by unwrapping(Block::statementEdges)
     /**
-     * This variable helps to differentiate between static and non static initializer blocks. Static
+     * This variable helps to differentiate between static and non-static initializer blocks. Static
      * initializer blocks are executed when the enclosing declaration is first referred to, e.g.
-     * loaded into the jvm or parsed. Non static initializers are executed on Record construction.
+     * loaded into the jvm or parsed. Non-static initializers are executed on Record construction.
      *
      * If a compound statement is part of a method body, this notion is not relevant.
      */

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -40,6 +42,49 @@ import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
+
+    @Test
+    fun test1740EndlessCDG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("1740_endless_cdg_loop.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<ControlDependenceGraphPass>()
+            }
+        assertNotNull(tu)
+    }
+
+    @Test
+    fun testNestedFunctions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("nested_functions.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+        // Check that all three functions exist
+        val level1 = tu.functions["level1"]
+        assertNotNull(level1)
+        val level2 = tu.functions["level2"]
+        assertNotNull(level2)
+        val level3 = tu.functions["level3"]
+        assertNotNull(level3)
+        // Only level2 and level3 are children of level1
+        assertEquals(setOf(level2, level3), level1.body.functions.toSet())
+        // Only level3 is child of level2
+        assertEquals(setOf(level3), level2.body.functions.toSet())
+        // No child for level3
+        assertEquals(setOf(), level3.body.functions.toSet())
+    }
+
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
@@ -688,10 +733,16 @@ class PythonFrontendTest : BaseTest() {
 
         val classFieldDeclaredInFunction = clsFoo.fields["classFieldDeclaredInFunction"]
         assertNotNull(classFieldDeclaredInFunction)
-        // assertEquals(3, clsFoo.fields.size) // TODO should "self" be considered a field here?
-
         assertNull(classFieldNoInitializer.initializer)
-        assertNotNull(classFieldWithInit)
+
+        val localClassFieldNoInitializer = methBar.variables["classFieldNoInitializer"]
+        assertNotNull(localClassFieldNoInitializer)
+
+        val localClassFieldWithInit = methBar.variables["classFieldWithInit"]
+        assertNotNull(localClassFieldNoInitializer)
+
+        val localClassFieldDeclaredInFunction = methBar.variables["classFieldDeclaredInFunction"]
+        assertNotNull(localClassFieldNoInitializer)
 
         // classFieldNoInitializer = classFieldWithInit
         val assignClsFieldOutsideFunc = clsFoo.statements[2]
@@ -725,22 +776,22 @@ class PythonFrontendTest : BaseTest() {
         val barStmt3 = barBody.statements[3]
         assertIs<AssignExpression>(barStmt3)
         assertEquals("=", barStmt3.operatorCode)
-        assertRefersTo((barStmt3.lhs<Reference>()), classFieldNoInitializer)
-        assertEquals("shadowed", (barStmt3.rhs<Literal<*>>())?.value)
+        assertRefersTo(barStmt3.lhs<Reference>(), localClassFieldNoInitializer)
+        assertLiteralValue("shadowed", barStmt3.rhs<Literal<String>>())
 
         // classFieldWithInit = "shadowed"
         val barStmt4 = barBody.statements[4]
         assertIs<AssignExpression>(barStmt4)
         assertEquals("=", barStmt4.operatorCode)
-        assertRefersTo((barStmt4.lhs<Reference>()), classFieldWithInit)
-        assertEquals("shadowed", (barStmt4.rhs<Literal<*>>())?.value)
+        assertRefersTo(barStmt4.lhs<Reference>(), localClassFieldWithInit)
+        assertLiteralValue("shadowed", (barStmt4.rhs<Literal<String>>()))
 
         // classFieldDeclaredInFunction = "shadowed"
         val barStmt5 = barBody.statements[5]
         assertIs<AssignExpression>(barStmt5)
         assertEquals("=", barStmt5.operatorCode)
-        assertRefersTo((barStmt5.lhs<Reference>()), classFieldDeclaredInFunction)
-        assertEquals("shadowed", (barStmt5.rhs<Literal<*>>())?.value)
+        assertRefersTo((barStmt5.lhs<Reference>()), localClassFieldDeclaredInFunction)
+        assertLiteralValue("shadowed", barStmt5.rhs<Literal<String>>())
 
         /* TODO:
         foo = Foo()
@@ -1336,10 +1387,8 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        assertEquals(2, result.variables.size)
-        // Note, that "pi" is incorrectly inferred as a field declaration. This is a known bug in
-        // the inference system (and not in the python module) and will be handled separately.
-        assertEquals(listOf("mypi", "pi"), result.variables.map { it.name.localName })
+        assertEquals(1, result.variables.size)
+        assertEquals(listOf("mypi"), result.variables.map { it.name.localName })
     }
 
     @Test
@@ -1453,6 +1502,88 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Literal<*>>(rhs)
 
         assertEquals(4.toLong(), rhs.evaluate())
+    }
+
+    @Test
+    fun testParseWithUnicode() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("unicode.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val normalFunc = tu.functions["normal_func"]
+        assertNotNull(normalFunc)
+        // 11 chars (including whitespace) -> SARIF position = 12
+        //     e = "e"
+        assertEquals(12, normalFunc.body?.location?.region?.endColumn)
+
+        val unicodeFunc = tu.functions["unicode_func"]
+        assertNotNull(unicodeFunc)
+
+        // also 11 chars (including whitespace) -> SARIF position = 12
+        // But the python parser somehow sees these as two bytes so the position is 13 :(
+        //     e = "é"
+        assertEquals(13, unicodeFunc.body?.location?.region?.endColumn)
+
+        // So the code exceeds the line, but we clamp it and avoid a crash
+        assertEquals("e = \"é\"", unicodeFunc.body?.code)
+    }
+
+    @Test
+    fun testPackageResolution() {
+        val topLevel = Path.of("src", "test", "resources", "python", "packages")
+        var result =
+            analyze(listOf(topLevel.resolve("foobar")).map { it.toFile() }, topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+                it.useParallelFrontends(false)
+                it.failOnError(false)
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferFunctions(false).build()
+                )
+            }
+        assertNotNull(result)
+
+        var expected =
+            setOf(
+                "foobar",
+                "foobar.__main__",
+                "foobar.module1",
+                "foobar.config",
+                "foobar.implementation",
+                "foobar.implementation.internal_bar",
+                "foobar.implementation.internal_foo"
+            )
+        assertEquals(expected, result.namespaces.map { it.name.toString() }.distinct().toSet())
+
+        var bar = result.functions["bar"]
+        assertNotNull(bar)
+        assertFullName("foobar.implementation.internal_bar.bar", bar)
+
+        var foo = result.functions["foo"]
+        assertNotNull(foo)
+        assertFullName("foobar.implementation.internal_foo.foo", foo)
+
+        var barCall = result.calls["bar"]
+        assertNotNull(barCall)
+        assertInvokes(barCall, bar)
+
+        var fooCalls = result.calls("foo")
+        assertEquals(2, fooCalls.size)
+        fooCalls.forEach { assertInvokes(it, foo) }
+
+        val refBarString = result.refs("bar_string")
+        refBarString.forEach {
+            assertNotNull(it)
+            assertNotNull(it.refersTo)
+        }
+
+        val refFooString = result.refs("foo_string")
+        refFooString.forEach {
+            assertNotNull(it)
+            assertNotNull(it.refersTo)
+        }
     }
 
     class PythonValueEvaluator : ValueEvaluator() {

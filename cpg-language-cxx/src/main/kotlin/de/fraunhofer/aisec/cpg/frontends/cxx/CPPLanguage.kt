@@ -56,7 +56,8 @@ open class CPPLanguage :
     HasUnknownType,
     HasFunctionStyleCasts,
     HasFunctionOverloading,
-    HasOperatorOverloading {
+    HasOperatorOverloading,
+    HasImplicitReceiver {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
@@ -317,4 +318,7 @@ open class CPPLanguage :
 
         return Pair(false, listOf())
     }
+
+    override val receiverName: String
+        get() = "this"
 }

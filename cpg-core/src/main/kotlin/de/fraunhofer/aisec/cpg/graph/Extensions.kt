@@ -28,15 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -580,6 +572,10 @@ val Node?.forLoops: List<ForStatement>
 val Node?.trys: List<TryStatement>
     get() = this.allChildren()
 
+/** Returns all [ThrowStatement] child edges in this graph, starting with this [Node]. */
+val Node?.throws: List<ThrowStatement>
+    get() = this.allChildren()
+
 /** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
 val Node?.forEachLoops: List<ForEachStatement>
     get() = this.allChildren()
@@ -588,8 +584,20 @@ val Node?.forEachLoops: List<ForEachStatement>
 val Node?.switches: List<SwitchStatement>
     get() = this.allChildren()
 
-/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+/** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
 val Node?.whileLoops: List<WhileStatement>
+    get() = this.allChildren()
+
+/** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
+val Node?.doLoops: List<DoStatement>
+    get() = this.allChildren()
+
+/** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
+val Node?.breaks: List<BreakStatement>
+    get() = this.allChildren()
+
+/** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
+val Node?.continues: List<ContinueStatement>
     get() = this.allChildren()
 
 /** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
@@ -607,6 +615,31 @@ val Node?.returns: List<ReturnStatement>
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
 val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
+
+/**
+ * This function tries to find the first parent node that satisfies the condition specified in
+ * [predicate]. It starts searching in the [searchNode], moving up-wards using the [Node.astParent]
+ * attribute.
+ *
+ * @param searchNode the child node that we start the search from
+ * @param predicate the search predicate
+ */
+fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+
+    // start at searchNodes parent
+    var node: Node? = this.astParent
+
+    while (node != null) {
+        if (predicate(node)) {
+            return node
+        }
+
+        // go up-wards in the ast tree
+        node = node.astParent
+    }
+
+    return null
+}
 
 /**
  * Return all [ProblemNode] children in this graph (either stored directly or in
@@ -772,3 +805,17 @@ fun Expression?.unwrapReference(): Reference? {
         else -> null
     }
 }
+
+/** Returns the [TranslationUnitDeclaration] where this node is located in. */
+val Node.translationUnit: TranslationUnitDeclaration?
+    get() {
+        var node: Node? = this
+        while (node != null) {
+            if (node is TranslationUnitDeclaration) {
+                return node
+            }
+            node = node.astParent
+        }
+
+        return null
+    }
