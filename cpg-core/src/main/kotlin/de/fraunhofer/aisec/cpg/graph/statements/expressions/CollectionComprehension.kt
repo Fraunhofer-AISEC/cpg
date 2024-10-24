@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship
  *
  * Some languages provide a way to have multiple variables, iterables and predicates. For this
  * reason, we represent the `variable, iterable and predicate in its own class
- * [CollectionComprehension.ComprehensionExpression].
+ * [ComprehensionExpression].
  */
 class CollectionComprehension : Expression(), ArgumentHolder {
 
@@ -82,7 +82,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
 
     override fun addArgument(expression: Expression) {
-        if (this.statement == null) {
+        if (this.statement == null || this.statement is ProblemExpression) {
             this.statement = expression
         } else if (expression is ComprehensionExpression) {
             this.comprehensionExpressions += expression

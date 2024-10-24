@@ -91,9 +91,9 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
 
     override fun addArgument(expression: Expression) {
-        if (this.variable == null) {
+        if (this.variable is ProblemExpression) {
             this.variable = expression
-        } else if (this.iterable == null) {
+        } else if (this.iterable is ProblemExpression) {
             this.iterable = expression
         } else {
             this.predicate = expression
