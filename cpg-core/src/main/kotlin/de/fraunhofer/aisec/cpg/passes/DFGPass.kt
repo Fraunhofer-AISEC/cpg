@@ -166,10 +166,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * predicate(s).
      */
     protected fun handleComprehensionExpression(comprehension: ComprehensionExpression) {
-        comprehension.variable?.let { variable ->
-            comprehension.iterable?.let { iterable -> iterable.nextDFG += variable }
-            comprehension.prevDFG += variable
-        }
+        comprehension.iterable.nextDFG += comprehension.variable
+        comprehension.prevDFG += comprehension.variable
         comprehension.predicate?.let { comprehension.prevDFG += it }
     }
 

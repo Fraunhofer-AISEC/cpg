@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -39,7 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
 class ComprehensionExpression : Expression(), ArgumentHolder {
     @Relationship("VARIABLE")
     var variableEdge =
-        astOptionalEdgeOf<Statement>(
+        astEdgeOf<Statement>(
+            of = ProblemExpression("Missing variableEdge in ${this::class}"),
             onChanged = { _, new ->
                 val end = new?.end
                 if (end is Reference) {
@@ -54,7 +56,9 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
      */
     var variable by unwrapping(ComprehensionExpression::variableEdge)
 
-    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("ITERABLE")
+    var iterableEdge =
+        astEdgeOf<Expression>(ProblemExpression("Missing iterable in ${this::class}"))
 
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ComprehensionExpression::iterableEdge)

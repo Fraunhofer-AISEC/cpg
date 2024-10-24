@@ -419,7 +419,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // find out for java, but impossible for c++)
 
         // evaluate the call target first, optional base should be the callee or in its subtree
-        node.callee?.let { handleEOG(it) }
+        handleEOG(node.callee)
 
         // then the arguments
         for (arg in node.arguments) {
@@ -862,7 +862,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Connects the current EOG leaf nodes to the last stacked node, e.g. loop head, and removes the
      * nodes.
      *
-     * @param loopScope the loop scope
+     * @param loopStatement the loop statement
      */
     protected fun handleContainedBreaksAndContinues(loopStatement: LoopStatement) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
@@ -894,11 +894,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * Builds an EOG edge from prev to next. 'eogDirection' defines how the node instances save the
-     * references constituting the edge. 'FORWARD': only the nodes nextEOG member contains
-     * references, an points to the next nodes. 'BACKWARD': only the nodes prevEOG member contains
-     * references and points to the previous nodes. 'BIDIRECTIONAL': nextEOG and prevEOG contain
-     * references and point to the previous and the next nodes.
+     * Builds an EOG edge from prev to next.
      *
      * @param prev the previous node
      * @param next the next node
@@ -952,8 +948,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     private fun handleComprehensionExpression(node: ComprehensionExpression) {
         handleEOG(node.iterable)
         // When the iterable contains another element, the variable is evaluated with the
-        // nextElement. Therefore we ad a
-        // true edge.
+        // nextElement. Therefore, we add a "true" edge.
         nextEdgeBranch = true
         handleEOG(node.variable)
         handleEOG(node.predicate)
@@ -1233,7 +1228,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 else -> {
                     LOGGER.error(
                         "Currently the component {} does not have a defined loop start.",
-                        this?.javaClass
+                        this.javaClass
                     )
                     ArrayList()
                 }

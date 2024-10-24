@@ -362,7 +362,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 state.push(currentNode, it)
             }
         } else if (currentNode is ComprehensionExpression) {
-            val iterable = currentNode.iterable as? Expression
             val writtenTo =
                 when (val variable = currentNode.variable) {
                     is DeclarationStatement -> {
@@ -391,13 +390,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         }
                     }
 
-                iterable?.let {
-                    state.push(writtenTo, PowersetLattice(identitySetOf(iterable)))
-                    // Add the variable declaration (or the reference) to the list of previous
-                    // write nodes in this path
-                    state.declarationsState[writtenDeclaration] =
-                        PowersetLattice(identitySetOf(writtenTo))
-                }
+                state.push(writtenTo, PowersetLattice(identitySetOf(currentNode.iterable)))
+                // Add the variable declaration (or the reference) to the list of previous
+                // write nodes in this path
+                state.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(writtenTo))
             }
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
             // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
