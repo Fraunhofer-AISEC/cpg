@@ -59,6 +59,33 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testNestedFunctions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("nested_functions.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+        // Check that all three functions exist
+        val level1 = tu.functions["level1"]
+        assertNotNull(level1)
+        val level2 = tu.functions["level2"]
+        assertNotNull(level2)
+        val level3 = tu.functions["level3"]
+        assertNotNull(level3)
+        // Only level2 and level3 are children of level1
+        assertEquals(setOf(level2, level3), level1.body.functions.toSet())
+        // Only level3 is child of level2
+        assertEquals(setOf(level3), level2.body.functions.toSet())
+        // No child for level3
+        assertEquals(setOf(), level3.body.functions.toSet())
+    }
+
+    @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
