@@ -154,11 +154,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 .forEachIndexed { i, expr ->
                     expr.nextDFG += comprehension.comprehensionExpressions[i + 1]
                 }
-            comprehension.statement?.let {
-                comprehension.comprehensionExpressions.last().nextDFG += it
-            }
+            comprehension.comprehensionExpressions.last().nextDFG += comprehension.statement
         }
-        comprehension.statement?.let { comprehension.prevDFG += it }
+        comprehension.prevDFG += comprehension.statement
     }
 
     /**

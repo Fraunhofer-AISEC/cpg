@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.Objects
@@ -57,7 +57,11 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     var comprehensionExpressions by
         unwrapping(CollectionComprehension::comprehensionExpressionEdges)
 
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("STATEMENT")
+    var statementEdge =
+        astEdgeOf<Statement>(
+            ProblemExpression("No statement provided but is required in ${this::class}")
+        )
     /**
      * This field contains the statement which is applied to each element of the input for which the
      * predicate returned `true`.
@@ -82,7 +86,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
 
     override fun addArgument(expression: Expression) {
-        if (this.statement == null || this.statement is ProblemExpression) {
+        if (this.statement is ProblemExpression) {
             this.statement = expression
         } else if (expression is ComprehensionExpression) {
             this.comprehensionExpressions += expression
