@@ -161,6 +161,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         // Now, we add the remaining body.
         statements += node.body.map(::handle)
+        // Currently, the EOG pass requires a break statement to work as expected. For this reason,
+        // we insert an implicit break statement at the end of the block.
+        statements +=
+            newBreakStatement()
+                .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
         return statements
     }
 
