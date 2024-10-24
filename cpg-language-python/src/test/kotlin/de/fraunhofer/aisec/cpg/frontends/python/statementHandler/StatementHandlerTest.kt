@@ -60,6 +60,20 @@ class StatementHandlerTest : BaseTest() {
     }
 
     @Test
+    fun testMatch() {
+        analyzeFile("match.py")
+
+        val func = result.functions["matcher"]
+        assertNotNull(func)
+
+        val switchStatement = func.switches.singleOrNull()
+        assertNotNull(switchStatement)
+
+        assertLocalName("x", switchStatement.selector)
+        assertIs<Reference>(switchStatement.selector)
+    }
+
+    @Test
     fun testTry() {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("try.py").toFile()), topLevel, true) {

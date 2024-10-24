@@ -104,6 +104,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     this.rhs =
                         when (val value = node.value) {
                             is Python.AST.BaseExpr -> frontend.expressionHandler.handle(value)
+                            null ->
+                                newProblemExpression(
+                                    "Can't handle value 'None'/'null' in value of Python.AST.MatchSingleton yet"
+                                )
                             else ->
                                 newProblemExpression(
                                     "Can't handle ${value::class} in value of Python.AST.MatchSingleton yet"

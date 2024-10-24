@@ -1153,7 +1153,7 @@ interface Python {
          * ```
          */
         class MatchSingleton(pyObject: PyObject) : BasePattern(pyObject) {
-            val value: Any by lazy { "value" of pyObject }
+            val value: Any? by lazy { "value" of pyObject }
         }
 
         /**
