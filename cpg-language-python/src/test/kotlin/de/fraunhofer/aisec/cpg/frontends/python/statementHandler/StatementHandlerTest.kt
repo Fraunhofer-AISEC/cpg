@@ -71,6 +71,55 @@ class StatementHandlerTest : BaseTest() {
 
         assertLocalName("x", switchStatement.selector)
         assertIs<Reference>(switchStatement.selector)
+        val paramX = func.parameters.singleOrNull()
+        assertNotNull(paramX)
+        assertRefersTo(switchStatement.selector, paramX)
+
+        val statementBlock = switchStatement.statement as? Block
+        assertNotNull(statementBlock)
+        val caseSingleton = statementBlock[0]
+        assertIs<CaseStatement>(caseSingleton)
+        val singletonCheck = caseSingleton.caseExpression
+        assertIs<BinaryOperator>(singletonCheck)
+        assertNotNull(singletonCheck)
+        assertEquals("===", singletonCheck.operatorCode)
+        assertRefersTo(singletonCheck.lhs, paramX)
+        assertIs<ProblemExpression>(singletonCheck.rhs)
+
+        val caseValue = statementBlock[2]
+        assertIs<CaseStatement>(caseValue)
+        val valueCheck = caseValue.caseExpression
+        assertIs<BinaryOperator>(valueCheck)
+        assertNotNull(valueCheck)
+        assertEquals("==", valueCheck.operatorCode)
+        assertRefersTo(valueCheck.lhs, paramX)
+        assertLiteralValue("value", valueCheck.rhs)
+
+        val caseAnd = statementBlock[4]
+        assertIs<CaseStatement>(caseAnd)
+        val andExpr = caseAnd.caseExpression
+        assertIs<BinaryOperator>(andExpr)
+        assertEquals("and", andExpr.operatorCode)
+        val andRhs = andExpr.rhs
+        assertIs<BinaryOperator>(andRhs)
+        assertEquals(">", andRhs.operatorCode)
+        assertRefersTo(andRhs.lhs, paramX)
+        assertLiteralValue(0L, andRhs.rhs)
+
+        assertIs<CaseStatement>(statementBlock[4])
+        assertIs<CaseStatement>(statementBlock[6])
+        assertIs<CaseStatement>(statementBlock[8])
+        assertIs<CaseStatement>(statementBlock[10])
+        assertIs<CaseStatement>(statementBlock[12])
+        assertIs<CaseStatement>(statementBlock[14])
+        assertIs<CaseStatement>(statementBlock[16])
+
+        val caseOr = statementBlock[18]
+        assertIs<CaseStatement>(caseOr)
+        val orExpr = caseOr.caseExpression
+        assertIs<BinaryOperator>(orExpr)
+        assertNotNull(orExpr)
+        assertEquals("or", orExpr.operatorCode)
     }
 
     @Test
