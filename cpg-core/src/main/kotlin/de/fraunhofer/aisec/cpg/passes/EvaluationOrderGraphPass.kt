@@ -970,9 +970,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     private fun handleCollectionComprehension(node: CollectionComprehension) {
         // Process the comprehension expressions from 0 to n and connect the EOG of i to i+1.
         var prevComprehensionExpression: ComprehensionExpression? = null
-        var noMoreElementsEOGExits = listOf<Node>()
+        var noMoreElementsInCollection = listOf<Node>()
         node.comprehensionExpressions.forEach {
             handleEOG(it)
+
+            val noMoreElements = SubgraphWalker.getEOGPathEdges(it.iterable).exits
 
             // [ComprehensionExpression] yields no more elements => EOG:false
             val prevComp = prevComprehensionExpression
@@ -980,9 +982,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 // We handle the EOG:false edges of the outermost comprehensionExpression later,
                 // they continue the
                 // path of execution when no more elements are yielded
-                noMoreElementsEOGExits = currentPredecessors.toList()
+                noMoreElementsInCollection = noMoreElements
             } else {
-                drawEOGToEntriesOf(currentPredecessors, prevComp.iterable, branchLabel = false)
+                drawEOGToEntriesOf(noMoreElements, prevComp.iterable, branchLabel = false)
             }
             prevComprehensionExpression = it
 
@@ -996,7 +998,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             drawEOGToEntriesOf(currentPredecessors, it.iterable)
         }
         currentPredecessors.clear()
-        currentPredecessors.addAll(noMoreElementsEOGExits)
+        currentPredecessors.addAll(noMoreElementsInCollection)
         nextEdgeBranch =
             false // This path is followed when the comprehensions yield no more elements
         attachToEOG(node)

@@ -338,7 +338,7 @@ fun LanguageFrontend<*, *>.listComp(
 
     // Only add this to an argument holder if the nearest holder is an argument holder
     val holder = this@Holder
-    if (holder is ArgumentHolder) {
+    if (holder is StatementHolder) {
         holder += node
     }
 
