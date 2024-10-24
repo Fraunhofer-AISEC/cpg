@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
@@ -36,8 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
@@ -184,35 +188,42 @@ class FluentTest {
     @Test
     fun testCollectionComprehensions() {
         val result =
-            TestLanguageFrontend().build {
-                translationResult {
-                    translationUnit("File") {
-                        function("main", t("list")) {
-                            param("argc", t("int"))
-                            body {
-                                declare {
-                                    variable("some") {
-                                        listComp {
-                                            ref("i")
-                                            compExpr {
+            testFrontend {
+                    it.registerLanguage(TestLanguage("."))
+                    it.defaultPasses()
+                    it.registerPass<ControlDependenceGraphPass>()
+                    it.registerPass<ProgramDependenceGraphPass>()
+                }
+                .build {
+                    translationResult {
+                        translationUnit("File") {
+                            function("main", t("list")) {
+                                param("argc", t("int"))
+                                body {
+                                    declare {
+                                        variable("some") {
+                                            listComp {
                                                 ref("i")
-                                                ref("someIterable")
-                                                ref("i") gt
-                                                    literal(
-                                                        5,
-                                                        t("int")
-                                                    ) // TODO: This line doesn't work as expected
+                                                compExpr {
+                                                    ref("i")
+                                                    ref("someIterable")
+                                                    ref("i") gt
+                                                        literal(
+                                                            5,
+                                                            t("int")
+                                                        ) // TODO: This line doesn't work as
+                                                    // expected
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                returnStmt { ref("some") }
+                                    returnStmt { ref("some") }
+                                }
                             }
                         }
                     }
                 }
-            }
 
         val listComp = result.variables["some"]?.initializer
         assertIs<CollectionComprehension>(listComp)
@@ -227,6 +238,128 @@ class FluentTest {
         assertIs<ComprehensionExpression>(compExpr)
         assertIs<Reference>(compExpr.variable)
         assertLocalName("i", compExpr.variable)
+        assertIs<Reference>(compExpr.iterable)
+        assertLocalName("someIterable", compExpr.iterable)
+        // assertEquals(1, compExpr.predicates.size)
+    }
+
+    @Test
+    fun testCollectionComprehensionsWithDeclaration() {
+        val result =
+            testFrontend {
+                    it.registerLanguage(TestLanguage("."))
+                    it.defaultPasses()
+                    it.registerPass<ControlDependenceGraphPass>()
+                    it.registerPass<ProgramDependenceGraphPass>()
+                }
+                .build {
+                    translationResult {
+                        translationUnit("File") {
+                            function("main", t("list")) {
+                                param("argc", t("int"))
+                                body {
+                                    declare {
+                                        variable("some") {
+                                            listComp {
+                                                ref("i")
+                                                compExpr {
+                                                    this.variable = declare { variable("i") }
+                                                    ref("someIterable")
+                                                    ref("i") gt
+                                                        literal(
+                                                            5,
+                                                            t("int")
+                                                        ) // TODO: This line doesn't work as
+                                                    // expected
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    returnStmt { ref("some") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        val listComp = result.variables["some"]?.initializer
+        assertIs<CollectionComprehension>(listComp)
+        print(listComp.toString()) // This is only here to get a better test coverage
+        print(
+            listComp.comprehensionExpressions.firstOrNull()?.toString()
+        ) // This is only here to get a better test coverage
+        assertIs<Reference>(listComp.statement)
+        assertLocalName("i", listComp.statement)
+        assertEquals(1, listComp.comprehensionExpressions.size)
+        val compExpr = listComp.comprehensionExpressions.single()
+        assertIs<ComprehensionExpression>(compExpr)
+        val variableDecl = compExpr.variable
+        assertIs<DeclarationStatement>(variableDecl)
+        assertLocalName("i", variableDecl.singleDeclaration)
+        assertIs<Reference>(compExpr.iterable)
+        assertLocalName("someIterable", compExpr.iterable)
+        // assertEquals(1, compExpr.predicates.size)
+    }
+
+    @Test
+    fun testCollectionComprehensionsWithTwoDeclarations() {
+        val result =
+            testFrontend {
+                    it.registerLanguage(TestLanguage("."))
+                    it.defaultPasses()
+                    it.registerPass<ControlDependenceGraphPass>()
+                    it.registerPass<ProgramDependenceGraphPass>()
+                }
+                .build {
+                    translationResult {
+                        translationUnit("File") {
+                            function("main", t("list")) {
+                                param("argc", t("int"))
+                                body {
+                                    declare {
+                                        variable("some") {
+                                            listComp {
+                                                ref("i")
+                                                compExpr {
+                                                    this.variable = declare {
+                                                        variable("i")
+                                                        variable("y")
+                                                    }
+                                                    ref("someIterable")
+                                                    ref("i") gt
+                                                        literal(
+                                                            5,
+                                                            t("int")
+                                                        ) // TODO: This line doesn't work as
+                                                    // expected
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    returnStmt { ref("some") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        val listComp = result.variables["some"]?.initializer
+        assertIs<CollectionComprehension>(listComp)
+        print(listComp.toString()) // This is only here to get a better test coverage
+        print(
+            listComp.comprehensionExpressions.firstOrNull()?.toString()
+        ) // This is only here to get a better test coverage
+        assertIs<Reference>(listComp.statement)
+        assertLocalName("i", listComp.statement)
+        assertEquals(1, listComp.comprehensionExpressions.size)
+        val compExpr = listComp.comprehensionExpressions.single()
+        assertIs<ComprehensionExpression>(compExpr)
+        val variableDecl = compExpr.variable
+        assertIs<DeclarationStatement>(variableDecl)
+        assertLocalName("i", variableDecl.declarations[0])
+        assertLocalName("y", variableDecl.declarations[1])
         assertIs<Reference>(compExpr.iterable)
         assertLocalName("someIterable", compExpr.iterable)
         // assertEquals(1, compExpr.predicates.size)
