@@ -341,6 +341,9 @@ fun LanguageFrontend<*, *>.listComp(
     if (holder is StatementHolder) {
         holder += node
     }
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
 
     return node
 }
