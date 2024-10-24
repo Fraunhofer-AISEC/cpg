@@ -60,6 +60,78 @@ class StatementHandlerTest : BaseTest() {
     }
 
     @Test
+    fun testMatch() {
+        analyzeFile("match.py")
+
+        val func = result.functions["matcher"]
+        assertNotNull(func)
+
+        val switchStatement = func.switches.singleOrNull()
+        assertNotNull(switchStatement)
+
+        assertLocalName("x", switchStatement.selector)
+        assertIs<Reference>(switchStatement.selector)
+        val paramX = func.parameters.singleOrNull()
+        assertNotNull(paramX)
+        assertRefersTo(switchStatement.selector, paramX)
+
+        val statementBlock = switchStatement.statement as? Block
+        assertNotNull(statementBlock)
+        val caseSingleton = statementBlock[0]
+        assertIs<CaseStatement>(caseSingleton)
+        val singletonCheck = caseSingleton.caseExpression
+        assertIs<BinaryOperator>(singletonCheck)
+        assertNotNull(singletonCheck)
+        assertEquals("===", singletonCheck.operatorCode)
+        assertRefersTo(singletonCheck.lhs, paramX)
+        assertIs<ProblemExpression>(singletonCheck.rhs)
+        assertIs<BreakStatement>(statementBlock[2])
+
+        val caseValue = statementBlock[3]
+        assertIs<CaseStatement>(caseValue)
+        val valueCheck = caseValue.caseExpression
+        assertIs<BinaryOperator>(valueCheck)
+        assertNotNull(valueCheck)
+        assertEquals("==", valueCheck.operatorCode)
+        assertRefersTo(valueCheck.lhs, paramX)
+        assertLiteralValue("value", valueCheck.rhs)
+        assertIs<BreakStatement>(statementBlock[5])
+
+        val caseAnd = statementBlock[6]
+        assertIs<CaseStatement>(caseAnd)
+        val andExpr = caseAnd.caseExpression
+        assertIs<BinaryOperator>(andExpr)
+        assertEquals("and", andExpr.operatorCode)
+        val andRhs = andExpr.rhs
+        assertIs<BinaryOperator>(andRhs)
+        assertEquals(">", andRhs.operatorCode)
+        assertRefersTo(andRhs.lhs, paramX)
+        assertLiteralValue(0L, andRhs.rhs)
+        assertIs<BreakStatement>(statementBlock[8])
+
+        assertIs<CaseStatement>(statementBlock[9])
+        assertIs<BreakStatement>(statementBlock[11])
+        assertIs<CaseStatement>(statementBlock[12])
+        assertIs<BreakStatement>(statementBlock[14])
+        assertIs<CaseStatement>(statementBlock[15])
+        assertIs<BreakStatement>(statementBlock[17])
+        assertIs<CaseStatement>(statementBlock[18])
+        assertIs<BreakStatement>(statementBlock[20])
+        assertIs<CaseStatement>(statementBlock[21])
+        assertIs<BreakStatement>(statementBlock[23])
+        assertIs<CaseStatement>(statementBlock[24])
+        assertIs<BreakStatement>(statementBlock[26])
+
+        val caseOr = statementBlock[27]
+        assertIs<CaseStatement>(caseOr)
+        val orExpr = caseOr.caseExpression
+        assertIs<BinaryOperator>(orExpr)
+        assertNotNull(orExpr)
+        assertEquals("or", orExpr.operatorCode)
+        assertIs<BreakStatement>(statementBlock[29])
+    }
+
+    @Test
     fun testTry() {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("try.py").toFile()), topLevel, true) {
