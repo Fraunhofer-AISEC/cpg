@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -215,6 +216,135 @@ class EvaluationOrderGraphPassTest {
             n = breakStmt,
             refs = listOf(postForEach),
             cr = Util.Connect.SUBTREE
+        )
+    }
+
+    @Test
+    fun testCollectionComprehensionStatement() {
+        val compExample = GraphExamples.getNestedComprehensionExpressions()
+
+        val listComp = compExample.allChildren<CollectionComprehension>().first()
+        assertNotNull(listComp)
+
+        val preCall = compExample.calls["preComprehensions"]
+        assertNotNull(preCall)
+
+        val postCall = compExample.calls["postComprehensions"]
+        assertNotNull(postCall)
+
+        assertTrue { listComp.comprehensionExpressions.size == 2 }
+
+        val outerComprehensionExpression = listComp.comprehensionExpressions.first()
+        assertNotNull(outerComprehensionExpression)
+
+        val innerComprehensionExpression = listComp.comprehensionExpressions.last()
+        assertNotNull(innerComprehensionExpression)
+
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = preCall,
+                refs = listOf(listComp),
+                cr = Util.Connect.SUBTREE
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = listComp,
+                refs = listOf(postCall),
+                cr = Util.Connect.SUBTREE
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = outerComprehensionExpression,
+                refs =
+                    listOf(
+                        innerComprehensionExpression,
+                        listComp,
+                        outerComprehensionExpression.variable
+                    ),
+                cr = Util.Connect.SUBTREE
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                en = Util.Edge.EXITS,
+                n = outerComprehensionExpression,
+                refs =
+                    listOf(
+                        innerComprehensionExpression,
+                    ),
+                cr = Util.Connect.SUBTREE,
+                predicate = { it.branch == true }
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                en = Util.Edge.EXITS,
+                n = outerComprehensionExpression,
+                refs = listOf(listComp),
+                cr = Util.Connect.SUBTREE,
+                predicate = { it.branch == false }
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = innerComprehensionExpression,
+                refs = listOf(outerComprehensionExpression, listComp.statement),
+                cr = Util.Connect.SUBTREE
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                en = Util.Edge.EXITS,
+                n = innerComprehensionExpression,
+                refs = listOf(listComp.statement),
+                cr = Util.Connect.SUBTREE,
+                predicate = { it.branch == true }
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                en = Util.Edge.EXITS,
+                n = innerComprehensionExpression,
+                refs = listOf(outerComprehensionExpression),
+                cr = Util.Connect.SUBTREE,
+                predicate = { it.branch == false }
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                en = Util.Edge.EXITS,
+                n = outerComprehensionExpression.iterable,
+                refs = listOf(outerComprehensionExpression.variable),
+                cr = Util.Connect.SUBTREE,
+                predicate = { it.branch == true }
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                en = Util.Edge.EXITS,
+                n = innerComprehensionExpression.iterable,
+                refs = listOf(innerComprehensionExpression.variable),
+                cr = Util.Connect.SUBTREE,
+                predicate = { it.branch == true }
+            )
         )
     }
 }

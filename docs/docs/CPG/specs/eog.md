@@ -645,6 +645,55 @@ flowchart LR
   parent -.-> child3
 ```
 
+## CollectionComprehension
+This node iterates through a collection of elements via `comprehensionExpression` and applies `statement` to the elements. 
+
+Interesting fields:
+
+* `comprehensionExpressions: List<ComprehensionExpression>`: The part which iterates through all elements of the collection and filter them.
+* `statement: Statement`: The operation applied to each element iterated over.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["comprehensionExpressions[0]"]
+  child1 --EOG:true--> child2["comprehensionExpressions[n]"]
+  child2 --EOG:true--> child3["statement"]
+  child2 --EOG:false--> child1["comprehensionExpressions[0]"]
+  child1 --EOG:false--> parent(["CollectionComprehension"])
+  child3 --EOG--> child2
+  parent --EOG--> next:::outer
+  parent -.-> child3
+  parent -.-> child2
+  parent -.-> child1
+```
+
+## ComprehensionExpression
+This node iterates through a collection of elements of `iterable`, keeps the element in `variable` and evaluates an optional `predicate`.
+
+Interesting fields:
+
+* `iterable: Statement`: The part which iterates through all elements of the collection (or similar).
+* `variable: Statement`: The variable holding each element in the iterable.
+* `predicate: Statement`: A condition which determines if we consider this variable further or if we fetch the next element.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["iterable"]
+  child1 --EOG:true--> child2["variable"]
+  child2 --EOG--> child3["predicate"]
+  child3 --EOG--> parent(["ComprehensionExpression"])
+  parent --EOG:true--> enter:::outer
+  parent --EOG:false--> child1
+  child1 --EOG:false--> exit:::outer
+  parent -.-> child3
+  parent -.-> child2
+  parent -.-> child1
+```
+
 ## WhileStatement
 This is a classic while loop where the condition is evaluated before every loop iteration.
 
