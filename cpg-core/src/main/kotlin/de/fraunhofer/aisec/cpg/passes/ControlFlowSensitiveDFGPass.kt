@@ -363,18 +363,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         } else if (currentNode is ComprehensionExpression) {
             val iterable = currentNode.iterable as? Expression
-            val (writtenTo, writtenTo2) =
+            val writtenTo =
                 when (val variable = currentNode.variable) {
                     is DeclarationStatement -> {
                         if (variable.isSingleDeclaration()) {
-                            Pair(variable.singleDeclaration, null)
-                        } else if (variable.declarations.size == 2) {
-                            Pair(variable.declarations.first(), variable.declarations.last())
+                            variable.singleDeclaration
                         } else {
-                            Pair(null, null)
+                            log.error(
+                                "Cannot handle multiple declarations in the ComprehensionExpresdsion: Node $currentNode"
+                            )
+                            null
                         }
                     }
-                    else -> Pair(currentNode.variable, null)
+                    else -> currentNode.variable
                 }
             // We wrote something to this variable declaration
             writtenTo?.let {
@@ -396,27 +397,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     // write nodes in this path
                     state.declarationsState[writtenDeclaration] =
                         PowersetLattice(identitySetOf(writtenTo))
-                }
-            }
-            writtenTo2?.let {
-                val writtenDeclaration2 =
-                    when (writtenTo2) {
-                        is Declaration -> writtenTo2
-                        is Reference -> writtenTo2.refersTo
-                        else -> {
-                            log.error(
-                                "The variable of type ${writtenTo2.javaClass} is not yet supported in the ComprehensionExpression"
-                            )
-                            null
-                        }
-                    }
-
-                iterable?.let {
-                    state.push(writtenTo2, PowersetLattice(identitySetOf(iterable)))
-                    // Add the variable declaration (or the reference) to the list of previous
-                    // write nodes in this path
-                    state.declarationsState[writtenDeclaration2] =
-                        PowersetLattice(identitySetOf(writtenTo2))
                 }
             }
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
