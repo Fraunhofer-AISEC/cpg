@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractEvaluator
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration

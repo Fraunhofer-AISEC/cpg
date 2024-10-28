@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
 /** This class implements the [Value] interface for Integer values. */
