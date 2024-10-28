@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
@@ -47,6 +46,24 @@ abstract class AbstractEvaluationTests {
             }
 
             public void f2() {
+               Bar f = new Bar();
+               int a = 5;
+
+               a = 3;
+               a++;
+               ++a;
+               a -= 2;
+               a += 3;
+               a--;
+               --a;
+               a *= 4;
+               a /= 2;
+               a %= 3;
+
+               b.f(a);
+            }
+
+            public void f3() {
                 Bar b = new Bar();
                 int a = 5;
 
@@ -57,7 +74,7 @@ abstract class AbstractEvaluationTests {
                 b.f(a);
             }
 
-            public void f3() {
+            public void f4() {
                 Bar b = new Bar();
                 int a = 5;
 
@@ -70,7 +87,7 @@ abstract class AbstractEvaluationTests {
                 b.f(a);
             }
 
-            public void f4() {
+            public void f5() {
                 Bar b = new Bar();
                 int a = 5;
 
@@ -103,7 +120,6 @@ abstract class AbstractEvaluationTests {
                                     declare { variable("b", t("Bar")) }
                                     declare { variable("a", t("int")) { literal(5, t("int")) } }
 
-                                    // TODO: set the correct code as the evaluator relies on it
                                     ref("a") assign literal(0, t("int"))
                                     ref("a") assignMinus literal(2, t("int"))
                                     ref("a") assignPlus literal(3, t("int"))
@@ -116,6 +132,29 @@ abstract class AbstractEvaluationTests {
                                     declare { variable("b", t("Bar")) }
                                     declare { variable("a", t("int")) { literal(5, t("int")) } }
 
+                                    ref("a") assign literal(3, t("int"))
+
+                                    ref("a").inc()
+                                    ref("a").incPrefix()
+
+                                    ref("a") assignMinus literal(2, t("int"))
+                                    ref("a") assignPlus literal(3, t("int"))
+
+                                    ref("a").dec()
+                                    ref("a").decPrefix()
+
+                                    ref("a") assignMult literal(4, t("int"))
+                                    ref("a") assignDiv literal(2, t("int"))
+                                    ref("a") assignMod literal(3, t("int"))
+
+                                    memberCall("f", ref("Bar")) { ref("a") }
+                                }
+                            }
+                            method("f3") {
+                                body {
+                                    declare { variable("b", t("Bar")) }
+                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
+
                                     ifStmt {
                                         condition { memberCall("nextBoolean", ref("Random")) }
                                         thenStmt { ref("a") assignMinus literal(1, t("int")) }
@@ -124,7 +163,7 @@ abstract class AbstractEvaluationTests {
                                     memberCall("f", ref("Bar")) { ref("a") }
                                 }
                             }
-                            method("f3") {
+                            method("f4") {
                                 body {
                                     declare { variable("b", t("Bar")) }
                                     declare { variable("a", t("int")) { literal(5, t("int")) } }
@@ -138,7 +177,7 @@ abstract class AbstractEvaluationTests {
                                     memberCall("f", ref("Bar")) { ref("a") }
                                 }
                             }
-                            method("f4") {
+                            method("f5") {
                                 body {
                                     declare { variable("b", t("Bar")) }
                                     declare { variable("a", t("int")) { literal(5, t("int")) } }

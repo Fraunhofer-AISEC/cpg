@@ -73,6 +73,38 @@ class AbstractEvaluatorTest {
     }
 
     /*
+       Bar f = new Bar();
+       int a = 5;
+
+       a = 3;
+       a++;
+       ++a;
+       a -= 2;
+       a += 3;
+       a--;
+       --a;
+       a *= 4;
+       a /= 2;
+       a %= 3;
+
+       b.f(a);
+    */
+    @Test
+    fun testIntegerOperations() {
+        val mainClass = tu.records["Foo"]
+        assertNotNull(mainClass)
+        val f1 = mainClass.methods["f2"]
+        assertNotNull(f1)
+
+        val refA = f1.bodyOrNull<MemberCallExpression>(12)!!.arguments.first()
+        assertNotNull(refA)
+
+        val evaluator = AbstractEvaluator()
+        val value = evaluator.evaluate(refA)
+        assertEquals(LatticeInterval.Bounded(2, 2), value)
+    }
+
+    /*
        Bar b = new Bar();
        int a = 5;
 
@@ -86,7 +118,7 @@ class AbstractEvaluatorTest {
     fun testBranch1Integer() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f2"]
+        val f1 = mainClass.methods["f3"]
         assertNotNull(f1)
 
         val refA = f1.bodyOrNull<MemberCallExpression>(3)!!.arguments.first()
@@ -113,7 +145,7 @@ class AbstractEvaluatorTest {
     fun testBranch2Integer() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f3"]
+        val f1 = mainClass.methods["f4"]
         assertNotNull(f1)
 
         val refA = f1.bodyOrNull<MemberCallExpression>(3)!!.arguments.first()
@@ -138,7 +170,7 @@ class AbstractEvaluatorTest {
     fun testLoopInteger() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f4"]
+        val f1 = mainClass.methods["f5"]
         assertNotNull(f1)
 
         val refA = f1.bodyOrNull<MemberCallExpression>(5)!!.arguments.first()
