@@ -968,6 +968,7 @@ fun LanguageFrontend<*, *>.ref(
 ): Reference {
     val node = newReference(name)
     node.type = type
+    node.code = name.toString()
 
     if (init != null) {
         init(node)
@@ -1380,6 +1381,21 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
     val node = (this@LanguageFrontend).newAssignExpression("+=", listOf(this), listOf(rhs))
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `-=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.assignMinus(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("-=", listOf(this), listOf(rhs))
 
     if (this@Holder is StatementHolder) {
         this@Holder += node
