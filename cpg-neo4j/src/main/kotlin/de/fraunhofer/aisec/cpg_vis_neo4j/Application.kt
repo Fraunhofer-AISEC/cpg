@@ -620,20 +620,6 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
-        // For Testing, remove later!
-        val nodes = translationResult.nodes
-        val targetNodes = nodes.filter { it.name.localName == "a" }
-        val focusNode =
-            targetNodes.first {
-                it.location?.region?.startLine == 101 &&
-                    it is Reference &&
-                    it.type.name.toString() ==
-                        "int" // "java.util.LinkedList<java.lang.Integer>" // "int[]"
-            }
-        val size = AbstractEvaluator().evaluate(focusNode)
-        println(size)
-        return EXIT_SUCCESS
-
         exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
             pushToNeo4j(translationResult)

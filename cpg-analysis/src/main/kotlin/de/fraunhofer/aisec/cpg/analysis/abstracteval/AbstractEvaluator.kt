@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Array
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Integer
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.MutableList
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
@@ -40,6 +39,13 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import org.apache.commons.lang3.NotImplementedException
 
+/**
+ * An evaluator performing abstract evaluation for a singular [Value]. It takes a target [Node] and
+ * walks back to its Declaration. From there it uses the [Worklist] to traverse the EOG graph until
+ * it reaches the node. All statements encountered may influence the result as implemented in the
+ * respective [Value] class. The result is a [LatticeInterval] defining both a lower and upper bound
+ * for the final value.
+ */
 class AbstractEvaluator {
     // The node for which we want to get the value
     private lateinit var targetNode: Node
@@ -48,6 +54,9 @@ class AbstractEvaluator {
     // The type of the value we are analyzing
     private lateinit var targetType: KClass<out Value>
 
+    /**
+     * Takes a node (e.g. Reference) and tries to evaluate its value at this point in the program.
+     */
     fun evaluate(node: Node): LatticeInterval {
         return evaluate(
             node.name.localName,
@@ -58,6 +67,14 @@ class AbstractEvaluator {
         )
     }
 
+    /**
+     * Takes a manual configuration and tries to evaluate the value of the node at the end.
+     * @param name The name of the target node
+     * @param start The beginning of the analysis, usually the start of the target's life
+     * @param end The place at which we want to know the target's value
+     * @param type The Type of the target
+     * @param interval The starting value of the analysis, optional
+     */
     fun evaluate(
         name: String,
         start: Node,
@@ -73,17 +90,16 @@ class AbstractEvaluator {
         val startState = IntervalState()
         startState.push(start, interval)
         val finalState = iterateEOG(start, startState, ::handleNode, targetNode)
-        // TODO: null-safety
-        return finalState!![targetNode]!!.elements
+        return finalState?.get(targetNode)?.elements ?: LatticeInterval.BOTTOM
     }
 
     /**
-     * This function delegates to the right handler depending on the next node. This is the handler
-     * used in _iterateEOG_ to correctly handle complex statements.
+     * This function changes the state depending on the current node. This is the handler used in
+     * _iterateEOG_ to correctly handle complex statements.
      *
      * @param currentNode The current node
      * @param state The state for the current node
-     * @param worklist The whole worklist to manually handle complex scenarios if necessary
+     * @param worklist The whole worklist to manually handle complex scenarios
      * @return The updated state after handling the current node
      */
     private fun handleNode(
@@ -91,10 +107,10 @@ class AbstractEvaluator {
         state: State<Node, LatticeInterval>,
         worklist: Worklist<Node, Node, LatticeInterval>
     ): State<Node, LatticeInterval> {
-        // If the current node is already done
+        // Check if the current node is already DONE
         // (prevents infinite loop and unnecessary double-checking)
         if (worklist.isDone(currentNode)) {
-            // Mark following nodes as DONE if they only have this as previous EOG or all are DONE
+            // Mark following nodes as DONE if they only have this as previousEOG or all are DONE
             // In other cases, converging branches may still change the node
             currentNode.nextEOG.forEach { next ->
                 if (
@@ -107,12 +123,12 @@ class AbstractEvaluator {
             return state
         }
 
-        // First calculate the effect
+        // Calculate the effect of the currentNode
         val previousInterval = state[currentNode]?.elements
         val newInterval = state.calculateEffect(currentNode)
         val newState = state.duplicate()
 
-        // If it was already seen exactly once or is known to need widening
+        // Check if it is marked as in need of widening
         if (worklist.needsWidening(currentNode)) {
             // Widen the interval
             val widenedInterval = previousInterval!!.widen(newInterval)
@@ -136,7 +152,7 @@ class AbstractEvaluator {
             }
         }
 
-        // If it is marked as in need of narrowing
+        // Otherwise, check if it is marked as in need of narrowing
         else if (worklist.needsNarrowing(currentNode)) {
             // Narrow the interval
             val narrowedInterval = previousInterval!!.narrow(newInterval)
@@ -157,7 +173,8 @@ class AbstractEvaluator {
             }
         }
 
-        // If it was seen for the first time apply the effect and maybe mark it as "NEEDS WIDENING"
+        // Otherwise, if it was seen for the first time directly apply the effect.
+        // If it is within a loop mark it as "NEEDS WIDENING".
         // We cannot use the "already_seen" field as it is set before this handler is called
         else {
             newState[currentNode] = IntervalLattice(newInterval)
@@ -172,10 +189,10 @@ class AbstractEvaluator {
             }
         }
 
-        // We propagate the current Interval to all successor nodes which are empty
-        // If the next EOG already has a value we need to join them
-        // This is implemented in IntervalState.push
-        // Only do this if we have not reached the goal node
+        // Finally, we propagate the current Interval to all successor nodes which are empty.
+        // If the next EOG already has a value we need to join them.
+        // This is implemented in IntervalState.push.
+        // Only do this if we have not yet reached the goal node
         if (currentNode != targetNode) {
             currentNode.nextEOG.forEach { newState.push(it, newState[currentNode]) }
         }
@@ -192,11 +209,10 @@ class AbstractEvaluator {
     }
 
     /**
-     * Tries to determine the Collection type of the target Node by parsing the type name.
+     * Tries to determine the type of the target Node by parsing the type name.
      *
      * @param node The target node
-     * @return A Kotlin class representing the collection that contains the necessary analysis
-     *   functions
+     * @return A [Value] class that models the effects on the node type
      */
     private fun getType(node: Node): KClass<out Value> {
         if (node !is Reference) {
@@ -204,11 +220,9 @@ class AbstractEvaluator {
         }
         val name = node.type.name.toString()
         return when {
-            // TODO: could be linkedList, arrayList, ...
-            name.startsWith("java.util.List") -> MutableList::class
             name.endsWith("[]") -> Array::class
             name == "int" -> Integer::class
-            else -> MutableList::class // throw NotImplementedException()
+            else -> throw NotImplementedException()
         }
     }
 

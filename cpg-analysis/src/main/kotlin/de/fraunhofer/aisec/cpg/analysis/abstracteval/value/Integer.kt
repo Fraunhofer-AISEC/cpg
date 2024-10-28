@@ -34,8 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.query.value
 import org.apache.commons.lang3.NotImplementedException
 
+/** This class implements the [Value] interface for Integer values. */
 class Integer : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
+        // (Re-)Declarations of the Variable
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name
         ) {
@@ -46,6 +48,7 @@ class Integer : Value {
                 }
             return LatticeInterval.Bounded(initValue, initValue)
         }
+        // Unary Operators
         if (node is UnaryOperator) {
             if (node.input.code == name) {
                 return when (node.operatorCode) {
@@ -60,16 +63,17 @@ class Integer : Value {
                     else -> current
                 }
             }
-        } else if (node is AssignExpression) {
+        }
+        // Assignments and combined assign expressions
+        // TODO: we should aim to evaluate the right hand side expression for all cases!
+        //  currently evaluation only works correctly for literals
+        else if (node is AssignExpression) {
             if (node.lhs.any { it.code == name }) {
-                // TODO: we should evaluate the right hand side expression for all cases!
-                //  currently evaluation only works correctly for literals
                 return when (node.operatorCode) {
                     "=" -> {
-                        var newInterval: LatticeInterval = current
                         // If the rhs is only a literal use this exact value
                         val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
-                        newInterval =
+                        val newInterval =
                             if (value != null) {
                                 LatticeInterval.Bounded(value, value)
                             }
@@ -83,10 +87,9 @@ class Integer : Value {
                         newInterval
                     }
                     "+=" -> {
-                        var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
                         val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
-                        newInterval =
+                        val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current + valueInterval
@@ -103,10 +106,9 @@ class Integer : Value {
                         newInterval
                     }
                     "-=" -> {
-                        var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
                         val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
-                        newInterval =
+                        val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current - valueInterval
@@ -123,10 +125,9 @@ class Integer : Value {
                         newInterval
                     }
                     "*=" -> {
-                        var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
                         val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
-                        newInterval =
+                        val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current * valueInterval
@@ -141,10 +142,9 @@ class Integer : Value {
                         newInterval
                     }
                     "/=" -> {
-                        var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
                         val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
-                        newInterval =
+                        val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current / valueInterval
@@ -159,10 +159,9 @@ class Integer : Value {
                         newInterval
                     }
                     "%=" -> {
-                        var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
                         val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
-                        newInterval =
+                        val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current % valueInterval

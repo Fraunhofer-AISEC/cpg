@@ -30,8 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
+/**
+ * The [Value] interface is used by the AbstractEvaluator to store the behaviour of different
+ * analysis targets. Each class implementing this interface is expected to define all operations
+ * that might affect its internal value in [applyEffect]. When adding new classes remember to add
+ * them to AbstractEvaluator.getType and add tests.
+ */
 interface Value {
-    /** Applies the effect of a Node to the Interval describing possible values of a collection. */
+    /** Applies the effect of a Node to the interval containing its possible values. */
     fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval
 
     companion object {

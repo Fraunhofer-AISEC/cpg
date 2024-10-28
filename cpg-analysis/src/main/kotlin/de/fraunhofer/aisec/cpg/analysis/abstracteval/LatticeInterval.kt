@@ -29,10 +29,16 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.State
 
+/**
+ * The [LatticeInterval] class implements the functionality of intervals that is needed for the
+ * [AbstractEvaluator]. It is either a [BOTTOM] object signaling no knowledge or a [Bounded] object
+ * with a lower and upper [Bound]. Each [Bound] can then be [Bound.NEGATIVE_INFINITE],
+ * [Bound.INFINITE] or a [Bound.Value]. This class implements many convenience methods to handle the
+ * [LatticeInterval].
+ */
 sealed class LatticeInterval : Comparable<LatticeInterval> {
     object BOTTOM : LatticeInterval()
 
-    // TODO: future iterations should support fractional values
     data class Bounded(val lower: Bound, val upper: Bound) : LatticeInterval() {
         constructor(lower: Int, upper: Int) : this(Bound.Value(lower), Bound.Value(upper))
 
@@ -41,6 +47,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         constructor(lower: Bound, upper: Int) : this(lower, Bound.Value(upper))
     }
 
+    // TODO: future iterations should support fractional values
     sealed class Bound : Comparable<Bound> {
         data class Value(val value: Int) : Bound()
 
@@ -344,7 +351,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
 
 /**
  * The [LatticeElement] that is used for worklist iteration. It wraps a single element of the type
- * [LatticeInterval]
+ * [LatticeInterval].
  */
 class IntervalLattice(override val elements: LatticeInterval) :
     LatticeElement<LatticeInterval>(elements) {
@@ -352,7 +359,7 @@ class IntervalLattice(override val elements: LatticeInterval) :
         return elements.compareTo(other.elements)
     }
 
-    // Returns true whenever other is fully within this
+    /** Returns true iff [other] is fully within this */
     fun contains(other: LatticeElement<LatticeInterval>): Boolean {
         if (this.elements is LatticeInterval.BOTTOM || other.elements is LatticeInterval.BOTTOM) {
             return false
@@ -364,7 +371,7 @@ class IntervalLattice(override val elements: LatticeInterval) :
             thisInterval.upper >= otherInterval.upper)
     }
 
-    // The least upper bound of two Intervals is given by the join operation
+    /** The least upper bound of two Intervals is given by the join operation. */
     override fun lub(other: LatticeElement<LatticeInterval>): LatticeElement<LatticeInterval> {
         return IntervalLattice(this.elements.join(other.elements))
     }
@@ -386,11 +393,16 @@ class IntervalLattice(override val elements: LatticeInterval) :
     }
 }
 
+/**
+ * A [State] that maps analyzed [Node]s to their [LatticeInterval]. Whenever new information for a
+ * known node is pushed, we join it with the previous known value to properly handle branch merges.
+ */
 class IntervalState : State<Node, LatticeInterval>() {
     /**
      * Adds a new mapping from [newNode] to (a copy of) [newLatticeElement] to this object if
-     * [newNode] does not exist in this state yet. If it already exists, it will compute the lub
-     * over the new lattice Element and all predecessors. It returns whether the state has changed.
+     * [newNode] does not exist in this state yet. If it already exists, it will compute the [lub]
+     * over the new [LatticeElement] and the previous one. It returns whether the [LatticeElement]
+     * has changed.
      */
     override fun push(
         newNode: de.fraunhofer.aisec.cpg.graph.Node,
@@ -399,7 +411,7 @@ class IntervalState : State<Node, LatticeInterval>() {
         if (newLatticeElement == null) {
             return false
         }
-        val current = this[newNode] as? IntervalLattice
+        val current = this[newNode]
         if (current != null) {
             // Calculate the join of the new Element and the previous (propagated) value for the
             // node
@@ -417,7 +429,7 @@ class IntervalState : State<Node, LatticeInterval>() {
     }
 
     /**
-     * Performs the same duplication as the parent function, but returns a [IntervalState] object
+     * Implements the same duplication as the parent function, but returns a [IntervalState] object
      * instead.
      */
     override fun duplicate(): State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval> {
@@ -429,7 +441,7 @@ class IntervalState : State<Node, LatticeInterval>() {
     }
 
     /**
-     * Performs the same lub function as the parent, but uses the [push] function from
+     * Implements the same [lub] function as the parent, but uses the [push] function from
      * [LatticeInterval]
      */
     override fun lub(
