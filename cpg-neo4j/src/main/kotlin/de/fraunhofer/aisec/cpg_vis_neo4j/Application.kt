@@ -27,10 +27,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractEvaluator
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File

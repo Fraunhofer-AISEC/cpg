@@ -84,29 +84,6 @@ class ValueEvaluationTests {
                                     memberCall("println", member("out", ref("System"))) {
                                         ref("str")
                                     }
-
-                                    declare {
-                                        variable("list", t("list")) {
-                                            val init =
-                                                newMemberCallExpression(
-                                                    null,
-                                                    true,
-                                                )
-                                            init.addArgument(newLiteral("1"))
-                                            init.name = Name("of", Name("List"))
-                                            this.initializer = init
-                                        }
-                                    }
-                                    newMemberCallExpression(
-                                        memberCall("add", ref("list"), false) { literal("2") }
-                                    )
-                                    newMemberCallExpression(
-                                        memberCall("removeAll", ref("list"), false) { literal("3") }
-                                    )
-                                    memberCall("println", member("out", ref("System")), true) {
-                                        ref("list")
-                                    }
-
                                     returnStmt {}
                                 }
                             }

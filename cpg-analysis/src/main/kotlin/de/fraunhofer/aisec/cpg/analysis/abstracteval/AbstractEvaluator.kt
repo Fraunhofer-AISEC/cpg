@@ -69,6 +69,7 @@ class AbstractEvaluator {
 
     /**
      * Takes a manual configuration and tries to evaluate the value of the node at the end.
+     *
      * @param name The name of the target node
      * @param start The beginning of the analysis, usually the start of the target's life
      * @param end The place at which we want to know the target's value
