@@ -62,71 +62,119 @@ class Integer : Value {
             }
         } else if (node is AssignExpression) {
             if (node.lhs.any { it.code == name }) {
-                // TODO: we need to evaluate the right hand side for all cases!
+                // TODO: we should evaluate the right hand side expression for all cases!
+                //  currently evaluation only works correctly for literals
                 return when (node.operatorCode) {
                     "=" -> {
                         var newInterval: LatticeInterval = current
                         // If the rhs is only a literal use this exact value
-                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
-                            val value = node.rhs[0].value.value as? Int
+                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        newInterval =
                             if (value != null) {
-                                newInterval = LatticeInterval.Bounded(value, value)
+                                LatticeInterval.Bounded(value, value)
                             }
-                        } else {
-                            TODO()
-                        }
+                            // Per default set the bounds to unknown
+                            else {
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                    LatticeInterval.Bound.INFINITE
+                                )
+                            }
                         newInterval
                     }
                     "+=" -> {
                         var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
-                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
-                            val value = node.rhs[0].value.value as? Int
+                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
-                                newInterval = current.plus(valueInterval)
+                                current + valueInterval
                             }
-                        }
-                        // Per default set upper bound to infinite
-                        else {
-                            val joinInterval: LatticeInterval =
-                                LatticeInterval.Bounded(
-                                    LatticeInterval.Bound.INFINITE,
-                                    LatticeInterval.Bound.INFINITE
-                                )
-                            newInterval = current.join(joinInterval)
-                        }
+                            // Per default set upper bound to infinite
+                            else {
+                                val joinInterval: LatticeInterval =
+                                    LatticeInterval.Bounded(
+                                        LatticeInterval.Bound.INFINITE,
+                                        LatticeInterval.Bound.INFINITE
+                                    )
+                                current.join(joinInterval)
+                            }
                         newInterval
                     }
                     "-=" -> {
                         var newInterval: LatticeInterval = current
                         // If the rhs is only a literal we subtract this exact value
-                        if (node.rhs.size == 1 && node.rhs[0] is Literal<*>) {
-                            val value = node.rhs[0].value.value as? Int
+                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
-                                newInterval = current.minus(valueInterval)
+                                current - valueInterval
                             }
-                        }
-                        // Per default set lower bound to negative infinite
-                        else {
-                            val joinInterval: LatticeInterval =
-                                LatticeInterval.Bounded(
-                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.NEGATIVE_INFINITE
-                                )
-                            newInterval = current.join(joinInterval)
-                        }
+                            // Per default set lower bound to negative infinite
+                            else {
+                                val joinInterval: LatticeInterval =
+                                    LatticeInterval.Bounded(
+                                        LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                        LatticeInterval.Bound.NEGATIVE_INFINITE
+                                    )
+                                current.join(joinInterval)
+                            }
                         newInterval
                     }
                     "*=" -> {
-                        TODO()
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        newInterval =
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                current * valueInterval
+                            }
+                            // Per default lose all information
+                            else {
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                    LatticeInterval.Bound.INFINITE
+                                )
+                            }
+                        newInterval
                     }
                     "/=" -> {
-                        TODO()
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        newInterval =
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                current / valueInterval
+                            }
+                            // Per default lose all information
+                            else {
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                    LatticeInterval.Bound.INFINITE
+                                )
+                            }
+                        newInterval
                     }
                     "%=" -> {
-                        TODO()
+                        var newInterval: LatticeInterval = current
+                        // If the rhs is only a literal we subtract this exact value
+                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        newInterval =
+                            if (value != null) {
+                                val valueInterval = LatticeInterval.Bounded(value, value)
+                                current % valueInterval
+                            }
+                            // Per default lose all information
+                            else {
+                                LatticeInterval.Bounded(
+                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
+                                    LatticeInterval.Bound.INFINITE
+                                )
+                            }
+                        newInterval
                     }
                     else -> current
                 }

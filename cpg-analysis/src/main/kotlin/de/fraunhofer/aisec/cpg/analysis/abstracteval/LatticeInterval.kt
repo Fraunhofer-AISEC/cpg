@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.helpers.State
 sealed class LatticeInterval : Comparable<LatticeInterval> {
     object BOTTOM : LatticeInterval()
 
+    // TODO: future iterations should support fractional values
     data class Bounded(val lower: Bound, val upper: Bound) : LatticeInterval() {
         constructor(lower: Int, upper: Int) : this(Bound.Value(lower), Bound.Value(upper))
 
@@ -115,6 +116,45 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newLower = subtractBounds(this.lower, other.lower)
                 val newUpper = subtractBounds(this.upper, other.upper)
                 Bounded(newLower, newUpper)
+            }
+            else -> throw IllegalArgumentException("Unsupported interval type")
+        }
+    }
+
+    // Multiplication operator
+    operator fun times(other: LatticeInterval): LatticeInterval {
+        return when {
+            this is BOTTOM || other is BOTTOM -> BOTTOM
+            this is Bounded && other is Bounded -> {
+                val newLower = multiplyBounds(this.lower, other.lower)
+                val newUpper = multiplyBounds(this.upper, other.upper)
+                Bounded(min(newLower, newUpper), max(newLower, newUpper))
+            }
+            else -> throw IllegalArgumentException("Unsupported interval type")
+        }
+    }
+
+    // Division operator
+    operator fun div(other: LatticeInterval): LatticeInterval {
+        return when {
+            this is BOTTOM || other is BOTTOM -> BOTTOM
+            this is Bounded && other is Bounded -> {
+                val newLower = divideBounds(this.lower, other.lower)
+                val newUpper = divideBounds(this.upper, other.upper)
+                Bounded(min(newLower, newUpper), max(newLower, newUpper))
+            }
+            else -> throw IllegalArgumentException("Unsupported interval type")
+        }
+    }
+
+    // Modulo operator
+    operator fun rem(other: LatticeInterval): LatticeInterval {
+        return when {
+            this is BOTTOM || other is BOTTOM -> BOTTOM
+            this is Bounded && other is Bounded -> {
+                val lowerBracket = modulateBounds(this.lower, other.lower)
+                val upperBracket = modulateBounds(this.upper, other.upper)
+                lowerBracket.join(upperBracket)
             }
             else -> throw IllegalArgumentException("Unsupported interval type")
         }
@@ -215,7 +255,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
 
     private fun addBounds(a: Bound, b: Bound): Bound {
         return when {
-            // -∞ + ∞ is not an allowed operation
+            // -∞ + ∞ is not a defined operation
             a is Bound.INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             a is Bound.NEGATIVE_INFINITE && b !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
@@ -227,12 +267,65 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
 
     private fun subtractBounds(a: Bound, b: Bound): Bound {
         return when {
-            // ∞ - ∞ is not an allowed operation
+            // ∞ - ∞ is not a defined operation
             a is Bound.INFINITE && b !is Bound.INFINITE -> Bound.INFINITE
             a is Bound.NEGATIVE_INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.INFINITE && a !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.NEGATIVE_INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value - b.value)
+            else -> throw IllegalArgumentException("Unsupported bound type")
+        }
+    }
+
+    private fun multiplyBounds(a: Bound, b: Bound): Bound {
+        return when {
+            // ∞ * 0 is not a defined operation
+            a is Bound.INFINITE && b > Bound.Value(0) -> Bound.INFINITE
+            a is Bound.INFINITE && b < Bound.Value(0) -> Bound.NEGATIVE_INFINITE
+            a > Bound.Value(0) && b is Bound.INFINITE -> Bound.INFINITE
+            a < Bound.Value(0) && b is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
+            a is Bound.NEGATIVE_INFINITE && b > Bound.Value(0) -> Bound.NEGATIVE_INFINITE
+            a is Bound.NEGATIVE_INFINITE && b < Bound.Value(0) -> Bound.INFINITE
+            a > Bound.Value(0) && b is Bound.NEGATIVE_INFINITE -> Bound.NEGATIVE_INFINITE
+            a < Bound.Value(0) && b is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
+            a is Bound.Value && b is Bound.Value -> Bound.Value(a.value * b.value)
+            else -> throw IllegalArgumentException("Unsupported bound type")
+        }
+    }
+
+    private fun divideBounds(a: Bound, b: Bound): Bound {
+        return when {
+            // ∞ / ∞ is not a defined operation
+            a is Bound.INFINITE && b > Bound.Value(0) && b !is Bound.INFINITE -> Bound.INFINITE
+            a is Bound.INFINITE && b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
+                Bound.NEGATIVE_INFINITE
+            a > Bound.Value(0) && a !is Bound.INFINITE && b is Bound.INFINITE -> Bound.INFINITE
+            a < Bound.Value(0) && a !is Bound.NEGATIVE_INFINITE && b is Bound.INFINITE ->
+                Bound.NEGATIVE_INFINITE
+            a is Bound.NEGATIVE_INFINITE && b > Bound.Value(0) && b !is Bound.INFINITE ->
+                Bound.NEGATIVE_INFINITE
+            a is Bound.NEGATIVE_INFINITE && b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
+                Bound.INFINITE
+            a > Bound.Value(0) && a !is Bound.INFINITE && b is Bound.NEGATIVE_INFINITE ->
+                Bound.NEGATIVE_INFINITE
+            a < Bound.Value(0) && a !is Bound.NEGATIVE_INFINITE && b is Bound.NEGATIVE_INFINITE ->
+                Bound.INFINITE
+            a is Bound.Value && b is Bound.Value -> Bound.Value(a.value / b.value)
+            else -> throw IllegalArgumentException("Unsupported bound type")
+        }
+    }
+
+    // ∞ mod b can be any number [0, b], therefore we need to return an Interval
+    private fun modulateBounds(a: Bound, b: Bound): LatticeInterval {
+        return when {
+            // ∞ mod ∞ is not a defined operation
+            a == Bound.Value(0) -> Bounded(0, 0)
+            (a is Bound.INFINITE || a is Bound.NEGATIVE_INFINITE) && b >= Bound.Value(0) ->
+                Bounded(0, b)
+            (a is Bound.INFINITE || a is Bound.NEGATIVE_INFINITE) && b < Bound.Value(0) ->
+                Bounded(b, 0)
+            b is Bound.INFINITE || b is Bound.NEGATIVE_INFINITE -> Bounded(a, a)
+            a is Bound.Value && b is Bound.Value -> Bounded(a.value % b.value, a.value % b.value)
             else -> throw IllegalArgumentException("Unsupported bound type")
         }
     }
