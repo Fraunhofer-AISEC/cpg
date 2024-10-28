@@ -99,9 +99,11 @@ class MutableList : Value {
                 // This includes all functions with side effects
                 if (node.arguments.any { it.name.localName == name }) {
                     // This is a function call that uses the variable as an argument.
-                    // To find side effects we need to create a local evaluator for this function and
+                    // To find side effects we need to create a local evaluator for this function
+                    // and
                     // return the value of the renamed variable at the last statement
-                    // TODO: this currently does not work if the variable is given for multiple parameters
+                    // TODO: this currently does not work if the variable is given for multiple
+                    // parameters
                     // TODO: error handling
                     val function = node.invokes.first()
                     val argPos = node.arguments.indexOfFirst { it.name.localName == name }
