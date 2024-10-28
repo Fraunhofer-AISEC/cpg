@@ -336,6 +336,10 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             is Bounded -> "[$lower, $upper]"
         }
     }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
 }
 
 /**
