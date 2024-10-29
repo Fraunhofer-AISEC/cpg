@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.Objects
-import kotlin.collections.plusAssign
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
