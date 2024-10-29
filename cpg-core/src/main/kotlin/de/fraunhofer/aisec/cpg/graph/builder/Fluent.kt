@@ -340,8 +340,7 @@ fun LanguageFrontend<*, *>.listComp(
     val holder = this@Holder
     if (holder is StatementHolder) {
         holder += node
-    }
-    if (holder is ArgumentHolder) {
+    } else if (holder is ArgumentHolder) {
         holder += node
     }
 

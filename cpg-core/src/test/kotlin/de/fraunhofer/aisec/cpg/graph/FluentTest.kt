@@ -207,12 +207,7 @@ class FluentTest {
                                                 compExpr {
                                                     ref("i")
                                                     ref("someIterable")
-                                                    ref("i") gt
-                                                        literal(
-                                                            5,
-                                                            t("int")
-                                                        ) // TODO: This line doesn't work as
-                                                    // expected
+                                                    ref("i") gt literal(5, t("int"))
                                                 }
                                             }
                                         }
@@ -240,7 +235,7 @@ class FluentTest {
         assertLocalName("i", compExpr.variable)
         assertIs<Reference>(compExpr.iterable)
         assertLocalName("someIterable", compExpr.iterable)
-        // assertEquals(1, compExpr.predicates.size)
+        assertNotNull(compExpr.predicate)
     }
 
     @Test
@@ -265,12 +260,7 @@ class FluentTest {
                                                 compExpr {
                                                     this.variable = declare { variable("i") }
                                                     ref("someIterable")
-                                                    ref("i") gt
-                                                        literal(
-                                                            5,
-                                                            t("int")
-                                                        ) // TODO: This line doesn't work as
-                                                    // expected
+                                                    ref("i") gt literal(5, t("int"))
                                                 }
                                             }
                                         }
@@ -299,7 +289,7 @@ class FluentTest {
         assertLocalName("i", variableDecl.singleDeclaration)
         assertIs<Reference>(compExpr.iterable)
         assertLocalName("someIterable", compExpr.iterable)
-        // assertEquals(1, compExpr.predicates.size)
+        assertNotNull(compExpr.predicate)
     }
 
     @Test
@@ -327,12 +317,7 @@ class FluentTest {
                                                         variable("y")
                                                     }
                                                     ref("someIterable")
-                                                    ref("i") gt
-                                                        literal(
-                                                            5,
-                                                            t("int")
-                                                        ) // TODO: This line doesn't work as
-                                                    // expected
+                                                    ref("i") gt literal(5, t("int"))
                                                 }
                                             }
                                         }
@@ -362,6 +347,6 @@ class FluentTest {
         assertLocalName("y", variableDecl.declarations[1])
         assertIs<Reference>(compExpr.iterable)
         assertLocalName("someIterable", compExpr.iterable)
-        // assertEquals(1, compExpr.predicates.size)
+        assertNotNull(compExpr.predicate)
     }
 }
