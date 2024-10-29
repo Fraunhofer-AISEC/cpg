@@ -88,18 +88,25 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
      * [ComprehensionExpression].
      *
-     * Connects multiple predicates by "AND".
+     * Connects multiple predicates by `and`.
      */
     private fun handleComprehension(node: Python.AST.comprehension): ComprehensionExpression {
-        return newComprehensionExpression(node).apply {
-            this.variable = handle(node.target)
-            this.iterable = handle(node.iter)
+        return newComprehensionExpression(rawNode = node).apply {
+            variable = handle(node.target)
+            iterable = handle(node.iter)
             val predicates = node.ifs.map { handle(it) }
             if (predicates.size == 1) {
-                this.predicate = predicates.single()
+                predicate = predicates.single()
             } else if (predicates.size > 1) {
-                this.predicate = joinListWithBinOp("and", predicates, node)
+                predicate =
+                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = node)
             }
+            if (node.is_async != 0L)
+                additionalProblems +=
+                    newProblemExpression(
+                        "Node marked as is_async but we don't support this yet",
+                        rawNode = node
+                    )
         }
     }
 
@@ -109,9 +116,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * [CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
-        return newCollectionComprehension(node).apply {
-            this.statement = handle(node.elt)
-            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+        return newCollectionComprehension(rawNode = node).apply {
+            statement = handle(node.elt)
+            comprehensionExpressions += node.generators.map { handleComprehension(it) }
         }
     }
 
@@ -120,10 +127,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
-        return newCollectionComprehension(node).apply {
-            this.statement = handle(node.elt)
-            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
-            this.type = objectType("list") // TODO: Replace this once we have dedicated types
+        return newCollectionComprehension(rawNode = node).apply {
+            statement = handle(node.elt)
+            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            type = objectType("list") // TODO: Replace this once we have dedicated types
         }
     }
 
@@ -132,7 +139,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * a [CollectionComprehension].
      */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
-        return newCollectionComprehension(node).apply {
+        return newCollectionComprehension(rawNode = node).apply {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
             this.type = objectType("set") // TODO: Replace this once we have dedicated types
@@ -144,8 +151,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
-        return newCollectionComprehension(node).apply {
-            this.statement = newKeyValueExpression(handle(node.key), handle(node.value), node)
+        return newCollectionComprehension(rawNode = node).apply {
+            this.statement =
+                newKeyValueExpression(
+                    key = handle(node.key),
+                    value = handle(node.value),
+                    rawNode = node
+                )
             this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
             this.type = objectType("dict") // TODO: Replace this once we have dedicated types
         }
@@ -215,10 +227,15 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         } else if (values.size == 1) {
             values.first()
         } else {
-            joinListWithBinOp("+", values, node)
+            joinListWithBinOp(operatorCode = "+", nodes = values, rawNode = node)
         }
     }
 
+    /**
+     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
+     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
+     * The last operands are further down the tree.
+     */
     private fun joinListWithBinOp(
         operatorCode: String,
         nodes: List<Expression>,

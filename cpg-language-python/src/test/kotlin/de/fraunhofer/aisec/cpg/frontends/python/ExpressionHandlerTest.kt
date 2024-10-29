@@ -51,12 +51,12 @@ class ExpressionHandlerTest {
         val listComp = result.functions["listComp"]
         assertNotNull(listComp)
 
-        val body = listComp.body as? Block
-        assertNotNull(body)
-        val singleWithIfAssignment = body.statements[0] as? AssignExpression
-        assertNotNull(singleWithIfAssignment)
-        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithIf)
+        val body = listComp.body
+        assertIs<Block>(body)
+        val singleWithIfAssignment = body.statements[0]
+        assertIs<AssignExpression>(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithIf)
         assertIs<CallExpression>(singleWithIf.statement)
         assertEquals(1, singleWithIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithIf.comprehensionExpressions[0].variable)
@@ -66,10 +66,10 @@ class ExpressionHandlerTest {
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
 
-        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
-        assertNotNull(singleWithoutIfAssignment)
-        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithoutIf)
+        val singleWithoutIfAssignment = body.statements[1]
+        assertIs<AssignExpression>(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithoutIf)
         assertIs<CallExpression>(singleWithoutIf.statement)
         assertEquals(1, singleWithoutIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithoutIf.comprehensionExpressions[0].variable)
@@ -77,10 +77,10 @@ class ExpressionHandlerTest {
         assertLocalName("x", singleWithoutIf.comprehensionExpressions[0].iterable)
         assertNull(singleWithoutIf.comprehensionExpressions[0].predicate)
 
-        val singleWithDoubleIfAssignment = body.statements[2] as? AssignExpression
-        assertNotNull(singleWithDoubleIfAssignment)
-        val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithDoubleIf)
+        val singleWithDoubleIfAssignment = body.statements[2]
+        assertIs<AssignExpression>(singleWithDoubleIfAssignment)
+        val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithDoubleIf)
         assertIs<CallExpression>(singleWithDoubleIf.statement)
         assertEquals(1, singleWithDoubleIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithDoubleIf.comprehensionExpressions[0].variable)
@@ -91,7 +91,7 @@ class ExpressionHandlerTest {
         assertEquals("and", doubleIfPredicate.operatorCode)
 
         val doubleAssignment = body.statements[3] as? AssignExpression
-        assertNotNull(doubleAssignment)
+        assertIs<AssignExpression>(doubleAssignment)
         val double = doubleAssignment.rhs[0] as? CollectionComprehension
         assertNotNull(double)
         assertIs<CallExpression>(double.statement)
@@ -112,10 +112,10 @@ class ExpressionHandlerTest {
 
         val body = listComp.body as? Block
         assertNotNull(body)
-        val singleWithIfAssignment = body.statements[0] as? AssignExpression
-        assertNotNull(singleWithIfAssignment)
-        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithIf)
+        val singleWithIfAssignment = body.statements[0]
+        assertIs<AssignExpression>(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithIf)
         assertIs<CallExpression>(singleWithIf.statement)
         assertEquals(1, singleWithIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithIf.comprehensionExpressions[0].variable)
@@ -125,10 +125,10 @@ class ExpressionHandlerTest {
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
 
-        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
-        assertNotNull(singleWithoutIfAssignment)
-        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithoutIf)
+        val singleWithoutIfAssignment = body.statements[1]
+        assertIs<AssignExpression>(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithoutIf)
         assertIs<CallExpression>(singleWithoutIf.statement)
         assertEquals(1, singleWithoutIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithoutIf.comprehensionExpressions[0].variable)
@@ -136,10 +136,10 @@ class ExpressionHandlerTest {
         assertLocalName("x", singleWithoutIf.comprehensionExpressions[0].iterable)
         assertNull(singleWithoutIf.comprehensionExpressions[0].predicate)
 
-        val singleWithDoubleIfAssignment = body.statements[2] as? AssignExpression
-        assertNotNull(singleWithDoubleIfAssignment)
-        val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithDoubleIf)
+        val singleWithDoubleIfAssignment = body.statements[2]
+        assertIs<AssignExpression>(singleWithDoubleIfAssignment)
+        val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithDoubleIf)
         assertIs<CallExpression>(singleWithDoubleIf.statement)
         assertEquals(1, singleWithDoubleIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithDoubleIf.comprehensionExpressions[0].variable)
@@ -149,13 +149,12 @@ class ExpressionHandlerTest {
         assertIs<BinaryOperator>(doubleIfPredicate)
         assertEquals("and", doubleIfPredicate.operatorCode)
 
-        val doubleAssignment = body.statements[3] as? AssignExpression
-        assertNotNull(doubleAssignment)
-        val double = doubleAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(double)
+        val doubleAssignment = body.statements[3]
+        assertIs<AssignExpression>(doubleAssignment)
+        val double = doubleAssignment.rhs[0]
+        assertIs<CollectionComprehension>(double)
         assertIs<CallExpression>(double.statement)
         assertEquals(2, double.comprehensionExpressions.size)
-        // TODO: Add tests on the comprehension expressions
     }
 
     @Test
@@ -171,10 +170,10 @@ class ExpressionHandlerTest {
 
         val body = listComp.body as? Block
         assertNotNull(body)
-        val singleWithIfAssignment = body.statements[0] as? AssignExpression
-        assertNotNull(singleWithIfAssignment)
-        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithIf)
+        val singleWithIfAssignment = body.statements[0]
+        assertIs<AssignExpression>(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithIf)
         var statement = singleWithIf.statement
         assertIs<KeyValueExpression>(statement)
         assertIs<Reference>(statement.key)
@@ -188,10 +187,10 @@ class ExpressionHandlerTest {
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
 
-        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
-        assertNotNull(singleWithoutIfAssignment)
-        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithoutIf)
+        val singleWithoutIfAssignment = body.statements[1]
+        assertIs<AssignExpression>(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithoutIf)
         statement = singleWithIf.statement
         assertIs<KeyValueExpression>(statement)
         assertIs<Reference>(statement.key)
@@ -203,10 +202,10 @@ class ExpressionHandlerTest {
         assertLocalName("x", singleWithoutIf.comprehensionExpressions[0].iterable)
         assertNull(singleWithoutIf.comprehensionExpressions[0].predicate)
 
-        val singleWithDoubleIfAssignment = body.statements[2] as? AssignExpression
-        assertNotNull(singleWithDoubleIfAssignment)
-        val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithDoubleIf)
+        val singleWithDoubleIfAssignment = body.statements[2]
+        assertIs<AssignExpression>(singleWithDoubleIfAssignment)
+        val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithDoubleIf)
         statement = singleWithIf.statement
         assertIs<KeyValueExpression>(statement)
         assertIs<Reference>(statement.key)
@@ -221,7 +220,7 @@ class ExpressionHandlerTest {
         assertEquals("and", doubleIfPredicate.operatorCode)
 
         val doubleAssignment = body.statements[3] as? AssignExpression
-        assertNotNull(doubleAssignment)
+        assertIs<AssignExpression>(doubleAssignment)
         val double = doubleAssignment.rhs[0] as? CollectionComprehension
         assertNotNull(double)
         statement = singleWithIf.statement
@@ -230,7 +229,6 @@ class ExpressionHandlerTest {
         assertLocalName("i", statement.key)
         assertIs<CallExpression>(statement.value)
         assertEquals(2, double.comprehensionExpressions.size)
-        // TODO: Add tests on the comprehension expressions
     }
 
     @Test
@@ -246,10 +244,10 @@ class ExpressionHandlerTest {
 
         val body = listComp.body as? Block
         assertNotNull(body)
-        val singleWithIfAssignment = body.statements[0] as? AssignExpression
-        assertNotNull(singleWithIfAssignment)
-        val singleWithIf = singleWithIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithIf)
+        val singleWithIfAssignment = body.statements[0]
+        assertIs<AssignExpression>(singleWithIfAssignment)
+        val singleWithIf = singleWithIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithIf)
         assertIs<BinaryOperator>(singleWithIf.statement)
         assertEquals(1, singleWithIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithIf.comprehensionExpressions[0].variable)
@@ -259,10 +257,10 @@ class ExpressionHandlerTest {
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
 
-        val singleWithoutIfAssignment = body.statements[1] as? AssignExpression
-        assertNotNull(singleWithoutIfAssignment)
-        val singleWithoutIf = singleWithoutIfAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(singleWithoutIf)
+        val singleWithoutIfAssignment = body.statements[1]
+        assertIs<AssignExpression>(singleWithoutIfAssignment)
+        val singleWithoutIf = singleWithoutIfAssignment.rhs[0]
+        assertIs<CollectionComprehension>(singleWithoutIf)
         assertIs<BinaryOperator>(singleWithoutIf.statement)
         assertEquals(1, singleWithoutIf.comprehensionExpressions.size)
         assertLocalName("i", singleWithoutIf.comprehensionExpressions[0].variable)
