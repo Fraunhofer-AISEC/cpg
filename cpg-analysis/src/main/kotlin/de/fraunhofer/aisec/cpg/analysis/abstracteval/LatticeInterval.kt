@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.State
 sealed class LatticeInterval : Comparable<LatticeInterval> {
     object BOTTOM : LatticeInterval()
 
-    data class Bounded(val arg1: Bound, val arg2: Bound) : LatticeInterval() {
+    class Bounded(arg1: Bound, arg2: Bound) : LatticeInterval() {
         val lower: Bound
         val upper: Bound
 
