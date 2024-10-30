@@ -149,7 +149,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             this is Bounded && other is Bounded -> {
                 val newLower = multiplyBounds(this.lower, other.lower)
                 val newUpper = multiplyBounds(this.upper, other.upper)
-                Bounded(min(newLower, newUpper), max(newLower, newUpper))
+                Bounded(newLower, newUpper)
             }
             else -> throw IllegalArgumentException("Unsupported interval type")
         }
@@ -162,7 +162,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             this is Bounded && other is Bounded -> {
                 val newLower = divideBounds(this.lower, other.lower)
                 val newUpper = divideBounds(this.upper, other.upper)
-                Bounded(min(newLower, newUpper), max(newLower, newUpper))
+                Bounded(newLower, newUpper)
             }
             else -> throw IllegalArgumentException("Unsupported interval type")
         }
