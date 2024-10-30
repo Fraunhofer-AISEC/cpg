@@ -53,6 +53,9 @@ class UnwrappedEdgeListTest {
             assertEquals(1, node2.prevEOGEdges.size)
             assertEquals(1, node3.prevEOGEdges.size)
             assertEquals(1, node3.prevEOG.size)
+
+            assertEquals(listOf<Node>(node2, node3), node1.nextEOG.subList(0, 2))
+            assertEquals(listOf<Node>(node1), node3.prevEOG.subList(0, 1))
         }
     }
 

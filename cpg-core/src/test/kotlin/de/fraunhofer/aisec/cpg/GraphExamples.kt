@@ -243,6 +243,40 @@ class GraphExamples {
                 }
             }
 
+        fun getNestedComprehensionExpressions(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("whileWithBreakAndElse.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    call("preComprehensions")
+                                    listComp {
+                                        ref("i")
+                                        compExpr {
+                                            ref("i")
+                                            ref("someIterable")
+                                        }
+                                        compExpr {
+                                            ref("j")
+                                            ref("i")
+                                            ref("j") gt literal(5, t("int"))
+                                        }
+                                    }
+                                    call("postComprehensions")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
             val ctx = TranslationContext(config, ScopeManager(), TypeManager())
             val language = config.languages.filterIsInstance<TestLanguage>().first()
