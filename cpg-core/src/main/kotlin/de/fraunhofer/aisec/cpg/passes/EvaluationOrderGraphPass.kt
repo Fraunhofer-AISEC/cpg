@@ -402,7 +402,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-
     protected fun handlePointerReference(node: PointerReference) {
         handleEOG(node.input)
 
