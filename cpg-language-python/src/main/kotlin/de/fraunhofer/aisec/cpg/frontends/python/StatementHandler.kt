@@ -91,7 +91,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * and all of them are translated to traditional comparisons and logical expressions which could
      * also be seen in the condition of an if-statement.
      */
-    fun handlePattern(node: Python.AST.BasePattern, selector: String): Expression {
+    private fun handlePattern(node: Python.AST.BasePattern, selector: String): Expression {
         return when (node) {
             is Python.AST.MatchValue ->
                 newBinaryOperator("==", node).implicit().apply {
@@ -141,7 +141,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * pattern and the `rhs` is the guard. This is in line with
      * [PEP 634](https://peps.python.org/pep-0634/).
      */
-    fun handleCase(node: Python.AST.match_case, selector: String): List<Statement> {
+    private fun handleCase(node: Python.AST.match_case, selector: String): List<Statement> {
         val statements = mutableListOf<Statement>()
         // First, we add the caseStatement
         statements +=
@@ -173,7 +173,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * Translates a Python [`Match`](https://docs.python.org/3/library/ast.html#ast.Match) into a
      * [SwitchStatement].
      */
-    fun handleMatch(node: Python.AST.Match): Statement {
+    private fun handleMatch(node: Python.AST.Match): Statement {
         return newSwitchStatement(node).apply {
             val selector = frontend.expressionHandler.handle(node.subject)
             this.selector = selector

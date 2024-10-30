@@ -159,6 +159,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    /**
+     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
+     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
+     * The last operands are further down the tree.
+     */
     fun joinListWithBinOp(
         operatorCode: String,
         nodes: List<Expression>,
@@ -226,7 +231,12 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 rawNode = node
             )
         } else {
-            joinListWithBinOp(op, node.values.map(::handle), node, true)
+            joinListWithBinOp(
+                operatorCode = op,
+                nodes = node.values.map(::handle),
+                rawNode = node,
+                isImplicit = true
+            )
         }
     }
 

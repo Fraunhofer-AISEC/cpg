@@ -75,8 +75,8 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(paramX)
         assertRefersTo(switchStatement.selector, paramX)
 
-        val statementBlock = switchStatement.statement as? Block
-        assertNotNull(statementBlock)
+        val statementBlock = switchStatement.statement
+        assertIs<Block>(statementBlock)
         val caseSingleton = statementBlock[0]
         assertIs<CaseStatement>(caseSingleton)
         val singletonCheck = caseSingleton.caseExpression
