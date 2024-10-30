@@ -215,6 +215,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM -> other
             other is BOTTOM -> this
+            // Check if the overlap at all
+            this.compareTo(other) != 0 -> BOTTOM
             this is Bounded && other is Bounded -> {
                 val newLower = max(this.lower, other.lower)
                 val newUpper = min(this.upper, other.upper)
