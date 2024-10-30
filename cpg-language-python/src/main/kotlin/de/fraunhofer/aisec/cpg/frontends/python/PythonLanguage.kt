@@ -158,13 +158,7 @@ class PythonLanguage :
                     typeName = "set",
                     elementType = ObjectType("object", listOf(), false, this),
                     language = this
-                ),
-            "tuple" to
-                TupleType(
-                    typeName = "tuple",
-                    listOf(ObjectType("object", listOf(), false, this)),
-                    language = this
-                ),
+                )
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {

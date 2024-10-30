@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -33,8 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * Represents a tuple of types. Primarily used in resolving function calls with multiple return
  * values.
  */
-class TupleType(typeName: CharSequence, types: List<Type>, language: Language<*>) :
-    ObjectType(typeName, types, false, language) {
+class TupleType(types: List<Type>) : Type() {
     var types: List<Type> = listOf()
         set(value) {
             field = value
@@ -45,8 +43,8 @@ class TupleType(typeName: CharSequence, types: List<Type>, language: Language<*>
         this.types = types
     }
 
-    override fun reference(pointer: PointerType.PointerOrigin?): PointerType {
-        return PointerType(this, pointer)
+    override fun reference(pointer: PointerType.PointerOrigin?): Type {
+        return unknownType()
     }
 
     override fun dereference(): Type {
