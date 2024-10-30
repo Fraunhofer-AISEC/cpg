@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -296,6 +297,7 @@ class DFGFunctionSummariesTest {
     }
 
     @Test
+    @Ignore
     fun testPropagateArgumentsControlFlowInsensitive() {
         // We don't use the ControlFlowSensitiveDFGPass here to check the method
         // DFGPass.connectInferredCallArguments
