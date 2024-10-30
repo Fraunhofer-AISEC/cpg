@@ -39,12 +39,26 @@ import de.fraunhofer.aisec.cpg.helpers.State
 sealed class LatticeInterval : Comparable<LatticeInterval> {
     object BOTTOM : LatticeInterval()
 
-    data class Bounded(val lower: Bound, val upper: Bound) : LatticeInterval() {
-        constructor(lower: Int, upper: Int) : this(Bound.Value(lower), Bound.Value(upper))
+    data class Bounded(val arg1: Bound, val arg2: Bound) : LatticeInterval() {
+        val lower: Bound
+        val upper: Bound
 
-        constructor(lower: Int, upper: Bound) : this(Bound.Value(lower), upper)
+        constructor(arg1: Int, arg2: Int) : this(Bound.Value(arg1), Bound.Value(arg2))
 
-        constructor(lower: Bound, upper: Int) : this(lower, Bound.Value(upper))
+        constructor(arg1: Int, arg2: Bound) : this(Bound.Value(arg1), arg2)
+
+        constructor(arg1: Bound, arg2: Int) : this(arg1, Bound.Value(arg2))
+
+        // Automatically switch the arguments if the upper bound is lower than the lower bound
+        init {
+            if (arg1 > arg2) {
+                lower = arg2
+                upper = arg1
+            } else {
+                lower = arg1
+                upper = arg2
+            }
+        }
     }
 
     // TODO: future iterations should support fractional values

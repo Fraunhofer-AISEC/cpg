@@ -43,7 +43,7 @@ interface Value {
     companion object {
         fun getInitializer(node: Node?): Node? {
             return when (node) {
-                null -> null!!
+                null -> null
                 is Reference -> getInitializer(node.refersTo)
                 is VariableDeclaration -> node
                 else -> getInitializer(node.prevDFG.firstOrNull())
