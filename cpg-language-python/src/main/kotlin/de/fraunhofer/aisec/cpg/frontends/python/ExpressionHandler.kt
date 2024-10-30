@@ -119,6 +119,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return newCollectionComprehension(rawNode = node).apply {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            type = objectType("Generator")
         }
     }
 
