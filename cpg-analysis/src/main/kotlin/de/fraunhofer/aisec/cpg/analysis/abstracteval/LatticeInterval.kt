@@ -321,15 +321,12 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             a is Bound.INFINITE && b > Bound.Value(0) && b !is Bound.INFINITE -> Bound.INFINITE
             a is Bound.INFINITE && b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
                 Bound.NEGATIVE_INFINITE
-            a > Bound.Value(0) && a !is Bound.INFINITE && b is Bound.INFINITE -> Bound.INFINITE
-            a < Bound.Value(0) && a !is Bound.NEGATIVE_INFINITE && b is Bound.INFINITE ->
-                Bound.NEGATIVE_INFINITE
             a is Bound.NEGATIVE_INFINITE && b > Bound.Value(0) && b !is Bound.INFINITE ->
                 Bound.NEGATIVE_INFINITE
             a is Bound.NEGATIVE_INFINITE && b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
                 Bound.INFINITE
             // We estimate x / ∞ as 0
-            a != Bound.Value(0) && a !is Bound.INFINITE && a !is Bound.NEGATIVE_INFINITE && (b is Bound.NEGATIVE_INFINITE || b is Bound.INFINITE) ->
+            a != Bound.Value(0) && (b is Bound.NEGATIVE_INFINITE || b is Bound.INFINITE) ->
                 Bound.Value(0)
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value / b.value)
             else -> throw IllegalArgumentException("Unsupported bound type")
