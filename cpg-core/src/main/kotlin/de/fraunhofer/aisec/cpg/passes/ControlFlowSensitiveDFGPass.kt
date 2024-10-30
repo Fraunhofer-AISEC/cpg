@@ -361,6 +361,41 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // the other steps
                 state.push(currentNode, it)
             }
+        } else if (currentNode is ComprehensionExpression) {
+            val writtenTo =
+                when (val variable = currentNode.variable) {
+                    is DeclarationStatement -> {
+                        if (variable.isSingleDeclaration()) {
+                            variable.singleDeclaration
+                        } else {
+                            log.error(
+                                "Cannot handle multiple declarations in the ComprehensionExpresdsion: Node $currentNode"
+                            )
+                            null
+                        }
+                    }
+                    else -> currentNode.variable
+                }
+            // We wrote something to this variable declaration
+            writtenTo?.let {
+                writtenDeclaration =
+                    when (writtenTo) {
+                        is Declaration -> writtenTo
+                        is Reference -> writtenTo.refersTo
+                        else -> {
+                            log.error(
+                                "The variable of type ${writtenTo.javaClass} is not yet supported in the ComprehensionExpression"
+                            )
+                            null
+                        }
+                    }
+
+                state.push(writtenTo, PowersetLattice(identitySetOf(currentNode.iterable)))
+                // Add the variable declaration (or the reference) to the list of previous
+                // write nodes in this path
+                state.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(writtenTo))
+            }
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
             // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...

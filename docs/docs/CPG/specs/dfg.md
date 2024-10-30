@@ -177,6 +177,44 @@ Scheme:
     arrayExpression -.- node;
   ```
 
+## CollectionComprehension
+
+Interesting fields:
+
+* `comprehensionExpressions: List<CollectionComprehension.ComprehensionExpression>`: The list of expressions which are iterated over.
+* `statement: Statement`: The statement which returns the data.
+
+The data of `comprehensionExpressions[i]` flow to `comprehensionExpressions[i+1]` and the last item in `comprehensionExpressions` flows to `statement`.
+
+Scheme:
+```mermaid
+  flowchart LR
+    comp["for all 0 <= i < comprehensionExpressions-1: comprehensionExpressions[i]"] -- DFG --> comp1["comprehensionExpressions[i+1]"]  -- DFG --> stmt["statement"] -- DFG --> node([CollectionComprehension]);
+    node -.- comp;
+    node -.- comp1;
+    node -.- stmt;
+```
+
+## CollectionComprehension.ComprehensionExpression
+
+Interesting fields:
+
+* `predicates: List<Statements>`: A list of conditions which have to hold to process the variable in the result.
+* `iterable: Statement`: The statement which iterates over something.
+* `variable: Statement`: The variable which holds the individual elements in the iterable.
+
+The data of `iterable` flow to `variable` which flows to the whole node. Also, all `predicates` flow to the whole node.
+
+Scheme:
+```mermaid
+  flowchart LR
+    pred["for all i: predicates[i]"]  -- DFG --> stmt["statement"] -- DFG --> node([CollectionComprehension.ComprehensionExpression]);
+    iterable["iterable"] -- DFG --> var["variable"];
+    var -- DFG --> node;
+    node -.- pred;
+    node -.- var;
+    node -.- iterable;
+```
 
 ## ConditionalExpression
 

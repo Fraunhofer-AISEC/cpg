@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -311,6 +312,46 @@ fun LanguageFrontend<*, *>.subscriptExpr(
     init: (SubscriptExpression.() -> Unit)? = null
 ): SubscriptExpression {
     val node = newSubscriptExpression()
+
+    if (init != null) {
+        init(node)
+    }
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+context(Holder<out Statement>)
+fun LanguageFrontend<*, *>.listComp(
+    init: (CollectionComprehension.() -> Unit)? = null
+): CollectionComprehension {
+    val node = newCollectionComprehension()
+
+    if (init != null) {
+        init(node)
+    }
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    val holder = this@Holder
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+context(Holder<out Statement>)
+fun LanguageFrontend<*, *>.compExpr(
+    init: (ComprehensionExpression.() -> Unit)? = null
+): ComprehensionExpression {
+    val node = newComprehensionExpression()
 
     if (init != null) {
         init(node)

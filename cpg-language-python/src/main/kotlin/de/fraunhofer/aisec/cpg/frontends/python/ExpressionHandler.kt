@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -69,10 +70,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.JoinedStr -> handleJoinedStr(node)
             is Python.AST.Starred -> handleStarred(node)
             is Python.AST.NamedExpr -> handleNamedExpr(node)
-            is Python.AST.GeneratorExp,
-            is Python.AST.ListComp,
-            is Python.AST.SetComp,
-            is Python.AST.DictComp,
+            is Python.AST.ListComp -> handleListComprehension(node)
+            is Python.AST.SetComp -> handleSetComprehension(node)
+            is Python.AST.DictComp -> handleDictComprehension(node)
+            is Python.AST.GeneratorExp -> handleGeneratorExp(node)
             is Python.AST.Await,
             is Python.AST.Yield,
             is Python.AST.YieldFrom ->
@@ -80,6 +81,86 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     "The expression of class ${node.javaClass} is not supported yet",
                     rawNode = node
                 )
+        }
+    }
+    /**
+     * Translates a Python
+     * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
+     * [ComprehensionExpression].
+     *
+     * Connects multiple predicates by `and`.
+     */
+    private fun handleComprehension(node: Python.AST.comprehension): ComprehensionExpression {
+        return newComprehensionExpression(rawNode = node).apply {
+            variable = handle(node.target)
+            iterable = handle(node.iter)
+            val predicates = node.ifs.map { handle(it) }
+            if (predicates.size == 1) {
+                predicate = predicates.single()
+            } else if (predicates.size > 1) {
+                predicate =
+                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = node)
+            }
+            if (node.is_async != 0L)
+                additionalProblems +=
+                    newProblemExpression(
+                        "Node marked as is_async but we don't support this yet",
+                        rawNode = node
+                    )
+        }
+    }
+
+    /**
+     * Translates a Python
+     * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
+     * [CollectionComprehension].
+     */
+    private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).apply {
+            statement = handle(node.elt)
+            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            type = objectType("Generator")
+        }
+    }
+
+    /**
+     * Translates a Python [`ListComp`](https://docs.python.org/3/library/ast.html#ast.ListComp)
+     * into a [CollectionComprehension].
+     */
+    private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).apply {
+            statement = handle(node.elt)
+            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            type = objectType("list") // TODO: Replace this once we have dedicated types
+        }
+    }
+
+    /**
+     * Translates a Python [`SetComp`](https://docs.python.org/3/library/ast.html#ast.SetComp) into
+     * a [CollectionComprehension].
+     */
+    private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).apply {
+            this.statement = handle(node.elt)
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.type = objectType("set") // TODO: Replace this once we have dedicated types
+        }
+    }
+
+    /**
+     * Translates a Python [`DictComp`](https://docs.python.org/3/library/ast.html#ast.DictComp)
+     * into a [CollectionComprehension].
+     */
+    private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).apply {
+            this.statement =
+                newKeyValueExpression(
+                    key = handle(node.key),
+                    value = handle(node.value),
+                    rawNode = node
+                )
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.type = objectType("dict") // TODO: Replace this once we have dedicated types
         }
     }
 
@@ -147,15 +228,28 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         } else if (values.size == 1) {
             values.first()
         } else {
-            val lastTwo = newBinaryOperator("+", rawNode = node)
-            lastTwo.rhs = values.last()
-            lastTwo.lhs = values[values.size - 2]
-            values.subList(0, values.size - 2).foldRight(lastTwo) { newVal, start ->
-                val nextValue = newBinaryOperator("+")
-                nextValue.rhs = start
-                nextValue.lhs = newVal
-                nextValue
-            }
+            joinListWithBinOp(operatorCode = "+", nodes = values, rawNode = node)
+        }
+    }
+
+    /**
+     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
+     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
+     * The last operands are further down the tree.
+     */
+    private fun joinListWithBinOp(
+        operatorCode: String,
+        nodes: List<Expression>,
+        rawNode: Python.AST.AST? = null
+    ): BinaryOperator {
+        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
+        lastTwo.rhs = nodes.last()
+        lastTwo.lhs = nodes[nodes.size - 2]
+        return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
+            val nextValue = newBinaryOperator(operatorCode)
+            nextValue.rhs = start
+            nextValue.lhs = newVal
+            nextValue
         }
     }
 
@@ -427,7 +521,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.currentScope
                 ?.lookupSymbol(name.localName, replaceImports = false)
                 ?.filterIsInstance<ImportDeclaration>()
-        return decl?.isNotEmpty() ?: false
+        return decl?.isNotEmpty() == true
     }
 
     private fun handleName(node: Python.AST.Name): Expression {
