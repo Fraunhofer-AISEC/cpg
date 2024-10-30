@@ -140,7 +140,31 @@ class PythonLanguage :
                     this,
                     NumericType.Modifier.NOT_APPLICABLE
                 ), // It's two floats
-            "str" to StringType("str", this, listOf())
+            "str" to StringType("str", this, listOf()),
+            "list" to
+                ListType(
+                    typeName = "list",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this
+                ),
+            "map" to
+                MapType(
+                    typeName = "map",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this
+                ),
+            "set" to
+                SetType(
+                    typeName = "set",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this
+                ),
+            "tuple" to
+                TupleType(
+                    typeName = "tuple",
+                    listOf(ObjectType("object", listOf(), false, this)),
+                    language = this
+                ),
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {

@@ -26,30 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.unknownType
 
-/**
- * Represents a tuple of types. Primarily used in resolving function calls with multiple return
- * values.
- */
-class TupleType(typeName: CharSequence, types: List<Type>, language: Language<*>) :
-    ObjectType(typeName, types, false, language) {
-    var types: List<Type> = listOf()
-        set(value) {
-            field = value
-            name = Name(value.joinToString(", ", "(", ")") { it.name.toString() })
-        }
-
-    init {
-        this.types = types
-    }
-
-    override fun reference(pointer: PointerType.PointerOrigin?): PointerType {
-        return PointerType(this, pointer)
-    }
-
-    override fun dereference(): Type {
-        return unknownType()
-    }
-}
+/** Represents a [List] type that contains elements of a specified type. */
+class ListType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
+    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType
