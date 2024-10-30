@@ -119,7 +119,7 @@ class ExpressionHandlerTest {
     fun testAssignmentsMultiReturn() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
-            analyze(listOf(topLevel.resolve("multi_assign.py").toFile()), topLevel, true) {
+            analyze(listOf(topLevel.resolve("assignments.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
