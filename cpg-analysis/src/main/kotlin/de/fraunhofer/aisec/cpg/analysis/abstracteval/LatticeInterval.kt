@@ -59,11 +59,19 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 upper = arg2
             }
         }
+
+        override fun toString(): String {
+            return "[$lower, $upper]"
+        }
     }
 
     // TODO: future iterations should support fractional values
     sealed class Bound : Comparable<Bound> {
-        data class Value(val value: Int) : Bound()
+        data class Value(val value: Int) : Bound() {
+            override fun toString(): String {
+                return value.toString()
+            }
+        }
 
         // necessary values for widening and narrowing
         data object NEGATIVE_INFINITE : Bound()
@@ -78,6 +86,14 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 other is INFINITE && this !is INFINITE -> -1
                 this is Value && other is Value -> this.value.compareTo(other.value)
                 else -> 0
+            }
+        }
+
+        override fun toString(): String {
+            return when (this) {
+                is Value -> value.toString()
+                is INFINITE -> "INFINITE"
+                is NEGATIVE_INFINITE -> "NEGATIVE_INFINITE"
             }
         }
     }
@@ -354,7 +370,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     override fun toString(): String {
         return when (this) {
             is BOTTOM -> "BOTTOM"
-            is Bounded -> "[$lower, $upper]"
+            is Bounded -> this.toString()
         }
     }
 
