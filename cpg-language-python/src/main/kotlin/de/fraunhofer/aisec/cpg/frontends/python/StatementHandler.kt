@@ -634,7 +634,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [AssignExpression].
      */
     private fun handleAssign(node: Python.AST.Assign): AssignExpression {
-        val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+        val lhsCandidate = node.targets.map { frontend.expressionHandler.handle(it) }
+
+        /*
+         * We have to unpack the lhs of the assign expression, because this might be a multi assign.
+         * In this case, the handler returns an [InitializerListExpression] which does not fit very
+         * well for our lhs. We thus unpack the [InitializerListExpression] and directly use the
+         * [Reference]s stored inside.
+         */
+        val lhs =
+            lhsCandidate.flatMap {
+                when (it) {
+                    is Reference -> listOf(it)
+                    is InitializerListExpression -> it.initializers
+                    else ->
+                        listOf(
+                            newProblemExpression(
+                                problem =
+                                    "Expected a `Reference` or an `InitializerListExpression`.",
+                                type = ProblemNode.ProblemType.TRANSLATION,
+                                rawNode = node
+                            )
+                        )
+                }
+            }
+
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
             lhs.forEach { it.type = tpe }
