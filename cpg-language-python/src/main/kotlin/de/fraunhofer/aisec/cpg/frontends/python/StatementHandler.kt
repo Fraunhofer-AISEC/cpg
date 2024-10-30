@@ -36,6 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -66,18 +72,260 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
+            is Python.AST.With,
+            is Python.AST.AsyncWith -> handleWithStatement(node)
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
+            is Python.AST.Raise -> handleRaise(node)
             is Python.AST.Match,
-            is Python.AST.Raise,
-            is Python.AST.TryStar,
-            is Python.AST.With,
-            is Python.AST.AsyncWith ->
+            is Python.AST.TryStar ->
                 newProblemExpression(
                     "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
                 )
         }
+    }
+
+    /**
+     * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
+     * [ThrowStatement].
+     */
+    private fun handleRaise(node: Python.AST.Raise): ThrowStatement {
+        val ret = newThrowStatement(rawNode = node)
+        node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
+        node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
+        return ret
+    }
+
+    /**
+     * Translates a Python [`With`](https://docs.python.org/3/library/ast.html#ast.With) into a
+     * [Block].
+     *
+     * We return a Block to handle the with statement, following
+     * [python's documentation](https://docs.python.org/3/reference/compound_stmts.html#the-with-statement).
+     * The context manager's `__enter__` and `__exit__` methods should be identified before entering
+     * the try-block. However, we simplify the code from the documentation as follows:
+     * * `__enter__()` is called before the try-block.We make the identification and the call in the
+     *   same step.
+     * * `__exit__()` is either called in the `except`-block or in the `finally`-block but not
+     *   identified separately.
+     * * In fact, the `finally` is used like an `else`-block, so we use this construction.
+     *
+     * Example: We will translate the code
+     *
+     * ```python
+     * with ContextManager() as cm:
+     *     cm.doSomething()
+     * ```
+     *
+     * to something like
+     *
+     * ```python
+     * manager = ContextManager()
+     * tmpVal = manager.__enter__()
+     * try:
+     *     cm = tmpVal # Doesn't exist if no variable is used
+     *     cm.doSomething()
+     * except:
+     *     if not manager.__exit__(*sys.exc_info()):
+     *         raise
+     * else:
+     *     manager.__exit__(None, None, None)
+     * ```
+     */
+    private fun handleWithStatement(node: Python.AST.NormalOrAsyncWith): Block {
+        /**
+         * Prepares the `manager = ContextManager()` and returns the random name for the "manager"
+         * as well as the assignment.
+         */
+        fun generateManagerAssignment(withItem: Python.AST.withitem): Pair<AssignExpression, Name> {
+            // Create a temporary reference for the context manager
+            val managerName = Name.random(prefix = CONTEXT_MANAGER)
+            val manager = newReference(name = managerName).implicit()
+
+            // Handle the 'context expression' (the part before 'as') and assign to tempRef
+            // Represents the line `manager = ContextManager()`
+            val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
+            val managerAssignment =
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(manager),
+                        rhs = listOf(contextExpr)
+                    )
+                    .implicit()
+            return Pair(managerAssignment, managerName)
+        }
+
+        /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
+        fun generateExitCallWithNone(
+            managerName: Name,
+            withItem: Python.AST.withitem
+        ): MemberCallExpression {
+            val exitCallWithNone =
+                newMemberCallExpression(
+                        callee =
+                            newMemberExpression(
+                                    name = "__exit__",
+                                    base = newReference(name = managerName).implicit()
+                                )
+                                .implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            return exitCallWithNone
+        }
+
+        /**
+         * Prepares the if-statement which is the body of the catch block. This includes the call of
+         * `manager.__exit__(*sys.exc_info())`, the negation and the throw statement.
+         */
+        fun generateExitCallWithSysExcInfo(
+            managerName: Name,
+            withItem: Python.AST.withitem
+        ): IfStatement {
+            val exitCallWithSysExec =
+                newMemberCallExpression(
+                        callee =
+                            newMemberExpression(
+                                    name = "__exit__",
+                                    base = newReference(name = managerName).implicit()
+                                )
+                                .implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+            val starOp = newUnaryOperator("*", false, false)
+            starOp.input =
+                newMemberExpression(name = "exec_info", base = newReference("sys").implicit())
+                    .implicit()
+            exitCallWithSysExec.addArgument(starOp)
+
+            val ifStmt = newIfStatement().implicit()
+            ifStmt.thenStatement = newThrowStatement().implicit()
+            val neg = newUnaryOperator("not", false, false).implicit()
+            neg.input = exitCallWithSysExec
+            ifStmt.condition = neg
+            return ifStmt
+        }
+
+        /**
+         * calls __enter__() and assign to another random variable. Represents the line
+         *
+         * ```python
+         * tmpVal = manager.__enter__()
+         * ```
+         */
+        fun generateEnterCallAndAssignment(
+            managerName: Name,
+            withItem: Python.AST.withitem
+        ): Pair<AssignExpression, Name> {
+            val tmpValName = Name.random(prefix = WITH_TMP_VAL)
+            val enterVar = newReference(name = tmpValName).implicit()
+            val enterCall =
+                newMemberCallExpression(
+                        callee =
+                            newMemberExpression(
+                                    name = "__enter__",
+                                    base = newReference(name = managerName).implicit()
+                                )
+                                .implicit(),
+                        rawNode = withItem
+                    )
+                    .implicit()
+
+            return Pair(
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(enterVar),
+                        rhs = listOf(enterCall)
+                    )
+                    .implicit(),
+                tmpValName
+            )
+        }
+        val result =
+            newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
+
+        addAsyncWarning(node, result)
+
+        // If there are multiple elements in node.items, we have to nest the try statements.
+        // We start with a generic block for the outer context manager.
+        // For i > 1, we add context_manager[i] to the try-block of item[i-1]
+        val currentBlock =
+            node.items.fold(result) { currentBlock, withItem ->
+                val (managerAssignment, managerName) = generateManagerAssignment(withItem)
+
+                currentBlock.statements.add(managerAssignment)
+
+                val (enterAssignment, tmpValName) =
+                    generateEnterCallAndAssignment(managerName, withItem)
+                currentBlock.statements.add(enterAssignment)
+
+                // Create the try statement with __exit__ calls in the finally block
+                val tryStatement =
+                    newTryStatement(rawNode = node).apply {
+                        // We set it as implicit below because there we also have a code and
+                        // location.
+                        this.tryBlock =
+                            newBlock()
+                                .apply {
+                                    withItem.optional_vars?.let {
+                                        val optionalVar = frontend.expressionHandler.handle(it)
+                                        node.type_comment?.let {
+                                            optionalVar.type = frontend.typeOf(it)
+                                        }
+
+                                        // Assign the result of __enter__() to `optionalVar`
+                                        // Represents the line "cm = tmpVal # Doesn't exist if no
+                                        // variable is used"
+                                        this.statements.add(
+                                            newAssignExpression(
+                                                    operatorCode = "=",
+                                                    lhs = listOf(optionalVar),
+                                                    rhs =
+                                                        listOf(
+                                                            newReference(name = tmpValName)
+                                                                .implicit()
+                                                        )
+                                                )
+                                                .implicit()
+                                        )
+                                    }
+                                }
+                                .codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt)
+                                .implicit()
+                        // Add the catch block
+                        this.catchClauses.add(
+                            newCatchClause().implicit().apply {
+                                this.body =
+                                    newBlock().implicit().apply {
+                                        this.statements.add(
+                                            generateExitCallWithSysExcInfo(managerName, withItem)
+                                        )
+                                    }
+                            }
+                        )
+                        // Add the else-block
+                        this.elseBlock =
+                            newBlock().implicit().apply {
+                                this.statements.add(generateExitCallWithNone(managerName, withItem))
+                            }
+                    }
+                currentBlock.statements.add(tryStatement)
+
+                tryStatement.tryBlock ?: throw NullPointerException("This should never happen!")
+            }
+
+        // Create the block of the with statement and add it to the inner try-block
+        val bodyBlock = makeBlock(node.body, parentNode = node) // represents `cm.doSomething()`
+        currentBlock.statements.addAll(bodyBlock.statements)
+        currentBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
+
+        // The result is the outer block
+        return result
     }
 
     /**
@@ -189,13 +437,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleImportFrom(node: Python.AST.ImportFrom): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         val level = node.level
-        if (level == null || level > 0) {
-            return newProblemExpression(
-                "not supporting relative paths in from (...) import syntax yet"
-            )
+        var module = parseName(node.module ?: "")
+
+        if (level != null && level > 0L) {
+            // Because the __init__ module is omitted from our current namespace, we need to check
+            // for its existence and add __init__, otherwise the relative path would be off by one
+            // level.
+            var parent =
+                if (isInitModule()) {
+                    frontend.scopeManager.currentNamespace.fqn("__init__")
+                } else {
+                    frontend.scopeManager.currentNamespace
+                }
+
+            // If the level is specified, we need to relative the module path. We basically need to
+            // move upwards in the parent namespace in the amount of dots
+            for (i in 0 until level) {
+                parent = parent?.parent
+                if (parent == null) {
+                    break
+                }
+            }
+
+            module = parent.fqn(module.localName)
         }
 
-        val module = parseName(node.module ?: "")
         for (imp in node.names) {
             // We need to differentiate between a wildcard import and an individual symbol.
             // Wildcards luckily do not have aliases
@@ -222,6 +488,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
         return declStmt
     }
+
+    /** Small utility function to check, whether we are inside an __init__ module. */
+    private fun isInitModule(): Boolean =
+        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
+                as? NamespaceDeclaration)
+            ?.path
+            ?.endsWith("__init__") == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
@@ -254,14 +527,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEachStatement {
         val ret = newForEachStatement(rawNode = node)
-        if (node is IsAsync) {
-            ret.addDeclaration(
-                newProblemDeclaration(
-                    problem = "The \"async\" keyword is not yet supported.",
-                    rawNode = node
-                )
-            )
-        }
+        addAsyncWarning(node, ret)
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
 
@@ -482,14 +748,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
         frontend.scopeManager.enterScope(result)
 
-        if (s is Python.AST.AsyncFunctionDef) {
-            result.addDeclaration(
-                newProblemDeclaration(
-                    problem = "The \"async\" keyword is not yet supported.",
-                    rawNode = s
-                )
-            )
-        }
+        addAsyncWarning(s, result)
 
         // Handle decorators (which are translated into CPG "annotations")
         result.annotations += handleAnnotations(s)
@@ -844,5 +1103,20 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
         return declStmt
+    }
+
+    /**
+     * Checks whether [mightBeAsync] implements the [IsAsync] interface and adds a warning to the
+     * corresponding [parentNode] stored in [Node.additionalProblems].
+     */
+    private fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
+        if (mightBeAsync is IsAsync) {
+            parentNode.additionalProblems +=
+                newProblemDeclaration(
+                    problem = "The \"async\" keyword is not yet supported.",
+                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = mightBeAsync
+                )
+        }
     }
 }

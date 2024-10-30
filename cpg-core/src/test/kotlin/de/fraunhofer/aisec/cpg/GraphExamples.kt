@@ -1350,5 +1350,25 @@ class GraphExamples {
                     }
                 }
             }
+
+        fun prepareThrowDFGTest(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(TestLanguage("."))
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("some.file") {
+                        function("foo", t("void")) {
+                            body {
+                                declare { variable("a", t("short")) { literal(42) } }
+                                `throw` { call("SomeError") { ref("a") } }
+                            }
+                        }
+                    }
+                }
+            }
     }
 }

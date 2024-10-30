@@ -379,6 +379,27 @@ flowchart LR
 
 ```
 
+## ThrowStatement
+The EOG continues at an exception catching structure or a function that does a re-throw.
+
+Interesting fields:
+
+* `exception: Expression`: Exception to be thrown for exception handling.
+* `parentException: Expression`: Exception which caused this exception to be thrown.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["exception"]
+  child1 --EOG--> child2["parentException"]
+  child2 --EOG-->parent
+  parent(["ThrowStatement"]) --EOG--> catchingContext:::outer
+  parent -.-> child1
+  parent -.-> child2
+
+```
+
 
 ## AssertStatement
 Statement that evaluates a condition and if the condition is false, evaluates a message, this message is generalized to a `Statement` to hold everything 

@@ -34,13 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -54,6 +54,18 @@ import org.slf4j.LoggerFactory
  * An EOG always starts at the header of a method/function and ends in one (virtual) or multiple
  * return statements. A virtual return statement with a code location of (-1,-1) is used if the
  * actual source code does not have an explicit return statement.
+ *
+ * How to use: When constructing the eog for a new CPG AST-node, first the EOG should be constructed
+ * for its subtrees, in the order the subtrees are evaluated. This is done by invoking the handler
+ * function [handleEOG] on the children of the current node in the appropriate order. After the
+ * AST-subtrees of the children are attached to the EOG, the current node has to be attached with
+ * [attachToEOG], which simply constructs an EOG-edge from the [currentPredecessors] to the node,
+ * and saves the node as the new [currentPredecessors]. Note that some handlers deviate from this
+ * order and attach the current root node after a condition and before the other subtrees
+ * constituted by its child nodes to represent branching. Nodes that manipulate the control flow of
+ * a program have to be handled with more care, by adding and removing nodes from
+ * [currentPredecessors] or even temporarily save and restore the valid eog exits of an ast subtree,
+ * e.g. [IfStatement].
  *
  * The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle differences:
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
@@ -75,6 +87,22 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     protected var currentPredecessors = mutableListOf<Node>()
     protected var nextEdgeBranch: Boolean? = null
+
+    /**
+     * This maps nodes that have to handle throws, i.e. [TryStatement] and [FunctionDeclaration], to
+     * the [Type]s of errors that were thrown and the EOG exits of the throwing statements. Entries
+     * to the outer map will only be created if the node was identified to handle or relay a throw.
+     * Entries to the inner throw will only be created when the mapping type was thrown.
+     */
+    val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
+
+    /**
+     * This maps nodes that have to handle [BreakStatement]s and [ContinueStatement]s, i.e.
+     * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle. An
+     * entry will only be created if the statement was identified to handle the above mentioned
+     * control flow statements.
+     */
+    val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
 
     /**
      * Allows to register EOG creation logic when a currently visited node can depend on future
@@ -162,6 +190,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
+        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
     }
 
     protected fun doNothing() {
@@ -174,7 +203,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     override fun accept(tu: TranslationUnitDeclaration) {
-        createEOG(tu)
+        handleEOG(tu)
         removeUnreachableEOGEdges(tu)
     }
 
@@ -218,7 +247,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // loop through functions
         for (child in node.declarations) {
             currentPredecessors.clear()
-            createEOG(child)
+            handleEOG(child)
         }
         processedListener.clearProcessed()
     }
@@ -229,40 +258,38 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // loop through functions
         for (child in node.declarations) {
             currentPredecessors.clear()
-            createEOG(child)
+            handleEOG(child)
         }
         processedListener.clearProcessed()
     }
 
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
-        pushToEOG(node)
+        attachToEOG(node)
         // analyze the initializer
-        createEOG(node.initializer)
+        handleEOG(node.initializer)
     }
 
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
-        pushToEOG(node)
+        attachToEOG(node)
         // analyze the initializer
-        createEOG(node.initializer)
+        handleEOG(node.initializer)
     }
 
     protected open fun handleRecordDeclaration(node: RecordDeclaration) {
-        scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
         for (constructor in node.constructors) {
-            createEOG(constructor)
+            handleEOG(constructor)
         }
         for (method in node.methods) {
-            createEOG(method)
+            handleEOG(method)
         }
         for (fields in node.fields) {
-            createEOG(fields)
+            handleEOG(fields)
         }
         for (records in node.records) {
-            createEOG(records)
+            handleEOG(records)
         }
-        scopeManager.leaveScope(node)
     }
 
     protected fun handleStatementHolder(statementHolder: StatementHolder) {
@@ -273,14 +300,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
         val staticCode = code.filter { it !in nonStaticCode }
 
-        pushToEOG(statementHolder as Node)
+        attachToEOG(statementHolder as Node)
         for (staticStatement in staticCode) {
-            createEOG(staticStatement)
+            handleEOG(staticStatement)
         }
         currentPredecessors.clear()
-        pushToEOG(statementHolder as Node)
+        attachToEOG(statementHolder as Node)
         for (nonStaticStatement in nonStaticCode) {
-            createEOG(nonStaticStatement)
+            handleEOG(nonStaticStatement)
         }
         currentPredecessors.clear()
     }
@@ -294,7 +321,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
         intermediateNodes.clear()
 
-        createEOG(node.function)
+        handleEOG(node.function)
 
         nextEdgeBranch = null
         currentPredecessors.clear()
@@ -304,49 +331,21 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.addAll(tmpCurrentEOG)
         intermediateNodes.addAll(tmpIntermediateNodes)
 
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // reset EOG
         currentPredecessors.clear()
-        var needToLeaveRecord = false
-        if (
-            node is MethodDeclaration &&
-                node.recordDeclaration != null &&
-                (node.recordDeclaration !== scopeManager.currentRecord)
-        ) {
-            // This is a method declaration outside the AST of the record, as its possible in
-            // languages, such as C++. Therefore, we need to enter the record scope as well
-            scopeManager.enterScope(node.recordDeclaration!!)
-            needToLeaveRecord = true
-        }
-        scopeManager.enterScope(node)
         // push the function declaration
-        pushToEOG(node)
+        attachToEOG(node)
 
         // analyze the body
-        createEOG(node.body)
+        handleEOG(node.body)
 
-        val currentScope = scopeManager.currentScope
-        if (currentScope !is FunctionScope) {
-            Util.errorWithFileLocation(
-                node,
-                log,
-                "Scope of function declaration is not a function scope. EOG of function might be incorrect."
-            )
-            // try to recover at least a little bit
-            scopeManager.leaveScope(node)
-            currentPredecessors.clear()
-            return
-        }
-        val uncaughtEOGThrows = currentScope.catchesOrRelays.values.flatten()
+        val uncaughtEOGThrows = nodesToInternalThrows[node]?.values?.flatten() ?: listOf()
         // Connect uncaught throws to block node
         node.body?.let { addMultipleIncomingEOGEdges(uncaughtEOGThrows, it) }
-        scopeManager.leaveScope(node)
-        if (node is MethodDeclaration && node.recordDeclaration != null && needToLeaveRecord) {
-            scopeManager.leaveScope(node.recordDeclaration!!)
-        }
 
         // Set default argument evaluation nodes
         val funcDeclNextEOG = node.nextEOG
@@ -356,7 +355,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         for (paramVariableDeclaration in node.parameters) {
             paramVariableDeclaration.default?.let {
                 defaultArg = it
-                pushToEOG(it)
+                attachToEOG(it)
                 currentPredecessors.clear()
                 currentPredecessors.add(it)
                 currentPredecessors.add(node)
@@ -366,7 +365,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             for (nextEOG in funcDeclNextEOG) {
                 currentPredecessors.clear()
                 currentPredecessors.add(it)
-                pushToEOG(nextEOG)
+                attachToEOG(nextEOG)
             }
         }
         currentPredecessors.clear()
@@ -374,9 +373,15 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * Tries to create the necessary EOG edges for the [node] (if it is non-null) by looking up the
-     * appropriate handler function of the node's class in [map] and calling it.
+     * appropriate handler function of the node's class in [map] and calling it. The EOG is build
+     * for the entire ast subtree represented by node, and when this function returns the EOG in
+     * this subtree can be connected to other trees by invoking this function on them. The nodes
+     * stored in [currentPredecessors] contain the valid EOG exits of the subtree that will be
+     * connected to the next handled subtree. Adding or removing nodes from the list allows for
+     * custom adaptation of control flow behavior when handling nodes that influence control flow,
+     * e.g. [LoopStatement]s or [BreakStatement].
      */
-    protected fun createEOG(node: Node?) {
+    protected fun handleEOG(node: Node?) {
         if (node == null) {
             // nothing to do
             return
@@ -397,20 +402,25 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-    protected fun handlePointerReference(node: PointerReference) {
-        createEOG(node.input)
 
-        pushToEOG(node)
+    protected fun handlePointerReference(node: PointerReference) {
+        handleEOG(node.input)
+
+        attachToEOG(node)
     }
 
     protected fun handlePointerDereference(node: PointerDereference) {
-        createEOG(node.input)
+        handleEOG(node.input)
 
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
+    /**
+     * Default handler for nodes. The node is simply attacked to the EOG and the ast subtree is
+     * ignored.
+     */
     protected fun handleDefault(node: Node) {
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleCallExpression(node: CallExpression) {
@@ -418,42 +428,42 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // find out for java, but impossible for c++)
 
         // evaluate the call target first, optional base should be the callee or in its subtree
-        createEOG(node.callee)
+        node.callee?.let { handleEOG(it) }
 
         // then the arguments
         for (arg in node.arguments) {
-            createEOG(arg)
+            handleEOG(arg)
         }
         // finally the call itself
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleMemberExpression(node: MemberExpression) {
-        createEOG(node.base)
-        pushToEOG(node)
+        handleEOG(node.base)
+        attachToEOG(node)
     }
 
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
-        createEOG(node.arrayExpression)
-        createEOG(node.subscriptExpression)
-        pushToEOG(node)
+        handleEOG(node.arrayExpression)
+        handleEOG(node.subscriptExpression)
+        attachToEOG(node)
     }
 
     protected fun handleNewArrayExpression(node: NewArrayExpression) {
         for (dimension in node.dimensions) {
-            createEOG(dimension)
+            handleEOG(dimension)
         }
-        createEOG(node.initializer)
-        pushToEOG(node)
+        handleEOG(node.initializer)
+        attachToEOG(node)
     }
 
     protected fun handleRangeExpression(node: RangeExpression) {
-        createEOG(node.floor)
-        createEOG(node.ceiling)
-        createEOG(node.third)
-        pushToEOG(node)
+        handleEOG(node.floor)
+        handleEOG(node.ceiling)
+        handleEOG(node.third)
+        attachToEOG(node)
     }
 
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
@@ -461,7 +471,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         for (declaration in node.declarations) {
             if (declaration is VariableDeclaration) {
                 // analyze the initializers if there is one
-                createEOG(declaration)
+                handleEOG(declaration)
             } else if (declaration is FunctionDeclaration) {
                 // save the current EOG stack, because we can have a function declaration within an
                 // existing function and the EOG handler for handling function declarations will
@@ -470,7 +480,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val oldEOG = currentPredecessors.toMutableList()
 
                 // analyze the defaults
-                createEOG(declaration)
+                handleEOG(declaration)
 
                 // reset the oldEOG stack
                 currentPredecessors = oldEOG
@@ -478,22 +488,22 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
 
         // push statement itself
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleReturnStatement(node: ReturnStatement) {
         // analyze the return value
-        createEOG(node.returnValue)
+        handleEOG(node.returnValue)
 
         // push the statement itself
-        pushToEOG(node)
+        attachToEOG(node)
 
         // reset the state afterwards, we're done with this function
         currentPredecessors.clear()
     }
 
     protected fun handleBinaryOperator(node: BinaryOperator) {
-        createEOG(node.lhs)
+        handleEOG(node.lhs)
         val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value. If the language has the trait of short-circuit evaluation, we check if the
@@ -511,75 +521,85 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // If it is not a conjunctive operator, the check above implies it is a disjunctive
             // operator.
             nextEdgeBranch = lang.conjunctiveOperators.contains(node.operatorCode)
-            createEOG(node.rhs)
-            pushToEOG(node)
+            handleEOG(node.rhs)
+            attachToEOG(node)
             setCurrentEOGs(shortCircuitNodes)
             // Inverted property to assigne false when true was assigned above.
             nextEdgeBranch = !lang.conjunctiveOperators.contains(node.operatorCode)
         } else {
-            createEOG(node.rhs)
+            handleEOG(node.rhs)
         }
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
         for (declaration in node.declarations) {
-            createEOG(declaration)
+            handleEOG(declaration)
         }
 
-        // First the left hand side(s)
-        node.lhs.forEach { createEOG(it) }
+        // Handle left hand side(s) first
+        node.lhs.forEach { handleEOG(it) }
 
         // Then, handle the right side(s). Avoid creating the EOG twice if it's already part of the
         // initializer of a declaration
         node.rhs.forEach {
             if (it !in node.declarations.map { decl -> decl.initializer }) {
-                createEOG(it)
+                handleEOG(it)
             }
         }
 
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleBlock(node: Block) {
-        // not all language handle compound statements as scoping blocks, so we need to avoid
-        // creating new scopes here
-        scopeManager.enterScopeIfExists(node)
 
         // analyze the contained statements
         for (child in node.statements) {
-            createEOG(child)
+            handleEOG(child)
         }
-        if (scopeManager.currentScope is BlockScope) {
-            scopeManager.leaveScope(node)
-        }
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleUnaryOperator(node: UnaryOperator) {
         // TODO(oxisto): These operator codes are highly language specific and might be more suited
         //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
         if (node.operatorCode == "throw") {
-            handleThrowOperator(node)
+            handleThrowOperator(node, node.input.type, node.input)
         } else {
             handleUnspecificUnaryOperator(node)
         }
     }
 
-    protected fun handleThrowOperator(node: UnaryOperator) {
-        val input = node.input
-        createEOG(input)
+    /**
+     * Generates the EOG for a [node] which represents a statement/expression which throws an
+     * exception. Since some languages may accept different inputs to a throw statement (typically
+     * 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input which is
+     * evaluated first, must be the first item in the vararg! Any `null` object in `inputs` will be
+     * filtered. We connect the throw statement internally, i.e., the inputs are evaluated from
+     * index 0 to n and then the whole node is evaluated.
+     */
+    protected fun handleThrowOperator(node: Node, throwType: Type?, vararg inputs: Expression?) {
+        inputs.filterNotNull().forEach { handleEOG(it) }
+        attachToEOG(node)
 
-        val catchingScope =
-            scopeManager.firstScopeOrNull { scope -> scope is TryScope || scope is FunctionScope }
-
-        val throwType = input.type
-        pushToEOG(node)
-        if (catchingScope is TryScope) {
-            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
-        } else if (catchingScope is FunctionScope) {
-            catchingScope.catchesOrRelays[throwType] = currentPredecessors.toMutableList()
+        if (throwType != null) {
+            // Here, we identify the encapsulating ast node that can handle or relay a throw
+            val handlingOrRelayingParent =
+                node.firstParentOrNull { parent ->
+                    parent is TryStatement || parent is FunctionDeclaration
+                }
+            if (handlingOrRelayingParent != null) {
+                val throwByTypeMap =
+                    nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
+                val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
+                throwEOGExits.addAll(currentPredecessors.toMutableList())
+            } else {
+                LOGGER.error(
+                    "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
+                )
+            }
         }
+        // After a throw, the eog is not progressing in the following ast subtrees
         currentPredecessors.clear()
     }
 
@@ -591,33 +611,31 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      */
     protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
-        createEOG(input)
+        handleEOG(input)
 
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleAssertStatement(node: AssertStatement) {
-        createEOG(node.condition)
+        handleEOG(node.condition)
         val openConditionEOGs = currentPredecessors.toMutableList()
-        createEOG(node.message)
+        handleEOG(node.message)
         setCurrentEOGs(openConditionEOGs)
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleTypeExpression(node: TypeExpression) {
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleTryStatement(node: TryStatement) {
-        scopeManager.enterScope(node)
-        val tryScope = scopeManager.currentScope as TryScope?
 
-        node.resources.forEach { createEOG(it) }
+        node.resources.forEach { handleEOG(it) }
 
-        createEOG(node.tryBlock)
+        handleEOG(node.tryBlock)
         val tmpEOGNodes = currentPredecessors.toMutableList()
         val catchEnds = mutableListOf<Node>()
-        val catchesOrRelays = tryScope?.catchesOrRelays
+        val catchesOrRelays = nodesToInternalThrows[node]
         for (catchClause in node.catchClauses) {
             currentPredecessors.clear()
             // Try to catch all internally thrown exceptions under the catching clause and remove
@@ -628,13 +646,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 if (catchParam == null) { // e.g. catch (...)
                     currentPredecessors.addAll(eogEdges)
                 } else if (throwType.tryCast(catchParam.type) != CastNotPossible) {
+                    // If the thrown type can be cast to the type of the catch clause, a valid
+                    // handling of the
+                    // throw can be assumed
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }
             }
             toRemove.forEach { catchesOrRelays?.remove(it) }
-            pushToEOG(catchClause)
-            createEOG(catchClause.body)
+            attachToEOG(catchClause)
+            handleEOG(catchClause.body)
             catchEnds.addAll(currentPredecessors)
         }
 
@@ -644,7 +665,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if (node.elseBlock != null) {
             currentPredecessors.clear()
             currentPredecessors.addAll(tmpEOGNodes)
-            createEOG(node.elseBlock)
+            handleEOG(node.elseBlock)
             // All valid try ends got through the else block.
             tmpEOGNodes.clear()
             tmpEOGNodes.addAll(currentPredecessors)
@@ -662,7 +683,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 ?.entries
                 ?.flatMap { (_, value) -> value }
                 ?.let { currentPredecessors.addAll(it) }
-            createEOG(node.finallyBlock)
+            handleEOG(node.finallyBlock)
 
             //  all current-eog edges , result of finally execution as value List of uncaught
             // catchesOrRelaysThrows
@@ -672,54 +693,85 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
-        val outerScope =
-            scopeManager.firstScopeOrNull(scopeManager.currentScope?.parent) { scope: Scope? ->
-                scope is TryScope || scope is FunctionScope
-            }
-        if (outerScope != null) {
+        val outerCatchingNode =
+            node.firstParentOrNull { parent -> parent is TryStatement || parent is LoopStatement }
+        if (outerCatchingNode != null) {
+            // Forwarding is done by merging the currently associated throws to a type with the new
+            // throws based on their type
             val outerCatchesOrRelays =
-                if (outerScope is TryScope) outerScope.catchesOrRelays
-                else (outerScope as FunctionScope).catchesOrRelays
-            for ((key, value) in catchesOrRelays ?: mapOf()) {
-                val catches = outerCatchesOrRelays[key] ?: mutableListOf<Node>()
-                catches.addAll(value)
-                outerCatchesOrRelays[key] = catches
+                nodesToInternalThrows.getOrPut(outerCatchingNode) { mutableMapOf() }
+            for ((exceptionType, exceptionSources) in catchesOrRelays ?: mapOf()) {
+                val catches = outerCatchesOrRelays.getOrPut(exceptionType) { mutableListOf() }
+                catches.addAll(exceptionSources)
             }
         }
-        scopeManager.leaveScope(node)
-        // To Avoid edges out of the "finally" block to the next regular statement.
+        // To Avoid edges out of the try or finally block to the next regular statement if the try
+        // can not be exited
+        // without a throw
         if (!canTerminateExceptionfree) {
             currentPredecessors.clear()
         }
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleContinueStatement(node: ContinueStatement) {
-        pushToEOG(node)
-        scopeManager.addContinueStatement(node)
+        attachToEOG(node)
+        val label = node.label
+        val continuableNode =
+            if (label == null) {
+                node.firstParentOrNull { it.isContinuable() }
+            } else {
+                // If a label was specified, the continue is associated to a node explicitly labeled
+                // with the same label
+                getLabeledASTNode(node, label)
+            }
+        if (continuableNode != null) {
+            val cfNodesList =
+                nodesWithContinuesAndBreaks.getOrPut(continuableNode) { mutableListOf() }
+            cfNodesList.add(node)
+        } else {
+            LOGGER.error(
+                "I am unexpectedly not in a continuable subtree, cannot add continue statement"
+            )
+        }
+
         currentPredecessors.clear()
     }
 
     protected fun handleDeleteExpression(node: DeleteExpression) {
         for (operand in node.operands) {
-            createEOG(operand)
+            handleEOG(operand)
         }
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleBreakStatement(node: BreakStatement) {
-        pushToEOG(node)
-        scopeManager.addBreakStatement(node)
+        attachToEOG(node)
+        val label = node.label
+        val breakableNode =
+            if (label == null) {
+                node.firstParentOrNull { it.isBreakable() }
+            } else {
+                getLabeledASTNode(node, label)
+            }
+        if (breakableNode != null) {
+            val cfNodesList =
+                nodesWithContinuesAndBreaks.getOrPut(breakableNode) { mutableListOf() }
+            cfNodesList.add(node)
+        } else {
+            LOGGER.error("I am unexpectedly not in a breakable subtree, cannot add break statement")
+        }
+
         currentPredecessors.clear()
     }
 
     protected fun handleLabelStatement(node: LabelStatement) {
-        scopeManager.addLabelStatement(node)
-        createEOG(node.subStatement)
+        node.scope?.addLabelStatement(node)
+        handleEOG(node.subStatement)
     }
 
     protected fun handleGotoStatement(node: GotoStatement) {
-        pushToEOG(node)
+        attachToEOG(node)
         node.targetLabel?.let {
             processedListener.registerObjectListener(it) { _, to -> addEOGEdge(node, to) }
         }
@@ -727,47 +779,47 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleCaseStatement(node: CaseStatement) {
-        createEOG(node.caseExpression)
-        pushToEOG(node)
+        handleEOG(node.caseExpression)
+        attachToEOG(node)
     }
 
     protected fun handleNewExpression(node: NewExpression) {
-        createEOG(node.initializer)
-        pushToEOG(node)
+        handleEOG(node.initializer)
+        attachToEOG(node)
     }
 
     protected fun handleKeyValueExpression(node: KeyValueExpression) {
-        createEOG(node.key)
-        createEOG(node.value)
-        pushToEOG(node)
+        handleEOG(node.key)
+        handleEOG(node.value)
+        attachToEOG(node)
     }
 
     protected fun handleCastExpression(node: CastExpression) {
-        createEOG(node.expression)
-        pushToEOG(node)
+        handleEOG(node.expression)
+        attachToEOG(node)
     }
 
     protected fun handleExpressionList(node: ExpressionList) {
         for (expr in node.expressions) {
-            createEOG(expr)
+            handleEOG(expr)
         }
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
         // first the arguments
         for (inits in node.initializers) {
-            createEOG(inits)
+            handleEOG(inits)
         }
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     protected fun handleConstructExpression(node: ConstructExpression) {
         // first the arguments
         for (arg in node.arguments) {
-            createEOG(arg)
+            handleEOG(arg)
         }
-        pushToEOG(node)
+        attachToEOG(node)
 
         if (node.anonymousClass != null) {
             // Generate the EOG inside the anonymous class. It's not linked to the EOG of the outer
@@ -780,7 +832,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             currentPredecessors.clear()
             intermediateNodes.clear()
 
-            createEOG(node.anonymousClass)
+            handleEOG(node.anonymousClass)
 
             nextEdgeBranch = null
             currentPredecessors.clear()
@@ -793,11 +845,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * Creates an EOG-edge between the given argument node and the saved currentEOG Edges.
+     * Creates an EOG-edge between the given argument node and the saved currentEOG Nodes stored in
+     * [currentPredecessors].
      *
      * @param node node that gets the incoming edge
      */
-    fun pushToEOG(node: Node) {
+    fun attachToEOG(node: Node) {
         LOGGER.trace("Pushing {} {} to EOG", node.javaClass.simpleName, node)
         for (intermediate in intermediateNodes) {
             processedListener.process(intermediate, node)
@@ -820,28 +873,33 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      *
      * @param loopScope the loop scope
      */
-    protected fun exitLoop(loopScope: LoopScope) {
+    protected fun handleContainedBreaksAndContinues(loopStatement: LoopStatement) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
         // context is destroyed
-        currentPredecessors.addAll(loopScope.breakStatements)
-        val continues = loopScope.continueStatements.toMutableList()
-        if (continues.isNotEmpty()) {
-            val conditions =
-                loopScope.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
-            conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
+        val cfNode = nodesWithContinuesAndBreaks[loopStatement]
+        cfNode?.let {
+            // All [BreakStatement]s are added to the current predecessors to attach them to the
+            // nodes following the loop
+            currentPredecessors.addAll(cfNode.filterIsInstance<BreakStatement>())
+            // [ContinueStatement]s are attached to the start of loops
+            val continues = cfNode.filterIsInstance<ContinueStatement>().toMutableList()
+            if (continues.isNotEmpty()) {
+                val conditions =
+                    loopStatement.conditions
+                        .map { SubgraphWalker.getEOGPathEdges(it).entries }
+                        .flatten()
+                conditions.forEach { node -> addMultipleIncomingEOGEdges(continues, node) }
+            }
         }
     }
 
     /**
      * Connects current EOG nodes to the previously saved loop start to mimic control flow of loops
      */
-    protected fun connectCurrentToLoopStart() {
-        val loopScope = scopeManager.firstScopeOrNull { it is LoopScope } as? LoopScope
-        if (loopScope == null) {
-            LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start")
-            return
+    protected fun connectCurrentEOGToLoopStart(loopStatement: LoopStatement) {
+        loopStatement.starts.forEach { node ->
+            addMultipleIncomingEOGEdges(currentPredecessors, node)
         }
-        loopScope.starts.forEach { node -> addMultipleIncomingEOGEdges(currentPredecessors, node) }
     }
 
     /**
@@ -866,129 +924,108 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
-        createEOG(node.expression)
-        pushToEOG(node)
-        createEOG(node.block)
+        handleEOG(node.expression)
+        attachToEOG(node)
+        handleEOG(node.block)
     }
 
     protected fun handleConditionalExpression(node: ConditionalExpression) {
         val openBranchNodes = mutableListOf<Node>()
-        createEOG(node.condition)
+        handleEOG(node.condition)
         // To have semantic information after the condition evaluation
-        pushToEOG(node)
+        attachToEOG(node)
         val openConditionEOGs = currentPredecessors.toMutableList()
         nextEdgeBranch = true
-        createEOG(node.thenExpression)
+        handleEOG(node.thenExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openConditionEOGs)
         nextEdgeBranch = false
-        createEOG(node.elseExpression)
+        handleEOG(node.elseExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openBranchNodes)
     }
 
     protected fun handleDoStatement(node: DoStatement) {
-        scopeManager.enterScope(node)
-        createEOG(node.statement)
-        createEOG(node.condition)
+        handleEOG(node.statement)
+        handleEOG(node.condition)
         // TODO(oxisto): Do we really want to set DFG edges here?
         node.condition?.let { node.prevDFGEdges += it }
-        pushToEOG(node) // To have semantic information after the condition evaluation
+        attachToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
-        connectCurrentToLoopStart()
+        connectCurrentEOGToLoopStart(node)
         nextEdgeBranch = false
-        node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit do loop, but no loop scope: $node")
-        }
+        node.elseStatement?.let { handleEOG(it) }
+        handleContainedBreaksAndContinues(node)
     }
 
     protected fun handleForEachStatement(node: ForEachStatement) {
-        scopeManager.enterScope(node)
-        createEOG(node.iterable)
-        createEOG(node.variable)
+        handleEOG(node.iterable)
+        handleEOG(node.variable)
         // TODO(oxisto): Do we really want to set DFG edges here?
         node.variable?.let { node.prevDFGEdges += it }
-        pushToEOG(node) // To have semantic information after the variable declaration
+        attachToEOG(node) // To have semantic information after the variable declaration
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
-        createEOG(node.statement)
-        connectCurrentToLoopStart()
+        handleEOG(node.statement)
+        connectCurrentEOGToLoopStart(node)
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
-        node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit foreach loop, but not in loop scope: $node")
-        }
+        node.elseStatement?.let { handleEOG(it) }
+        handleContainedBreaksAndContinues(node)
         nextEdgeBranch = false
     }
 
     protected fun handleForStatement(node: ForStatement) {
-        scopeManager.enterScope(node)
-        createEOG(node.initializerStatement)
-        createEOG(node.conditionDeclaration)
-        createEOG(node.condition)
+        handleEOG(node.initializerStatement)
+        handleEOG(node.conditionDeclaration)
+        handleEOG(node.condition)
 
-        pushToEOG(node) // To have semantic information after the condition evaluation
+        attachToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
 
-        createEOG(node.statement)
-        createEOG(node.iterationStatement)
+        handleEOG(node.statement)
+        handleEOG(node.iterationStatement)
 
-        connectCurrentToLoopStart()
+        connectCurrentEOGToLoopStart(node)
 
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
-        node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit for loop, but no loop scope: $node")
-        }
+        node.elseStatement?.let { handleEOG(it) }
+        handleContainedBreaksAndContinues(node)
         nextEdgeBranch = false
     }
 
     protected fun handleIfStatement(node: IfStatement) {
         val openBranchNodes = mutableListOf<Node>()
-        scopeManager.enterScopeIfExists(node)
-        createEOG(node.initializerStatement)
-        createEOG(node.conditionDeclaration)
-        createEOG(node.condition)
-        pushToEOG(node) // To have semantic information after the condition evaluation
+        handleEOG(node.initializerStatement)
+        handleEOG(node.conditionDeclaration)
+        handleEOG(node.condition)
+        attachToEOG(node) // To have semantic information after the condition evaluation
         val openConditionEOGs = currentPredecessors.toMutableList()
         nextEdgeBranch = true
-        createEOG(node.thenStatement)
+        handleEOG(node.thenStatement)
         openBranchNodes.addAll(currentPredecessors)
         if (node.elseStatement != null) {
             setCurrentEOGs(openConditionEOGs)
             nextEdgeBranch = false
-            createEOG(node.elseStatement)
+            handleEOG(node.elseStatement)
             openBranchNodes.addAll(currentPredecessors)
         } else {
             openBranchNodes.addAll(openConditionEOGs)
         }
-        scopeManager.leaveScope(node)
         setCurrentEOGs(openBranchNodes)
     }
 
     protected fun handleSwitchStatement(node: SwitchStatement) {
-        scopeManager.enterScopeIfExists(node)
-        createEOG(node.initializerStatement)
-        createEOG(node.selectorDeclaration)
-        createEOG(node.selector)
-        pushToEOG(node) // To have semantic information after the condition evaluation
+        handleEOG(node.initializerStatement)
+        handleEOG(node.selectorDeclaration)
+        handleEOG(node.selector)
+        attachToEOG(node) // To have semantic information after the condition evaluation
         val tmp = currentPredecessors.toMutableList()
         val compound =
             if (node.statement is DoStatement) {
-                createEOG(node.statement)
+                handleEOG(node.statement)
                 (node.statement as DoStatement).statement as Block
             } else {
                 node.statement as Block
@@ -998,7 +1035,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             if (subStatement is CaseStatement || subStatement is DefaultStatement) {
                 currentPredecessors.addAll(tmp)
             }
-            createEOG(subStatement)
+            handleEOG(subStatement)
         }
 
         // If we do not have default statement, we also need to put the switch statement into the
@@ -1008,42 +1045,51 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             currentPredecessors.add(node)
         }
 
-        pushToEOG(compound)
-        val switchScope = scopeManager.leaveScope(node) as SwitchScope?
-        if (switchScope != null) {
-            currentPredecessors.addAll(switchScope.breakStatements)
-        } else {
-            LOGGER.error("Handling switch statement, but not in switch scope: $node")
-        }
+        attachToEOG(compound)
+        currentPredecessors.addAll(nodesWithContinuesAndBreaks[node] ?: mutableListOf())
     }
 
     protected fun handleWhileStatement(node: WhileStatement) {
-        scopeManager.enterScope(node)
-        createEOG(node.conditionDeclaration)
-        createEOG(node.condition)
-        pushToEOG(node) // To have semantic information after the condition evaluation
+        handleEOG(node.conditionDeclaration)
+        handleEOG(node.condition)
+        attachToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
-        createEOG(node.statement)
-        connectCurrentToLoopStart()
+        handleEOG(node.statement)
+        connectCurrentEOGToLoopStart(node)
 
         // Replace current EOG nodes without triggering post setEOG ... processing
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
         nextEdgeBranch = false
-        node.elseStatement?.let { createEOG(it) }
-        val currentLoopScope = scopeManager.leaveScope(node) as LoopScope?
-        if (currentLoopScope != null) {
-            exitLoop(currentLoopScope)
-        } else {
-            LOGGER.error("Trying to exit while loop, but no loop scope: $node")
-        }
+        node.elseStatement?.let { handleEOG(it) }
+        handleContainedBreaksAndContinues(node)
     }
 
     private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
         // Include the node as part of the EOG itself, but we do not need to go into any children or
         // properties here
-        pushToEOG(stmt)
+        attachToEOG(stmt)
+    }
+
+    /** We use the scope where the current [node] is in, to find a statement labeled with [label] */
+    fun getLabeledASTNode(node: Node, label: String): Node? {
+        scopeManager.jumpTo(node.scope)
+        val labelStatement = scopeManager.getLabelStatement(label)
+        labelStatement?.subStatement?.let {
+            return it
+        }
+        return null
+    }
+
+    /** Calls [handleThrowOperator]. */
+    protected fun handleThrowStatement(statement: ThrowStatement) {
+        handleThrowOperator(
+            statement,
+            statement.exception?.type,
+            statement.exception,
+            statement.parentException
+        )
     }
 
     companion object {
@@ -1108,6 +1154,83 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
             }
             return ret
+        }
+    }
+
+    /**
+     * Statements that constitute the start of the Loop depending on the used pass, mostly of
+     * size 1. THis list has to be extended if new structures are added that allow for looping.
+     */
+    val LoopStatement.starts: List<Node>
+        get() =
+            when (this) {
+                is WhileStatement -> {
+                    if (this.conditionDeclaration != null)
+                        SubgraphWalker.getEOGPathEdges(this.conditionDeclaration).entries
+                    else if (this.condition != null)
+                        SubgraphWalker.getEOGPathEdges(this.condition).entries
+                    else SubgraphWalker.getEOGPathEdges(this.statement).entries
+                }
+                is ForStatement -> {
+                    if (this.conditionDeclaration != null)
+                        SubgraphWalker.getEOGPathEdges(this.conditionDeclaration).entries
+                    else if (this.condition != null)
+                        SubgraphWalker.getEOGPathEdges(this.condition).entries
+                    else SubgraphWalker.getEOGPathEdges(this.statement).entries
+                }
+                is ForEachStatement -> {
+                    SubgraphWalker.getEOGPathEdges(this).entries
+                }
+                is DoStatement -> {
+                    SubgraphWalker.getEOGPathEdges(this.statement).entries
+                }
+                else -> {
+                    LOGGER.error(
+                        "Currently the component {} does not have a defined loop start.",
+                        this?.javaClass
+                    )
+                    ArrayList()
+                }
+            }
+
+    /**
+     * Statements that constitute the start of the condition evaluation, mostly of size 1. This has
+     * to be extended if new nodes are added that have a condition relevant as entry points when
+     * looping.
+     */
+    val Node.conditions: List<Node>
+        get() =
+            when (this) {
+                is WhileStatement ->
+                    mutableListOf(this.condition, this.conditionDeclaration).filterNotNull()
+                is ForStatement -> mutableListOf(this.condition).filterNotNull()
+                is ForEachStatement -> mutableListOf(this.variable).filterNotNull()
+                is DoStatement -> mutableListOf(this.condition).filterNotNull()
+                is AssertStatement -> mutableListOf(this.condition).filterNotNull()
+                else -> {
+                    LOGGER.error(
+                        "Currently the component {} does not have defined conditions",
+                        this.javaClass
+                    )
+                    mutableListOf()
+                }
+            }
+
+    /** Can be exited via [BreakStatement]. */
+    fun Node.isBreakable(): Boolean {
+        return when (this) {
+            is LoopStatement -> true
+            is TryStatement -> true
+            is SwitchStatement -> true
+            else -> false
+        }
+    }
+
+    /** Can be rerun from the beginning via [ContinueStatement]. */
+    fun Node.isContinuable(): Boolean {
+        return when (this) {
+            is LoopStatement -> true
+            else -> false
         }
     }
 }

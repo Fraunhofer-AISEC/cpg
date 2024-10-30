@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -40,6 +42,49 @@ import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
+
+    @Test
+    fun test1740EndlessCDG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("1740_endless_cdg_loop.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<ControlDependenceGraphPass>()
+            }
+        assertNotNull(tu)
+    }
+
+    @Test
+    fun testNestedFunctions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("nested_functions.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+        // Check that all three functions exist
+        val level1 = tu.functions["level1"]
+        assertNotNull(level1)
+        val level2 = tu.functions["level2"]
+        assertNotNull(level2)
+        val level3 = tu.functions["level3"]
+        assertNotNull(level3)
+        // Only level2 and level3 are children of level1
+        assertEquals(setOf(level2, level3), level1.body.functions.toSet())
+        // Only level3 is child of level2
+        assertEquals(setOf(level3), level2.body.functions.toSet())
+        // No child for level3
+        assertEquals(setOf(), level3.body.functions.toSet())
+    }
+
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
@@ -1484,6 +1529,61 @@ class PythonFrontendTest : BaseTest() {
 
         // So the code exceeds the line, but we clamp it and avoid a crash
         assertEquals("e = \"é\"", unicodeFunc.body?.code)
+    }
+
+    @Test
+    fun testPackageResolution() {
+        val topLevel = Path.of("src", "test", "resources", "python", "packages")
+        var result =
+            analyze(listOf(topLevel.resolve("foobar")).map { it.toFile() }, topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+                it.useParallelFrontends(false)
+                it.failOnError(false)
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferFunctions(false).build()
+                )
+            }
+        assertNotNull(result)
+
+        var expected =
+            setOf(
+                "foobar",
+                "foobar.__main__",
+                "foobar.module1",
+                "foobar.config",
+                "foobar.implementation",
+                "foobar.implementation.internal_bar",
+                "foobar.implementation.internal_foo"
+            )
+        assertEquals(expected, result.namespaces.map { it.name.toString() }.distinct().toSet())
+
+        var bar = result.functions["bar"]
+        assertNotNull(bar)
+        assertFullName("foobar.implementation.internal_bar.bar", bar)
+
+        var foo = result.functions["foo"]
+        assertNotNull(foo)
+        assertFullName("foobar.implementation.internal_foo.foo", foo)
+
+        var barCall = result.calls["bar"]
+        assertNotNull(barCall)
+        assertInvokes(barCall, bar)
+
+        var fooCalls = result.calls("foo")
+        assertEquals(2, fooCalls.size)
+        fooCalls.forEach { assertInvokes(it, foo) }
+
+        val refBarString = result.refs("bar_string")
+        refBarString.forEach {
+            assertNotNull(it)
+            assertNotNull(it.refersTo)
+        }
+
+        val refFooString = result.refs("foo_string")
+        refFooString.forEach {
+            assertNotNull(it)
+            assertNotNull(it.refersTo)
+        }
     }
 
     class PythonValueEvaluator : ValueEvaluator() {
