@@ -338,14 +338,15 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     // ∞ mod b can be any number [0, b], therefore we need to return an Interval
     private fun modulateBounds(a: Bound, b: Bound): LatticeInterval {
         return when {
-            // ∞ mod ∞ is not a defined operation
+            // x mod 0 is not a defined operation
+            // we approximate ∞ mod x as any number [0, b] (with x != ∞)
+            // x mod -∞ is not a defined operation
             a == Bound.Value(0) -> Bounded(0, 0)
-            (a is Bound.INFINITE || a is Bound.NEGATIVE_INFINITE) && b >= Bound.Value(0) ->
+            (a is Bound.INFINITE || a is Bound.NEGATIVE_INFINITE) && b != Bound.Value(0) ->
                 Bounded(0, b)
-            (a is Bound.INFINITE || a is Bound.NEGATIVE_INFINITE) && b < Bound.Value(0) ->
-                Bounded(b, 0)
-            b is Bound.INFINITE || b is Bound.NEGATIVE_INFINITE -> Bounded(a, a)
-            a is Bound.Value && b is Bound.Value -> Bounded(a.value % b.value, a.value % b.value)
+            b is Bound.INFINITE -> Bounded(a, a)
+            a is Bound.Value && b is Bound.Value && b != Bound.Value(0) ->
+                Bounded(a.value % b.value, a.value % b.value)
             else -> throw IllegalArgumentException("Unsupported bound type")
         }
     }
