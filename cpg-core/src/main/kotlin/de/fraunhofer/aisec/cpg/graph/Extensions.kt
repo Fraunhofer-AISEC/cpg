@@ -300,6 +300,18 @@ fun Node.followNextCDGUntilHit(
     return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
 }
 
+fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followPrevCDGUntilHit(true, true, interproceduralAnalysis) { false }.failed
+}
+
+fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followNextCDGUntilHit(true, true, interproceduralAnalysis) { false }.failed
+}
+
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
  * contains all possible shortest data flow paths (with [ControlDependence]) between the starting
