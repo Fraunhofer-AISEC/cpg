@@ -236,6 +236,143 @@ fun Node.followPrevFullDFGEdgesUntilHit(predicate: (Node) -> Boolean): Fulfilled
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [ControlDependence]) between the starting
+ * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
+ * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followNextCDGUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = false,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    // Looks complicated but at least it's not recursive...
+    // result: List of paths (between from and to)
+    val fulfilledPaths = mutableListOf<List<Node>>()
+    // failedPaths: All the paths which do not satisfy "predicate"
+    val failedPaths = mutableListOf<List<Node>>()
+    // The list of paths where we're not done yet.
+    val worklist = mutableSetOf<List<Node>>()
+    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+
+    val alreadySeenNodes = mutableSetOf<Node>()
+
+    while (worklist.isNotEmpty()) {
+        val currentPath = worklist.maxBy { it.size }
+        worklist.remove(currentPath)
+        val currentNode = currentPath.last()
+        alreadySeenNodes.add(currentNode)
+        // The last node of the path is where we continue. We get all of its outgoing CDG edges and
+        // follow them
+        var nextNodes = currentNode.nextCDG.toMutableList()
+        if (interproceduralAnalysis) {
+            nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+        }
+
+        // No further nodes in the path and the path criteria are not satisfied.
+        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath)
+
+        for (next in nextNodes) {
+            // Copy the path for each outgoing CDG edge and add the next node
+            val nextPath = currentPath.toMutableList()
+            nextPath.add(next)
+            if (predicate(next)) {
+                // We ended up in the node fulfilling "predicate", so we're done for this path. Add
+                // the path to the results.
+                fulfilledPaths.add(nextPath)
+                continue // Don't add this path anymore. The requirement is satisfied.
+            }
+            // The next node is new in the current path (i.e., there's no loop), so we add the path
+            // with the next step to the worklist.
+            if (
+                next !in currentPath &&
+                    (findAllPossiblePaths ||
+                        (next !in alreadySeenNodes && worklist.none { next in it }))
+            ) {
+                worklist.add(nextPath)
+            }
+        }
+    }
+
+    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [ControlDependence]) between the starting
+ * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
+ * represented as lists of nodes. Paths which do not end at such a node are included in
+ * [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followPrevCDGUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = false,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    // Looks complicated but at least it's not recursive...
+    // result: List of paths (between from and to)
+    val fulfilledPaths = mutableListOf<List<Node>>()
+    // failedPaths: All the paths which do not satisfy "predicate"
+    val failedPaths = mutableListOf<List<Node>>()
+    // The list of paths where we're not done yet.
+    val worklist = mutableSetOf<List<Node>>()
+    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+
+    val alreadySeenNodes = mutableSetOf<Node>()
+
+    while (worklist.isNotEmpty()) {
+        val currentPath = worklist.maxBy { it.size }
+        worklist.remove(currentPath)
+        val currentNode = currentPath.last()
+        alreadySeenNodes.add(currentNode)
+        // The last node of the path is where we continue. We get all of its outgoing CDG edges and
+        // follow them
+        var nextNodes = currentNode.prevCDG.toMutableList()
+        if (interproceduralAnalysis) {
+            nextNodes.addAll(
+                (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                    it.astParent as? CallExpression
+                } ?: listOf()
+            )
+        }
+
+        // No further nodes in the path and the path criteria are not satisfied.
+        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath)
+
+        for (next in nextNodes) {
+            // Copy the path for each outgoing CDG edge and add the next node
+            val nextPath = currentPath.toMutableList()
+            nextPath.add(next)
+            if (predicate(next)) {
+                // We ended up in the node fulfilling "predicate", so we're done for this path. Add
+                // the path to the results.
+                fulfilledPaths.add(nextPath)
+                continue // Don't add this path anymore. The requirement is satisfied.
+            }
+            // The next node is new in the current path (i.e., there's no loop), so we add the path
+            // with the next step to the worklist.
+            if (
+                next !in currentPath &&
+                    (findAllPossiblePaths ||
+                        (next !in alreadySeenNodes && worklist.none { next in it }))
+            ) {
+                worklist.add(nextPath)
+            }
+        }
+    }
+
+    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
  * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
  * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
  * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
@@ -634,7 +771,7 @@ fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
             return node
         }
 
-        // go up-wards in the ast tree
+        // go upwards in the ast tree
         node = node.astParent
     }
 
