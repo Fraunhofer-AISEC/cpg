@@ -84,7 +84,9 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(singletonCheck)
         assertEquals("===", singletonCheck.operatorCode)
         assertRefersTo(singletonCheck.lhs, paramX)
-        assertIs<ProblemExpression>(singletonCheck.rhs)
+        val singletonRhs = singletonCheck.rhs
+        assertIs<Literal<*>>(singletonRhs)
+        assertNull(singletonRhs.value)
         assertIs<BreakStatement>(statementBlock[2])
 
         val caseValue = statementBlock[3]
