@@ -237,28 +237,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
      * The last operands are further down the tree.
      */
-    private fun joinListWithBinOp(
-        operatorCode: String,
-        nodes: List<Expression>,
-        rawNode: Python.AST.AST? = null
-    ): BinaryOperator {
-        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
-        lastTwo.rhs = nodes.last()
-        lastTwo.lhs = nodes[nodes.size - 2]
-        return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
-            val nextValue = newBinaryOperator(operatorCode)
-            nextValue.rhs = start
-            nextValue.lhs = newVal
-            nextValue
-        }
-    }
-
-    /**
-     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
-     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
-     * The last operands are further down the tree.
-     */
-    fun joinListWithBinOp(
+    internal fun joinListWithBinOp(
         operatorCode: String,
         nodes: List<Expression>,
         rawNode: Python.AST.AST? = null,
@@ -268,13 +247,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         lastTwo.rhs = nodes.last()
         lastTwo.lhs = nodes[nodes.size - 2]
         return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
-            val nextValue = newBinaryOperator(operatorCode)
-            if (isImplicit && rawNode != null)
-                nextValue.implicit(
-                    code = frontend.codeOf(rawNode),
-                    location = frontend.locationOf(rawNode)
-                )
-            else if (isImplicit) nextValue.implicit()
+            val nextValue = newBinaryOperator(operatorCode, rawNode = rawNode)
+            if (isImplicit) nextValue.implicit()
             nextValue.rhs = start
             nextValue.lhs = newVal
             nextValue

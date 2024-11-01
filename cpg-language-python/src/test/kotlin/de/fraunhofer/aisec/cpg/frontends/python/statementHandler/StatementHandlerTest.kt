@@ -81,7 +81,6 @@ class StatementHandlerTest : BaseTest() {
         assertIs<CaseStatement>(caseSingleton)
         val singletonCheck = caseSingleton.caseExpression
         assertIs<BinaryOperator>(singletonCheck)
-        assertNotNull(singletonCheck)
         assertEquals("===", singletonCheck.operatorCode)
         assertRefersTo(singletonCheck.lhs, paramX)
         val singletonRhs = singletonCheck.rhs
@@ -93,7 +92,6 @@ class StatementHandlerTest : BaseTest() {
         assertIs<CaseStatement>(caseValue)
         val valueCheck = caseValue.caseExpression
         assertIs<BinaryOperator>(valueCheck)
-        assertNotNull(valueCheck)
         assertEquals("==", valueCheck.operatorCode)
         assertRefersTo(valueCheck.lhs, paramX)
         assertLiteralValue("value", valueCheck.rhs)
@@ -128,9 +126,12 @@ class StatementHandlerTest : BaseTest() {
         assertIs<CaseStatement>(caseOr)
         val orExpr = caseOr.caseExpression
         assertIs<BinaryOperator>(orExpr)
-        assertNotNull(orExpr)
         assertEquals("or", orExpr.operatorCode)
         assertIs<BreakStatement>(statementBlock[29])
+
+        val caseDefault = statementBlock[30]
+        assertIs<DefaultStatement>(caseDefault)
+        assertIs<BreakStatement>(statementBlock[32])
     }
 
     @Test

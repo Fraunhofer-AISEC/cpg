@@ -113,9 +113,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 }
             is Python.AST.MatchOr ->
                 frontend.expressionHandler.joinListWithBinOp(
-                    "or",
-                    node.patterns.map { handlePattern(it, selector) },
-                    node
+                    operatorCode = "or",
+                    nodes = node.patterns.map { handlePattern(it, selector) },
+                    rawNode = node,
+                    isImplicit = false
                 )
             is Python.AST.MatchSequence,
             is Python.AST.MatchMapping,
@@ -140,21 +141,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleCase(node: Python.AST.match_case, selector: String): List<Statement> {
         val statements = mutableListOf<Statement>()
-        // First, we add the caseStatement
+        // First, we add the CaseStatement. If the pattern is a `MatchAs` without a pattern, then
+        // it's a default statement.
+        // We have to handle this here since we do not want to generate the CaseStatement in this
+        // case.
         statements +=
-            newCaseStatement(node).apply {
-                this.caseExpression =
-                    node.guard?.let {
-                        newBinaryOperator("and")
-                            .implicit(
-                                code = frontend.codeOf(node),
-                                location = frontend.locationOf(node)
-                            )
-                            .apply {
-                                this.lhs = handlePattern(node.pattern, selector)
-                                this.rhs = frontend.expressionHandler.handle(it)
-                            }
-                    } ?: handlePattern(node.pattern, selector)
+            if (
+                node.pattern is Python.AST.MatchAs &&
+                    (node.pattern as Python.AST.MatchAs).pattern == null
+            ) {
+                newDefaultStatement(rawNode = node.pattern)
+            } else {
+                newCaseStatement(node).apply {
+                    this.caseExpression =
+                        node.guard?.let {
+                            newBinaryOperator("and")
+                                .implicit(
+                                    code = frontend.codeOf(node),
+                                    location = frontend.locationOf(node)
+                                )
+                                .apply {
+                                    this.lhs = handlePattern(node.pattern, selector)
+                                    this.rhs = frontend.expressionHandler.handle(it)
+                                }
+                        } ?: handlePattern(node.pattern, selector)
+                }
             }
         // Now, we add the remaining body.
         statements += node.body.map(::handle)
