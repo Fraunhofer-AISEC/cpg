@@ -35,7 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.helpers.*
-import de.fraunhofer.aisec.cpg.helpers.LatticeElement
+import de.fraunhofer.aisec.cpg.helpers.functional.LatticeElement
+import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.iterateEOGClean
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
@@ -61,15 +63,17 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      */
     protected fun handle(node: Node, parent: Node?) {
         if (node is FunctionDeclaration) {
-            val startState = UnreachabilityState()
+            var startState = UnreachabilityState()
             for (firstEdge in node.nextEOGEdges) {
-                startState.push(firstEdge, ReachabilityLattice(Reachability.REACHABLE))
+                startState = startState.push(firstEdge, Reachability.REACHABLE)
             }
-            val finalState = iterateEOG(node.nextEOGEdges, startState, ::transfer) ?: return
 
-            for ((key, value) in finalState) {
+            val nextEog = node.nextEOGEdges.toList()
+            val finalState = iterateEOGClean(nextEog, startState, ::transfer)
+
+            for ((key, value) in finalState.elements) {
                 if (value.elements == Reachability.UNREACHABLE) {
-                    (key as? EvaluationOrder)?.unreachable = true
+                    key.unreachable = true
                 }
             }
         }
@@ -91,24 +95,31 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  * Returns the updated state and true because we always expect an update of the state.
  */
 fun transfer(
-    currentEdge: Edge<Node>,
-    currentState: State<Edge<Node>, Reachability>
-): State<Edge<Node>, Reachability> {
+    currentEdge: EvaluationOrder,
+    currentState: LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>>
+): LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>> {
+    var newState = currentState as? UnreachabilityState ?: return currentState
     when (val currentNode = currentEdge.end) {
         is IfStatement -> {
-            handleIfStatement(currentEdge, currentNode, currentState)
+            newState = handleIfStatement(currentEdge, currentNode, newState)
         }
         is WhileStatement -> {
-            handleWhileStatement(currentEdge, currentNode, currentState)
+            newState = handleWhileStatement(currentEdge, currentNode, newState)
         }
         else -> {
             // For all other edges, we simply propagate the reachability property of the edge
             // which made us come here.
-            currentNode.nextEOGEdges.forEach { currentState.push(it, currentState[currentEdge]) }
+            currentNode.nextEOGEdges.forEach {
+                newState =
+                    newState.push(
+                        it,
+                        newState.elements[currentEdge]?.elements ?: Reachability.BOTTOM
+                    )
+            }
         }
     }
 
-    return currentState
+    return newState
 }
 
 /**
@@ -120,35 +131,38 @@ fun transfer(
 private fun handleIfStatement(
     enteringEdge: Edge<Node>,
     n: IfStatement,
-    state: State<Edge<Node>, Reachability>
-) {
+    state: UnreachabilityState
+): UnreachabilityState {
+    var newState = state
     val evalResult = ValueEvaluator().evaluate(n.condition)
 
-    val (unreachableEdge, remainingEdges) =
+    val (unreachableEdges, remainingEdges) =
         if (evalResult == true) {
             // If the condition is always true, the "false" branch is always unreachable
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.branch == false },
+                n.nextEOGEdges.filter { e -> e.branch == false },
                 n.nextEOGEdges.filter { e -> e.branch != false }
             )
         } else if (evalResult == false) {
             // If the condition is always false, the "true" branch is always unreachable
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.branch == true },
+                n.nextEOGEdges.filter { e -> e.branch == true },
                 n.nextEOGEdges.filter { e -> e.branch != true }
             )
         } else {
-            Pair(null, n.nextEOGEdges)
+            Pair(listOf(), n.nextEOGEdges)
         }
 
-    if (unreachableEdge != null) {
-        // This edge is definitely unreachable
-        state.push(unreachableEdge, ReachabilityLattice(Reachability.UNREACHABLE))
-    }
+    // These edges are definitely unreachable
+    unreachableEdges.forEach { newState = newState.push(it, Reachability.UNREACHABLE) }
 
     // For all other edges, we simply propagate the reachability property of the edge which
     // made us come here.
-    remainingEdges.forEach { state.push(it, state[enteringEdge]) }
+    remainingEdges.forEach {
+        newState =
+            newState.push(it, newState.elements[enteringEdge]?.elements ?: Reachability.BOTTOM)
+    }
+    return newState
 }
 
 /**
@@ -161,8 +175,9 @@ private fun handleIfStatement(
 private fun handleWhileStatement(
     enteringEdge: Edge<Node>,
     n: WhileStatement,
-    state: State<Edge<Node>, Reachability>
-) {
+    state: UnreachabilityState
+): UnreachabilityState {
+    var newState = state
     /*
      * Note: It does not understand that code like
      * x = true; while(x) {...; x = false;}
@@ -173,37 +188,37 @@ private fun handleWhileStatement(
      */
     val evalResult = ValueEvaluator().evaluate(n.condition)
 
-    val (unreachableEdge, remainingEdges) =
+    val (unreachableEdges, remainingEdges) =
         if (evalResult is Boolean && evalResult == true) {
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.index == 1 },
+                n.nextEOGEdges.filter { e -> e.index == 1 },
                 n.nextEOGEdges.filter { e -> e.index != 1 }
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
-                n.nextEOGEdges.firstOrNull { e -> e.index == 0 },
+                n.nextEOGEdges.filter { e -> e.index == 0 },
                 n.nextEOGEdges.filter { e -> e.index != 0 }
             )
         } else {
-            Pair(null, n.nextEOGEdges)
+            Pair(listOf(), n.nextEOGEdges)
         }
 
-    if (unreachableEdge != null) {
-        // This edge is definitely unreachable
-        state.push(unreachableEdge, ReachabilityLattice(Reachability.UNREACHABLE))
-    }
+    // These edges are definitely unreachable
+    unreachableEdges.forEach { newState = newState.push(it, Reachability.UNREACHABLE) }
 
     // For all other edges, we simply propagate the reachability property of the edge which
     // made us come here.
-    remainingEdges.forEach { state.push(it, state[enteringEdge]) }
+    remainingEdges.forEach {
+        newState =
+            newState.push(it, newState.elements[enteringEdge]?.elements ?: Reachability.BOTTOM)
+    }
+    return newState
 }
 
 /**
- * Implements the [LatticeElement] over reachability properties: TOP | REACHABLE | UNREACHABLE |
- * BOTTOM
+ * Implements the [LatticeElement] over reachability properties: REACHABLE | UNREACHABLE | BOTTOM
  */
-class ReachabilityLattice(override val elements: Reachability) :
-    LatticeElement<Reachability>(elements) {
+class ReachabilityLattice(elements: Reachability) : LatticeElement<Reachability>(elements) {
     override fun lub(other: LatticeElement<Reachability>) =
         ReachabilityLattice(maxOf(this.elements, other.elements))
 
@@ -211,6 +226,14 @@ class ReachabilityLattice(override val elements: Reachability) :
 
     override fun compareTo(other: LatticeElement<Reachability>) =
         this.elements.compareTo(other.elements)
+
+    override fun equals(other: Any?): Boolean {
+        return other is ReachabilityLattice && this.elements == other.elements
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode() * 31 + elements.hashCode()
+    }
 }
 
 /**
@@ -227,4 +250,26 @@ enum class Reachability {
  * A state which actually holds a state for all [Edge]s, one only for declarations and one for
  * ReturnStatements.
  */
-class UnreachabilityState : State<Edge<Node>, Reachability>()
+class UnreachabilityState(elements: Map<EvaluationOrder, ReachabilityLattice> = mapOf()) :
+    MapLattice<EvaluationOrder, Reachability>(elements) {
+    override fun lub(
+        other: LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>>
+    ): UnreachabilityState {
+        return UnreachabilityState(
+            this.elements.entries.fold(
+                other.elements.mapValues { ReachabilityLattice(it.value.elements) }
+            ) { current, (thisKey, thisValue) ->
+                val mutableMap = current.toMutableMap()
+                mutableMap.compute(thisKey) { k, v ->
+                    ReachabilityLattice(thisValue.elements)
+                        .lub(v ?: ReachabilityLattice(Reachability.BOTTOM))
+                }
+                mutableMap
+            }
+        )
+    }
+
+    fun push(newEdge: EvaluationOrder, newReachability: Reachability): UnreachabilityState {
+        return this.lub(MapLattice(mapOf(Pair(newEdge, ReachabilityLattice(newReachability)))))
+    }
+}
