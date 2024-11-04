@@ -279,20 +279,24 @@ class LatticeIntervalTest {
     @Test
     fun testMeet() {
         // With BOTTOM
-        assertEquals(BOTTOM, BOTTOM.join(Bounded(5, 5)))
-        assertEquals(BOTTOM, Bounded(5, 5).join(BOTTOM))
-        assertEquals(BOTTOM, BOTTOM.join(Bounded(NEGATIVE_INFINITE, INFINITE)))
-        assertEquals(BOTTOM, Bounded(NEGATIVE_INFINITE, INFINITE).join(BOTTOM))
-        assertEquals(BOTTOM, BOTTOM.join(BOTTOM))
-
-        // Without BOTTOM
-        assertEquals(BOTTOM, Bounded(5, 10).join(Bounded(NEGATIVE_INFINITE, -5)))
-        assertEquals(BOTTOM, Bounded(-10, -5).join(Bounded(5, INFINITE)))
+        assertEquals(Bounded(5, 5), BOTTOM.meet(Bounded(5, 5)))
+        assertEquals(Bounded(5, 5), Bounded(5, 5).meet(BOTTOM))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(0, 0).join(Bounded(NEGATIVE_INFINITE, INFINITE))
+            BOTTOM.meet(Bounded(NEGATIVE_INFINITE, INFINITE))
         )
-        assertEquals(Bounded(-10, 10), Bounded(9, 10).join(Bounded(-10, -9)))
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(NEGATIVE_INFINITE, INFINITE).meet(BOTTOM)
+        )
+        assertEquals(BOTTOM, BOTTOM.meet(BOTTOM))
+
+        // Without BOTTOM
+        assertEquals(BOTTOM, Bounded(5, 10).meet(Bounded(NEGATIVE_INFINITE, -5)))
+        assertEquals(BOTTOM, Bounded(-10, -5).meet(Bounded(5, INFINITE)))
+        assertEquals(BOTTOM, Bounded(9, 10).meet(Bounded(-10, -9)))
+        assertEquals(Bounded(0, 0), Bounded(0, 0).meet(Bounded(NEGATIVE_INFINITE, INFINITE)))
+        assertEquals(Bounded(-9, 9), Bounded(-9, 10).meet(Bounded(-10, 9)))
     }
 
     @Test
