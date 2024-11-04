@@ -27,9 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 
-/**
- * Represents a [Map] type with key-value pairs, where each key is associated with a specific value
- * type.
- */
+/** Represents a [Map] type with key-value pairs. */
 class MapType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
     ObjectType(typeName, listOf(elementType), false, language), SecondOrderType

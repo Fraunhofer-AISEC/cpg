@@ -27,6 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 
-/** Represents a [List] type that contains elements of a specified type. */
+/** Represents a [List] type that contains multiple elements. */
 class ListType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
     ObjectType(typeName, listOf(elementType), false, language), SecondOrderType
