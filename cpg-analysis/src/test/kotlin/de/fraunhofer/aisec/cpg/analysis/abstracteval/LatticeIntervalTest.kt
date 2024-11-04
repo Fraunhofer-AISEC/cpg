@@ -29,10 +29,8 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.BOTTOM
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.INFINITE
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.NEGATIVE_INFINITE
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bounded
+import kotlin.test.*
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
@@ -280,27 +278,68 @@ class LatticeIntervalTest {
 
     @Test
     fun testMeet() {
-        // TODO
+        // With BOTTOM
+        assertEquals(BOTTOM, BOTTOM.join(Bounded(5, 5)))
+        assertEquals(BOTTOM, Bounded(5, 5).join(BOTTOM))
+        assertEquals(BOTTOM, BOTTOM.join(Bounded(NEGATIVE_INFINITE, INFINITE)))
+        assertEquals(BOTTOM, Bounded(NEGATIVE_INFINITE, INFINITE).join(BOTTOM))
+        assertEquals(BOTTOM, BOTTOM.join(BOTTOM))
+
+        // Without BOTTOM
+        assertEquals(BOTTOM, Bounded(5, 10).join(Bounded(NEGATIVE_INFINITE, -5)))
+        assertEquals(BOTTOM, Bounded(-10, -5).join(Bounded(5, INFINITE)))
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(0, 0).join(Bounded(NEGATIVE_INFINITE, INFINITE))
+        )
+        assertEquals(Bounded(-10, 10), Bounded(9, 10).join(Bounded(-10, -9)))
     }
 
     @Test
     fun testWiden() {
-        // TODO
+        // With BOTTOM
+        assertEquals(Bounded(5, 5), BOTTOM.widen(Bounded(5, 5)))
+        assertEquals(Bounded(5, 5), Bounded(5, 5).widen(BOTTOM))
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            BOTTOM.widen(Bounded(NEGATIVE_INFINITE, INFINITE))
+        )
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(NEGATIVE_INFINITE, INFINITE).widen(BOTTOM)
+        )
+        assertEquals(BOTTOM, BOTTOM.widen(BOTTOM))
+
+        // Without BOTTOM
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, 10),
+            Bounded(5, 10).widen(Bounded(NEGATIVE_INFINITE, -5))
+        )
+        assertEquals(Bounded(-10, INFINITE), Bounded(-10, -5).widen(Bounded(5, INFINITE)))
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(0, 0).widen(Bounded(NEGATIVE_INFINITE, INFINITE))
+        )
+        assertEquals(Bounded(NEGATIVE_INFINITE, 10), Bounded(9, 10).widen(Bounded(-10, -9)))
+        assertEquals(Bounded(-10, INFINITE), Bounded(-10, -9).widen(Bounded(9, 10)))
     }
 
     @Test
     fun testNarrow() {
-        // TODO
-    }
+        // With BOTTOM
+        assertEquals(BOTTOM, BOTTOM.narrow(Bounded(5, 5)))
+        assertEquals(BOTTOM, Bounded(5, 5).narrow(BOTTOM))
+        assertEquals(BOTTOM, BOTTOM.narrow(Bounded(NEGATIVE_INFINITE, INFINITE)))
+        assertEquals(BOTTOM, Bounded(NEGATIVE_INFINITE, INFINITE).narrow(BOTTOM))
+        assertEquals(BOTTOM, BOTTOM.narrow(BOTTOM))
 
-    @Test
-    fun testMin() {
-        // TODO
-    }
-
-    @Test
-    fun testMax() {
-        // TODO
+        // Without BOTTOM
+        assertEquals(Bounded(5, 10), Bounded(5, 10).narrow(Bounded(NEGATIVE_INFINITE, -5)))
+        assertEquals(Bounded(-10, -5), Bounded(-10, -5).narrow(Bounded(5, INFINITE)))
+        assertEquals(Bounded(0, 0), Bounded(0, 0).narrow(Bounded(NEGATIVE_INFINITE, INFINITE)))
+        assertEquals(Bounded(-5, 5), Bounded(NEGATIVE_INFINITE, -5).narrow(Bounded(5, 10)))
+        assertEquals(Bounded(-5, 5), Bounded(5, INFINITE).narrow(Bounded(-10, -5)))
+        assertEquals(Bounded(0, 0), Bounded(NEGATIVE_INFINITE, INFINITE).narrow(Bounded(0, 0)))
     }
 
     @Test
@@ -311,5 +350,33 @@ class LatticeIntervalTest {
         //            Bounded(NEGATIVE_INFINITE, INFINITE).toString()
         //        )
         assertEquals("[-5, 5]", Bounded(-5, 5).toString())
+    }
+
+    @Test
+    fun testWrapper() {
+        val bottomWrapper = IntervalLattice(BOTTOM)
+        val zeroWrapper = IntervalLattice(Bounded(0, 0))
+        val outerWrapper = IntervalLattice(Bounded(-5, 5))
+        val infinityWrapper = IntervalLattice(Bounded(NEGATIVE_INFINITE, INFINITE))
+
+        // compare to
+        assertEquals(-1, bottomWrapper.compareTo(zeroWrapper))
+        assertEquals(0, zeroWrapper.compareTo(zeroWrapper))
+        assertEquals(1, zeroWrapper.compareTo(bottomWrapper))
+
+        // contains
+        assertFalse(bottomWrapper.contains(zeroWrapper))
+        assertFalse(zeroWrapper.contains(bottomWrapper))
+        assertFalse(zeroWrapper.contains(outerWrapper))
+        assertTrue(outerWrapper.contains(zeroWrapper))
+
+        // widen
+        assertEquals(outerWrapper, outerWrapper.widen(zeroWrapper))
+        assertEquals(infinityWrapper, zeroWrapper.widen(outerWrapper))
+
+        // narrow
+        assertEquals(outerWrapper, infinityWrapper.narrow(outerWrapper))
+        assertEquals(outerWrapper, outerWrapper.narrow(zeroWrapper))
+        assertEquals(outerWrapper, outerWrapper.narrow(infinityWrapper))
     }
 }
