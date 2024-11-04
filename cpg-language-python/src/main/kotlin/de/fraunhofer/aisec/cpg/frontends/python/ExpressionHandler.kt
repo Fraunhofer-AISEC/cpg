@@ -367,7 +367,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     .codeAndLocationFromChildren(node, frontend.lineSeparator)
         }
         val ile = newInitializerListExpression(rawNode = node)
-        ile.type = frontend.objectType("map")
+        ile.type = frontend.objectType("dict")
         ile.initializers = lst
         return ile
     }

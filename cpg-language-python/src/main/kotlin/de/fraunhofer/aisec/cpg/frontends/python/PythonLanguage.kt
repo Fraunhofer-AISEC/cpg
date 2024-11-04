@@ -145,11 +145,17 @@ class PythonLanguage :
                 ListType(
                     typeName = "list",
                     elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "tuple" to
+                ListType(
+                    typeName = "tuple",
+                    elementType = ObjectType("object", listOf(), false, this),
                     language = this
                 ),
-            "map" to
+            "dict" to
                 MapType(
-                    typeName = "map",
+                    typeName = "dict",
                     elementType = ObjectType("object", listOf(), false, this),
                     language = this
                 ),
