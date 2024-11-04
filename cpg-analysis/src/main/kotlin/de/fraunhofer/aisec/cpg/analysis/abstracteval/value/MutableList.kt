@@ -68,30 +68,10 @@ class MutableList : Value {
         // If the call does not have the subject as base, check for subject as argument
         if ((node.callee as? MemberExpression)?.base?.code != name) {
             if (node.arguments.any { it.name.localName == name }) {
+                TODO()
                 // This is a function call that uses the variable as an argument.
                 // To find side effects we need to create a local evaluator for this function
                 // and return the value of the renamed variable at the last statement.
-                // TODO: unfinished:
-                //  this currently does not work if the variable is given for multiple
-                // parameters!
-                val function = node.invokes.first()
-                val argPos = node.arguments.indexOfFirst { it.name.localName == name }
-
-                // We cannot take the "first" as that refers to the Block which has no nextEOG
-                val functionStart = function.body.statements[1]
-                // This variable should be a PhysicalLocation but the CPG often just hands us
-                // "null"
-                val functionEnd = function.body.statements.last()
-                val newTargetName = function.parameters[argPos].name.localName
-
-                val localEvaluator = AbstractEvaluator()
-                return localEvaluator.evaluate(
-                    newTargetName,
-                    functionStart,
-                    functionEnd,
-                    this::class,
-                    IntervalLattice(current)
-                )
             } else {
                 return current
             }
