@@ -93,11 +93,11 @@ class Integer : Value {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current + valueInterval
                             }
-                            // Per default set upper bound to infinite
+                            // Per default lose all information
                             else {
                                 val joinInterval: LatticeInterval =
                                     LatticeInterval.Bounded(
-                                        LatticeInterval.Bound.INFINITE,
+                                        LatticeInterval.Bound.NEGATIVE_INFINITE,
                                         LatticeInterval.Bound.INFINITE
                                     )
                                 current.join(joinInterval)
@@ -112,12 +112,12 @@ class Integer : Value {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
                                 current - valueInterval
                             }
-                            // Per default set lower bound to negative infinite
+                            // Per default lose all information
                             else {
                                 val joinInterval: LatticeInterval =
                                     LatticeInterval.Bounded(
                                         LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                        LatticeInterval.Bound.NEGATIVE_INFINITE
+                                        LatticeInterval.Bound.INFINITE
                                     )
                                 current.join(joinInterval)
                             }
