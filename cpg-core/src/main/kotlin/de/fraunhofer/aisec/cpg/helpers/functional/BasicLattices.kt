@@ -93,7 +93,7 @@ typealias MapLatticeT<K, V> = LatticeElement<Map<K, V>>
 inline fun <reified K, T> emptyMapLattice() = MapLattice<K, LatticeElement<T>>(mapOf())
 
 /** Implements the [LatticeElement] for a lattice over a map of nodes to another lattice. */
-class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
+open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
     LatticeElement<Map<K, LatticeElement<V>>>(elements) {
     override fun lub(
         other: LatticeElement<Map<K, LatticeElement<V>>>
