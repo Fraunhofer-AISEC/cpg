@@ -99,6 +99,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     }
 
     // Comparing two Intervals. They are treated as equal if they overlap
+    // BOTTOM intervals are considered "smaller" than known intervals
     override fun compareTo(other: LatticeInterval): Int {
         return when {
             this is BOTTOM && other !is BOTTOM -> -1
@@ -389,6 +390,13 @@ class IntervalLattice(override val elements: LatticeInterval) :
     LatticeElement<LatticeInterval>(elements) {
     override fun compareTo(other: LatticeElement<LatticeInterval>): Int {
         return elements.compareTo(other.elements)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is IntervalLattice) {
+            return false
+        }
+        return this.elements == other.elements
     }
 
     /** Returns true iff [other] is fully within this */
