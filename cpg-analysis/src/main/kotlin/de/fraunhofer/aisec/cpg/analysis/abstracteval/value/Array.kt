@@ -41,7 +41,9 @@ import org.apache.commons.lang3.NotImplementedException
 class Array : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // (Re-)Declaration
-        if (node is VariableDeclaration && node.initializer != null) {
+        if (
+            node is VariableDeclaration && node.initializer != null && node.name.localName == name
+        ) {
             val initValue = getSize(node.initializer!!)
             return LatticeInterval.Bounded(initValue, initValue)
         }
