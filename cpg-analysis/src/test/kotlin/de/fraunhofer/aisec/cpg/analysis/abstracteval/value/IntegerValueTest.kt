@@ -37,8 +37,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class IntegerValueTest {
-    val name = Name("testVariable")
-    val current = LatticeInterval.Bounded(1, 1)
+    private val name = Name("testVariable")
+    private val current = LatticeInterval.Bounded(1, 1)
 
     @Test
     fun applyDeclarationTest() {
