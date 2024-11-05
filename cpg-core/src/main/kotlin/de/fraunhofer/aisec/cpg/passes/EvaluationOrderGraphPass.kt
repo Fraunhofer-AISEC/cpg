@@ -178,13 +178,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[ConstructExpression::class.java] = {
             handleConstructExpression(it as ConstructExpression)
         }
-        map[EmptyStatement::class.java] = {
-            handleDefault(it as EmptyStatement)
-        } // TODO: Documentation missing
-        map[Literal::class.java] = { handleDefault(it) } // TODO: Documentation missing
-        map[DefaultStatement::class.java] = { handleDefault(it) } // TODO: Documentation missing
-        map[TypeIdExpression::class.java] = { handleDefault(it) } // TODO: Documentation missing
-        map[Reference::class.java] = { handleDefault(it) } // TODO: Documentation missing
+        map[EmptyStatement::class.java] = { handleEmptyStatement(it as EmptyStatement) }
+        map[Literal::class.java] = { handleLiteral(it as Literal<*>) }
+        map[DefaultStatement::class.java] = { handleDefaultStatement(it as DefaultStatement) }
+        map[TypeIdExpression::class.java] = { handleTypeIdExpression(it as TypeIdExpression) }
+        map[Reference::class.java] = { handleReference(it as Reference) }
         map[CollectionComprehension::class.java] = {
             handleCollectionComprehension(it as CollectionComprehension)
         }
@@ -196,13 +194,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
         map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
-    }
-
-    /**
-     * See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#includedeclaration)
-     */
-    protected fun handleIncludeDeclaration() {
-        doNothing()
     }
 
     protected fun doNothing() {
@@ -446,6 +437,43 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      */
     protected fun handleDefault(node: Node) {
         attachToEOG(node)
+    }
+
+    /** See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#emptystatement) */
+    private fun handleEmptyStatement(node: EmptyStatement) {
+        attachToEOG(node)
+    }
+
+    /** See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#emptystatement) */
+    private fun handleLiteral(node: Literal<*>) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#defaultstatement)
+     */
+    private fun handleDefaultStatement(node: DefaultStatement) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#handletypeidexpression)
+     */
+    private fun handleTypeIdExpression(node: TypeIdExpression) {
+        attachToEOG(node)
+    }
+
+    /** See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#reference) */
+    private fun handleReference(node: Reference) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#includedeclaration)
+     */
+    protected fun handleIncludeDeclaration() {
+        doNothing()
     }
 
     /** See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#callexpression) */

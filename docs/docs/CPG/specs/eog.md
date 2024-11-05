@@ -907,6 +907,71 @@ flowchart LR
   parent --EOG--> next:::outer
 ```
 
+## EmptyStatement
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["EmptyStatement"]
+  parent --EOG--> next:::outer
+```
+
+## Literal
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["Literal"]
+  parent --EOG--> next:::outer
+```
+
+## DefaultStatement
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["DefaultStatement"]
+  parent --EOG--> next:::outer
+```
+
+## TypeIdExpression
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["TypeIdExpression"]
+  parent --EOG--> next:::outer
+```
+
+## Reference
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["Reference"]
+  parent --EOG--> next:::outer
+```
+
 ## IncludeDeclaration
 The `IncludeDeclaration` is not connected to the EOG.
 We continue with the next statement.
