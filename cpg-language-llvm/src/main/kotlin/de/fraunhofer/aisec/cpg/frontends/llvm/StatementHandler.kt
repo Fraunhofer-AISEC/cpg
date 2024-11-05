@@ -175,7 +175,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                return newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
+                return newThrowStatement(rawNode = instr).apply {
+                    exception =
+                        newProblemExpression("We don't know the exception while parsing this node.")
+                }
             }
             LLVMLandingPad -> {
                 return handleLandingpad(instr)
@@ -335,10 +338,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         } else {
             // "unwind to caller". As we don't know where the control flow continues,
             // the best model would be to throw the exception again. Here, we only know
-            // that we will throw something here but we don't know what. We have to fix
+            // that we will throw something here, but we don't know what. We have to fix
             // that later once we know in which catch-block this statement is executed.
             val throwOperation =
-                newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
+                newThrowStatement(rawNode = instr).apply {
+                    exception =
+                        newProblemExpression("We don't know the exception while parsing this node.")
+                }
             currentIfStatement?.elseStatement = throwOperation
         }
 
