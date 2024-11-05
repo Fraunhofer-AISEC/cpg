@@ -60,6 +60,25 @@ class StatementHandlerTest : BaseTest() {
     }
 
     @Test
+    fun testMatch2() {
+        analyzeFile("match.py")
+
+        val func = result.functions["match_weird"]
+        assertNotNull(func)
+
+        val switchStatement = func.switches.singleOrNull()
+        assertNotNull(switchStatement)
+
+        assertIs<CallExpression>(switchStatement.selector)
+
+        val statementBlock = switchStatement.statement
+        assertIs<Block>(statementBlock)
+        val case = statementBlock[0]
+        assertIs<CaseStatement>(case)
+        assertIs<ProblemExpression>(case.caseExpression)
+    }
+
+    @Test
     fun testMatch() {
         analyzeFile("match.py")
 

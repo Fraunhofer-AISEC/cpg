@@ -80,7 +80,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Match -> handleMatch(node)
             is Python.AST.TryStar ->
                 newProblemExpression(
-                    "The statement of class ${node.javaClass} is not supported yet",
+                    problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node
                 )
         }
@@ -91,30 +91,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * and all of them are translated to traditional comparisons and logical expressions which could
      * also be seen in the condition of an if-statement.
      */
-    private fun handlePattern(node: Python.AST.BasePattern, selector: String): Expression {
+    private fun handlePattern(node: Python.AST.BasePattern, subject: String): Expression {
         return when (node) {
             is Python.AST.MatchValue ->
-                newBinaryOperator("==", node).implicit().apply {
-                    this.lhs = newReference(selector)
-                    this.rhs = frontend.expressionHandler.handle(node.value)
+                newBinaryOperator(operatorCode = "==", rawNode = node).implicit().apply {
+                    this.lhs = newReference(name = subject)
+                    this.rhs = frontend.expressionHandler.handle(ctx = node.value)
                 }
             is Python.AST.MatchSingleton ->
-                newBinaryOperator("===", node).implicit().apply {
-                    this.lhs = newReference(selector)
+                newBinaryOperator(operatorCode = "===", rawNode = node).implicit().apply {
+                    this.lhs = newReference(name = subject)
                     this.rhs =
                         when (val value = node.value) {
-                            is Python.AST.BaseExpr -> frontend.expressionHandler.handle(value)
+                            is Python.AST.BaseExpr -> frontend.expressionHandler.handle(ctx = value)
                             null -> newLiteral(value = null, rawNode = node)
                             else ->
                                 newProblemExpression(
-                                    "Can't handle ${value::class} in value of Python.AST.MatchSingleton yet"
+                                    problem =
+                                        "Can't handle ${value::class} in value of Python.AST.MatchSingleton yet"
                                 )
                         }
                 }
             is Python.AST.MatchOr ->
                 frontend.expressionHandler.joinListWithBinOp(
                     operatorCode = "or",
-                    nodes = node.patterns.map { handlePattern(it, selector) },
+                    nodes = node.patterns.map { handlePattern(node = it, subject = subject) },
                     rawNode = node,
                     isImplicit = false
                 )
@@ -123,8 +124,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.MatchClass,
             is Python.AST.MatchStar,
             is Python.AST.MatchAs ->
-                newProblemExpression("Cannot handle of type ${node::class} yet")
-            else -> newProblemExpression("Cannot handle of type ${node::class} yet")
+                newProblemExpression(
+                    problem = "Cannot handle of type ${node::class} yet",
+                    rawNode = node
+                )
+            else ->
+                newProblemExpression(
+                    problem = "Cannot handle of type ${node::class} yet",
+                    rawNode = node
+                )
         }
     }
 
@@ -139,7 +147,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * pattern and the `rhs` is the guard. This is in line with
      * [PEP 634](https://peps.python.org/pep-0634/).
      */
-    private fun handleCase(node: Python.AST.match_case, selector: String): List<Statement> {
+    private fun handleMatchCase(node: Python.AST.match_case, subject: String): List<Statement> {
         val statements = mutableListOf<Statement>()
         // First, we add the CaseStatement. If the pattern is a `MatchAs` without a pattern, then
         // it's a default statement.
@@ -152,19 +160,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             ) {
                 newDefaultStatement(rawNode = node.pattern)
             } else {
-                newCaseStatement(node).apply {
+                newCaseStatement(rawNode = node).apply {
                     this.caseExpression =
                         node.guard?.let {
-                            newBinaryOperator("and")
+                            newBinaryOperator(operatorCode = "and")
                                 .implicit(
-                                    code = frontend.codeOf(node),
-                                    location = frontend.locationOf(node)
+                                    code = frontend.codeOf(astNode = node),
+                                    location = frontend.locationOf(astNode = node)
                                 )
                                 .apply {
-                                    this.lhs = handlePattern(node.pattern, selector)
-                                    this.rhs = frontend.expressionHandler.handle(it)
+                                    this.lhs = handlePattern(node = node.pattern, subject = subject)
+                                    this.rhs = frontend.expressionHandler.handle(ctx = it)
                                 }
-                        } ?: handlePattern(node.pattern, selector)
+                        } ?: handlePattern(node = node.pattern, subject = subject)
                 }
             }
         // Now, we add the remaining body.
@@ -173,7 +181,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // we insert an implicit break statement at the end of the block.
         statements +=
             newBreakStatement()
-                .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
+                .implicit(
+                    code = frontend.codeOf(astNode = node),
+                    location = frontend.locationOf(astNode = node)
+                )
         return statements
     }
 
@@ -181,18 +192,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * Translates a Python [`Match`](https://docs.python.org/3/library/ast.html#ast.Match) into a
      * [SwitchStatement].
      */
-    private fun handleMatch(node: Python.AST.Match): Statement {
-        return newSwitchStatement(node).apply {
-            val selector = frontend.expressionHandler.handle(node.subject)
-            this.selector = selector
+    private fun handleMatch(node: Python.AST.Match) =
+        newSwitchStatement(rawNode = node).apply {
+            val subject = frontend.expressionHandler.handle(ctx = node.subject)
+            this.selector = subject
 
             this.statement =
-                node.cases.fold(newBlock().implicit()) { block, case ->
-                    block.statements += handleCase(case, selector.name.localName)
+                node.cases.fold(initial = newBlock().implicit()) { block, case ->
+                    block.statements +=
+                        handleMatchCase(node = case, subject = subject.name.localName)
                     block
                 }
         }
-    }
 
     /**
      * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a

@@ -22,3 +22,8 @@ def matcher(x):
             print("or" + x)
         case _:
             print("Default match")
+
+def match_weird():
+    match command.split():
+        case ["go", ("north" | "south" | "east" | "west") as direction]:
+            current_room = current_room.neighbor(direction)

@@ -243,15 +243,18 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         rawNode: Python.AST.AST? = null,
         isImplicit: Boolean = true
     ): BinaryOperator {
-        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
-        lastTwo.rhs = nodes.last()
-        lastTwo.lhs = nodes[nodes.size - 2]
+        val lastTwo =
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = nodes.last()
+                lhs = nodes[nodes.size - 2]
+                this.isImplicit = isImplicit
+            }
         return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
-            val nextValue = newBinaryOperator(operatorCode, rawNode = rawNode)
-            if (isImplicit) nextValue.implicit()
-            nextValue.rhs = start
-            nextValue.lhs = newVal
-            nextValue
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = start
+                lhs = newVal
+                this.isImplicit = isImplicit
+            }
         }
     }
 
