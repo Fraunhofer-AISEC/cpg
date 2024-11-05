@@ -88,9 +88,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
-     * [ThrowStatement].
+     * [ThrowExpression].
      */
-    private fun handleRaise(node: Python.AST.Raise): ThrowStatement {
+    private fun handleRaise(node: Python.AST.Raise): ThrowExpression {
         val ret = newThrowStatement(rawNode = node)
         node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
         node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }

@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.statements.ThrowStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ThrowExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -69,13 +69,13 @@ class ThrowStatementTest {
         assertIs<Block>(body)
 
         val emptyThrow = body.statements.getOrNull(0)
-        assertIs<ThrowStatement>(emptyThrow)
+        assertIs<ThrowExpression>(emptyThrow)
         println(emptyThrow.toString()) // This is only here to simulate a higher test coverage
         assertNull(emptyThrow.exception)
         assertTrue(emptyThrow.prevDFG.isEmpty())
 
         val throwWithExc = body.statements.getOrNull(1)
-        assertIs<ThrowStatement>(throwWithExc)
+        assertIs<ThrowExpression>(throwWithExc)
         println(throwWithExc.toString()) // This is only here to simulate a higher test coverage
         val throwCall = throwWithExc.exception
         assertIs<CallExpression>(throwCall)
@@ -83,7 +83,7 @@ class ThrowStatementTest {
         assertEquals(setOf<Node>(throwCall), throwWithExc.prevDFG.toSet())
 
         val throwWithExcAndParent = body.statements.getOrNull(2)
-        assertIs<ThrowStatement>(throwWithExcAndParent)
+        assertIs<ThrowExpression>(throwWithExcAndParent)
         println(
             throwWithExcAndParent.toString()
         ) // This is only here to simulate a higher test coverage

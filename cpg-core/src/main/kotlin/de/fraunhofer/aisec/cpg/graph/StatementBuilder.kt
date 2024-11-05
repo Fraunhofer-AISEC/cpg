@@ -358,14 +358,14 @@ fun MetadataProvider.newLookupScopeStatement(
 }
 
 /**
- * Creates a new [ThrowStatement]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ThrowExpression]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newThrowStatement(rawNode: Any? = null): ThrowStatement {
-    val node = ThrowStatement()
+fun MetadataProvider.newThrowStatement(rawNode: Any? = null): ThrowExpression {
+    val node = ThrowExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
