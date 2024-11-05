@@ -895,7 +895,7 @@ flowchart LR
 ```
 
 ## LookupScopeStatement
-The expression itself is connected to the outer EOG.
+The statement itself is connected to the outer EOG.
 
 Interesting fields: /
 
@@ -906,3 +906,7 @@ flowchart LR
   prev:::outer --EOG--> parent["LookupScopeStatement"]
   parent --EOG--> next:::outer
 ```
+
+## IncludeDeclaration
+The `IncludeDeclaration` is not connected to the EOG.
+We continue with the next statement.

@@ -117,7 +117,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected val intermediateNodes = mutableListOf<Node>()
 
     init {
-        map[IncludeDeclaration::class.java] = { doNothing() } // TODO: Documentation missing
+        map[IncludeDeclaration::class.java] = { handleIncludeDeclaration() }
         map[TranslationUnitDeclaration::class.java] = {
             handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
         }
@@ -196,6 +196,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
         map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
+    }
+
+    /**
+     * See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#includedeclaration)
+     */
+    protected fun handleIncludeDeclaration() {
+        doNothing()
     }
 
     protected fun doNothing() {
