@@ -1462,7 +1462,7 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
 infix fun Expression.`throw`(init: (ThrowExpression.() -> Unit)?): ThrowExpression {
-    val node = (this@LanguageFrontend).newThrowStatement()
+    val node = (this@LanguageFrontend).newThrowExpression()
     if (init != null) init(node)
 
     val holder = this@Holder

@@ -364,7 +364,7 @@ fun MetadataProvider.newLookupScopeStatement(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newThrowStatement(rawNode: Any? = null): ThrowExpression {
+fun MetadataProvider.newThrowExpression(rawNode: Any? = null): ThrowExpression {
     val node = ThrowExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 

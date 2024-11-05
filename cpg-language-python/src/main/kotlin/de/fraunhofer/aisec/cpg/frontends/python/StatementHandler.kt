@@ -91,7 +91,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [ThrowExpression].
      */
     private fun handleRaise(node: Python.AST.Raise): ThrowExpression {
-        val ret = newThrowStatement(rawNode = node)
+        val ret = newThrowExpression(rawNode = node)
         node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
         node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
         return ret
@@ -204,7 +204,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
-            ifStmt.thenStatement = newThrowStatement().implicit()
+            ifStmt.thenStatement = newThrowExpression().implicit()
             val neg = newUnaryOperator("not", false, false).implicit()
             neg.input = exitCallWithSysExec
             ifStmt.condition = neg

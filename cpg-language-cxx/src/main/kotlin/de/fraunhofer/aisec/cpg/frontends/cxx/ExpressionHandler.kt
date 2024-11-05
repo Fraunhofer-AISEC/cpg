@@ -401,7 +401,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 return input as Expression
             }
             IASTUnaryExpression.op_throw ->
-                return newThrowStatement(rawNode = ctx).apply { this.exception = input }
+                return newThrowExpression(rawNode = ctx).apply { this.exception = input }
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
             IASTUnaryExpression.op_alignOf -> operatorCode = "alignof"
             IASTUnaryExpression.op_sizeofParameterPack -> operatorCode = "sizeof..."
