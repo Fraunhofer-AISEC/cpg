@@ -61,7 +61,7 @@ inline fun <reified V> emptyPowersetLattice() = PowersetLattice<V>(setOf())
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
  * constructed by the powerset.
  */
-class PowersetLattice<V>(elements: Set<V>) : LatticeElement<Set<V>>(elements) {
+open class PowersetLattice<V>(elements: Set<V>) : LatticeElement<Set<V>>(elements) {
     override fun lub(other: LatticeElement<Set<V>>) =
         PowersetLattice(this.elements.union(other.elements))
 
