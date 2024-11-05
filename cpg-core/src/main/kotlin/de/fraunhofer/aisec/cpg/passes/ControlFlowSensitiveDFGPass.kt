@@ -35,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
-import de.fraunhofer.aisec.cpg.helpers.LatticeElement
-import de.fraunhofer.aisec.cpg.helpers.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.set
 import kotlin.contracts.ExperimentalContracts
@@ -565,16 +563,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected class DFGPassState<V>(
         /**
-         * A mapping of a [Node] to its [de.fraunhofer.aisec.cpg.helpers.functional.LatticeElement].
-         * The keys of this state will later get the DFG edges from the value!
+         * A mapping of a [Node] to its [LatticeElement]. The keys of this state will later get the
+         * DFG edges from the value!
          */
         var generalState: State<Node, V> = State(),
         /**
          * It's main purpose is to store the most recent mapping of a [Declaration] to its
-         * [de.fraunhofer.aisec.cpg.helpers.functional.LatticeElement]. However, it is also used to
-         * figure out if we have to continue with the iteration (something in the declarationState
-         * has changed) which is why we store all nodes here. However, since we never use them
-         * except from determining if we changed something, it won't affect the result.
+         * [LatticeElement]. However, it is also used to figure out if we have to continue with the
+         * iteration (something in the declarationState has changed) which is why we store all nodes
+         * here. However, since we never use them except from determining if we changed something,
+         * it won't affect the result.
          */
         var declarationsState: State<Any?, V> = State(),
 
