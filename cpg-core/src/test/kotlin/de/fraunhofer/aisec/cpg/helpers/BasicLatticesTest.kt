@@ -143,7 +143,8 @@ class BasicLatticesTest {
         // Duplicates are equal but not identical. Same for the elements.
         val emptyDuplicate = emptyLattice1.duplicate()
         assertNotSame(emptyLattice1, emptyDuplicate)
-        // assertNotSame(emptyLattice1.elements, emptyDuplicate.elements)
+        // assertNotSame(emptyLattice1.elements, emptyDuplicate.elements) // Somehow, the empty set
+        // is the same
         assertEquals(emptyLattice1, emptyDuplicate)
         val aBlaLatticeDuplicate = aBlaLattice1.duplicate()
         assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
