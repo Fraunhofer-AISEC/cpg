@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -99,7 +98,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     /**
      * This maps nodes that have to handle [BreakStatement]s and [ContinueStatement]s, i.e.
      * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle. An
-     * entry will only be created if the statement was identified to handle the above mentioned
+     * entry will only be created if the statement was identified to handle the above-mentioned
      * control flow statements.
      */
     val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
@@ -548,7 +547,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value. If the language has the trait of short-circuit evaluation, we check if the
-        // operatorCode is amongst the operators that leed such an evaluation.
+        // operatorCode is amongst the operators that lead to such an evaluation.
         if (
             lang != null &&
                 lang is HasShortCircuitOperators &&
@@ -565,7 +564,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleEOG(node.rhs)
             attachToEOG(node)
             setCurrentEOGs(shortCircuitNodes)
-            // Inverted property to assigne false when true was assigned above.
+            // Inverted property to assign false when true was assigned above.
             nextEdgeBranch = !lang.conjunctiveOperators.contains(node.operatorCode)
         } else {
             handleEOG(node.rhs)
@@ -652,8 +651,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     /**
      * This function handles all regular unary operators that do not receive any special handling
      * (such as [handleThrowOperator]). This gives language frontends a chance to override this
-     * function using [ReplacePass], handle specific operators on their own and delegate the rest to
-     * this function.
+     * function using [de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass], handle specific
+     * operators on their own and delegate the rest to this function.
      */
     protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
@@ -775,8 +774,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             if (label == null) {
                 node.firstParentOrNull { it.isContinuable() }
             } else {
-                // If a label was specified, the continue is associated to a node explicitly labeled
-                // with the same label
+                // If a label was specified, the continue statement is associated to a node
+                // explicitly labeled with the same label
                 getLabeledASTNode(node, label)
             }
         if (continuableNode != null) {
