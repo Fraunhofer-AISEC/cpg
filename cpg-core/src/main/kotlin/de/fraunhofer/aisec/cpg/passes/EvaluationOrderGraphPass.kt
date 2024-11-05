@@ -672,7 +672,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
-    // TODO: Documentation missing
+    /** See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#typeexpression) */
     protected fun handleTypeExpression(node: TypeExpression) {
         attachToEOG(node)
     }

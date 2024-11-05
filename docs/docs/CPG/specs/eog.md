@@ -881,6 +881,19 @@ flowchart LR
 
 ```
 
+## TypeExpression
+The expression itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["TypeExpression"]
+  parent --EOG--> next:::outer
+```
+
 
 
 
