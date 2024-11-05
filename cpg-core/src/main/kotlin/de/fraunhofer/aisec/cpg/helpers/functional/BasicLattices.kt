@@ -30,7 +30,6 @@ import kotlin.Pair
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.toMap
-import kotlin.hashCode
 
 /**
  * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, e.g., a

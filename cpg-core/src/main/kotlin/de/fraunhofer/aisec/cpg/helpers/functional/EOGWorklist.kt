@@ -46,7 +46,6 @@ inline fun <reified V> iterateEOGClean(
 
         val nextGlobal = globalState[nextEdge] ?: continue
         val newState = transformation(nextEdge, nextGlobal)
-        // if (newState != nextGlobal) {
         nextEdge.end.nextEOGEdges.forEach {
             val oldGlobalIt = globalState[it]
             val newGlobalIt = oldGlobalIt?.let { newState.lub(it) } ?: newState
@@ -54,7 +53,6 @@ inline fun <reified V> iterateEOGClean(
             if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt))
                 edgesList.add(0, it)
         }
-        // }
     }
 
     return globalState.values.fold(globalState.values.firstOrNull()) { state, value ->
