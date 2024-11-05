@@ -985,7 +985,7 @@ class LLVMIRLanguageFrontendTest {
 
         val innerCatchThrows =
             (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.elseStatement
-        assertIs<ThrowStatement>(innerCatchThrows)
+        assertIs<ThrowExpression>(innerCatchThrows)
         assertNotNull(innerCatchThrows.exception)
         assertRefersTo(innerCatchThrows.exception, innerTry.catchClauses[0].parameter)
     }

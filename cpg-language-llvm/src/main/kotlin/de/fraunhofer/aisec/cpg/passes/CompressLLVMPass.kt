@@ -188,7 +188,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun fixThrowStatementsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filterIsInstance<ThrowStatement>().filter { n ->
+            getAllChildrenRecursively(catch).filterIsInstance<ThrowExpression>().filter { n ->
                 n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
