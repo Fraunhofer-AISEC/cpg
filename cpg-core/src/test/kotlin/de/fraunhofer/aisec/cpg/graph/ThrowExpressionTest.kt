@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import kotlin.test.*
 
-class ThrowStatementTest {
+class ThrowExpressionTest {
     @Test
     fun testThrow() {
         val result =
