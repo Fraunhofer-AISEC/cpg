@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -189,10 +188,8 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun fixThrowStatementsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filter { n ->
-                n is UnaryOperator &&
-                    n.operatorCode?.equals("throw") == true &&
-                    n.input is ProblemExpression
+            getAllChildrenRecursively(catch).filterIsInstance<ThrowStatement>().filter { n ->
+                n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
             if (catch.parameter == null) {
@@ -212,7 +209,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 )
             exceptionReference.language = catch.language
             exceptionReference.refersTo = catch.parameter
-            reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
+            reachableThrowNodes.forEach { n -> n.exception = exceptionReference }
         }
     }
 
