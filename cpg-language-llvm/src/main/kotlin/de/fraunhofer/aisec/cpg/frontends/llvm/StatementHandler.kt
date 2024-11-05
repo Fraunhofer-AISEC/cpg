@@ -1391,9 +1391,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // make an assignment in each BB.
         val functionName = LLVMGetValueName(bbsFunction).string
         val functions =
-            tu.declarations.filter { d ->
-                (d as? FunctionDeclaration)?.name != null &&
-                    (d as? FunctionDeclaration)?.name.toString() == functionName
+            tu.declarations.filterIsInstance<FunctionDeclaration>().filter {
+                it.name.toString() == functionName
             }
         if (functions.size != 1) {
             log.error(
@@ -1402,7 +1401,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             throw TranslationException("Wrong number of functions for phi statement.")
         }
         // Create the dummy declaration at the beginning of the function body
-        val firstBB = (functions[0] as FunctionDeclaration).body as Block
+        val firstBB = functions[0].body as Block
         val varName = instr.name
         val type = frontend.typeOf(instr)
         val declaration = newVariableDeclaration(varName, type, false, rawNode = instr)
