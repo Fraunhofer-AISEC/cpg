@@ -18,7 +18,7 @@ def matcher(x):
             print("class" + x)
         case [x] as y:
             print("as" + y)
-        case [x] | (y):
+        case "xyz" | "abc":
             print("or" + x)
         case _:
             print("Default match")

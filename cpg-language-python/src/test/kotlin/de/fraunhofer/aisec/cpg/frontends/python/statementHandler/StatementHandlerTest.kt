@@ -146,6 +146,8 @@ class StatementHandlerTest : BaseTest() {
         val orExpr = caseOr.caseExpression
         assertIs<BinaryOperator>(orExpr)
         assertEquals("or", orExpr.operatorCode)
+        assertIs<BinaryOperator>(orExpr.lhs)
+        assertIs<BinaryOperator>(orExpr.rhs)
         assertIs<BreakStatement>(statementBlock[29])
 
         val caseDefault = statementBlock[30]
