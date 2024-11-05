@@ -33,8 +33,8 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a `throw` or `raise` statement. */
-class ThrowStatement : Statement(), ArgumentHolder {
+/** Represents a `throw` or `raise` statement/expression. */
+class ThrowStatement : Expression(), ArgumentHolder {
 
     /** The exception object to be raised. */
     @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()
