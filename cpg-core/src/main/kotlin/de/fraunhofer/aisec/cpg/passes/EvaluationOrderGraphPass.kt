@@ -1216,7 +1216,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleContainedBreaksAndContinues(node)
     }
 
-    // TODO: Documentation missing
+    /**
+     * See
+     * [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#lookupScopestatement)
+     */
     private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
         // Include the node as part of the EOG itself, but we do not need to go into any children or
         // properties here
