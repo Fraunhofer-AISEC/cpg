@@ -429,7 +429,7 @@ The data flow from the input to this node and, in case of the operatorCodes ++ a
 
 *Dangerous: We have to ensure that the first operation is performed before the last one (if applicable)*
 
-## ThrowStatement
+## ThrowExpression
 
 Interesting fields:
 
@@ -441,7 +441,7 @@ The return value flows to the whole statement.
 Scheme:
 ```mermaid
   flowchart LR
-    exception -- DFG --> node([ThrowStatement]);
+    exception -- DFG --> node([ThrowExpression]);
     parentException -- DFG --> node;
     exception -.- node;
     parentException -.- node;
