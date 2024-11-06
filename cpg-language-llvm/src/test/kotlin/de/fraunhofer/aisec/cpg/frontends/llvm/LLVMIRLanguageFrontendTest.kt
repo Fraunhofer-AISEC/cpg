@@ -726,41 +726,44 @@ class LLVMIRLanguageFrontendTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val mainBody = main.body as Block
-        val tryStatement = mainBody.statements[0] as? TryStatement
-        assertNotNull(tryStatement)
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val tryStatement = mainBody.statements[0]
+        assertIs<TryStatement>(tryStatement)
 
         // Check the assignment of the function call
-        val resDecl =
-            (tryStatement.tryBlock?.statements?.get(0) as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
-        assertNotNull(resDecl)
-        assertLocalName("res", resDecl)
-        val call = resDecl.initializer as? CallExpression
-        assertNotNull(call)
+        val resDeclarationStatement = tryStatement.tryBlock?.statements?.get(0)
+        assertIs<DeclarationStatement>(resDeclarationStatement)
+        val resDeclaration = resDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(resDeclaration)
+        assertLocalName("res", resDeclaration)
+        val call = resDeclaration.initializer
+        assertIs<CallExpression>(call)
         assertLocalName("throwingFoo", call)
-        assertTrue(call.invokes.contains(throwingFoo))
+        assertContains(call.invokes, throwingFoo)
         assertEquals(0, call.arguments.size)
 
         // Check that the second part of the try-block is inlined by the pass
-        val aDecl =
-            (tryStatement.tryBlock?.statements?.get(1) as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
-        assertNotNull(aDecl)
-        assertLocalName("a", aDecl)
-        val resStatement = tryStatement.tryBlock?.statements?.get(2) as? ReturnStatement
-        assertNotNull(resStatement)
+        val aDeclarationStatement = tryStatement.tryBlock?.statements?.get(1)
+        assertIs<DeclarationStatement>(aDeclarationStatement)
+        val aDeclaration = aDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(aDeclaration)
+        assertLocalName("a", aDeclaration)
+        val resStatement = tryStatement.tryBlock?.statements?.get(2)
+        assertIs<ReturnStatement>(resStatement)
 
         // Check that the catch block is inlined by the pass
         assertEquals(1, tryStatement.catchClauses.size)
         assertEquals(5, tryStatement.catchClauses[0].body?.statements?.size)
         assertLocalName("_ZTIi | ...", tryStatement.catchClauses[0])
-        val ifStatement = tryStatement.catchClauses[0].body?.statements?.get(4) as? IfStatement
-        assertNotNull(ifStatement)
-        assertTrue(ifStatement.thenStatement is Block)
-        assertEquals(4, (ifStatement.thenStatement as Block).statements.size)
-        assertTrue(ifStatement.elseStatement is Block)
-        assertEquals(1, (ifStatement.elseStatement as Block).statements.size)
+        val ifStatement = tryStatement.catchClauses[0].body?.statements?.get(4)
+        assertIs<IfStatement>(ifStatement)
+        val thenStatement = ifStatement.thenStatement
+        assertIs<Block>(thenStatement)
+        assertEquals(4, thenStatement.statements.size)
+        val elseStatement = ifStatement.elseStatement
+        assertIs<Block>(elseStatement)
+        assertEquals(1, elseStatement.statements.size)
     }
 
     @Test
