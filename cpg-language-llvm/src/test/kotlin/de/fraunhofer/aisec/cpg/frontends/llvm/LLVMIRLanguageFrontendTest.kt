@@ -787,48 +787,52 @@ class LLVMIRLanguageFrontendTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val mainBody = main.body as Block
-        val yDecl =
-            (mainBody.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        assertNotNull(yDecl)
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val yDeclarationStatement = mainBody.statements[0]
+        assertIs<DeclarationStatement>(yDeclarationStatement)
+        val yDecl = yDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(yDecl)
 
-        val ifStatement = mainBody.statements[3] as? IfStatement
-        assertNotNull(ifStatement)
+        val ifStatement = mainBody.statements[3]
+        assertIs<IfStatement>(ifStatement)
 
-        val thenStmt = ifStatement.thenStatement as? Block
-        assertNotNull(thenStmt)
+        val thenStmt = ifStatement.thenStatement
+        assertIs<Block>(thenStmt)
         assertEquals(3, thenStmt.statements.size)
-        assertNotNull(thenStmt.statements[1] as? AssignExpression)
-        val aDecl =
-            (thenStmt.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        val thenY = thenStmt.statements[1] as AssignExpression
+        val aDeclarationStatement = thenStmt.statements[0]
+        assertIs<DeclarationStatement>(aDeclarationStatement)
+        val aDecl = aDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(aDecl)
+        val thenY = thenStmt.statements[1]
+        assertIs<AssignExpression>(thenY)
         assertEquals(1, thenY.lhs.size)
         assertEquals(1, thenY.rhs.size)
-        assertSame(aDecl, (thenY.rhs.first() as Reference).refersTo)
-        assertSame(yDecl, (thenY.lhs.first() as Reference).refersTo)
+        assertRefersTo(thenY.rhs.first(), aDecl)
+        assertRefersTo(thenY.lhs.first(), yDecl)
 
-        val elseStmt = ifStatement.elseStatement as? Block
-        assertNotNull(elseStmt)
+        val elseStmt = ifStatement.elseStatement
+        assertIs<Block>(elseStmt)
         assertEquals(3, elseStmt.statements.size)
-        val bDecl =
-            (elseStmt.statements[0] as DeclarationStatement).singleDeclaration
-                as VariableDeclaration
-        assertNotNull(elseStmt.statements[1] as? AssignExpression)
-        val elseY = elseStmt.statements[1] as AssignExpression
+        val bDeclarationStatement = elseStmt.statements[0]
+        assertIs<DeclarationStatement>(bDeclarationStatement)
+        val bDecl = bDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(bDecl)
+        val elseY = elseStmt.statements[1]
+        assertIs<AssignExpression>(elseY)
         assertEquals(1, elseY.lhs.size)
         assertEquals(1, elseY.lhs.size)
-        assertSame(bDecl, (elseY.rhs.first() as Reference).refersTo)
-        assertSame(yDecl, (elseY.lhs.first() as Reference).refersTo)
+        assertRefersTo(elseY.rhs.first(), bDecl)
+        assertRefersTo(elseY.lhs.first(), yDecl)
 
-        val continueBlock =
-            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement as? Block
-        assertNotNull(continueBlock)
-        assertEquals(
-            yDecl,
-            ((continueBlock.statements[1] as ReturnStatement).returnValue as Reference).refersTo
-        )
+        val gotoStatement = thenStmt.statements[2]
+        assertIs<GotoStatement>(gotoStatement)
+        val continueBlock = gotoStatement.targetLabel?.subStatement
+        assertIs<Block>(continueBlock)
+        val returnStatement = continueBlock.statements[1]
+        assertIs<ReturnStatement>(returnStatement)
+        assertIs<Reference>(returnStatement.returnValue)
+        assertRefersTo(returnStatement.returnValue, yDecl)
     }
 
     @Test
