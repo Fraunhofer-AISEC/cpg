@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -162,7 +161,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
                 node.catchClauses = catchClauses
 
-                fixThrowStatementsForCatch(node.catchClauses[0])
+                fixThrowExpressionsForCatch(node.catchClauses[0])
             }
             node.catchClauses.size == 1 &&
                 node.catchClauses[0].body?.statements?.get(0) is Block -> {
@@ -172,27 +171,25 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // the compound statement the body of the catch clause.
                 val innerCompound = node.catchClauses[0].body?.statements?.get(0) as? Block
                 innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
-                fixThrowStatementsForCatch(node.catchClauses[0])
+                fixThrowExpressionsForCatch(node.catchClauses[0])
             }
             node.catchClauses.isNotEmpty() -> {
                 for (catch in node.catchClauses) {
-                    fixThrowStatementsForCatch(catch)
+                    fixThrowExpressionsForCatch(catch)
                 }
             }
         }
     }
 
     /**
-     * Checks if a throw statement which is included in this catch block does not have a parameter.
-     * Those statements have been artificially added e.g. by a catchswitch and need to be filled
+     * Checks if a throw expression which is included in this catch block does not have a parameter.
+     * Those expressions have been artificially added e.g. by a catchswitch and need to be filled
      * now.
      */
-    private fun fixThrowStatementsForCatch(catch: CatchClause) {
+    private fun fixThrowExpressionsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filter { n ->
-                n is UnaryOperator &&
-                    n.operatorCode?.equals("throw") == true &&
-                    n.input is ProblemExpression
+            getAllChildrenRecursively(catch).filterIsInstance<ThrowExpression>().filter { n ->
+                n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
             if (catch.parameter == null) {
@@ -212,7 +209,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 )
             exceptionReference.language = catch.language
             exceptionReference.refersTo = catch.parameter
-            reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
+            reachableThrowNodes.forEach { n -> n.exception = exceptionReference }
         }
     }
 

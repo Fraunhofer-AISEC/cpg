@@ -106,6 +106,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     ) {
         when (node) {
             // Expressions
+            is CollectionComprehension -> handleCollectionComprehension(node)
+            is ComprehensionExpression -> handleComprehensionExpression(node)
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
@@ -130,7 +132,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
-            is ThrowStatement -> handleThrowStatement(node)
+            is ThrowExpression -> handleThrowExpression(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
@@ -139,8 +141,36 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /** Handle a [ThrowStatement]. The exception and parent exception flow into the node. */
-    protected fun handleThrowStatement(node: ThrowStatement) {
+    /**
+     * Handles a collection comprehension. The data flow from
+     * `comprehension.comprehensionExpressions[i]` to `comprehension.comprehensionExpressions[i+1]`
+     * and for the last `comprehension.comprehensionExpressions[i]`, it flows to the
+     * `comprehension.statement`.
+     */
+    protected fun handleCollectionComprehension(comprehension: CollectionComprehension) {
+        if (comprehension.comprehensionExpressions.isNotEmpty()) {
+            comprehension.comprehensionExpressions
+                .subList(0, comprehension.comprehensionExpressions.size - 1)
+                .forEachIndexed { i, expr ->
+                    expr.nextDFG += comprehension.comprehensionExpressions[i + 1]
+                }
+            comprehension.comprehensionExpressions.last().nextDFG += comprehension.statement
+        }
+        comprehension.prevDFG += comprehension.statement
+    }
+
+    /**
+     * The iterable flows to the variable which flows into the whole expression together with the
+     * predicate(s).
+     */
+    protected fun handleComprehensionExpression(comprehension: ComprehensionExpression) {
+        comprehension.iterable.nextDFG += comprehension.variable
+        comprehension.prevDFG += comprehension.variable
+        comprehension.predicate?.let { comprehension.prevDFG += it }
+    }
+
+    /** Handle a [ThrowExpression]. The exception and parent exception flow into the node. */
+    protected fun handleThrowExpression(node: ThrowExpression) {
         node.exception?.let { node.prevDFGEdges += it }
         node.parentException?.let { node.prevDFGEdges += it }
     }
