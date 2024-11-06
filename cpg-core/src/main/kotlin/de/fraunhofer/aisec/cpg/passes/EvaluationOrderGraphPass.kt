@@ -551,13 +551,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    protected fun handleUnaryOperator(node: UnaryOperator) {
+        handleUnspecificUnaryOperator(node)
+    }
+
     /**
      * This function handles all regular unary operators that do not receive any special handling
      * (such as [handleThrowOperator]). This gives language frontends a chance to override this
      * function using [ReplacePass], handle specific operators on their own and delegate the rest to
      * this function.
      */
-    protected fun handleUnaryOperator(node: UnaryOperator) {
+    protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
         handleEOG(input)
 
