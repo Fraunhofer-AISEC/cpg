@@ -219,7 +219,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun testSwitchCase() { // TODO: Update the test
+    fun testSwitchCase() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             analyzeAndGetFirstTU(
@@ -236,17 +236,17 @@ class LLVMIRLanguageFrontendTest {
         val onzeroLabel = main.labels.getOrNull(0)
         assertNotNull(onzeroLabel)
         assertLocalName("onzero", onzeroLabel)
-        assertTrue(onzeroLabel.subStatement is Block)
+        assertIs<Block>(onzeroLabel.subStatement)
 
         val ononeLabel = main.labels.getOrNull(1)
         assertNotNull(ononeLabel)
         assertLocalName("onone", ononeLabel)
-        assertTrue(ononeLabel.subStatement is Block)
+        assertIs<Block>(ononeLabel.subStatement)
 
         val defaultLabel = main.labels.getOrNull(2)
         assertNotNull(defaultLabel)
         assertLocalName("otherwise", defaultLabel)
-        assertTrue(defaultLabel.subStatement is Block)
+        assertIs<Block>(defaultLabel.subStatement)
 
         // Check that the type of %a is i32
         val a = main.variables["a"]
@@ -259,21 +259,24 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(switchStatement)
 
         // Check that we have switch(a)
-        assertSame(a, (switchStatement.selector as Reference).refersTo)
+        assertRefersTo(switchStatement.selector, a)
 
-        val cases = switchStatement.statement as Block
+        val cases = switchStatement.statement
+        assertIs<Block>(cases)
         // Check that the first case is case 0 -> goto onzero and that the BB is inlined
-        val case1 = cases.statements[0] as CaseStatement
-        assertEquals(0L, (case1.caseExpression as Literal<*>).value as Long)
+        val case1 = cases.statements[0]
+        assertIs<CaseStatement>(case1)
+        assertLiteralValue(0L, case1.caseExpression)
         assertSame(onzeroLabel.subStatement, cases.statements[1])
         // Check that the second case is case 1 -> goto onone and that the BB is inlined
-        val case2 = cases.statements[2] as CaseStatement
-        assertEquals(1L, (case2.caseExpression as Literal<*>).value as Long)
+        val case2 = cases.statements[2]
+        assertIs<CaseStatement>(case2)
+        assertLiteralValue(1L, case2.caseExpression)
         assertSame(ononeLabel.subStatement, cases.statements[3])
 
         // Check that the default location is inlined
         val defaultStatement = cases.statements[4] as? DefaultStatement
-        assertNotNull(defaultStatement)
+        assertIs<DefaultStatement>(defaultStatement)
         assertSame(defaultLabel.subStatement, cases.statements[5])
     }
 
