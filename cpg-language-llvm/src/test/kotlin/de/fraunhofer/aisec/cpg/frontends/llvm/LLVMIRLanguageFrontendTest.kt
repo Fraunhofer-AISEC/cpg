@@ -621,11 +621,11 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // %ptr = alloca i32
-        val ptr = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration as? VariableDeclaration
-        assertNotNull(ptr)
+        val ptr = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        assertIs<VariableDeclaration>(ptr)
 
-        val alloca = ptr.initializer as? NewArrayExpression
-        assertNotNull(alloca)
+        val alloca = ptr.initializer
+        assertIs<NewArrayExpression>(alloca)
         assertEquals("i32*", alloca.type.typeName)
 
         // store i32 3, i32* %ptr
@@ -634,16 +634,16 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("=", store.operatorCode)
 
         assertEquals(1, store.lhs.size)
-        val dereferencePtr = store.lhs.first() as? UnaryOperator
-        assertNotNull(dereferencePtr)
+        val dereferencePtr = store.lhs.firstOrNull()
+        assertIs<UnaryOperator>(dereferencePtr)
         assertEquals("*", dereferencePtr.operatorCode)
         assertEquals("i32", dereferencePtr.type.typeName)
-        assertSame(ptr, (dereferencePtr.input as? Reference)?.refersTo)
+        assertRefersTo(dereferencePtr.input, ptr)
 
         assertEquals(1, store.rhs.size)
-        val value = store.rhs.first() as? Literal<*>
-        assertNotNull(value)
-        assertEquals(3L, value.value)
+        val value = store.rhs.firstOrNull()
+        assertIs<Literal<*>>(value)
+        assertLiteralValue(3L, value)
         assertEquals("i32", value.type.typeName)
     }
 
