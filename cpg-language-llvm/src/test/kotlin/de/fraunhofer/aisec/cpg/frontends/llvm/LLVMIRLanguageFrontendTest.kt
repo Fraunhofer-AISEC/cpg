@@ -665,17 +665,22 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(foo)
         assertEquals("literal_i32_i8", foo.type.typeName)
 
-        val record = (foo.type as? ObjectType)?.recordDeclaration
+        val fooType = foo.type
+        assertIs<ObjectType>(fooType)
+        val record = fooType.recordDeclaration
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val declStatement = foo.bodyOrNull<DeclarationStatement>()
-        assertNotNull(declStatement)
+        val declarationStatement = foo.bodyOrNull<DeclarationStatement>()
+        assertNotNull(declarationStatement)
 
-        val varDecl = declStatement.singleDeclaration as VariableDeclaration
-        assertLocalName("a", varDecl)
-        assertEquals("literal_i32_i8", varDecl.type.typeName)
-        val args = (varDecl.initializer as ConstructExpression).arguments
+        val varDeclaration = declarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(varDeclaration)
+        assertLocalName("a", varDeclaration)
+        assertEquals("literal_i32_i8", varDeclaration.type.typeName)
+        val initializer = varDeclaration.initializer
+        assertIs<ConstructExpression>(initializer)
+        val args = initializer.arguments
         assertEquals(2, args.size)
         assertLiteralValue(100L, args[0])
         assertLiteralValue(null, args[1])
@@ -696,10 +701,12 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("=", assign.operatorCode)
         assertEquals(1, assign.lhs.size)
         assertEquals(1, assign.rhs.size)
-        assertLocalName("b", (assign.lhs.first() as MemberExpression).base)
-        assertEquals(".", (assign.lhs.first() as MemberExpression).operatorCode)
-        assertLocalName("field_1", assign.lhs.first() as MemberExpression)
-        assertEquals(7L, (assign.rhs.first() as Literal<*>).value as Long)
+        val assignLhs = assign.lhs.first()
+        assertIs<MemberExpression>(assignLhs)
+        assertLocalName("b", assignLhs.base)
+        assertEquals(".", assignLhs.operatorCode)
+        assertLocalName("field_1", assignLhs)
+        assertLiteralValue(7L, assign.rhs.first())
     }
 
     @Test
