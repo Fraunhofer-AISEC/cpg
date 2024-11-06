@@ -530,28 +530,26 @@ class LLVMIRLanguageFrontendTest {
 
         val foo = tu.functions["foo"]
         assertNotNull(foo)
-        assertEquals("literal_i32_i8", foo.type.typeName)
+        val fooType = foo.type
+        assertIs<ObjectType>(fooType)
+        assertEquals("literal_i32_i8", fooType.typeName)
 
-        val record = (foo.type as? ObjectType)?.recordDeclaration
+        val record = fooType.recordDeclaration
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val returnStatement = foo.bodyOrNull<ReturnStatement>(0)
+        val returnStatement = foo.returns.singleOrNull()
         assertNotNull(returnStatement)
 
-        val construct = returnStatement.returnValue as? ConstructExpression
-        assertNotNull(construct)
+        val construct = returnStatement.returnValue
+        assertIs<ConstructExpression>(construct)
         assertEquals(2, construct.arguments.size)
 
-        var arg = construct.arguments.getOrNull(0) as? Literal<*>
-        assertNotNull(arg)
-        assertEquals("i32", arg.type.typeName)
-        assertEquals(4L, arg.value)
+        assertEquals("i32", construct.arguments[0].type.typeName)
+        assertLiteralValue(4L, construct.arguments[0])
 
-        arg = construct.arguments.getOrNull(1) as? Literal<*>
-        assertNotNull(arg)
-        assertEquals("i8", arg.type.typeName)
-        assertEquals(2L, arg.value)
+        assertEquals("i8", construct.arguments[1].type.typeName)
+        assertLiteralValue(2L, construct.arguments[1])
     }
 
     @Test
