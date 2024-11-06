@@ -939,18 +939,19 @@ class LLVMIRLanguageFrontendTest {
 
         // Test that x is initialized correctly
         val mainBody = main.body as Block
+        assertIs<Block>(mainBody)
 
-        val fenceCall = mainBody.statements[0] as? CallExpression
-        assertNotNull(fenceCall)
+        val fenceCall = mainBody.statements[0]
+        assertIs<CallExpression>(fenceCall)
         assertEquals(1, fenceCall.arguments.size)
-        assertEquals(2, (fenceCall.arguments[0] as Literal<*>).value)
+        assertLiteralValue(2, fenceCall.arguments[0])
 
-        val fenceCallScope = mainBody.statements[2] as? CallExpression
-        assertNotNull(fenceCallScope)
+        val fenceCallScope = mainBody.statements[2]
+        assertIs<CallExpression>(fenceCallScope)
         assertEquals(2, fenceCallScope.arguments.size)
         // TODO: This doesn't match but it doesn't seem to be our mistake
         // assertEquals(5, (fenceCallScope.arguments[0] as Literal<*>).value)
-        assertEquals("scope", (fenceCallScope.arguments[1] as Literal<*>).value)
+        assertLiteralValue("scope", fenceCallScope.arguments[1])
     }
 
     @Test
