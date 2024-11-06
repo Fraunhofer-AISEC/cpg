@@ -71,15 +71,21 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
         assertLocalName("i32", main.type)
 
-        val xVector =
-            (main.bodyOrNull<Block>(0)?.statements?.get(0) as? DeclarationStatement)
-                ?.singleDeclaration as? VariableDeclaration
-        val xInit = xVector?.initializer as? InitializerListExpression
-        assertNotNull(xInit)
-        assertLocalName("poison", xInit.initializers[0] as? Reference)
-        assertEquals(0L, (xInit.initializers[1] as? Literal<*>)?.value)
-        assertEquals(0L, (xInit.initializers[2] as? Literal<*>)?.value)
-        assertEquals(0L, (xInit.initializers[3] as? Literal<*>)?.value)
+        // We want to see that the declaration is the very first statement of the method body (it's
+        // wrapped inside another block).
+        val mainBody = main.bodyOrNull<Block>(0)
+        assertIs<Block>(mainBody)
+        val declarationStmt = mainBody.statements.firstOrNull()
+        assertIs<DeclarationStatement>(declarationStmt)
+        val xVector = declarationStmt.singleDeclaration
+        assertIs<VariableDeclaration>(xVector)
+        val xInit = xVector.initializer
+        assertIs<InitializerListExpression>(xInit)
+        assertIs<Reference>(xInit.initializers[0])
+        assertLocalName("poison", xInit.initializers[0])
+        assertLiteralValue(0L, xInit.initializers[1])
+        assertLiteralValue(0L, xInit.initializers[2])
+        assertLiteralValue(0L, xInit.initializers[3])
     }
 
     @Test
