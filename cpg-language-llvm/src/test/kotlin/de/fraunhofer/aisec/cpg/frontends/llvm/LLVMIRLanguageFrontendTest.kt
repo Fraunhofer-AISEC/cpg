@@ -503,13 +503,15 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
-        val decl = foo.variables["value_loaded"]
-        assertNotNull(decl)
-        assertLocalName("i1", decl.type)
+        val declaration = foo.variables["value_loaded"]
+        assertNotNull(declaration)
+        assertLocalName("i1", declaration.type)
 
-        assertLocalName("val_success", (decl.initializer as MemberExpression).base)
-        assertEquals(".", (decl.initializer as MemberExpression).operatorCode)
-        assertLocalName("field_1", decl.initializer as MemberExpression)
+        val initializer = declaration.initializer
+        assertIs<MemberExpression>(initializer)
+        assertLocalName("val_success", initializer.base)
+        assertEquals(".", initializer.operatorCode)
+        assertLocalName("field_1", initializer)
     }
 
     @Test
