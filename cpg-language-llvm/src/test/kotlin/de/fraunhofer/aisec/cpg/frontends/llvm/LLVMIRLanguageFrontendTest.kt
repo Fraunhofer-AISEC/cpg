@@ -938,7 +938,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // Test that x is initialized correctly
-        val mainBody = main.body as Block
+        val mainBody = main.body
         assertIs<Block>(mainBody)
 
         val fenceCall = mainBody.statements[0]
