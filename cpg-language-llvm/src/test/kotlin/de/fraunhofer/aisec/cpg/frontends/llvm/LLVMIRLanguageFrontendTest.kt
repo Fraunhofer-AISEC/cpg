@@ -581,26 +581,30 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(loadXStatement)
         assertLocalName("locX", loadXStatement.singleDeclaration)
 
-        val initXOp =
-            (loadXStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
+        val initXOpDeclaration = loadXStatement.singleDeclaration
+        assertIs<VariableDeclaration>(initXOpDeclaration)
+        val initXOp = initXOpDeclaration.initializer
+        assertIs<UnaryOperator>(initXOp)
         assertEquals("*", initXOp.operatorCode)
 
-        var ref = initXOp.input as? Reference
-        assertNotNull(ref)
+        var ref = initXOp.input
+        assertIs<Reference>(ref)
         assertLocalName("x", ref)
-        assertSame(globalX, ref.refersTo)
+        assertRefersTo(ref, globalX)
 
         val loadAStatement = main.bodyOrNull<DeclarationStatement>(2)
         assertNotNull(loadAStatement)
+        val loadADeclaration = loadAStatement.singleDeclaration
+        assertIs<VariableDeclaration>(loadADeclaration)
         assertLocalName("locA", loadAStatement.singleDeclaration)
-        val initAOp =
-            (loadAStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
+        val initAOp = loadADeclaration.initializer
+        assertIs<UnaryOperator>(initAOp)
         assertEquals("*", initAOp.operatorCode)
 
-        ref = initAOp.input as? Reference
-        assertNotNull(ref)
+        ref = initAOp.input
+        assertIs<Reference>(ref)
         assertLocalName("a", ref)
-        assertSame(globalA, ref.refersTo)
+        assertRefersTo(ref, globalA)
     }
 
     @Test
