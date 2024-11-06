@@ -1056,7 +1056,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
             // other nodes that are not "statements", but also handled as part of this handler,
             // e.g., the Python.AST.ExceptHandler.
-            with(frontend) { result.codeAndLocationFromChildren(ast) }
+            with(frontend) { result.codeAndLocationFromChildren(ast, frontend.lineSeparator) }
         }
 
         return result
