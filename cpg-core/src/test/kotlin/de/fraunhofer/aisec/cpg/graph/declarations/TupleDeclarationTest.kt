@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -91,11 +92,13 @@ class TupleDeclarationTest {
             assertNotNull(a)
             assertLocalName("MyClass", a.type)
             assertContains(a.prevDFG, call)
+            assertEquals(tuple, a.astParent)
 
             val b = tuple.elements["b"]
             assertNotNull(b)
             assertLocalName("error", b.type)
             assertContains(b.prevDFG, call)
+            assertEquals(tuple, b.astParent)
 
             val callPrint = main.calls["print"]
             assertNotNull(callPrint)
@@ -169,11 +172,13 @@ class TupleDeclarationTest {
             assertNotNull(a)
             assertLocalName("MyClass", a.type)
             assertContains(a.prevDFG, call)
+            assertEquals(tuple, a.astParent)
 
             val b = tuple.elements["b"]
             assertNotNull(b)
             assertLocalName("error", b.type)
             assertContains(b.prevDFG, call)
+            assertEquals(tuple, b.astParent)
 
             val callPrint = main.calls["print"]
             assertNotNull(callPrint)
