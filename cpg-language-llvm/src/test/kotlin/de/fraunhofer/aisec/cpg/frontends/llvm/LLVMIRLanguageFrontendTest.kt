@@ -296,60 +296,75 @@ class LLVMIRLanguageFrontendTest {
         // Test that the types and values of the comparison expression are correct
         val icmpStatement = main.bodyOrNull<DeclarationStatement>(1)
         assertNotNull(icmpStatement)
-        val variableDecl = icmpStatement.declarations[0] as VariableDeclaration
-        val comparison = variableDecl.initializer as BinaryOperator
+        val variableDecl = icmpStatement.declarations[0]
+        assertIs<VariableDeclaration>(variableDecl)
+        val comparison = variableDecl.initializer
+        assertIs<BinaryOperator>(comparison)
         assertEquals("==", comparison.operatorCode)
-        val rhs = (comparison.rhs as Literal<*>)
-        val lhs = (comparison.lhs as Reference).refersTo as VariableDeclaration
-        assertEquals(10L, (rhs.value as Long))
+        val rhs = comparison.rhs
+        assertIs<Literal<*>>(rhs)
+        assertLiteralValue(10L, rhs)
         assertEquals(tu.primitiveType("i32"), rhs.type)
-        assertLocalName("x", comparison.lhs as Reference)
-        assertLocalName("x", lhs)
-        assertEquals(tu.primitiveType("i32"), lhs.type)
+        val lhsRef = comparison.lhs
+        assertIs<Reference>(lhsRef)
+        assertLocalName("x", lhsRef)
+        val lhsDeclaration = lhsRef.refersTo
+        assertIs<VariableDeclaration>(lhsDeclaration)
+        assertLocalName("x", lhsDeclaration)
+        assertSame(tu.primitiveType("i32"), lhsDeclaration.type)
 
         // Check that the jump targets are set correctly
         val ifStatement = main.ifs.firstOrNull()
         assertNotNull(ifStatement)
-        assertEquals("IfUnequal", (ifStatement.elseStatement!! as GotoStatement).labelName)
-        val ifBranch = (ifStatement.thenStatement as Block)
+        val elseStatement = ifStatement.elseStatement
+        assertIs<GotoStatement>(elseStatement)
+        assertEquals("IfUnequal", elseStatement.labelName)
+        val thenBranch = ifStatement.thenStatement
+        assertIs<Block>(thenBranch)
 
         // Check that the condition is set correctly
         val ifCondition = ifStatement.condition
-        assertSame(variableDecl, (ifCondition as Reference).refersTo)
+        assertRefersTo(ifCondition, variableDecl)
 
-        val elseBranch =
-            (ifStatement.elseStatement!! as GotoStatement).targetLabel?.subStatement as Block
+        val elseBranch = elseStatement.targetLabel?.subStatement
+        assertIs<Block>(elseBranch)
         assertEquals(2, elseBranch.statements.size)
         assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)
         assertEquals("  ret i32 %y", elseBranch.statements[1].code)
 
         // Check that it's  the correct then-branch
-        assertEquals(2, ifBranch.statements.size)
-        assertEquals("  %condUnsigned = icmp ugt i32 %x, -3", ifBranch.statements[0].code)
+        assertEquals(2, thenBranch.statements.size)
+        assertEquals("  %condUnsigned = icmp ugt i32 %x, -3", thenBranch.statements[0].code)
 
-        val ifBranchVariableDecl =
-            (ifBranch.statements[0] as DeclarationStatement).declarations[0] as VariableDeclaration
-        val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOperator
+        val ifBranchDeclarationStatement = thenBranch.statements[0]
+        assertIs<DeclarationStatement>(ifBranchDeclarationStatement)
+        val ifBranchVariableDeclaration = ifBranchDeclarationStatement.declarations[0]
+        assertIs<VariableDeclaration>(ifBranchVariableDeclaration)
+        val ifBranchComp = ifBranchVariableDeclaration.initializer
+        assertIs<BinaryOperator>(ifBranchComp)
         assertEquals(">", ifBranchComp.operatorCode)
-        assertTrue(ifBranchComp.rhs is CastExpression)
-        assertTrue(ifBranchComp.lhs is CastExpression)
+        assertIs<CastExpression>(ifBranchComp.rhs)
+        assertIs<CastExpression>(ifBranchComp.lhs)
 
-        val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
+        val ifBranchCompRhs = ifBranchComp.rhs
+        assertIs<CastExpression>(ifBranchCompRhs)
         assertEquals(tu.objectType("ui32"), ifBranchCompRhs.castType)
         assertEquals(tu.objectType("ui32"), ifBranchCompRhs.type)
-        val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
+        val ifBranchCompLhs = ifBranchComp.lhs
+        assertIs<CastExpression>(ifBranchCompLhs)
         assertEquals(tu.objectType("ui32"), ifBranchCompLhs.castType)
         assertEquals(tu.objectType("ui32"), ifBranchCompLhs.type)
 
-        val declRefExpr = ifBranchCompLhs.expression as Reference
-        assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
+        val declRefExpr = ifBranchCompLhs.expression
+        assertIs<Reference>(declRefExpr)
         assertLocalName("x", declRefExpr)
-        // TODO: declRefExpr.refersTo is null. Is that expected/intended?
+        assertLiteralValue(-3L, ifBranchCompRhs.expression)
+        assertNotNull(declRefExpr.refersTo)
 
-        val ifBranchSecondStatement = ifBranch.statements[1] as? IfStatement
-        assertNotNull(ifBranchSecondStatement)
-        val ifRet = ifBranchSecondStatement.thenStatement as? Block
-        assertNotNull(ifRet)
+        val ifBranchSecondStatement = thenBranch.statements[1]
+        assertIs<IfStatement>(ifBranchSecondStatement)
+        val ifRet = ifBranchSecondStatement.thenStatement
+        assertIs<Block>(ifRet)
         assertEquals(1, ifRet.statements.size)
         assertEquals("  ret i32 1", ifRet.statements[0].code)
     }
