@@ -81,7 +81,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMMetadataAsValueValueKind,
             LLVMInlineAsmValueKind -> {
-                // TODO
                 return newProblemExpression(
                     "Metadata or ASM value kind not supported yet",
                     ProblemNode.ProblemType.TRANSLATION,
