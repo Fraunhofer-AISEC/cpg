@@ -169,54 +169,53 @@ class LLVMIRLanguageFrontendTest {
         val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
 
-        val arrayidx =
-            foo.bodyOrNull<DeclarationStatement>(0)?.singleDeclaration as? VariableDeclaration
+        val arrayidx = foo.variables["arrayidx"]
         assertNotNull(arrayidx)
 
         // arrayidx will be assigned to a chain of the following expressions:
         // &s[1].field2.field1[5][13]
         // we will check them in the reverse order (after the unary operator)
 
-        val unary = arrayidx.initializer as? UnaryOperator
-        assertNotNull(unary)
+        val unary = arrayidx.initializer
+        assertIs<UnaryOperator>(unary)
         assertEquals("&", unary.operatorCode)
 
-        var arrayExpr = unary.input as? SubscriptExpression
-        assertNotNull(arrayExpr)
+        var arrayExpr = unary.input
+        assertIs<SubscriptExpression>(arrayExpr)
         assertLocalName("13", arrayExpr)
-        assertEquals(
+        assertLiteralValue(
             13L,
-            (arrayExpr.subscriptExpression as? Literal<*>)?.value
+            arrayExpr.subscriptExpression
         ) // should this be integer instead of long?
 
-        arrayExpr = arrayExpr.arrayExpression as? SubscriptExpression
-        assertNotNull(arrayExpr)
+        arrayExpr = arrayExpr.arrayExpression
+        assertIs<SubscriptExpression>(arrayExpr)
         assertLocalName("5", arrayExpr)
-        assertEquals(
+        assertLiteralValue(
             5L,
-            (arrayExpr.subscriptExpression as? Literal<*>)?.value
+            arrayExpr.subscriptExpression
         ) // should this be integer instead of long?
 
-        var memberExpression = arrayExpr.arrayExpression as? MemberExpression
-        assertNotNull(memberExpression)
+        var memberExpression = arrayExpr.arrayExpression
+        assertIs<MemberExpression>(memberExpression)
         assertLocalName("field_1", memberExpression)
 
-        memberExpression = memberExpression.base as? MemberExpression
-        assertNotNull(memberExpression)
+        memberExpression = memberExpression.base
+        assertIs<MemberExpression>(memberExpression)
         assertLocalName("field_2", memberExpression)
 
-        arrayExpr = memberExpression.base as? SubscriptExpression
-        assertNotNull(arrayExpr)
+        arrayExpr = memberExpression.base
+        assertIs<SubscriptExpression>(arrayExpr)
         assertLocalName("1", arrayExpr)
-        assertEquals(
+        assertLiteralValue(
             1L,
-            (arrayExpr.subscriptExpression as? Literal<*>)?.value
+            arrayExpr.subscriptExpression
         ) // should this be integer instead of long?
 
-        val ref = arrayExpr.arrayExpression as? Reference
-        assertNotNull(ref)
+        val ref = arrayExpr.arrayExpression
+        assertIs<Reference>(ref)
         assertLocalName("s", ref)
-        assertSame(s, ref.refersTo)
+        assertRefersTo(ref, s)
     }
 
     @Test
