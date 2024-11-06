@@ -439,38 +439,53 @@ class LLVMIRLanguageFrontendTest {
 
         // Check that the first statement is "literal_i32_i1 val_success = literal_i32_i1(*ptr, *ptr
         // == 5)"
-        val decl = (cmpxchgStatement.statements[0].declarations[0] as VariableDeclaration)
-        assertLocalName("val_success", decl)
-        assertLocalName("literal_i32_i1", decl.type)
+        val declaration = cmpxchgStatement.statements[0].declarations[0]
+        assertIs<VariableDeclaration>(declaration)
+        assertLocalName("val_success", declaration)
+        assertLocalName("literal_i32_i1", declaration.type)
 
         // Check that the first value is *ptr
-        val value1 = (decl.initializer as ConstructExpression).arguments[0] as UnaryOperator
+        val declarationInitializer = declaration.initializer
+        assertIs<ConstructExpression>(declarationInitializer)
+        val value1 = declarationInitializer.arguments[0]
+        assertIs<UnaryOperator>(value1)
         assertEquals("*", value1.operatorCode)
         assertLocalName("ptr", value1.input)
 
         // Check that the first value is *ptr == 5
-        val value2 = (decl.initializer as ConstructExpression).arguments[1] as BinaryOperator
+        val value2 = declarationInitializer.arguments[1]
+        assertIs<BinaryOperator>(value2)
         assertEquals("==", value2.operatorCode)
-        assertEquals("*", (value2.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (value2.lhs as UnaryOperator).input)
-        assertEquals(5L, (value2.rhs as Literal<*>).value as Long)
+        val value2Lhs = value2.lhs
+        assertIs<UnaryOperator>(value2Lhs)
+        assertEquals("*", value2Lhs.operatorCode)
+        assertLocalName("ptr", value2Lhs.input)
+        assertLiteralValue(5L, value2.rhs)
 
-        val ifStatement = cmpxchgStatement.statements[1] as IfStatement
+        val ifStatement = cmpxchgStatement.statements[1]
+        assertIs<IfStatement>(ifStatement)
         // The condition is the same as the second value above
-        val ifExpr = ifStatement.condition as BinaryOperator
+        val ifExpr = ifStatement.condition
+        assertIs<BinaryOperator>(ifExpr)
         assertEquals("==", ifExpr.operatorCode)
-        assertEquals("*", (ifExpr.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (ifExpr.lhs as UnaryOperator).input)
-        assertEquals(5L, (ifExpr.rhs as Literal<*>).value as Long)
+        val ifExprLhs = ifExpr.lhs
+        assertIs<UnaryOperator>(ifExprLhs)
+        assertEquals("*", ifExprLhs.operatorCode)
+        assertLocalName("ptr", ifExprLhs.input)
+        assertLiteralValue(5L, ifExpr.rhs)
 
-        val thenExpr = ifStatement.thenStatement as AssignExpression
+        val thenExpr = ifStatement.thenStatement
+        assertIs<AssignExpression>(thenExpr)
         assertEquals(1, thenExpr.lhs.size)
         assertEquals(1, thenExpr.rhs.size)
         assertEquals("=", thenExpr.operatorCode)
-        assertEquals("*", (thenExpr.lhs.first() as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (thenExpr.lhs.first() as UnaryOperator).input)
-        assertLocalName("old", thenExpr.rhs.first() as Reference)
-        assertLocalName("old", (thenExpr.rhs.first() as Reference).refersTo)
+        val thenExprLhs = thenExpr.lhs.first()
+        assertIs<UnaryOperator>(thenExprLhs)
+        assertEquals("*", thenExprLhs.operatorCode)
+        assertLocalName("ptr", thenExprLhs.input)
+        assertIs<Reference>(thenExpr.rhs.first())
+        assertLocalName("old", thenExpr.rhs.first())
+        assertRefersTo(thenExpr.rhs.first(), tu.variables["old"])
     }
 
     @Test
