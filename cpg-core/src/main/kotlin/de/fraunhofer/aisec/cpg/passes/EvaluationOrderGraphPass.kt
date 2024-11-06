@@ -551,56 +551,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
-    protected fun handleUnaryOperator(node: UnaryOperator) {
-        // TODO(oxisto): These operator codes are highly language specific and might be more suited
-        //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
-        if (node.operatorCode == "throw") {
-            handleThrowOperator(node, node.input.type, node.input)
-        } else {
-            handleUnspecificUnaryOperator(node)
-        }
-    }
-
-    /**
-     * Generates the EOG for a [node] which represents a statement/expression which throws an
-     * exception. Since some languages may accept different inputs to a throw statement (typically
-     * 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input which is
-     * evaluated first, must be the first item in the vararg! Any `null` object in `inputs` will be
-     * filtered. We connect the throw statement internally, i.e., the inputs are evaluated from
-     * index 0 to n and then the whole node is evaluated.
-     */
-    protected fun handleThrowOperator(node: Node, throwType: Type?, vararg inputs: Expression?) {
-        inputs.filterNotNull().forEach { handleEOG(it) }
-        attachToEOG(node)
-
-        if (throwType != null) {
-            // Here, we identify the encapsulating ast node that can handle or relay a throw
-            val handlingOrRelayingParent =
-                node.firstParentOrNull { parent ->
-                    parent is TryStatement || parent is FunctionDeclaration
-                }
-            if (handlingOrRelayingParent != null) {
-                val throwByTypeMap =
-                    nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
-                val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
-                throwEOGExits.addAll(currentPredecessors.toMutableList())
-            } else {
-                LOGGER.error(
-                    "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
-                )
-            }
-        }
-        // After a throw, the eog is not progressing in the following ast subtrees
-        currentPredecessors.clear()
-    }
-
     /**
      * This function handles all regular unary operators that do not receive any special handling
      * (such as [handleThrowOperator]). This gives language frontends a chance to override this
      * function using [ReplacePass], handle specific operators on their own and delegate the rest to
      * this function.
      */
-    protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
+    protected fun handleUnaryOperator(node: UnaryOperator) {
         val input = node.input
         handleEOG(input)
 
@@ -1124,13 +1081,50 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /** Calls [handleThrowOperator]. */
-    protected fun handleThrowExpression(statement: ThrowExpression) {
+    protected fun handleThrowExpression(throwExpression: ThrowExpression) {
         handleThrowOperator(
-            statement,
-            statement.exception?.type,
-            statement.exception,
-            statement.parentException
+            throwExpression,
+            throwExpression.exception?.type,
+            throwExpression.exception,
+            throwExpression.parentException
         )
+    }
+
+    /**
+     * Generates the EOG for a [throwExpression] which represents a statement/expression which
+     * throws an exception. Since some languages may accept different inputs to a throw statement
+     * (typically 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input
+     * which is evaluated first, must be the first item in the vararg! Any `null` object in `inputs`
+     * will be filtered. We connect the throw statement internally, i.e., the inputs are evaluated
+     * from index 0 to n and then the whole node is evaluated.
+     */
+    protected fun handleThrowOperator(
+        throwExpression: Node,
+        throwType: Type?,
+        vararg inputs: Expression?
+    ) {
+        inputs.filterNotNull().forEach { handleEOG(it) }
+        attachToEOG(throwExpression)
+
+        if (throwType != null) {
+            // Here, we identify the encapsulating ast node that can handle or relay a throw
+            val handlingOrRelayingParent =
+                throwExpression.firstParentOrNull { parent ->
+                    parent is TryStatement || parent is FunctionDeclaration
+                }
+            if (handlingOrRelayingParent != null) {
+                val throwByTypeMap =
+                    nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
+                val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
+                throwEOGExits.addAll(currentPredecessors.toMutableList())
+            } else {
+                LOGGER.error(
+                    "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
+                )
+            }
+        }
+        // After a throw, the eog is not progressing in the following ast subtrees
+        currentPredecessors.clear()
     }
 
     companion object {
