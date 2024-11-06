@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -299,10 +298,16 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  * code is extracted from the parent node to catch separators and auxiliary syntactic elements that
  * are between the child nodes.
  *
- * @param parentNode Used to extract the code for this node
+ * @param parentNode Used to extract the code for this node.
+ * @param newLineType The char(s) used to describe a new line, usually either "\n" or "\r\n". This
+ *   is needed because the location block spanning the children usually comprises more than one
+ *   line.
  */
 context(CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
+fun <T : Node, AstNode> T.codeAndLocationFromChildren(
+    parentNode: AstNode,
+    newLineType: CharSequence = "\n"
+): T {
     var first: Node? = null
     var last: Node? = null
 
@@ -358,7 +363,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
         val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
             // If the parent has code and region the new region is used to extract the code
-            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion)
+            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion, newLineType)
         }
     }
 
