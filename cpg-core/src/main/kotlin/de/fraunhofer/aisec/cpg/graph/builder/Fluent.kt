@@ -1457,12 +1457,12 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
 }
 
 /**
- * Creates a new [ThrowStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * Creates a new [ThrowExpression] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
 context(LanguageFrontend<*, *>, Holder<out Node>)
-infix fun Expression.`throw`(init: (ThrowStatement.() -> Unit)?): ThrowStatement {
-    val node = (this@LanguageFrontend).newThrowStatement()
+infix fun Expression.`throw`(init: (ThrowExpression.() -> Unit)?): ThrowExpression {
+    val node = (this@LanguageFrontend).newThrowExpression()
     if (init != null) init(node)
 
     val holder = this@Holder

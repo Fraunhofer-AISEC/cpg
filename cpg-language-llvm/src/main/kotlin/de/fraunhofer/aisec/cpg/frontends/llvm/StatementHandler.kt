@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -175,7 +174,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                return newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
+                return newThrowExpression(rawNode = instr).apply {
+                    exception =
+                        newProblemExpression("We don't know the exception while parsing this node.")
+                }
             }
             LLVMLandingPad -> {
                 return handleLandingpad(instr)
@@ -335,10 +337,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         } else {
             // "unwind to caller". As we don't know where the control flow continues,
             // the best model would be to throw the exception again. Here, we only know
-            // that we will throw something here but we don't know what. We have to fix
+            // that we will throw something here, but we don't know what. We have to fix
             // that later once we know in which catch-block this statement is executed.
             val throwOperation =
-                newUnaryOperator("throw", postfix = false, prefix = true, rawNode = instr)
+                newThrowExpression(rawNode = instr).apply {
+                    exception =
+                        newProblemExpression("We don't know the exception while parsing this node.")
+                }
             currentIfStatement?.elseStatement = throwOperation
         }
 
@@ -1390,11 +1395,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // We have multiple pairs, so we insert a declaration at the beginning of the function and
         // make an assignment in each BB.
         val functionName = LLVMGetValueName(bbsFunction).string
-        val functions =
-            tu.declarations.filter { d ->
-                (d as? FunctionDeclaration)?.name != null &&
-                    (d as? FunctionDeclaration)?.name.toString() == functionName
-            }
+        val functions = tu.functions(functionName)
         if (functions.size != 1) {
             log.error(
                 "${functions.size} functions match the name of the one where the phi instruction is inserted. Can't handle this case."
@@ -1402,7 +1403,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             throw TranslationException("Wrong number of functions for phi statement.")
         }
         // Create the dummy declaration at the beginning of the function body
-        val firstBB = (functions[0] as FunctionDeclaration).body as Block
+        val firstBB = functions[0].body as Block
         val varName = instr.name
         val type = frontend.typeOf(instr)
         val declaration = newVariableDeclaration(varName, type, false, rawNode = instr)
