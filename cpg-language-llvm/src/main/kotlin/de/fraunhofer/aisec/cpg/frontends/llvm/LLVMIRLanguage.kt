@@ -40,7 +40,7 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
     override val compoundAssignmentOperators = setOf<String>()
 
-    // TODO: In theory, the integers can have any bitwidth from 1 to 1^32 bits. It's not known if
+    // TODO: In theory, the integers can have any bit-width from 1 to 1^32 bits. It's not known if
     //  they are interpreted as signed or unsigned.
     @Transient
     override val builtInTypes =

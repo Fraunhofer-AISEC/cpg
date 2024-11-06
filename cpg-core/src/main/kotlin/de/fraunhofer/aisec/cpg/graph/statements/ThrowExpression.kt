@@ -33,12 +33,12 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a `throw` or `raise` statement. */
-class ThrowStatement : Statement(), ArgumentHolder {
+/** Represents a `throw` or `raise` statement/expression. */
+class ThrowExpression : Expression(), ArgumentHolder {
 
     /** The exception object to be raised. */
     @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()
-    var exception by unwrapping(ThrowStatement::exceptionEdge)
+    var exception by unwrapping(ThrowExpression::exceptionEdge)
 
     /**
      * Some languages (Python) can add a parent exception (or `cause`) to indicate that an exception
@@ -46,7 +46,7 @@ class ThrowStatement : Statement(), ArgumentHolder {
      */
     @Relationship(value = "PARENT_EXCEPTION")
     var parentExceptionEdge = astOptionalEdgeOf<Expression>()
-    var parentException by unwrapping(ThrowStatement::parentExceptionEdge)
+    var parentException by unwrapping(ThrowExpression::parentExceptionEdge)
 
     override fun addArgument(expression: Expression) {
         when {
@@ -75,7 +75,7 @@ class ThrowStatement : Statement(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ThrowStatement) return false
+        if (other !is ThrowExpression) return false
         return super.equals(other) &&
             exception == other.exception &&
             parentException == other.parentException
