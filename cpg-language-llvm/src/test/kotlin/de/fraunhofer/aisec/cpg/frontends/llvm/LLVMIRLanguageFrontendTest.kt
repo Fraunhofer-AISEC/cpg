@@ -969,26 +969,25 @@ class LLVMIRLanguageFrontendTest {
         val funcF = tu.functions["f"]
         assertNotNull(funcF)
 
-        val tryStatement =
-            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? Block)
-                ?.statements
-                ?.firstOrNull { s -> s is TryStatement }
-        assertIs<TryStatement>(tryStatement)
-        assertEquals(2, tryStatement.tryBlock?.statements?.size)
-        assertFullName(
-            "_CxxThrowException",
-            tryStatement.tryBlock?.statements?.get(0) as? CallExpression
-        )
-        assertLocalName(
-            "end",
-            (tryStatement.tryBlock?.statements?.get(1) as? GotoStatement)?.targetLabel
-        )
+        val tryStatement = funcF.bodyOrNull<LabelStatement>(0)?.subStatement?.trys?.firstOrNull()
+        assertNotNull(tryStatement)
+        val tryBlock = tryStatement.tryBlock
+        assertNotNull(tryBlock)
+        assertEquals(2, tryBlock.statements.size)
+        assertIs<CallExpression>(tryBlock.statements[0])
+        assertFullName("_CxxThrowException", tryBlock.statements[0])
+        val gotoStatement = tryBlock.statements[1]
+        assertIs<GotoStatement>(gotoStatement)
+        assertLocalName("end", gotoStatement.targetLabel)
 
         assertEquals(1, tryStatement.catchClauses.size)
-        val catchSwitchExpr = tryStatement.catchClauses[0].body?.statements?.get(0)
+        val catchBody = tryStatement.catchClauses[0].body
+        assertNotNull(catchBody)
+        val catchSwitchExpr = catchBody.statements[0]
         assertIs<DeclarationStatement>(catchSwitchExpr)
-        val catchswitchCall =
-            (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer
+        val catchSwitchDeclaration = catchSwitchExpr.singleDeclaration
+        assertIs<VariableDeclaration>(catchSwitchDeclaration)
+        val catchswitchCall = catchSwitchDeclaration.initializer
         assertIs<CallExpression>(catchswitchCall)
         assertFullName("llvm.catchswitch", catchswitchCall)
         val ifExceptionMatches = tryStatement.catchClauses[0].body?.statements?.get(1)
@@ -996,47 +995,47 @@ class LLVMIRLanguageFrontendTest {
         val matchesExceptionCall = ifExceptionMatches.condition
         assertIs<CallExpression>(matchesExceptionCall)
         assertFullName("llvm.matchesCatchpad", matchesExceptionCall)
-        assertEquals(
-            catchSwitchExpr.singleDeclaration,
-            (matchesExceptionCall.arguments[0] as Reference).refersTo
-        )
-        assertEquals(null, (matchesExceptionCall.arguments[1] as Literal<*>).value)
-        assertEquals(64L, (matchesExceptionCall.arguments[2] as Literal<*>).value as Long)
-        assertEquals(null, (matchesExceptionCall.arguments[3] as Literal<*>).value)
+        assertRefersTo(matchesExceptionCall.arguments[0], catchSwitchDeclaration)
+        assertLiteralValue(null, matchesExceptionCall.arguments[1])
+        assertLiteralValue(64L, matchesExceptionCall.arguments[2])
+        assertLiteralValue(null, matchesExceptionCall.arguments[3])
 
         val catchBlock = ifExceptionMatches.thenStatement
         assertIs<Block>(catchBlock)
-        assertFullName(
-            "llvm.catchpad",
-            ((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? CallExpression
-        )
+        val catchpadDeclarationStatement = catchBlock.statements[0]
+        assertIs<DeclarationStatement>(catchpadDeclarationStatement)
+        val catchpadDeclaration = catchpadDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(catchpadDeclaration)
+        assertIs<CallExpression>(catchpadDeclaration.initializer)
+        assertFullName("llvm.catchpad", catchpadDeclaration.initializer)
 
         val innerTry = catchBlock.statements[1]
         assertIs<TryStatement>(innerTry)
-        assertFullName(
-            "_CxxThrowException",
-            innerTry.tryBlock?.statements?.get(0) as? CallExpression
-        )
-        assertLocalName(
-            "try.cont",
-            (innerTry.tryBlock?.statements?.get(1) as? GotoStatement)?.targetLabel
-        )
+        val innerTryBlock = innerTry.tryBlock
+        assertNotNull(innerTryBlock)
+        assertIs<CallExpression>(innerTryBlock.statements[0])
+        assertFullName("_CxxThrowException", innerTryBlock.statements[0])
+        val innerTryGoto = innerTryBlock.statements[1]
+        assertIs<GotoStatement>(innerTryGoto)
+        assertLocalName("try.cont", innerTryGoto.targetLabel)
 
-        val innerCatchClause =
-            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.thenStatement
+        val innerCatchBody = innerTry.catchClauses[0].body
+        assertNotNull(innerCatchBody)
+        val innerCatchIf = innerCatchBody.statements[1]
+        assertIs<IfStatement>(innerCatchIf)
+        val innerCatchClause = innerCatchIf.thenStatement
         assertIs<Block>(innerCatchClause)
-        assertFullName(
-            "llvm.catchpad",
-            ((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer
-        )
-        assertLocalName("try.cont", (innerCatchClause.statements[1] as? GotoStatement)?.targetLabel)
+        val innerCatchpadDeclarationStatement = innerCatchClause.statements[0]
+        assertIs<DeclarationStatement>(innerCatchpadDeclarationStatement)
+        val innerCatchDeclaration = innerCatchpadDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(innerCatchDeclaration)
+        assertFullName("llvm.catchpad", innerCatchDeclaration.initializer)
 
-        val innerCatchThrows =
-            (innerTry.catchClauses[0].body?.statements?.get(1) as? IfStatement)?.elseStatement
+        val innerCatchGoto = innerCatchClause.statements[1]
+        assertIs<GotoStatement>(innerCatchGoto)
+        assertLocalName("try.cont", innerCatchGoto.targetLabel)
+
+        val innerCatchThrows = innerCatchIf.elseStatement
         assertIs<ThrowExpression>(innerCatchThrows)
         assertNotNull(innerCatchThrows.exception)
         assertRefersTo(innerCatchThrows.exception, innerTry.catchClauses[0].parameter)
