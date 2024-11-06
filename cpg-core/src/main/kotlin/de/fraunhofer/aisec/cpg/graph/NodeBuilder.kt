@@ -306,7 +306,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
 context(CodeAndLocationProvider<AstNode>)
 fun <T : Node, AstNode> T.codeAndLocationFromChildren(
     parentNode: AstNode,
-    newLineType: CharSequence = "\n"
+    lineBreakSequence: CharSequence = "\n"
 ): T {
     var first: Node? = null
     var last: Node? = null
@@ -363,7 +363,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
         val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
             // If the parent has code and region the new region is used to extract the code
-            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion, newLineType)
+            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion, lineBreakSequence)
         }
     }
 
