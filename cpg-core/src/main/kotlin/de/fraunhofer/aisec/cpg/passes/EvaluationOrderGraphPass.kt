@@ -194,7 +194,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
-        map[ThrowExpression::class.java] = { handleThrowStatement(it as ThrowExpression) }
+        map[ThrowExpression::class.java] = { handleThrowExpression(it as ThrowExpression) }
     }
 
     protected fun doNothing() {
@@ -1124,7 +1124,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /** Calls [handleThrowOperator]. */
-    protected fun handleThrowStatement(statement: ThrowExpression) {
+    protected fun handleThrowExpression(statement: ThrowExpression) {
         handleThrowOperator(
             statement,
             statement.exception?.type,
