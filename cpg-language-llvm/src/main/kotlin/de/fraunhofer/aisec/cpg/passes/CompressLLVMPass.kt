@@ -161,7 +161,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
                 node.catchClauses = catchClauses
 
-                fixThrowStatementsForCatch(node.catchClauses[0])
+                fixThrowExpressionsForCatch(node.catchClauses[0])
             }
             node.catchClauses.size == 1 &&
                 node.catchClauses[0].body?.statements?.get(0) is Block -> {
@@ -171,24 +171,24 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // the compound statement the body of the catch clause.
                 val innerCompound = node.catchClauses[0].body?.statements?.get(0) as? Block
                 innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
-                fixThrowStatementsForCatch(node.catchClauses[0])
+                fixThrowExpressionsForCatch(node.catchClauses[0])
             }
             node.catchClauses.isNotEmpty() -> {
                 for (catch in node.catchClauses) {
-                    fixThrowStatementsForCatch(catch)
+                    fixThrowExpressionsForCatch(catch)
                 }
             }
         }
     }
 
     /**
-     * Checks if a throw statement which is included in this catch block does not have a parameter.
-     * Those statements have been artificially added e.g. by a catchswitch and need to be filled
+     * Checks if a throw expression which is included in this catch block does not have a parameter.
+     * Those expressions have been artificially added e.g. by a catchswitch and need to be filled
      * now.
      */
-    private fun fixThrowStatementsForCatch(catch: CatchClause) {
+    private fun fixThrowExpressionsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filterIsInstance<ThrowStatement>().filter { n ->
+            getAllChildrenRecursively(catch).filterIsInstance<ThrowExpression>().filter { n ->
                 n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
