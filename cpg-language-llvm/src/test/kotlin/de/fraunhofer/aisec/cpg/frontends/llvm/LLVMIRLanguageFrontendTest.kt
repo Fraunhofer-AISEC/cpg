@@ -388,25 +388,34 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(atomicrmwStatement)
 
         // Check that the value is assigned to
-        val decl = (atomicrmwStatement.statements[0].declarations[0] as VariableDeclaration)
-        assertLocalName("old", decl)
-        assertLocalName("i32", decl.type)
-        assertEquals("*", (decl.initializer as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (decl.initializer as UnaryOperator).input)
+        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        assertIs<VariableDeclaration>(declaration)
+        assertLocalName("old", declaration)
+        assertLocalName("i32", declaration.type)
+        val initializer = declaration.initializer
+        assertIs<UnaryOperator>(initializer)
+        assertEquals("*", initializer.operatorCode)
+        assertLocalName("ptr", initializer.input)
 
         // Check that the replacement equals *ptr = *ptr + 1
-        val replacement = (atomicrmwStatement.statements[1] as AssignExpression)
+        val replacement = atomicrmwStatement.statements[1]
+        assertIs<AssignExpression>(replacement)
         assertEquals(1, replacement.lhs.size)
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
-        assertEquals("*", (replacement.lhs.first() as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (replacement.lhs.first() as UnaryOperator).input)
+        val replacementLhs = replacement.lhs.first()
+        assertIs<UnaryOperator>(replacementLhs)
+        assertEquals("*", replacementLhs.operatorCode)
+        assertLocalName("ptr", replacementLhs.input)
         // Check that the rhs is equal to *ptr + 1
-        val add = replacement.rhs.first() as BinaryOperator
+        val add = replacement.rhs.first()
+        assertIs<BinaryOperator>(add)
         assertEquals("+", add.operatorCode)
-        assertEquals("*", (add.lhs as UnaryOperator).operatorCode)
-        assertLocalName("ptr", (add.lhs as UnaryOperator).input)
-        assertEquals(1L, (add.rhs as Literal<*>).value as Long)
+        val addLhs = add.lhs
+        assertIs<UnaryOperator>(addLhs)
+        assertEquals("*", addLhs.operatorCode)
+        assertLocalName("ptr", addLhs.input)
+        assertLiteralValue(1L, add.rhs)
     }
 
     @Test
