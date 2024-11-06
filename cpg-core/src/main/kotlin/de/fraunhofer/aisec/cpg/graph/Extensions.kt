@@ -200,19 +200,38 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
 fun Node.followPrevFullDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
-    return followXUntilHit({ currentNode -> currentNode.prevFullDFG }, true, true, predicate)
+    return followXUntilHit(
+        x = { currentNode -> currentNode.prevFullDFG },
+        collectFailedPaths = true,
+        findAllPossiblePaths = true,
+        predicate = predicate
+    )
 }
 
 fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followPrevCDGUntilHit(true, true, interproceduralAnalysis) { false }.failed
+    return this.followPrevCDGUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis
+        ) {
+            false
+        }
+        .failed
 }
 
 fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextCDGUntilHit(true, true, interproceduralAnalysis) { false }.failed
+    return this.followNextCDGUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis
+        ) {
+            false
+        }
+        .failed
 }
 
 /**
@@ -231,16 +250,16 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        { currentNode ->
+        x = { currentNode ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
             }
             nextNodes
         },
-        collectFailedPaths,
-        findAllPossiblePaths,
-        predicate
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
     )
 }
 
@@ -261,7 +280,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        { currentNode ->
+        x = { currentNode ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -272,9 +291,9 @@ fun Node.followPrevCDGUntilHit(
             }
             nextNodes
         },
-        collectFailedPaths,
-        findAllPossiblePaths,
-        predicate
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
     )
 }
 
@@ -357,10 +376,10 @@ fun Node.followNextFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        { currentNode -> currentNode.nextFullDFG },
-        collectFailedPaths,
-        findAllPossiblePaths,
-        predicate
+        x = { currentNode -> currentNode.nextFullDFG },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
     )
 }
 
@@ -376,12 +395,12 @@ fun Node.followNextFullDFGEdgesUntilHit(
  */
 fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
     return followXUntilHit(
-        { currentNode ->
+        x = { currentNode ->
             currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
         },
-        true,
-        true,
-        predicate
+        collectFailedPaths = true,
+        findAllPossiblePaths = true,
+        predicate = predicate
     )
 }
 
@@ -397,12 +416,12 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  */
 fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
     return followXUntilHit(
-        { currentNode ->
+        x = { currentNode ->
             currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
         },
-        true,
-        true,
-        predicate
+        collectFailedPaths = true,
+        findAllPossiblePaths = true,
+        predicate = predicate
     )
 }
 
