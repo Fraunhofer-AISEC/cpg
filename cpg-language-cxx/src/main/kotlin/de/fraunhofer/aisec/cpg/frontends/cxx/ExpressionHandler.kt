@@ -400,7 +400,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // need to information about the parenthesis.
                 return input as Expression
             }
-            IASTUnaryExpression.op_throw -> operatorCode = "throw"
+            IASTUnaryExpression.op_throw ->
+                return newThrowExpression(rawNode = ctx).apply { this.exception = input }
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
             IASTUnaryExpression.op_alignOf -> operatorCode = "alignof"
             IASTUnaryExpression.op_sizeofParameterPack -> operatorCode = "sizeof..."
