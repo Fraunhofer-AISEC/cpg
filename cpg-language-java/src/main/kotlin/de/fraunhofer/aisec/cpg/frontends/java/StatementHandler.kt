@@ -79,9 +79,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
-        val throwOperation =
-            this.newUnaryOperator("throw", postfix = false, prefix = true, rawNode = stmt)
-        throwOperation.input =
+        val throwOperation = newThrowExpression(rawNode = stmt)
+        throwOperation.exception =
             frontend.expressionHandler.handle(throwStmt.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         return throwOperation
