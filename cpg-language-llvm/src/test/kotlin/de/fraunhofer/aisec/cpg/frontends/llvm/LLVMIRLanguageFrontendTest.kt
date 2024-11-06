@@ -110,25 +110,25 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(rand)
         assertNull(rand.body)
 
-        val decl = tu.variables["x"]
-        assertNotNull(decl)
+        val xDeclaration = tu.variables["x"]
+        assertNotNull(xDeclaration)
 
-        val call = decl.initializer as? CallExpression
-        assertNotNull(call)
+        val call = xDeclaration.initializer
+        assertIs<CallExpression>(call)
         assertLocalName("rand", call)
-        assertTrue(call.invokes.contains(rand))
+        assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
 
         val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
         assertNotNull(xorStatement)
 
-        val xorDecl = xorStatement.singleDeclaration as? VariableDeclaration
-        assertNotNull(xorDecl)
-        assertLocalName("a", xorDecl)
-        assertEquals("i32", xorDecl.type.typeName)
+        val xorDeclaration = xorStatement.singleDeclaration
+        assertIs<VariableDeclaration>(xorDeclaration)
+        assertLocalName("a", xorDeclaration)
+        assertEquals("i32", xorDeclaration.type.typeName)
 
-        val xor = xorDecl.initializer as? BinaryOperator
-        assertNotNull(xor)
+        val xor = xorDeclaration.initializer
+        assertIs<BinaryOperator>(xor)
         assertEquals("^", xor.operatorCode)
     }
 
