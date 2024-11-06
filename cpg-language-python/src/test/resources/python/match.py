@@ -23,6 +23,31 @@ def matcher(x):
         case _:
             print("Default match")
 
+def matchSingleton(x):
+    match x:
+        case None:
+            print("singleton" + x)
+
+def matchValue(x):
+    match x:
+        case "value":
+            print("value" + x)
+
+def matchOr(x):
+    match x:
+        case "xyz" | "abc":
+            print("or" + x)
+
+def matchAnd(x):
+    match x:
+        case [x] if x>0:
+            print(x)
+
+def matchDefault(x):
+    match x:
+        case _:
+            print("Default match")
+
 def match_weird():
     match command.split():
         case ["go", ("north" | "south" | "east" | "west") as direction]:
