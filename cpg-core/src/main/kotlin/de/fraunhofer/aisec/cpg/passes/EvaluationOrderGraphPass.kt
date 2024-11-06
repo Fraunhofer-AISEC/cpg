@@ -193,7 +193,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         map[LookupScopeStatement::class.java] = {
             handleLookupScopeStatement(it as LookupScopeStatement)
         }
-        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
+        map[ThrowExpression::class.java] = { handleThrowExpression(it as ThrowExpression) }
     }
 
     protected fun doNothing() {
@@ -1274,9 +1274,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     /**
      * Calls [handleThrowOperator].
      *
-     * See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#throwstatement)
+     * See [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#throwexpression)
      */
-    protected fun handleThrowStatement(statement: ThrowStatement) {
+    protected fun handleThrowExpression(statement: ThrowExpression) {
         handleThrowOperator(
             statement,
             statement.exception?.type,
