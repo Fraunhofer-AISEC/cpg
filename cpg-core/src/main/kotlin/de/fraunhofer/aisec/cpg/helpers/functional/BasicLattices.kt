@@ -89,7 +89,7 @@ open class PowersetLattice<V>(elements: Set<V>) : LatticeElement<Set<V>>(element
 
 typealias MapLatticeT<K, V> = LatticeElement<Map<K, V>>
 
-inline fun <reified K, T> emptyMapLattice() = MapLattice<K, LatticeElement<T>>(mapOf())
+inline fun <reified K, T> emptyMapLattice() = MapLattice<K, T>(mapOf())
 
 /** Implements the [LatticeElement] for a lattice over a map of nodes to another lattice. */
 open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
@@ -115,7 +115,7 @@ open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
     }
 
     override fun compareTo(other: LatticeElement<Map<K, LatticeElement<V>>>): Int {
-        if (this.elements.entries == other.elements.entries) return 0
+        if (this.elements == other.elements) return 0
         if (
             this.elements.keys.containsAll(other.elements.keys) &&
                 this.elements.entries.all { (k, v) ->
@@ -127,7 +127,7 @@ open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is MapLattice<K, V> && this.elements.entries == other.elements.entries
+        return other is MapLattice<K, V> && this.elements == other.elements
     }
 
     override fun hashCode(): Int {
