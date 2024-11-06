@@ -357,26 +357,6 @@ flowchart LR
   child --EOG-->parent
   parent(["UnaryOperator"]) --EOG--> next:::outer
   parent -."statements(n)".-> child
-
-```
-
-
-### UnaryOperator for exception throws
-Throwing of exceptions is modelled as unary operation. The EOG continues at an exception catching structure or a function that does a re-throw. 
-
-Interesting fields:
-
-* `input: Expression`: Exception to be thrown for exception handling.
-
-Scheme:
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child["input"]
-  child --EOG-->parent
-  parent(["throw"]) --EOG--> catchingContext:::outer
-  parent -."statements(n)".-> child
-
 ```
 
 ## ThrowExpression
@@ -397,7 +377,6 @@ flowchart LR
   parent(["ThrowExpression"]) --EOG--> catchingContext:::outer
   parent -.-> child1
   parent -.-> child2
-
 ```
 
 
