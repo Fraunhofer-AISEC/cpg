@@ -157,7 +157,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
             .filter { entry ->
-                entry.key.first in from && (to as HasAliases).aliases.any { it == entry.key.second }
+                entry.key.first in from && (to as? Reference)?.refersTo == entry.key.second
             }
             .forEach { edgePropertiesMap[Triple(it.key.first, to, true)] = it.value }
     }
@@ -429,7 +429,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             variable.singleDeclaration
                         } else {
                             log.error(
-                                "Cannot handle multiple declarations in the ComprehensionExpresdsion: Node $currentNode"
+                                "Cannot handle multiple declarations in the ComprehensionExpression: Node $currentNode"
                             )
                             null
                         }
@@ -547,13 +547,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        /*edgePropertiesMap[Triple(param, arg?.refersTo, false)] =
-                        CallingContextOut(currentNode)*/
+
                         if (arg != null) {
-                            for (alias in arg.aliases) {
-                                edgePropertiesMap[Triple(param, alias as Node?, false)] =
-                                    CallingContextOut(currentNode)
-                            }
+                            edgePropertiesMap[Triple(param, arg.refersTo, false)] =
+                                CallingContextOut(currentNode)
                         }
                     }
                 }
