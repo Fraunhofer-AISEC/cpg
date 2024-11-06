@@ -154,7 +154,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * Checks if there's an entry in [edgePropertiesMap] with key `(x, null, <any>)` where `x` is in
      * [from] and, if so, adds an entry with key `(x, to, true)` and the same value
      */
-    protected fun findAndSetProperties(from: Set<Node>, to: Node) {
+    protected open fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
             .filter { entry ->
                 entry.key.first in from && (to as? Reference)?.refersTo == entry.key.second
