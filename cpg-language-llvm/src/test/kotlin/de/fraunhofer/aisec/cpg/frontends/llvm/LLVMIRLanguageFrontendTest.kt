@@ -846,99 +846,85 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // Test that x is initialized correctly
-        val mainBody = main.body as Block
-        val origX =
-            ((mainBody.statements[0] as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration)
-        val xInit = origX?.initializer as? InitializerListExpression
-        assertNotNull(xInit)
-        assertEquals(10L, (xInit.initializers[0] as? Literal<*>)?.value)
-        assertEquals(9L, (xInit.initializers[1] as? Literal<*>)?.value)
-        assertEquals(6L, (xInit.initializers[2] as? Literal<*>)?.value)
-        assertEquals(-100L, (xInit.initializers[3] as? Literal<*>)?.value)
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val xDeclarationStatement = mainBody.statements[0]
+        assertIs<DeclarationStatement>(xDeclarationStatement)
+        val origX = xDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(origX)
+        val xInit = origX.initializer
+        assertIs<InitializerListExpression>(xInit)
+        assertLiteralValue(10L, xInit.initializers[0])
+        assertLiteralValue(9L, xInit.initializers[1])
+        assertLiteralValue(6L, xInit.initializers[2])
+        assertLiteralValue(-100L, xInit.initializers[3])
 
         // Test that y is initialized correctly
-        val origY =
-            ((mainBody.statements[1] as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration)
-        val yInit = origY?.initializer as? InitializerListExpression
-        assertNotNull(yInit)
-        assertEquals(15L, (yInit.initializers[0] as? Literal<*>)?.value)
-        assertEquals(34L, (yInit.initializers[1] as? Literal<*>)?.value)
-        assertEquals(99L, (yInit.initializers[2] as? Literal<*>)?.value)
-        assertEquals(1000L, (yInit.initializers[3] as? Literal<*>)?.value)
+
+        val yDeclarationStatement = mainBody.statements[1]
+        assertIs<DeclarationStatement>(yDeclarationStatement)
+        val origY = yDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(origY)
+        val yInit = origY.initializer
+        assertIs<InitializerListExpression>(yInit)
+        assertLiteralValue(15L, yInit.initializers[0])
+        assertLiteralValue(34L, yInit.initializers[1])
+        assertLiteralValue(99L, yInit.initializers[2])
+        assertLiteralValue(1000L, yInit.initializers[3])
 
         // Test that extractelement works
-        val zInit =
-            ((mainBody.statements[2] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? SubscriptExpression
-        assertNotNull(zInit)
-        assertEquals(0L, (zInit.subscriptExpression as? Literal<*>)?.value)
-        assertEquals("x", (zInit.arrayExpression as? Reference)?.name?.localName)
-        assertSame(origX, (zInit.arrayExpression as? Reference)?.refersTo)
+        val zDeclarationStatement = mainBody.statements[2]
+        assertIs<DeclarationStatement>(zDeclarationStatement)
+        val origZ = zDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(origZ)
+        val zInit = origZ.initializer
+        assertIs<SubscriptExpression>(zInit)
+        assertLiteralValue(0L, zInit.subscriptExpression)
+        assertLocalName("x", zInit.arrayExpression)
+        assertRefersTo(zInit.arrayExpression, origX)
 
         // Test the assignment of y to yMod
-        val yModInit =
-            ((mainBody.statements[3] as Block).statements[0] as? DeclarationStatement)
-                ?.singleDeclaration as? VariableDeclaration
-        assertNotNull(yModInit)
-        assertEquals("y", (yModInit.initializer as? Reference)?.name?.localName)
-        assertSame(origY, (yModInit.initializer as? Reference)?.refersTo)
+        val yModDeclarationStatementBlock = mainBody.statements[3]
+        assertIs<Block>(yModDeclarationStatementBlock)
+        val yModDeclarationStatement = yModDeclarationStatementBlock.statements[0]
+        assertIs<DeclarationStatement>(yModDeclarationStatement)
+        val modY = yModDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(modY)
+        val yModInit = modY.initializer
+        assertIs<Reference>(yModInit)
+        assertLocalName("y", yModInit)
+        assertRefersTo(yModInit, origY)
+
         // Now, test the modification of yMod[3] = 8
-        val yMod = ((mainBody.statements[3] as Block).statements[1] as? AssignExpression)
-        assertNotNull(yMod)
+        val yMod = yModDeclarationStatementBlock.statements[1]
+        assertIs<AssignExpression>(yMod)
         assertEquals(1, yMod.lhs.size)
         assertEquals(1, yMod.rhs.size)
-        assertEquals(
-            3L,
-            ((yMod.lhs.first() as? SubscriptExpression)?.subscriptExpression as? Literal<*>)?.value
-        )
-        assertSame(
-            yModInit,
-            ((yMod.lhs.first() as? SubscriptExpression)?.arrayExpression as? Reference)?.refersTo
-        )
-        assertEquals(8L, (yMod.rhs.first() as? Literal<*>)?.value)
+        val yModLhs = yMod.lhs.first()
+        assertIs<SubscriptExpression>(yModLhs)
+        assertLiteralValue(3L, yModLhs.subscriptExpression)
+        assertRefersTo(yModLhs.arrayExpression, modY)
+        assertLiteralValue(8L, yMod.rhs.first())
 
         // Test the last shufflevector instruction which does not contain constant as initializers.
-        val shuffledInit =
-            ((mainBody.statements[4] as? DeclarationStatement)?.singleDeclaration
-                    as? VariableDeclaration)
-                ?.initializer as? InitializerListExpression
-        assertNotNull(shuffledInit)
-        assertSame(
-            origX,
-            ((shuffledInit.initializers[0] as? SubscriptExpression)?.arrayExpression as? Reference)
-                ?.refersTo
-        )
-        assertSame(
-            yModInit,
-            ((shuffledInit.initializers[1] as? SubscriptExpression)?.arrayExpression as? Reference)
-                ?.refersTo
-        )
-        assertSame(
-            yModInit,
-            ((shuffledInit.initializers[2] as? SubscriptExpression)?.arrayExpression as? Reference)
-                ?.refersTo
-        )
-        assertSame(
-            1,
-            ((shuffledInit.initializers[0] as? SubscriptExpression)?.subscriptExpression
-                    as? Literal<*>)
-                ?.value
-        )
-        assertSame(
-            2,
-            ((shuffledInit.initializers[1] as? SubscriptExpression)?.subscriptExpression
-                    as? Literal<*>)
-                ?.value
-        )
-        assertSame(
-            3,
-            ((shuffledInit.initializers[2] as? SubscriptExpression)?.subscriptExpression
-                    as? Literal<*>)
-                ?.value
-        )
+        val shuffledInitDeclarationStatement = mainBody.statements[4]
+        assertIs<DeclarationStatement>(shuffledInitDeclarationStatement)
+        val shuffledInitDeclaration = shuffledInitDeclarationStatement.singleDeclaration
+        assertIs<VariableDeclaration>(shuffledInitDeclaration)
+        val shuffledInit = shuffledInitDeclaration.initializer
+        assertIs<InitializerListExpression>(shuffledInit)
+        val shuffledInit0 = shuffledInit.initializers[0]
+        assertIs<SubscriptExpression>(shuffledInit0)
+        val shuffledInit1 = shuffledInit.initializers[1]
+        assertIs<SubscriptExpression>(shuffledInit1)
+        val shuffledInit2 = shuffledInit.initializers[2]
+        assertIs<SubscriptExpression>(shuffledInit2)
+        assertRefersTo(shuffledInit0.arrayExpression, origX)
+        assertRefersTo(shuffledInit1.arrayExpression, modY)
+        assertRefersTo(shuffledInit2.arrayExpression, modY)
+        assertLiteralValue(1, shuffledInit0.subscriptExpression)
+        assertLiteralValue(2, shuffledInit1.subscriptExpression)
+        assertLiteralValue(3, shuffledInit2.subscriptExpression)
     }
 
     @Test
