@@ -760,19 +760,9 @@ class StatementHandlerTest {
         assertIs<Block>(atomicrmwXorStatement)
         checkAtomicRmwBinaryOpReplacement(atomicrmwXorStatement, "^", "old5")
 
-        val atomicrmwNandStatement = fooBody[5]
-        assertIs<Block>(atomicrmwNandStatement)
-        val declaration = atomicrmwNandStatement.statements[0].declarations[0]
-        assertIs<VariableDeclaration>(declaration)
-        assertLocalName("old6", declaration)
-        assertLocalName("i32", declaration.type)
-        val initializer = declaration.initializer
-        assertIs<UnaryOperator>(initializer)
-        assertEquals("*", initializer.operatorCode)
-        assertLocalName("ptr", initializer.input)
-
+        // This one is not wrapped in a block and does not have the declaration statement!
         // Check that the replacement equals *ptr = ~(*ptr | 1)
-        val replacementNand = atomicrmwNandStatement.statements[1]
+        val replacementNand = fooBody[5]
         assertIs<AssignExpression>(replacementNand)
         assertEquals(1, replacementNand.lhs.size)
         assertEquals(1, replacementNand.rhs.size)

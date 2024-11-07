@@ -5,7 +5,7 @@ define i32 @foo(i32* %ptr) nounwind uwtable readnone optsize ssp {
   %old3 = atomicrmw and i32* %ptr, i32 1 acquire
   %old4 = atomicrmw or i32* %ptr, i32 1 acquire
   %old5 = atomicrmw xor i32* %ptr, i32 1 acquire
-  %old6 = atomicrmw nand i32* %ptr, i32 1 acquire
+  atomicrmw nand i32* %ptr, i32 1 acquire
   %old7 = atomicrmw min i32* %ptr, i32 1 acquire
   %old8 = atomicrmw max i32* %ptr, i32 1 acquire
   %old9 = atomicrmw umin i32* %ptr, i32 1 acquire
