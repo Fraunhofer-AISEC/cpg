@@ -236,10 +236,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val unwindDest =
             if (instr.opCode == LLVMCatchRet) {
                 LLVMGetOperand(instr, 1)
-            } else if (LLVMGetUnwindDest(instr) != null) {
-                LLVMBasicBlockAsValue(LLVMGetUnwindDest(instr))
             } else {
-                null
+                LLVMGetUnwindDest(instr)?.let { LLVMBasicBlockAsValue(it) }
             }
         val name =
             Name(
@@ -250,13 +248,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
             )
         return if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val gotoStatement = assembleGotoStatement(instr, unwindDest)
-            gotoStatement.name = name
-            gotoStatement
+            assembleGotoStatement(instr, unwindDest).apply { this.name = name }
         } else {
-            val emptyStatement = newEmptyStatement(rawNode = instr)
-            emptyStatement.name = name
-            emptyStatement
+            newEmptyStatement(rawNode = instr).apply { this.name = name }
         }
     }
 
