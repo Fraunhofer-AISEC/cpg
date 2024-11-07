@@ -51,7 +51,7 @@ import kotlin.math.min
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
-    private val lineSeparator = '\n' // TODO
+    val lineSeparator = "\n" // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
@@ -191,7 +191,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 lines = removeExtraAtEnd(location, lines)
                 lines = fixStartColumn(location, lines)
 
-                lines.joinToString(separator = lineSeparator.toString())
+                lines.joinToString(separator = lineSeparator)
             } else {
                 null
             }
