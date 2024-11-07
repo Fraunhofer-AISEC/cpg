@@ -362,7 +362,7 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
-        val cmpxchgStatement = foo.bodyOrNull<Block>(1)
+        val cmpxchgStatement = foo.bodyOrNull<Block>(6)
         assertNotNull(cmpxchgStatement)
         assertEquals(2, cmpxchgStatement.statements.size)
 
@@ -413,8 +413,8 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("*", thenExprLhs.operatorCode)
         assertLocalName("ptr", thenExprLhs.input)
         assertIs<Reference>(thenExpr.rhs.first())
-        assertLocalName("old", thenExpr.rhs.first())
-        assertRefersTo(thenExpr.rhs.first(), tu.variables["old"])
+        assertLocalName("old1", thenExpr.rhs.first())
+        assertRefersTo(thenExpr.rhs.first(), tu.variables["old1"])
     }
 
     @Test
