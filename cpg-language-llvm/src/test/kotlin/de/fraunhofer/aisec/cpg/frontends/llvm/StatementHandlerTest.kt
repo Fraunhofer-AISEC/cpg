@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -792,6 +793,79 @@ class StatementHandlerTest {
         assertEquals("*", binOpLhs.operatorCode)
         assertLocalName("ptr", binOpLhs.input)
         assertLiteralValue(1L, binOp.rhs)
+
+        val atomicrmwMinStatement = fooBody[6]
+        assertIs<Block>(atomicrmwMinStatement)
+        checkAtomicRmwMinMax(atomicrmwMinStatement, "<", "old7", false)
+
+        val atomicrmwMaxStatement = fooBody[7]
+        assertIs<Block>(atomicrmwMaxStatement)
+        checkAtomicRmwMinMax(atomicrmwMaxStatement, ">", "old8", false)
+
+        val atomicrmwUminStatement = fooBody[8]
+        assertIs<Block>(atomicrmwUminStatement)
+        checkAtomicRmwMinMax(atomicrmwUminStatement, "<", "old9", true)
+
+        val atomicrmwUmaxStatement = fooBody[9]
+        assertIs<Block>(atomicrmwUmaxStatement)
+        checkAtomicRmwMinMax(atomicrmwUmaxStatement, ">", "old10", true)
+    }
+
+    // We expect *ptr = (*ptr <cmp> 1) ? *ptr : 1
+    private fun checkAtomicRmwMinMax(
+        atomicrmwStatement: Block,
+        cmp: String,
+        variableName: String,
+        requiresUintCast: Boolean
+    ) {
+        // Check that the value is assigned to
+        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        assertIs<VariableDeclaration>(declaration)
+        assertLocalName(variableName, declaration)
+        assertLocalName("i32", declaration.type)
+        val initializer = declaration.initializer
+        assertIs<UnaryOperator>(initializer)
+        assertEquals("*", initializer.operatorCode)
+        assertLocalName("ptr", initializer.input)
+
+        // Check that the replacement equals *ptr = (*ptr <cmp> 1) ? *ptr : 1
+        val replacement = atomicrmwStatement.statements[1]
+        assertIs<AssignExpression>(replacement)
+        assertEquals(1, replacement.lhs.size)
+        assertEquals(1, replacement.rhs.size)
+        assertEquals("=", replacement.operatorCode)
+        val replacementLhs = replacement.lhs.first()
+        assertIs<UnaryOperator>(replacementLhs)
+        assertEquals("*", replacementLhs.operatorCode)
+        assertLocalName("ptr", replacementLhs.input)
+
+        // Check that the rhs is equal to (*ptr <cmp> 1) ? *ptr : 1
+        val conditionalExpression = replacement.rhs.first()
+        assertIs<ConditionalExpression>(conditionalExpression)
+        val condition = conditionalExpression.condition
+        assertIs<BinaryOperator>(condition)
+        assertEquals(cmp, condition.operatorCode)
+        var cmpLhs = condition.lhs
+        if (requiresUintCast) {
+            assertIs<CastExpression>(cmpLhs)
+            assertEquals("ui32", cmpLhs.castType.typeName)
+            cmpLhs = cmpLhs.expression
+        }
+        assertIs<UnaryOperator>(cmpLhs)
+        assertEquals("*", cmpLhs.operatorCode)
+        assertLocalName("ptr", cmpLhs.input)
+        var cmpRhs = condition.rhs
+        if (requiresUintCast) {
+            assertIs<CastExpression>(cmpRhs)
+            assertEquals("ui32", cmpRhs.castType.typeName)
+            cmpRhs = cmpRhs.expression
+        }
+        assertLiteralValue(1L, cmpRhs)
+        val thenExpression = conditionalExpression.thenExpression
+        assertIs<UnaryOperator>(thenExpression)
+        assertEquals("*", thenExpression.operatorCode)
+        assertLocalName("ptr", thenExpression.input)
+        assertLiteralValue(1L, conditionalExpression.elseExpression)
     }
 
     private fun checkAtomicRmwBinaryOpReplacement(
