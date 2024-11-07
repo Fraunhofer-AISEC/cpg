@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -299,6 +300,18 @@ class StatementHandlerTest {
         val frem = fremDeclaration.initializer
         assertIs<BinaryOperator>(frem)
         assertEquals("%", frem.operatorCode)
+
+        val fnegStatement = main.bodyOrNull<DeclarationStatement>(7)
+        assertNotNull(fnegStatement)
+
+        val fnegDeclaration = fnegStatement.singleDeclaration
+        assertIs<VariableDeclaration>(fnegDeclaration)
+        assertLocalName("f", fnegDeclaration)
+        assertEquals("half", fnegDeclaration.type.typeName)
+
+        val fneg = fnegDeclaration.initializer
+        assertIs<UnaryOperator>(fneg)
+        assertEquals("-", fneg.operatorCode)
     }
 
     @Test

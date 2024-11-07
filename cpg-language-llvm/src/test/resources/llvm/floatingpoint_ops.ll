@@ -10,6 +10,7 @@ define half @main() {   ; half()*
   %c = fsub half %a, %b
   %d = fdiv half %a, %x
   %e = frem half %a, %x
+  %f = fneg half %e
 
   ret half %b
 }

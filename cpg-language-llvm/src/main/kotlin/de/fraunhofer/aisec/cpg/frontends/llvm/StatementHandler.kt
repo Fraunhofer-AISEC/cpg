@@ -106,7 +106,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMFNeg -> {
                 val fneg = newUnaryOperator("-", postfix = false, prefix = true, rawNode = instr)
                 fneg.input = frontend.getOperandValueAtIndex(instr, 0)
-                return fneg
+
+                val decl = declarationOrNot(fneg, instr)
+                (decl as? DeclarationStatement)?.let {
+                    // cache binding
+                    frontend.bindingsCache[instr.symbolName] =
+                        decl.singleDeclaration as VariableDeclaration
+                }
+
+                return decl
             }
             LLVMAlloca -> {
                 return handleAlloca(instr)
