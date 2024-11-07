@@ -300,4 +300,156 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(frem)
         assertEquals("%", frem.operatorCode)
     }
+
+    @Test
+    fun testIntegerComparisons() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("integer_comparisons.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertEquals(2, tu.declarations.size)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+        assertLocalName("i32", main.type)
+
+        val rand = tu.functions["rand"]
+        assertNotNull(rand)
+        assertNull(rand.body)
+
+        val xDeclaration = tu.variables["x"]
+        assertNotNull(xDeclaration)
+
+        val call = xDeclaration.initializer
+        assertIs<CallExpression>(call)
+        assertLocalName("rand", call)
+        assertContains(call.invokes, rand)
+        assertEquals(0, call.arguments.size)
+
+        val cmpEqStatement = main.bodyOrNull<DeclarationStatement>(1)
+        assertNotNull(cmpEqStatement)
+
+        val cmpEqDeclaration = cmpEqStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpEqDeclaration)
+        assertLocalName("a", cmpEqDeclaration)
+        assertEquals("i1", cmpEqDeclaration.type.typeName)
+
+        val cmpEq = cmpEqDeclaration.initializer
+        assertIs<BinaryOperator>(cmpEq)
+        assertEquals("==", cmpEq.operatorCode)
+
+        val cmpNeqStatement = main.bodyOrNull<DeclarationStatement>(2)
+        assertNotNull(cmpNeqStatement)
+
+        val cmpNeqDeclaration = cmpNeqStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpNeqDeclaration)
+        assertLocalName("b", cmpNeqDeclaration)
+        assertEquals("i1", cmpNeqDeclaration.type.typeName)
+
+        val cmpNeq = cmpNeqDeclaration.initializer
+        assertIs<BinaryOperator>(cmpNeq)
+        assertEquals("!=", cmpNeq.operatorCode)
+
+        val cmpUgtStatement = main.bodyOrNull<DeclarationStatement>(3)
+        assertNotNull(cmpUgtStatement)
+
+        val cmpUgtDeclaration = cmpUgtStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpUgtDeclaration)
+        assertLocalName("c", cmpUgtDeclaration)
+        assertEquals("i1", cmpUgtDeclaration.type.typeName)
+
+        val cmpUgt = cmpUgtDeclaration.initializer
+        assertIs<BinaryOperator>(cmpUgt)
+        assertEquals(">", cmpUgt.operatorCode)
+
+        val cmpUltStatement = main.bodyOrNull<DeclarationStatement>(4)
+        assertNotNull(cmpUltStatement)
+
+        val cmpUltDeclaration = cmpUltStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpUltDeclaration)
+        assertLocalName("d", cmpUltDeclaration)
+        assertEquals("i1", cmpUltDeclaration.type.typeName)
+
+        val cmpUlt = cmpUltDeclaration.initializer
+        assertIs<BinaryOperator>(cmpUlt)
+        assertEquals("<", cmpUlt.operatorCode)
+
+        val cmpUgeStatement = main.bodyOrNull<DeclarationStatement>(5)
+        assertNotNull(cmpUgeStatement)
+
+        val cmpUgeDeclaration = cmpUgeStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpUgeDeclaration)
+        assertLocalName("e", cmpUgeDeclaration)
+        assertEquals("i1", cmpUgeDeclaration.type.typeName)
+
+        val cmpUge = cmpUgeDeclaration.initializer
+        assertIs<BinaryOperator>(cmpUge)
+        assertEquals(">=", cmpUge.operatorCode)
+
+        val cmpUleStatement = main.bodyOrNull<DeclarationStatement>(6)
+        assertNotNull(cmpUleStatement)
+
+        val cmpUleDeclaration = cmpUleStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpUleDeclaration)
+        assertLocalName("f", cmpUleDeclaration)
+        assertEquals("i1", cmpUleDeclaration.type.typeName)
+
+        val cmpUle = cmpUleDeclaration.initializer
+        assertIs<BinaryOperator>(cmpUle)
+        assertEquals("<=", cmpUle.operatorCode)
+
+        val cmpSgtStatement = main.bodyOrNull<DeclarationStatement>(7)
+        assertNotNull(cmpSgtStatement)
+
+        val cmpSgtDeclaration = cmpSgtStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpSgtDeclaration)
+        assertLocalName("g", cmpSgtDeclaration)
+        assertEquals("i1", cmpSgtDeclaration.type.typeName)
+
+        val cmpSgt = cmpSgtDeclaration.initializer
+        assertIs<BinaryOperator>(cmpSgt)
+        assertEquals(">", cmpSgt.operatorCode)
+
+        val cmpSltStatement = main.bodyOrNull<DeclarationStatement>(8)
+        assertNotNull(cmpSltStatement)
+
+        val cmpSltDeclaration = cmpSltStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpSltDeclaration)
+        assertLocalName("h", cmpSltDeclaration)
+        assertEquals("i1", cmpSltDeclaration.type.typeName)
+
+        val cmpSlt = cmpSltDeclaration.initializer
+        assertIs<BinaryOperator>(cmpSlt)
+        assertEquals("<", cmpSlt.operatorCode)
+
+        val cmpSgeStatement = main.bodyOrNull<DeclarationStatement>(9)
+        assertNotNull(cmpSgeStatement)
+
+        val cmpSgeDeclaration = cmpSgeStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpSgeDeclaration)
+        assertLocalName("i", cmpSgeDeclaration)
+        assertEquals("i1", cmpSgeDeclaration.type.typeName)
+
+        val cmpSge = cmpSgeDeclaration.initializer
+        assertIs<BinaryOperator>(cmpSge)
+        assertEquals(">=", cmpSge.operatorCode)
+
+        val cmpSleStatement = main.bodyOrNull<DeclarationStatement>(10)
+        assertNotNull(cmpSleStatement)
+
+        val cmpSleDeclaration = cmpSleStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpSleDeclaration)
+        assertLocalName("j", cmpSleDeclaration)
+        assertEquals("i1", cmpSleDeclaration.type.typeName)
+
+        val cmpSle = cmpSleDeclaration.initializer
+        assertIs<BinaryOperator>(cmpSle)
+        assertEquals("<=", cmpSle.operatorCode)
+    }
 }
