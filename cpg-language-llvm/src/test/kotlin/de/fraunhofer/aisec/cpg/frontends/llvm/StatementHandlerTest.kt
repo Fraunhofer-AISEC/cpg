@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -659,5 +661,22 @@ class StatementHandlerTest {
         val cmpUne = cmpUneOr.rhs
         assertIs<BinaryOperator>(cmpUne)
         assertEquals("!=", cmpUne.operatorCode)
+    }
+
+    @Test
+    fun testCallBr() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("callbr.ll").toFile()), topLevel, true) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val callBrInstruction = mainBody.statements[3]
+        assertIs<ProblemExpression>(callBrInstruction)
     }
 }
