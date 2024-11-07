@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -718,6 +719,116 @@ class StatementHandlerTest {
         assertFullName("llvm.freeze", elseExpression)
         assertEquals(1, elseExpression.arguments.size)
         assertRefersTo(elseExpression.arguments.firstOrNull(), wDeclaration)
+    }
+
+    @Test
+    fun testAtomicrmw() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("atomicrmw.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        val fooBody = foo.body
+        assertIs<Block>(fooBody)
+
+        val atomicrmwAddStatement = fooBody[0]
+        assertIs<Block>(atomicrmwAddStatement)
+        checkAtomicRmwBinaryOpReplacement(atomicrmwAddStatement, "+", "old1")
+
+        val atomicrmwSubStatement = fooBody[1]
+        assertIs<Block>(atomicrmwSubStatement)
+        checkAtomicRmwBinaryOpReplacement(atomicrmwSubStatement, "-", "old2")
+
+        val atomicrmwAndStatement = fooBody[2]
+        assertIs<Block>(atomicrmwAndStatement)
+        checkAtomicRmwBinaryOpReplacement(atomicrmwAndStatement, "&", "old3")
+
+        val atomicrmwOrStatement = fooBody[3]
+        assertIs<Block>(atomicrmwOrStatement)
+        checkAtomicRmwBinaryOpReplacement(atomicrmwOrStatement, "|", "old4")
+
+        val atomicrmwXorStatement = fooBody[4]
+        assertIs<Block>(atomicrmwXorStatement)
+        checkAtomicRmwBinaryOpReplacement(atomicrmwXorStatement, "^", "old5")
+
+        val atomicrmwNandStatement = fooBody[5]
+        assertIs<Block>(atomicrmwNandStatement)
+        val declaration = atomicrmwNandStatement.statements[0].declarations[0]
+        assertIs<VariableDeclaration>(declaration)
+        assertLocalName("old6", declaration)
+        assertLocalName("i32", declaration.type)
+        val initializer = declaration.initializer
+        assertIs<UnaryOperator>(initializer)
+        assertEquals("*", initializer.operatorCode)
+        assertLocalName("ptr", initializer.input)
+
+        // Check that the replacement equals *ptr = ~(*ptr | 1)
+        val replacementNand = atomicrmwNandStatement.statements[1]
+        assertIs<AssignExpression>(replacementNand)
+        assertEquals(1, replacementNand.lhs.size)
+        assertEquals(1, replacementNand.rhs.size)
+        assertEquals("=", replacementNand.operatorCode)
+        val replacementNandLhs = replacementNand.lhs.first()
+        assertIs<UnaryOperator>(replacementNandLhs)
+        assertEquals("*", replacementNandLhs.operatorCode)
+        assertLocalName("ptr", replacementNandLhs.input)
+        // Check that the rhs is equal to ~(*ptr | 1)
+        val unaryOp = replacementNand.rhs.first()
+        assertIs<UnaryOperator>(unaryOp)
+        assertEquals("~", unaryOp.operatorCode)
+        val binOp = unaryOp.input
+        assertIs<BinaryOperator>(binOp)
+        assertEquals("|", binOp.operatorCode)
+        val binOpLhs = binOp.lhs
+        assertIs<UnaryOperator>(binOpLhs)
+        assertEquals("*", binOpLhs.operatorCode)
+        assertLocalName("ptr", binOpLhs.input)
+        assertLiteralValue(1L, binOp.rhs)
+    }
+
+    private fun checkAtomicRmwBinaryOpReplacement(
+        atomicrmwStatement: Block,
+        operator: String,
+        variableName: String
+    ) {
+        // Check that the value is assigned to
+        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        assertIs<VariableDeclaration>(declaration)
+        assertLocalName(variableName, declaration)
+        assertLocalName("i32", declaration.type)
+        val initializer = declaration.initializer
+        assertIs<UnaryOperator>(initializer)
+        assertEquals("*", initializer.operatorCode)
+        assertLocalName("ptr", initializer.input)
+
+        // Check that the replacement equals *ptr = *ptr <operator> 1
+        val replacement = atomicrmwStatement.statements[1]
+
+        assertIs<AssignExpression>(replacement)
+        assertEquals(1, replacement.lhs.size)
+        assertEquals(1, replacement.rhs.size)
+        assertEquals("=", replacement.operatorCode)
+        val replacementLhs = replacement.lhs.first()
+        assertIs<UnaryOperator>(replacementLhs)
+        assertEquals("*", replacementLhs.operatorCode)
+        assertLocalName("ptr", replacementLhs.input)
+        // Check that the rhs is equal to *ptr + 1
+        val binOp = replacement.rhs.first()
+        assertIs<BinaryOperator>(binOp)
+        assertEquals(operator, binOp.operatorCode)
+        val binOpLhs = binOp.lhs
+        assertIs<UnaryOperator>(binOpLhs)
+        assertEquals("*", binOpLhs.operatorCode)
+        assertLocalName("ptr", binOpLhs.input)
+        assertLiteralValue(1L, binOp.rhs)
     }
 
     @Test

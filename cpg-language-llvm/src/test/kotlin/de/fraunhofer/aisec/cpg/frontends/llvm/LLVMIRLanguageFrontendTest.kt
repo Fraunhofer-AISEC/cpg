@@ -348,55 +348,6 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun testAtomicrmw() {
-        val topLevel = Path.of("src", "test", "resources", "llvm")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("atomicrmw.ll").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<LLVMIRLanguage>()
-            }
-
-        val foo = tu.functions["foo"]
-        assertNotNull(foo)
-
-        val atomicrmwStatement = foo.bodyOrNull<Block>()
-        assertNotNull(atomicrmwStatement)
-
-        // Check that the value is assigned to
-        val declaration = atomicrmwStatement.statements[0].declarations[0]
-        assertIs<VariableDeclaration>(declaration)
-        assertLocalName("old", declaration)
-        assertLocalName("i32", declaration.type)
-        val initializer = declaration.initializer
-        assertIs<UnaryOperator>(initializer)
-        assertEquals("*", initializer.operatorCode)
-        assertLocalName("ptr", initializer.input)
-
-        // Check that the replacement equals *ptr = *ptr + 1
-        val replacement = atomicrmwStatement.statements[1]
-        assertIs<AssignExpression>(replacement)
-        assertEquals(1, replacement.lhs.size)
-        assertEquals(1, replacement.rhs.size)
-        assertEquals("=", replacement.operatorCode)
-        val replacementLhs = replacement.lhs.first()
-        assertIs<UnaryOperator>(replacementLhs)
-        assertEquals("*", replacementLhs.operatorCode)
-        assertLocalName("ptr", replacementLhs.input)
-        // Check that the rhs is equal to *ptr + 1
-        val add = replacement.rhs.first()
-        assertIs<BinaryOperator>(add)
-        assertEquals("+", add.operatorCode)
-        val addLhs = add.lhs
-        assertIs<UnaryOperator>(addLhs)
-        assertEquals("*", addLhs.operatorCode)
-        assertLocalName("ptr", addLhs.input)
-        assertLiteralValue(1L, add.rhs)
-    }
-
-    @Test
     fun testCmpxchg() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
