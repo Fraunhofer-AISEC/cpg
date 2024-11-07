@@ -69,9 +69,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             return declarationOrNot(frontend.expressionHandler.handleCastInstruction(instr), instr)
         }
 
-        val opcode = instr.opCode
-
-        when (opcode) {
+        return when (val opcode = instr.opCode) {
             LLVMRet -> {
                 val ret = newReturnStatement(rawNode = instr)
 
@@ -80,28 +78,32 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     ret.returnValue = frontend.getOperandValueAtIndex(instr, 0)
                 }
 
-                return ret
+                ret
             }
             LLVMBr -> {
-                return handleBrStatement(instr)
+                handleBrStatement(instr)
             }
             LLVMSwitch -> {
-                return handleSwitchStatement(instr)
+                handleSwitchStatement(instr)
             }
             LLVMIndirectBr -> {
-                return handleIndirectbrStatement(instr)
+                handleIndirectbrStatement(instr)
             }
             LLVMCall,
             LLVMInvoke -> {
-                return handleFunctionCall(instr)
+                handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
                 // Does nothing
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
-                log.error("Cannot parse callbr instruction yet")
+                newProblemExpression(
+                    "Cannot handle callbr instruction yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
             LLVMFNeg -> {
                 val fneg = newUnaryOperator("-", postfix = false, prefix = true, rawNode = instr)
@@ -114,115 +116,113 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         decl.singleDeclaration as VariableDeclaration
                 }
 
-                return decl
+                decl
             }
             LLVMAlloca -> {
-                return handleAlloca(instr)
+                handleAlloca(instr)
             }
             LLVMLoad -> {
-                return handleLoad(instr)
+                handleLoad(instr)
             }
             LLVMStore -> {
-                return handleStore(instr)
+                handleStore(instr)
             }
             LLVMExtractValue,
             LLVMGetElementPtr -> {
-                return declarationOrNot(
-                    frontend.expressionHandler.handleGetElementPtr(instr),
-                    instr
-                )
+                declarationOrNot(frontend.expressionHandler.handleGetElementPtr(instr), instr)
             }
             LLVMICmp -> {
-                return handleIntegerComparison(instr)
+                handleIntegerComparison(instr)
             }
             LLVMFCmp -> {
-                return handleFloatComparison(instr)
+                handleFloatComparison(instr)
             }
             LLVMPHI -> {
                 frontend.phiList.add(instr)
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMSelect -> {
-                return declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
+                declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
             }
             LLVMUserOp1,
             LLVMUserOp2 -> {
                 log.info(
                     "userop instruction is not a real instruction. Replacing it with empty statement"
                 )
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMVAArg -> {
-                return handleVaArg(instr)
+                handleVaArg(instr)
             }
             LLVMExtractElement -> {
-                return handleExtractelement(instr)
+                handleExtractelement(instr)
             }
             LLVMInsertElement -> {
-                return handleInsertelement(instr)
+                handleInsertelement(instr)
             }
             LLVMShuffleVector -> {
-                return handleShufflevector(instr)
+                handleShufflevector(instr)
             }
             LLVMInsertValue -> {
-                return handleInsertValue(instr)
+                handleInsertValue(instr)
             }
             LLVMFreeze -> {
-                return handleFreeze(instr)
+                handleFreeze(instr)
             }
             LLVMFence -> {
-                return handleFence(instr)
+                handleFence(instr)
             }
             LLVMAtomicCmpXchg -> {
-                return handleAtomiccmpxchg(instr)
+                handleAtomiccmpxchg(instr)
             }
             LLVMAtomicRMW -> {
-                return handleAtomicrmw(instr)
+                handleAtomicrmw(instr)
             }
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                return newThrowExpression(rawNode = instr).apply {
+                newThrowExpression(rawNode = instr).apply {
                     exception =
                         newProblemExpression("We don't know the exception while parsing this node.")
                 }
             }
             LLVMLandingPad -> {
-                return handleLandingpad(instr)
+                handleLandingpad(instr)
             }
             LLVMCleanupRet -> {
                 // End of the cleanup basic block(s)
                 // Jump to a label where handling the exception will unwind to next (e.g. a
                 // catchswitch statement)
-                return handleCatchret(instr)
+                handleCatchret(instr)
             }
             LLVMCatchRet -> {
                 // Catch (caught by catchpad instruction) is over.
                 // Jumps to a label where the "normal" function logic continues
-                return handleCatchret(instr)
+                handleCatchret(instr)
             }
             LLVMCatchPad -> {
                 // Actually handles the exception.
-                return handleCatchpad(instr)
+                handleCatchpad(instr)
             }
             LLVMCleanupPad -> {
                 // Beginning of the cleanup basic block(s).
                 // We should model this as the beginning of a catch block
-                return handleCleanuppad(instr)
+                handleCleanuppad(instr)
             }
             LLVMCatchSwitch -> {
                 // Marks the beginning of a "real" catch block
                 // Jumps to one of the handlers specified or to the default handler (if specified)
-                return handleCatchswitch(instr)
+                handleCatchswitch(instr)
+            }
+            else -> {
+                log.error("Not handling instruction opcode {} yet", opcode)
+                newProblemExpression(
+                    "Not handling instruction opcode $opcode yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
         }
-
-        log.error("Not handling instruction opcode {} yet", opcode)
-        return newProblemExpression(
-            "Not handling instruction opcode $opcode yet",
-            ProblemNode.ProblemType.TRANSLATION,
-            rawNode = instr
-        )
     }
 
     /**
