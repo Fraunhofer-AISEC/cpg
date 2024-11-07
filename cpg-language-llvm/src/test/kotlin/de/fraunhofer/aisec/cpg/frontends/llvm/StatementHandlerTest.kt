@@ -33,11 +33,15 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertFullName
+import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
+import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -661,6 +665,59 @@ class StatementHandlerTest {
         val cmpUne = cmpUneOr.rhs
         assertIs<BinaryOperator>(cmpUne)
         assertEquals("!=", cmpUne.operatorCode)
+    }
+
+    @Test
+    fun testFreeze() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("freeze.ll").toFile()), topLevel, true) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val wDeclaration = main.variables["w"]
+        assertNotNull(wDeclaration)
+
+        val freezeInstructionDeclaration = mainBody.statements[3]
+        // We expect something like this: x = (w != undef && w != poison) ? w : llvm.freeze(w)
+        assertIs<DeclarationStatement>(freezeInstructionDeclaration)
+        val xDeclaration = freezeInstructionDeclaration.singleDeclaration
+        assertIs<VariableDeclaration>(xDeclaration)
+        assertLocalName("x", xDeclaration)
+        assertEquals("i32", xDeclaration.type.typeName)
+
+        val freezeInstruction = xDeclaration.initializer
+        assertIs<ConditionalExpression>(freezeInstruction)
+        val condition = freezeInstruction.condition
+        assertIs<BinaryOperator>(condition)
+        assertEquals("&&", condition.operatorCode)
+
+        val undefCheck = condition.lhs
+        assertIs<BinaryOperator>(undefCheck)
+        assertEquals("!=", undefCheck.operatorCode)
+        assertRefersTo(undefCheck.lhs, wDeclaration)
+        // undef is modeled as null
+        assertLiteralValue(null, undefCheck.rhs)
+
+        val poisonCheck = condition.rhs
+        assertIs<BinaryOperator>(poisonCheck)
+        assertEquals("!=", poisonCheck.operatorCode)
+        assertRefersTo(poisonCheck.lhs, wDeclaration)
+        // poison is modeled as the string "POISON"
+        assertLiteralValue("POISON", poisonCheck.rhs)
+
+        assertRefersTo(freezeInstruction.thenExpression, wDeclaration)
+
+        val elseExpression = freezeInstruction.elseExpression
+        assertIs<CallExpression>(elseExpression)
+        assertFullName("llvm.freeze", elseExpression)
+        assertEquals(1, elseExpression.arguments.size)
+        assertRefersTo(elseExpression.arguments.firstOrNull(), wDeclaration)
     }
 
     @Test

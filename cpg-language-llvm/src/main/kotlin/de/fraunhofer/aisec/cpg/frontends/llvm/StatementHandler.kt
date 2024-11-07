@@ -754,7 +754,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             newCallExpression(llvmInternalRef("llvm.freeze"), "llvm.freeze", false, rawNode = instr)
         callExpression.addArgument(operand)
 
-        // res = (arg != undef && arg != poison) ? arg : llvm.freeze(in)
+        // res = (arg != undef && arg != poison) ? arg : llvm.freeze(arg)
         val conditional =
             newConditionalExpression(
                 condition,
