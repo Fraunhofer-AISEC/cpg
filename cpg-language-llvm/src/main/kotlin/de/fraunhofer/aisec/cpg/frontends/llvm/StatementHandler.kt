@@ -978,7 +978,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
-                throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")
+                newProblemExpression(
+                    "LLVMAtomicRMWBinOp $operation not supported",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
         }
 
