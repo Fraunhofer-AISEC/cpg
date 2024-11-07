@@ -1033,6 +1033,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Get the label of the goto statement.
             val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
             caseStatements.statements += gotoStatement
+            caseStatements.statements += newBreakStatement().implicit()
             idx++
         }
 

@@ -29,13 +29,18 @@ import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -910,5 +915,44 @@ class StatementHandlerTest {
         assertIs<Block>(mainBody)
         val callBrInstruction = mainBody.statements[3]
         assertIs<ProblemExpression>(callBrInstruction)
+    }
+
+    @Test
+    fun testIndirectBr() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("indirectbr.ll").toFile()),
+                topLevel,
+                false
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        val fooBody = foo.body
+        assertIs<Block>(fooBody)
+        val indirectbrInstruction = fooBody.statements[0]
+        assertIs<SwitchStatement>(indirectbrInstruction)
+        assertRefersTo(indirectbrInstruction.selector, foo.parameters.single())
+        val jumps = indirectbrInstruction.statement
+        assertIs<Block>(jumps)
+        val caseBB1 = jumps.statements[0]
+        assertIs<CaseStatement>(caseBB1)
+        assertIs<Literal<*>>(caseBB1.caseExpression)
+        val jumpBB1 = jumps.statements[1]
+        assertIs<GotoStatement>(jumpBB1)
+        assertEquals("bb1", jumpBB1.targetLabel?.label)
+        assertIs<BreakStatement>(jumps.statements[2])
+
+        val caseBB2 = jumps.statements[3]
+        assertIs<CaseStatement>(caseBB2)
+        assertIs<Literal<*>>(caseBB2.caseExpression)
+        val jumpBB2 = jumps.statements[4]
+        assertIs<GotoStatement>(jumpBB2)
+        assertEquals("bb2", jumpBB2.targetLabel?.label)
+        assertIs<BreakStatement>(jumps.statements[5])
     }
 }
