@@ -89,22 +89,21 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 )
             }
             else -> {
-                log.info(
-                    "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
-                    kind
-                )
                 // old stuff from getOperandValue, needs to be refactored to the `when` above
                 return if (LLVMIsConstant(value) != 1) {
-                    val operandName =
+                    log.info("Update handling value kind {} to the new way", kind)
+                    var printVal =
                         if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
                             // Already resolve the aliasee of the constant
-                            LLVMPrintValueToString(LLVMAliasGetAliasee(value)).string
+                            LLVMAliasGetAliasee(value)
                         } else {
-                            // This does not return the actual constant but only a string
-                            // representation
-                            LLVMPrintValueToString(value).string
+                            value
                         }
-                    newLiteral(operandName, frontend.typeOf(value), rawNode = value)
+                    newLiteral(
+                        LLVMPrintValueToString(printVal).string,
+                        frontend.typeOf(value),
+                        rawNode = value
+                    )
                 } else {
                     log.error("Unknown expression {}", kind)
                     newProblemExpression(
