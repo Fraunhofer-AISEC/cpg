@@ -748,8 +748,8 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(poisonCheck)
         assertEquals("!=", poisonCheck.operatorCode)
         assertRefersTo(poisonCheck.lhs, wDeclaration)
-        // poison is modeled as the string "POISON"
-        assertLiteralValue("POISON", poisonCheck.rhs)
+        // poison is modeled as a reference "poison"
+        assertLocalName("poison", poisonCheck.rhs)
 
         assertRefersTo(freezeInstruction.thenExpression, wDeclaration)
 

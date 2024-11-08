@@ -741,12 +741,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         condition.lhs = undefCheck
         val poisonCheck = newBinaryOperator("!=", rawNode = instr)
         poisonCheck.lhs = operand
-        poisonCheck.rhs =
-            newLiteral(
-                "POISON",
-                operand.type,
-                rawNode = instr
-            ) // This could be e.g. NAN. Not sure for complex types
+        // This could be e.g. NAN. Not sure for complex types
+        poisonCheck.rhs = newReference("poison", operand.type, rawNode = instr)
         condition.rhs = poisonCheck
 
         // Call to a dummy function "llvm.freeze" which would fill the undef or poison values
