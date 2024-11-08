@@ -18,6 +18,8 @@ define half @main() {   ; i32()*
   %j = fcmp ule half %x, %y
   %k = fcmp ueq half %x, %y
   %l = fcmp une half %x, %y
+  %m = fcmp ord half %x, %y
+  %n = fcmp uno half %x, %y
 
   ret half %x
 }

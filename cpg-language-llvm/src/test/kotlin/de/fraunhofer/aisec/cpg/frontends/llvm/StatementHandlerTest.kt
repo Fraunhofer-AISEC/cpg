@@ -504,6 +504,8 @@ class StatementHandlerTest {
 
         val xDeclaration = tu.variables["x"]
         assertNotNull(xDeclaration)
+        val yDeclaration = tu.variables["y"]
+        assertNotNull(yDeclaration)
 
         val call = xDeclaration.initializer
         assertIs<CallExpression>(call)
@@ -672,6 +674,37 @@ class StatementHandlerTest {
         val cmpUne = cmpUneOr.rhs
         assertIs<BinaryOperator>(cmpUne)
         assertEquals("!=", cmpUne.operatorCode)
+
+        val cmpOrdStatement = main.bodyOrNull<DeclarationStatement>(14)
+        assertNotNull(cmpOrdStatement)
+
+        val cmpOrdDeclaration = cmpOrdStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpOrdDeclaration)
+        assertLocalName("m", cmpOrdDeclaration)
+        assertEquals("i1", cmpOrdDeclaration.type.typeName)
+
+        val cmpOrdNeg = cmpOrdDeclaration.initializer
+        assertIs<UnaryOperator>(cmpOrdNeg)
+        assertEquals("!", cmpOrdNeg.operatorCode)
+        val cmpOrd = cmpOrdNeg.input
+        assertIs<CallExpression>(cmpOrd)
+        assertLocalName("isunordered", cmpOrd)
+        assertRefersTo(cmpOrd.arguments[0], xDeclaration)
+        assertRefersTo(cmpOrd.arguments[1], yDeclaration)
+
+        val cmpUnoStatement = main.bodyOrNull<DeclarationStatement>(15)
+        assertNotNull(cmpUnoStatement)
+
+        val cmpUnoDeclaration = cmpUnoStatement.singleDeclaration
+        assertIs<VariableDeclaration>(cmpUnoDeclaration)
+        assertLocalName("n", cmpUnoDeclaration)
+        assertEquals("i1", cmpUnoDeclaration.type.typeName)
+
+        val cmpUno = cmpUnoDeclaration.initializer
+        assertIs<CallExpression>(cmpUno)
+        assertLocalName("isunordered", cmpUno)
+        assertRefersTo(cmpUno.arguments[0], xDeclaration)
+        assertRefersTo(cmpUno.arguments[1], yDeclaration)
     }
 
     @Test
