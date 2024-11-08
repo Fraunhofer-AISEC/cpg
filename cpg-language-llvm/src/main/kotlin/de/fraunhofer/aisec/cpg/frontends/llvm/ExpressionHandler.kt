@@ -243,11 +243,35 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                             ProblemNode.ProblemType.TRANSLATION,
                             rawNode = value
                         )
+                LLVMMul,
+                LLVMFMul ->
+                    frontend.statementHandler.handleBinaryOperator(value, "*", false) as? Expression
+                        ?: newProblemExpression(
+                            "Wrong type of constant binary operation *",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            rawNode = value
+                        )
+                LLVMShl ->
+                    frontend.statementHandler.handleBinaryOperator(value, "<<", false)
+                        as? Expression
+                        ?: newProblemExpression(
+                            "Wrong type of constant binary operation <<",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            rawNode = value
+                        )
+                LLVMLShr,
                 LLVMAShr ->
                     frontend.statementHandler.handleBinaryOperator(value, ">>", false)
                         as? Expression
                         ?: newProblemExpression(
                             "Wrong type of constant binary operation >>",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            rawNode = value
+                        )
+                LLVMXor ->
+                    frontend.statementHandler.handleBinaryOperator(value, "^", false) as? Expression
+                        ?: newProblemExpression(
+                            "Wrong type of constant binary operation <<",
                             ProblemNode.ProblemType.TRANSLATION,
                             rawNode = value
                         )
