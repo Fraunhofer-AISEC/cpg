@@ -41,6 +41,30 @@ import kotlin.test.assertNotNull
 
 class ExpressionHandlerTest {
     @Test
+    fun testConstantFloat() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("floatingpoint_const.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        val globalX = tu.variables["x"]
+        assertNotNull(globalX)
+        assertLiteralValue(1.25, globalX.initializer)
+
+        val a = tu.variables["a"]
+        assertNotNull(a)
+        val aInit = a.initializer
+        assertIs<BinaryOperator>(aInit)
+        assertLiteralValue(1.25, aInit.lhs)
+        assertLiteralValue(1.0, aInit.rhs)
+    }
+
+    @Test
     fun testConstantExpr() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
