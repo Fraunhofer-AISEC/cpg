@@ -132,7 +132,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 declarationOrNot(frontend.expressionHandler.handleGetElementPtr(instr), instr)
             }
             LLVMICmp -> {
-                handleIntegerComparison(instr)
+                declarationOrNot(handleIntegerComparison(instr), instr)
             }
             LLVMFCmp -> {
                 handleFloatComparison(instr)
@@ -425,57 +425,60 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /** Handles all kinds of instructions which are an arithmetic or logical binary instruction. */
     private fun handleBinaryInstruction(instr: LLVMValueRef): Statement {
-        when (instr.opCode) {
-            LLVMAdd,
-            LLVMFAdd -> {
-                return handleBinaryOperator(instr, "+", false)
+        val binaryOperator =
+            when (instr.opCode) {
+                LLVMAdd,
+                LLVMFAdd -> {
+                    handleBinaryOperator(instr, "+", false)
+                }
+                LLVMSub,
+                LLVMFSub -> {
+                    handleBinaryOperator(instr, "-", false)
+                }
+                LLVMMul,
+                LLVMFMul -> {
+                    handleBinaryOperator(instr, "*", false)
+                }
+                LLVMUDiv -> {
+                    handleBinaryOperator(instr, "/", true)
+                }
+                LLVMSDiv,
+                LLVMFDiv -> {
+                    handleBinaryOperator(instr, "/", false)
+                }
+                LLVMURem -> {
+                    handleBinaryOperator(instr, "%", true)
+                }
+                LLVMSRem,
+                LLVMFRem -> {
+                    handleBinaryOperator(instr, "%", false)
+                }
+                LLVMShl -> {
+                    handleBinaryOperator(instr, "<<", false)
+                }
+                LLVMLShr -> {
+                    handleBinaryOperator(instr, ">>", true)
+                }
+                LLVMAShr -> {
+                    handleBinaryOperator(instr, ">>", false)
+                }
+                LLVMAnd -> {
+                    handleBinaryOperator(instr, "&", false)
+                }
+                LLVMOr -> {
+                    handleBinaryOperator(instr, "|", false)
+                }
+                LLVMXor -> {
+                    handleBinaryOperator(instr, "^", false)
+                }
+                else ->
+                    newProblemExpression(
+                        "No opcode found for binary operator",
+                        ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = instr
+                    )
             }
-            LLVMSub,
-            LLVMFSub -> {
-                return handleBinaryOperator(instr, "-", false)
-            }
-            LLVMMul,
-            LLVMFMul -> {
-                return handleBinaryOperator(instr, "*", false)
-            }
-            LLVMUDiv -> {
-                return handleBinaryOperator(instr, "/", true)
-            }
-            LLVMSDiv,
-            LLVMFDiv -> {
-                return handleBinaryOperator(instr, "/", false)
-            }
-            LLVMURem -> {
-                return handleBinaryOperator(instr, "%", true)
-            }
-            LLVMSRem,
-            LLVMFRem -> {
-                return handleBinaryOperator(instr, "%", false)
-            }
-            LLVMShl -> {
-                return handleBinaryOperator(instr, "<<", false)
-            }
-            LLVMLShr -> {
-                return handleBinaryOperator(instr, ">>", true)
-            }
-            LLVMAShr -> {
-                return handleBinaryOperator(instr, ">>", false)
-            }
-            LLVMAnd -> {
-                return handleBinaryOperator(instr, "&", false)
-            }
-            LLVMOr -> {
-                return handleBinaryOperator(instr, "|", false)
-            }
-            LLVMXor -> {
-                return handleBinaryOperator(instr, "^", false)
-            }
-        }
-        return newProblemExpression(
-            "Not opcode found for binary operator",
-            ProblemNode.ProblemType.TRANSLATION,
-            rawNode = instr
-        )
+        return declarationOrNot(binaryOperator, instr)
     }
 
     /**
@@ -529,7 +532,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`icmp`](https://llvm.org/docs/LangRef.html#icmp-instruction) instruction for
      * comparing integer values.
      */
-    fun handleIntegerComparison(instr: LLVMValueRef): Statement {
+    fun handleIntegerComparison(instr: LLVMValueRef): Expression {
         var unsigned = false
         val cmpPred =
             when (LLVMGetICmpPredicate(instr)) {
@@ -610,7 +613,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 else -> "unknown"
             }
 
-        return handleBinaryOperator(instr, cmpPred, false, unordered)
+        return declarationOrNot(handleBinaryOperator(instr, cmpPred, false, unordered), instr)
     }
 
     /**
@@ -1532,7 +1535,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         op: String,
         unsigned: Boolean,
         unordered: Boolean = false
-    ): Statement {
+    ): Expression {
         val op1 = frontend.getOperandValueAtIndex(instr, 0)
         val op2 = frontend.getOperandValueAtIndex(instr, 1)
 
@@ -1605,17 +1608,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
-        val declOp = if (unordered) binOpUnordered else binaryOperator
-        val decl =
-            declOp?.let { declarationOrNot(it, instr) }
-                ?: newProblemExpression("Could not parse declaration")
-
-        (decl as? DeclarationStatement)?.let {
-            // cache binding
-            frontend.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
-        }
-
-        return decl
+        return binOpUnordered ?: binaryOperator
     }
 
     /**

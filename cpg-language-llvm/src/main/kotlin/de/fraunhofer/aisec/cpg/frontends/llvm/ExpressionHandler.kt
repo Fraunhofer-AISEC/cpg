@@ -210,46 +210,42 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * regular expression.
      */
     private fun handleConstantExprValueKind(value: LLVMValueRef): Expression {
-        val kind = LLVMGetConstOpcode(value)
-        val expr =
-            when (kind) {
-                LLVMGetElementPtr -> handleGetElementPtr(value)
-                LLVMSelect -> handleSelect(value)
-                LLVMTrunc,
-                LLVMZExt,
-                LLVMSExt,
-                LLVMFPToUI,
-                LLVMFPToSI,
-                LLVMUIToFP,
-                LLVMSIToFP,
-                LLVMFPTrunc,
-                LLVMFPExt,
-                LLVMPtrToInt,
-                LLVMIntToPtr,
-                LLVMBitCast,
-                LLVMAddrSpaceCast -> handleCastInstruction(value)
-                LLVMAdd,
-                LLVMFAdd -> frontend.statementHandler.handleBinaryOperator(value, "+", false)
-                LLVMSub,
-                LLVMFSub -> frontend.statementHandler.handleBinaryOperator(value, "-", false)
-                LLVMMul,
-                LLVMFMul -> frontend.statementHandler.handleBinaryOperator(value, "*", false)
-                LLVMShl -> frontend.statementHandler.handleBinaryOperator(value, "<<", false)
-                LLVMLShr,
-                LLVMAShr -> frontend.statementHandler.handleBinaryOperator(value, ">>", false)
-                LLVMXor -> frontend.statementHandler.handleBinaryOperator(value, "^", false)
-                LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value)
-                else -> {
-                    log.error("Not handling constant expression of opcode {} yet", kind)
-                    null
-                }
+        return when (val kind = LLVMGetConstOpcode(value)) {
+            LLVMGetElementPtr -> handleGetElementPtr(value)
+            LLVMSelect -> handleSelect(value)
+            LLVMTrunc,
+            LLVMZExt,
+            LLVMSExt,
+            LLVMFPToUI,
+            LLVMFPToSI,
+            LLVMUIToFP,
+            LLVMSIToFP,
+            LLVMFPTrunc,
+            LLVMFPExt,
+            LLVMPtrToInt,
+            LLVMIntToPtr,
+            LLVMBitCast,
+            LLVMAddrSpaceCast -> handleCastInstruction(value)
+            LLVMAdd,
+            LLVMFAdd -> frontend.statementHandler.handleBinaryOperator(value, "+", false)
+            LLVMSub,
+            LLVMFSub -> frontend.statementHandler.handleBinaryOperator(value, "-", false)
+            LLVMMul,
+            LLVMFMul -> frontend.statementHandler.handleBinaryOperator(value, "*", false)
+            LLVMShl -> frontend.statementHandler.handleBinaryOperator(value, "<<", false)
+            LLVMLShr,
+            LLVMAShr -> frontend.statementHandler.handleBinaryOperator(value, ">>", false)
+            LLVMXor -> frontend.statementHandler.handleBinaryOperator(value, "^", false)
+            LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value)
+            else -> {
+                log.error("Not handling constant expression of opcode {} yet", kind)
+                newProblemExpression(
+                    "Not handling constant expression of opcode $kind yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = value
+                )
             }
-        return (expr as? Expression)
-            ?: newProblemExpression(
-                "Could not handle constant expression of opcode $kind correctly",
-                ProblemNode.ProblemType.TRANSLATION,
-                rawNode = value
-            )
+        }
     }
 
     /**
