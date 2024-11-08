@@ -210,8 +210,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * regular expression.
      */
     private fun handleConstantExprValueKind(value: LLVMValueRef): Expression {
+        val kind = LLVMGetConstOpcode(value)
         val expr =
-            when (val kind = LLVMGetConstOpcode(value)) {
+            when (kind) {
                 LLVMGetElementPtr -> handleGetElementPtr(value)
                 LLVMSelect -> handleSelect(value)
                 LLVMTrunc,
@@ -228,71 +229,27 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMBitCast,
                 LLVMAddrSpaceCast -> handleCastInstruction(value)
                 LLVMAdd,
-                LLVMFAdd ->
-                    frontend.statementHandler.handleBinaryOperator(value, "+", false) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation +",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
+                LLVMFAdd -> frontend.statementHandler.handleBinaryOperator(value, "+", false)
                 LLVMSub,
-                LLVMFSub ->
-                    frontend.statementHandler.handleBinaryOperator(value, "-", false) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation -",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
+                LLVMFSub -> frontend.statementHandler.handleBinaryOperator(value, "-", false)
                 LLVMMul,
-                LLVMFMul ->
-                    frontend.statementHandler.handleBinaryOperator(value, "*", false) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation *",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                LLVMShl ->
-                    frontend.statementHandler.handleBinaryOperator(value, "<<", false)
-                        as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation <<",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
+                LLVMFMul -> frontend.statementHandler.handleBinaryOperator(value, "*", false)
+                LLVMShl -> frontend.statementHandler.handleBinaryOperator(value, "<<", false)
                 LLVMLShr,
-                LLVMAShr ->
-                    frontend.statementHandler.handleBinaryOperator(value, ">>", false)
-                        as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation >>",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                LLVMXor ->
-                    frontend.statementHandler.handleBinaryOperator(value, "^", false) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation <<",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                LLVMICmp ->
-                    frontend.statementHandler.handleIntegerComparison(value) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant comparison",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
+                LLVMAShr -> frontend.statementHandler.handleBinaryOperator(value, ">>", false)
+                LLVMXor -> frontend.statementHandler.handleBinaryOperator(value, "^", false)
+                LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value)
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
-                    newProblemExpression(
-                        "Not handling constant expression of opcode $kind yet",
-                        ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = value
-                    )
+                    null
                 }
             }
-
-        return expr
+        return (expr as? Expression)
+            ?: newProblemExpression(
+                "Could not handle constant expression of opcode $kind correctly",
+                ProblemNode.ProblemType.TRANSLATION,
+                rawNode = value
+            )
     }
 
     /**
