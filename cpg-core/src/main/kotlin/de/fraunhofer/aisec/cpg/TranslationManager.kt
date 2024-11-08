@@ -146,6 +146,13 @@ private constructor(
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
+            sourceLocations =
+                sourceLocations.filter { file ->
+                    ctx.config.excludedDirectories.none { excludedDir ->
+                        file.toPath().contains(excludedDir)
+                    }
+                }
+
             var useParallelFrontends = ctx.config.useParallelFrontends
 
             val list =

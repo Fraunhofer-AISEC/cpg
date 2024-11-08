@@ -117,6 +117,8 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    /** This list contains the directories which should be excluded from the analysis. */
+    val excludedDirectories: List<Path>
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -257,6 +259,7 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private val excludedDirectories = mutableListOf<Path>()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -453,6 +456,12 @@ private constructor(
             return this.configurePass(T::class, config)
         }
 
+        /** Adds the directories to the [excludedDirectories] list. */
+        fun excludedDirs(dirs: List<String>): Builder {
+            excludedDirectories.addAll(dirs.map { Path.of(it) })
+            return this
+        }
+
         /**
          * Loads and registers an additional [Language] based on a fully qualified class name (FQN).
          */
@@ -647,7 +656,8 @@ private constructor(
                 compilationDatabase,
                 matchCommentsToNodes,
                 addIncludesToGraph,
-                passConfigurations
+                passConfigurations,
+                excludedDirectories
             )
         }
 
