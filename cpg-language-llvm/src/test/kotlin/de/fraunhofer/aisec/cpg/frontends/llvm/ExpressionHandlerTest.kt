@@ -144,5 +144,16 @@ class ExpressionHandlerTest {
         assertIs<CastExpression>(argumentFX)
         assertRefersTo(argumentFX.expression, globalX)
         assertLiteralValue(5L, argumentF.rhs)
+
+        val gInitCall = tu.variables["g"]?.initializer
+        assertIs<CallExpression>(gInitCall)
+        assertLocalName("foo1", gInitCall)
+        val argumentG = gInitCall.arguments.singleOrNull()
+        assertIs<BinaryOperator>(argumentG)
+        assertEquals("==", argumentG.operatorCode)
+        val argumentGX = argumentG.lhs
+        assertIs<CastExpression>(argumentGX)
+        assertRefersTo(argumentGX.expression, globalX)
+        assertLiteralValue(5L, argumentG.rhs)
     }
 }
