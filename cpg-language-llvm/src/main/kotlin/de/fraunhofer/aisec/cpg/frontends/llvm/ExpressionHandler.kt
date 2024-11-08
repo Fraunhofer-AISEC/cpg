@@ -63,6 +63,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMPoisonValueValueKind -> {
                 newReference("poison", frontend.typeOf(value), rawNode = value)
             }
+            LLVMConstantTargetNoneValueKind -> newLiteral(null, unknownType(), rawNode = value)
             LLVMConstantTokenNoneValueKind -> newLiteral(null, unknownType(), rawNode = value)
             LLVMUndefValueValueKind -> initializeAsUndef(frontend.typeOf(value), value)
             LLVMConstantAggregateZeroValueKind -> initializeAsZero(frontend.typeOf(value), value)
@@ -92,41 +93,25 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
                     kind
                 )
-                val cpgType = frontend.typeOf(value)
-
-                // old stuff from getOperandValue, needs to be refactored to the when above
-                // TODO also move the other stuff to the expression handler
-                return when {
-                    LLVMIsConstant(value) != 1 -> {
-                        val operandName: String =
-                            if (
-                                LLVMIsAGlobalAlias(value) != null ||
-                                    LLVMIsGlobalConstant(value) == 1
-                            ) {
-                                val aliasee = LLVMAliasGetAliasee(value)
-                                LLVMPrintValueToString(aliasee)
-                                    .string // Already resolve the aliasee of the constant
-                            } else {
-                                // TODO This does not return the actual constant but only a string
-                                // representation
-                                LLVMPrintValueToString(value).string
-                            }
-                        newLiteral(operandName, cpgType, rawNode = value)
-                    }
-                    LLVMIsUndef(value) == 1 -> {
-                        newReference("undef", cpgType, rawNode = value)
-                    }
-                    LLVMIsPoison(value) == 1 -> {
-                        newReference("poison", cpgType, rawNode = value)
-                    }
-                    else -> {
-                        log.error("Unknown expression {}", kind)
-                        newProblemExpression(
-                            "Unknown expression $kind",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                    }
+                // old stuff from getOperandValue, needs to be refactored to the `when` above
+                return if (LLVMIsConstant(value) != 1) {
+                    val operandName =
+                        if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
+                            // Already resolve the aliasee of the constant
+                            LLVMPrintValueToString(LLVMAliasGetAliasee(value)).string
+                        } else {
+                            // This does not return the actual constant but only a string
+                            // representation
+                            LLVMPrintValueToString(value).string
+                        }
+                    newLiteral(operandName, frontend.typeOf(value), rawNode = value)
+                } else {
+                    log.error("Unknown expression {}", kind)
+                    newProblemExpression(
+                        "Unknown expression $kind",
+                        ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = value
+                    )
                 }
             }
         }
