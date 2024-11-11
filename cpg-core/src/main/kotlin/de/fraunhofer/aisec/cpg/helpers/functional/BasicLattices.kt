@@ -79,7 +79,8 @@ open class PowersetLattice<V>(elements: Set<V>) : LatticeElement<Set<V>>(element
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is PowersetLattice<V> && this.elements == other.elements
+        // The call of `toSet` ensures that we don't get stuck for different types of sets.
+        return other is PowersetLattice<V> && this.elements.toSet() == other.elements.toSet()
     }
 
     override fun hashCode(): Int {
