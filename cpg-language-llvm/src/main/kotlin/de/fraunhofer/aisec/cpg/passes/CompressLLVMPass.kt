@@ -206,7 +206,11 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /** Iterates through all nodes which are reachable from the catch clause */
+    /**
+     * Iterates through all nodes which are reachable from the catch clause. Note: When reaching a
+     * `TryStatement`, we do not follow the path further. This is why we can't use the `allChildren`
+     * extension.
+     */
     private fun getAllChildrenRecursively(node: CatchClause?): Set<Node> {
         if (node == null) return setOf()
         val worklist: Queue<Node> = LinkedList()
