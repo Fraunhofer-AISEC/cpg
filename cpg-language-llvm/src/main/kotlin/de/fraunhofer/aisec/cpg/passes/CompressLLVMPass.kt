@@ -78,22 +78,23 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     handleTryStatement(node)
                 }
                 is Block -> {
-                    // Get the last statement in a Block and replace a goto statement
-                    // iff it is the only one jumping to the target
-                    val goto = node.statements.lastOrNull() as? GotoStatement
-                    val gotoSubstatement = goto?.targetLabel?.subStatement as? Block
-                    if (
-                        goto != null &&
-                            gotoSubstatement != null &&
-                            goto in gotosToReplace &&
-                            node !in gotoSubstatement.allChildren<Block>()
-                    ) {
-                        val newStatements = node.statements.dropLast(1).toMutableList()
-                        newStatements.addAll(gotoSubstatement.statements)
-                        node.statements = newStatements
-                    }
+                    handleBlock(node, gotosToReplace)
                 }
             }
+        }
+    }
+
+    /**
+     * Get the last statement in a Block and replace a goto statement iff it is the only one jumping
+     * to the target
+     */
+    private fun handleBlock(node: Block, gotosToReplace: List<GotoStatement>) {
+        val goto = node.statements.lastOrNull() as? GotoStatement ?: return
+        val gotoSubstatement = goto.targetLabel?.subStatement as? Block ?: return
+        if (goto in gotosToReplace && node !in gotoSubstatement.allChildren<Block>()) {
+            val newStatements = node.statements.dropLast(1).toMutableList()
+            newStatements.addAll(gotoSubstatement.statements)
+            node.statements = newStatements
         }
     }
 
@@ -113,7 +114,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 subStatement?.let { newStatements[i] = it }
             }
         }
-        (node.statement as? Block)?.statements = newStatements
+        caseBodyStatements.statements = newStatements
     }
 
     /**
@@ -135,9 +136,10 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun handleTryStatement(node: TryStatement) {
-        val firstStatement = node.catchClauses.firstOrNull()?.body?.statements?.get(0)
-        when {
-            node.catchClauses.size == 1 && firstStatement is CatchClause -> {
+        val firstCatch = node.catchClauses.singleOrNull()
+        val firstStatement = firstCatch?.body?.statements?.get(0)
+        when (firstStatement) {
+            is CatchClause -> {
                 /* Initially, we expect only a single catch clause which contains all the logic.
                  * The first statement of the clause should have been a `landingpad` instruction
                  * which has been translated to a CatchClause. We get this clause and set it as the
@@ -145,29 +147,24 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                  */
                 val catchClauses = mutableListOf<CatchClause>()
 
-                val caseBody = node.catchClauses[0].body
+                val caseBody = firstCatch.body
 
                 // This is the most generic one
                 catchClauses.add(firstStatement)
                 caseBody?.statements = caseBody.statements.drop(1).toMutableList()
                 catchClauses[0].body = caseBody
-                if (node.catchClauses[0].parameter != null) {
-                    catchClauses[0].parameter = node.catchClauses[0].parameter
+                if (firstCatch.parameter != null) {
+                    catchClauses[0].parameter = firstCatch.parameter
                 }
                 node.catchClauses = catchClauses
-
-                fixThrowExpressionsForCatch(node.catchClauses[0])
             }
-            node.catchClauses.size == 1 && firstStatement is Block -> {
+            is Block -> {
                 // A compound statement which is wrapped in the catchClause. We can simply move
                 // it one layer up and make the compound statement the body of the catch clause.
-                node.catchClauses[0].body?.statements = firstStatement.statements
-                fixThrowExpressionsForCatch(node.catchClauses[0])
-            }
-            else -> {
-                node.catchClauses.forEach(::fixThrowExpressionsForCatch)
+                firstCatch.body?.statements = firstStatement.statements
             }
         }
+        node.catchClauses.forEach(::fixThrowExpressionsForCatch)
     }
 
     /**
