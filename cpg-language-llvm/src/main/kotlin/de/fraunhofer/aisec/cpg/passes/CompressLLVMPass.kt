@@ -56,7 +56,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Enforce the order: First IfStatements, then SwitchStatements, then the rest. This
         // prevents to treat the final goto in the case or default statement as a normal
         // compound
-        // statement which would lead to inlining the instructions BB but we want to keep the BB
+        // statement which would lead to inlining the instructions BB, but we want to keep the BB
         // inside a Block.
         for (node in
             flatAST.sortedBy { n ->
@@ -72,21 +72,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     handleIfStatement(node, gotosToReplace)
                 }
                 is SwitchStatement -> {
-                    // Iterate over all statements in a body of the switch/case and replace a goto
-                    // statement if it is the only one jumping to the target
-                    val caseBodyStatements = node.statement as Block
-                    val newStatements = caseBodyStatements.statements.toMutableList()
-                    for (i in 0 until newStatements.size) {
-                        val subStatement =
-                            (newStatements[i] as? GotoStatement)?.targetLabel?.subStatement
-                        if (
-                            newStatements[i] in gotosToReplace &&
-                                newStatements[i] !in (subStatement?.astChildren ?: listOf())
-                        ) {
-                            subStatement?.let { newStatements[i] = it }
-                        }
-                    }
-                    (node.statement as Block).statements = newStatements
+                    handleSwitchStatement(node, gotosToReplace)
                 }
                 is TryStatement -> {
                     handleTryStatement(node)
@@ -94,18 +80,16 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 is Block -> {
                     // Get the last statement in a Block and replace a goto statement
                     // iff it is the only one jumping to the target
-                    val goto = node.statements.lastOrNull()
+                    val goto = node.statements.lastOrNull() as? GotoStatement
+                    val gotoSubstatement = goto?.targetLabel?.subStatement as? Block
                     if (
                         goto != null &&
+                            gotoSubstatement != null &&
                             goto in gotosToReplace &&
-                            node !in
-                                SubgraphWalker.flattenAST(
-                                    (goto as GotoStatement).targetLabel?.subStatement
-                                )
+                            node !in gotoSubstatement.allChildren<Block>()
                     ) {
-                        val subStatement = goto.targetLabel?.subStatement
                         val newStatements = node.statements.dropLast(1).toMutableList()
-                        newStatements.addAll((subStatement as Block).statements)
+                        newStatements.addAll(gotoSubstatement.statements)
                         node.statements = newStatements
                     }
                 }
@@ -113,35 +97,47 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun handleIfStatement(node: IfStatement, gotosToReplace: List<GotoStatement>) {
-        // Replace the then-statement with the basic block it jumps to iff we found that
-        // its goto statement is the only one jumping to the target
-        if (
-            node.thenStatement in gotosToReplace &&
-                node !in
-                    SubgraphWalker.flattenAST(
-                        (node.thenStatement as GotoStatement).targetLabel?.subStatement
-                    )
-        ) {
-            node.thenStatement = (node.thenStatement as GotoStatement).targetLabel?.subStatement
+    /**
+     * Iterates over all statements in a body of the switch/case and replace a goto statement if it
+     * is the only one jumping to the target
+     */
+    private fun handleSwitchStatement(node: SwitchStatement, gotosToReplace: List<GotoStatement>) {
+        val caseBodyStatements = node.statement as? Block ?: return
+        val newStatements = caseBodyStatements.statements.toMutableList()
+        for (i in 0 until newStatements.size) {
+            val subStatement = (newStatements[i] as? GotoStatement)?.targetLabel?.subStatement
+            if (
+                newStatements[i] in gotosToReplace &&
+                    newStatements[i] !in (subStatement?.astChildren ?: listOf())
+            ) {
+                subStatement?.let { newStatements[i] = it }
+            }
         }
-        // Replace the else-statement with the basic block it jumps to iff we found that
-        // its goto statement is the only one jumping to the target
-        if (
-            node.elseStatement in gotosToReplace &&
-                node !in
-                    SubgraphWalker.flattenAST(
-                        (node.elseStatement as GotoStatement).targetLabel?.subStatement
-                    )
-        ) {
-            node.elseStatement = (node.elseStatement as GotoStatement).targetLabel?.subStatement
+        (node.statement as? Block)?.statements = newStatements
+    }
+
+    /**
+     * Replace the then-statement and else-statement with the basic block it jumps to iff we found
+     * that its goto statement is the only one jumping to the target
+     */
+    private fun handleIfStatement(node: IfStatement, gotosToReplace: List<GotoStatement>) {
+
+        // Replace the then-statement
+        val thenGoto = (node.thenStatement as? GotoStatement)?.targetLabel?.subStatement
+        if (node.thenStatement in gotosToReplace && node !in thenGoto.allChildren<IfStatement>()) {
+            node.thenStatement = thenGoto
+        }
+        // Replace the else-statement
+        val elseGoto = (node.elseStatement as? GotoStatement)?.targetLabel?.subStatement
+        if (node.elseStatement in gotosToReplace && node !in elseGoto.allChildren<IfStatement>()) {
+            node.elseStatement = elseGoto
         }
     }
 
     private fun handleTryStatement(node: TryStatement) {
+        val firstStatement = node.catchClauses.firstOrNull()?.body?.statements?.get(0)
         when {
-            node.catchClauses.size == 1 &&
-                node.catchClauses[0].body?.statements?.get(0) is CatchClause -> {
+            node.catchClauses.size == 1 && firstStatement is CatchClause -> {
                 /* Initially, we expect only a single catch clause which contains all the logic.
                  * The first statement of the clause should have been a `landingpad` instruction
                  * which has been translated to a CatchClause. We get this clause and set it as the
@@ -152,9 +148,8 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val caseBody = node.catchClauses[0].body
 
                 // This is the most generic one
-                val clauseToAdd = caseBody?.statements?.get(0) as CatchClause
-                catchClauses.add(clauseToAdd)
-                caseBody.statements = caseBody.statements.drop(1).toMutableList()
+                catchClauses.add(firstStatement)
+                caseBody?.statements = caseBody.statements.drop(1).toMutableList()
                 catchClauses[0].body = caseBody
                 if (node.catchClauses[0].parameter != null) {
                     catchClauses[0].parameter = node.catchClauses[0].parameter
@@ -163,20 +158,14 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
                 fixThrowExpressionsForCatch(node.catchClauses[0])
             }
-            node.catchClauses.size == 1 &&
-                node.catchClauses[0].body?.statements?.get(0) is Block -> {
+            node.catchClauses.size == 1 && firstStatement is Block -> {
                 // A compound statement which is wrapped in the catchClause. We can simply move
-                // it
-                // one layer up and make
-                // the compound statement the body of the catch clause.
-                val innerCompound = node.catchClauses[0].body?.statements?.get(0) as? Block
-                innerCompound?.statements?.let { node.catchClauses[0].body?.statements = it }
+                // it one layer up and make the compound statement the body of the catch clause.
+                node.catchClauses[0].body?.statements = firstStatement.statements
                 fixThrowExpressionsForCatch(node.catchClauses[0])
             }
-            node.catchClauses.isNotEmpty() -> {
-                for (catch in node.catchClauses) {
-                    fixThrowExpressionsForCatch(catch)
-                }
+            else -> {
+                node.catchClauses.forEach(::fixThrowExpressionsForCatch)
             }
         }
     }
@@ -192,30 +181,34 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
-            if (catch.parameter == null) {
-                val error =
-                    newVariableDeclaration(
-                        "e_${catch.name}",
-                        UnknownType.getUnknownType(catch.language),
-                        true,
-                    )
-                error.language = catch.language
-                catch.parameter = error
+            val catchParameter =
+                catch.parameter
+                    ?: newVariableDeclaration(
+                            "e_${catch.name}",
+                            UnknownType.getUnknownType(catch.language),
+                            implicitInitializerAllowed = true,
+                        )
+                        .apply {
+                            language = catch.language
+                            catch.parameter = this
+                        }
+                        .implicit()
+
+            reachableThrowNodes.forEach {
+                it.exception =
+                    newReference(catchParameter.name, catchParameter.type)
+                        .apply {
+                            language = catch.language
+                            refersTo = catch.parameter
+                        }
+                        .implicit()
             }
-            val exceptionReference =
-                newReference(
-                    catch.parameter?.name,
-                    catch.parameter?.type ?: UnknownType.getUnknownType(catch.language),
-                )
-            exceptionReference.language = catch.language
-            exceptionReference.refersTo = catch.parameter
-            reachableThrowNodes.forEach { n -> n.exception = exceptionReference }
         }
     }
 
     /** Iterates through all nodes which are reachable from the catch clause */
     private fun getAllChildrenRecursively(node: CatchClause?): Set<Node> {
-        if (node == null) return LinkedHashSet()
+        if (node == null) return setOf()
         val worklist: Queue<Node> = LinkedList()
         worklist.add(node.body)
         val alreadyChecked = LinkedHashSet<Node>()
@@ -225,7 +218,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // We exclude sub-try statements as they would mess up with the results
             val toAdd =
                 currentNode.astChildren.filter { n ->
-                    n !is TryStatement && !alreadyChecked.contains(n) && !worklist.contains(n)
+                    n !is TryStatement && n !in alreadyChecked && n !in worklist
                 }
             worklist.addAll(toAdd)
         }
