@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeT
+import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.emptyMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.emptyPowersetLattice
 import kotlin.test.Test
@@ -36,6 +37,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 
 class BasicLatticesTest {
     @Test
@@ -44,6 +46,7 @@ class BasicLatticesTest {
         val emptyLattice2 = emptyPowersetLattice<Node>()
         assertEquals(0, emptyLattice1.compareTo(emptyLattice2))
         assertEquals(emptyLattice1, emptyLattice2)
+        assertNotSame(emptyLattice1.hashCode(), emptyLattice1.hashCode())
 
         val blaLattice1 = PowersetLattice<String>(setOf("bla"))
         val blaLattice2 = PowersetLattice<String>(setOf("bla"))
@@ -115,6 +118,7 @@ class BasicLatticesTest {
         val emptyLattice2 = emptyMapLattice<String, Set<String>>()
         assertEquals(0, emptyLattice1.compareTo(emptyLattice2))
         assertEquals(emptyLattice1, emptyLattice2)
+        assertNotSame(emptyLattice1.hashCode(), emptyLattice1.hashCode())
 
         val aBlaLattice1 =
             MapLattice<String, Set<String>>(mapOf("a" to PowersetLattice(setOf("bla"))))
@@ -206,5 +210,48 @@ class BasicLatticesTest {
         assertEquals(setOf("a", "b"), aBlaFooBBla.elements.keys)
         assertEquals(setOf("bla", "foo"), aBlaFooBBla.elements["a"]?.elements)
         assertEquals(setOf("bla"), aBlaFooBBla.elements["b"]?.elements)
+    }
+
+    @Test
+    fun testPairLattice() {
+        val emptyEmpty =
+            TupleLattice<Set<String>, Set<String>>(
+                Pair(emptyPowersetLattice<String>(), emptyPowersetLattice<String>())
+            )
+        val emptyBla =
+            TupleLattice<Set<String>, Set<String>>(
+                Pair(emptyPowersetLattice<String>(), PowersetLattice<String>(setOf("bla")))
+            )
+        val blaEmpty =
+            TupleLattice<Set<String>, Set<String>>(
+                Pair(PowersetLattice<String>(setOf("bla")), emptyPowersetLattice<String>())
+            )
+        val emptyBla2 = emptyBla.duplicate()
+        assertEquals(0, emptyBla.compareTo(emptyBla2))
+        assertEquals(emptyBla, emptyBla2)
+        assertNotSame(emptyBla, emptyBla2)
+        assertNotSame(emptyBla.hashCode(), emptyBla2.hashCode())
+        val (emptyBlaFirst, emptyBlaSecond) = emptyBla
+        assertSame(emptyBlaFirst, emptyBla.elements.first)
+        assertSame(emptyBlaSecond, emptyBla.elements.second)
+        assertNotSame(emptyBlaFirst, emptyBla2.elements.first)
+        assertEquals(emptyBlaFirst, emptyBla2.elements.first)
+        assertNotSame(emptyBlaSecond, emptyBla2.elements.second)
+        assertEquals(emptyBlaSecond, emptyBla2.elements.second)
+
+        assertEquals(-1, emptyEmpty.compareTo(emptyBla))
+        assertEquals(-1, emptyEmpty.compareTo(blaEmpty))
+        assertEquals(1, emptyBla.compareTo(emptyEmpty))
+        assertEquals(1, blaEmpty.compareTo(emptyEmpty))
+        assertEquals(-1, blaEmpty.compareTo(emptyBla))
+        assertEquals(-1, emptyBla.compareTo(blaEmpty))
+
+        val blaBla = emptyBla.lub(blaEmpty)
+        assertEquals(-1, emptyEmpty.compareTo(blaBla))
+        assertEquals(-1, emptyBla.compareTo(blaBla))
+        assertEquals(-1, blaEmpty.compareTo(blaBla))
+        assertEquals(1, blaBla.compareTo(emptyEmpty))
+        assertEquals(1, blaBla.compareTo(emptyBla))
+        assertEquals(1, blaBla.compareTo(blaEmpty))
     }
 }
