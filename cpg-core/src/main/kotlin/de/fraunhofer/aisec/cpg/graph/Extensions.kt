@@ -200,50 +200,115 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
 fun Node.followPrevFullDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
-    val fulfilledPaths = mutableListOf<List<Node>>()
-    val failedPaths = mutableListOf<List<Node>>()
-    val worklist = mutableListOf<List<Node>>()
-    worklist.add(listOf(this))
+    return followXUntilHit(
+        x = { currentNode -> currentNode.prevFullDFG },
+        collectFailedPaths = true,
+        findAllPossiblePaths = true,
+        predicate = predicate
+    )
+}
 
-    while (worklist.isNotEmpty()) {
-        val currentPath = worklist.removeFirst()
-        if (currentPath.last().prevFullDFG.isEmpty()) {
-            // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
-            continue
+fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followPrevCDGUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis
+        ) {
+            false
         }
+        .failed
+}
 
-        for (prev in currentPath.last().prevFullDFG) {
-            // Copy the path for each outgoing DFG edge and add the prev node
-            val nextPath = mutableListOf<Node>()
-            nextPath.addAll(currentPath)
-            nextPath.add(prev)
-
-            if (predicate(prev)) {
-                fulfilledPaths.add(nextPath)
-                continue // Don't add this path anymore. The requirement is satisfied.
-            }
-            // The prev node is new in the current path (i.e., there's no loop), so we add the path
-            // with the next step to the worklist.
-            if (!currentPath.contains(prev)) {
-                worklist.add(nextPath)
-            }
+fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followNextCDGUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis
+        ) {
+            false
         }
-    }
-
-    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+        .failed
 }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
- * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
- * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ * contains all possible shortest data flow paths (with [ControlDependence]) between the starting
+ * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
+ * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followNextFullDFGEdgesUntilHit(
+fun Node.followNextCDGUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = false,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode ->
+            val nextNodes = currentNode.nextCDG.toMutableList()
+            if (interproceduralAnalysis) {
+                nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+            }
+            nextNodes
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [ControlDependence]) between the starting
+ * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
+ * represented as lists of nodes. Paths which do not end at such a node are included in
+ * [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followPrevCDGUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = false,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode ->
+            val nextNodes = currentNode.prevCDG.toMutableList()
+            if (interproceduralAnalysis) {
+                nextNodes.addAll(
+                    (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                        it.astParent as? CallExpression
+                    } ?: listOf()
+                )
+            }
+            nextNodes
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [x] specifying how to fetch more nodes)
+ * between the starting node [this] and the end node fulfilling [predicate] (backwards analysis).
+ * The paths are represented as lists of nodes. Paths which do not end at such a node are included
+ * in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
+ * not mandatory**. If the list "failed" is empty, the path is mandatory.
+ */
+fun Node.followXUntilHit(
+    x: (Node) -> List<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     predicate: (Node) -> Boolean
@@ -264,15 +329,15 @@ fun Node.followNextFullDFGEdgesUntilHit(
         worklist.remove(currentPath)
         val currentNode = currentPath.last()
         alreadySeenNodes.add(currentNode)
-        // The last node of the path is where we continue. We get all of its outgoing DFG edges and
+        // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        if (currentNode.nextFullDFG.isEmpty()) {
-            // No further nodes in the path and the path criteria are not satisfied.
-            if (collectFailedPaths) failedPaths.add(currentPath)
-        }
+        var nextNodes = x(currentNode)
 
-        for (next in currentNode.nextFullDFG) {
-            // Copy the path for each outgoing DFG edge and add the next node
+        // No further nodes in the path and the path criteria are not satisfied.
+        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath)
+
+        for (next in nextNodes) {
+            // Copy the path for each outgoing CDG edge and add the next node
             val nextPath = currentPath.toMutableList()
             nextPath.add(next)
             if (predicate(next)) {
@@ -298,6 +363,28 @@ fun Node.followNextFullDFGEdgesUntilHit(
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
+ * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followNextFullDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode -> currentNode.nextFullDFG },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
  * contains all possible shortest evaluation paths between the starting node [this] and the end node
  * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
  * such a node are included in [FulfilledAndFailedPaths.failed].
@@ -307,45 +394,14 @@ fun Node.followNextFullDFGEdgesUntilHit(
  * such a statement is always executed.
  */
 fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
-    // Looks complicated but at least it's not recursive...
-    // result: List of paths (between from and to)
-    val fulfilledPaths = mutableListOf<List<Node>>()
-    // failedPaths: All the paths which do not satisfy "predicate"
-    val failedPaths = mutableListOf<List<Node>>()
-    // The list of paths where we're not done yet.
-    val worklist = mutableListOf<List<Node>>()
-    worklist.add(listOf(this)) // We start only with the "from" node (=this)
-
-    while (worklist.isNotEmpty()) {
-        val currentPath = worklist.removeFirst()
-        // The last node of the path is where we continue. We get all of its outgoing DFG edges and
-        // follow them
-        if (currentPath.last().nextEOGEdges.none { it.unreachable != true }) {
-            // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
-            continue // Don't add this path anymore. The requirement is satisfied.
-        }
-
-        for (next in
-            currentPath.last().nextEOGEdges.filter { it.unreachable != true }.map { it.end }) {
-            // Copy the path for each outgoing DFG edge and add the next node
-            val nextPath = mutableListOf<Node>()
-            nextPath.addAll(currentPath)
-            nextPath.add(next)
-            if (predicate(next)) {
-                // We ended up in the node "to", so we're done. Add the path to the results.
-                fulfilledPaths.add(nextPath)
-                continue // Don't add this path anymore. The requirement is satisfied.
-            }
-            // The next node is new in the current path (i.e., there's no loop), so we add the path
-            // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
-                worklist.add(nextPath)
-            }
-        }
-    }
-
-    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+    return followXUntilHit(
+        x = { currentNode ->
+            currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+        },
+        collectFailedPaths = true,
+        findAllPossiblePaths = true,
+        predicate = predicate
+    )
 }
 
 /**
@@ -359,45 +415,14 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  * such a statement is always executed.
  */
 fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
-    // Looks complicated but at least it's not recursive...
-    // result: List of paths (between from and to)
-    val fulfilledPaths = mutableListOf<List<Node>>()
-    // failedPaths: All the paths which do not satisfy "predicate"
-    val failedPaths = mutableListOf<List<Node>>()
-    // The list of paths where we're not done yet.
-    val worklist = mutableListOf<List<Node>>()
-    worklist.add(listOf(this)) // We start only with the "from" node (=this)
-
-    while (worklist.isNotEmpty()) {
-        val currentPath = worklist.removeFirst()
-        // The last node of the path is where we continue. We get all of its outgoing DFG edges and
-        // follow them
-        if (currentPath.last().prevEOGEdges.none { it.unreachable != true }) {
-            // No further nodes in the path and the path criteria are not satisfied.
-            failedPaths.add(currentPath)
-            continue // Don't add this path anymore. The requirement is satisfied.
-        }
-
-        for (next in
-            currentPath.last().prevEOGEdges.filter { it.unreachable != true }.map { it.start }) {
-            // Copy the path for each outgoing DFG edge and add the next node
-            val nextPath = mutableListOf<Node>()
-            nextPath.addAll(currentPath)
-            nextPath.add(next)
-            if (predicate(next)) {
-                // We ended up in the node "to", so we're done. Add the path to the results.
-                fulfilledPaths.add(nextPath)
-                continue // Don't add this path anymore. The requirement is satisfied.
-            }
-            // The next node is new in the current path (i.e., there's no loop), so we add the path
-            // with the next step to the worklist.
-            if (!currentPath.contains(next)) {
-                worklist.add(nextPath)
-            }
-        }
-    }
-
-    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+    return followXUntilHit(
+        x = { currentNode ->
+            currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+        },
+        collectFailedPaths = true,
+        findAllPossiblePaths = true,
+        predicate = predicate
+    )
 }
 
 /**
@@ -634,7 +659,7 @@ fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
             return node
         }
 
-        // go up-wards in the ast tree
+        // go upwards in the ast tree
         node = node.astParent
     }
 
