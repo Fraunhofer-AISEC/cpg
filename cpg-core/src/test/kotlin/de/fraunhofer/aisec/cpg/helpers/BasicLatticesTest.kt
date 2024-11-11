@@ -29,11 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeT
+import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.emptyMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.emptyPowersetLattice
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
@@ -210,6 +212,10 @@ class BasicLatticesTest {
         assertEquals(setOf("a", "b"), aBlaFooBBla.elements.keys)
         assertEquals(setOf("bla", "foo"), aBlaFooBBla.elements["a"]?.elements)
         assertEquals(setOf("bla"), aBlaFooBBla.elements["b"]?.elements)
+
+        assertFalse(aBlaFooBBla == emptyLattice1) // Wrong elements
+        assertFalse(aBlaFooBBla == aBlaFooBBla.elements["a"]) // Wrong types
+        assertFalse(aBlaFooBBla.elements["a"] == aBlaFooBBla) // Wrong types
     }
 
     @Test
@@ -253,5 +259,85 @@ class BasicLatticesTest {
         assertEquals(1, blaBla.compareTo(emptyEmpty))
         assertEquals(1, blaBla.compareTo(emptyBla))
         assertEquals(1, blaBla.compareTo(blaEmpty))
+
+        // We explicitly want to call equals here
+        assertFalse(blaBla == emptyBla) // Wrong elements
+        assertFalse(blaBla == emptyBlaFirst) // Wrong types
+        assertFalse(emptyBlaFirst == blaBla) // Wrong types
+    }
+
+    @Test
+    fun testTripleLattice() {
+        val emptyEmptyEmpty =
+            TripleLattice<Set<String>, Set<String>, Set<String>>(
+                Triple(
+                    emptyPowersetLattice<String>(),
+                    emptyPowersetLattice<String>(),
+                    emptyPowersetLattice<String>()
+                )
+            )
+        val emptyEmptyBla =
+            TripleLattice<Set<String>, Set<String>, Set<String>>(
+                Triple(
+                    emptyPowersetLattice<String>(),
+                    emptyPowersetLattice<String>(),
+                    PowersetLattice<String>(setOf("bla"))
+                )
+            )
+        val emptyBlaEmpty =
+            TripleLattice<Set<String>, Set<String>, Set<String>>(
+                Triple(
+                    emptyPowersetLattice<String>(),
+                    PowersetLattice<String>(setOf("bla")),
+                    emptyPowersetLattice<String>()
+                )
+            )
+        val blaEmptyEmpty =
+            TripleLattice<Set<String>, Set<String>, Set<String>>(
+                Triple(
+                    PowersetLattice<String>(setOf("bla")),
+                    emptyPowersetLattice<String>(),
+                    emptyPowersetLattice<String>()
+                )
+            )
+        val emptyBla2 = emptyEmptyBla.duplicate()
+        assertEquals(0, emptyEmptyBla.compareTo(emptyBla2))
+        assertEquals(emptyEmptyBla, emptyBla2)
+        assertNotSame(emptyEmptyBla, emptyBla2)
+        assertNotSame(emptyEmptyBla.hashCode(), emptyBla2.hashCode())
+        val (emptyBlaFirst, emptyBlaSecond, emptyBlaThird) = emptyEmptyBla
+        assertSame(emptyBlaFirst, emptyEmptyBla.elements.first)
+        assertSame(emptyBlaSecond, emptyEmptyBla.elements.second)
+        assertSame(emptyBlaThird, emptyEmptyBla.elements.third)
+        assertNotSame(emptyBlaFirst, emptyBla2.elements.first)
+        assertEquals(emptyBlaFirst, emptyBla2.elements.first)
+        assertNotSame(emptyBlaSecond, emptyBla2.elements.second)
+        assertEquals(emptyBlaSecond, emptyBla2.elements.second)
+        assertNotSame(emptyBlaThird, emptyBla2.elements.third)
+        assertEquals(emptyBlaThird, emptyBla2.elements.third)
+
+        assertEquals(-1, emptyEmptyEmpty.compareTo(emptyEmptyBla))
+        assertEquals(-1, emptyEmptyEmpty.compareTo(emptyBlaEmpty))
+        assertEquals(-1, emptyEmptyEmpty.compareTo(blaEmptyEmpty))
+        assertEquals(1, emptyEmptyBla.compareTo(emptyEmptyEmpty))
+        assertEquals(1, blaEmptyEmpty.compareTo(emptyEmptyEmpty))
+        assertEquals(1, emptyBlaEmpty.compareTo(emptyEmptyEmpty))
+        assertEquals(-1, blaEmptyEmpty.compareTo(emptyEmptyBla))
+        assertEquals(-1, emptyEmptyBla.compareTo(blaEmptyEmpty))
+        assertEquals(-1, emptyBlaEmpty.compareTo(blaEmptyEmpty))
+
+        val blaEmptyBla = emptyEmptyBla.lub(blaEmptyEmpty)
+        assertEquals(-1, emptyEmptyEmpty.compareTo(blaEmptyBla))
+        assertEquals(-1, emptyEmptyBla.compareTo(blaEmptyBla))
+        assertEquals(-1, blaEmptyEmpty.compareTo(blaEmptyBla))
+        assertEquals(-1, emptyBlaEmpty.compareTo(blaEmptyBla))
+        assertEquals(1, blaEmptyBla.compareTo(emptyEmptyEmpty))
+        assertEquals(1, blaEmptyBla.compareTo(emptyEmptyBla))
+        assertEquals(1, blaEmptyBla.compareTo(blaEmptyEmpty))
+
+        // We explicitly want to call equals here
+        assertFalse(blaEmptyBla == emptyEmptyBla) // Wrong elements
+        assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
+        assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
     }
 }
