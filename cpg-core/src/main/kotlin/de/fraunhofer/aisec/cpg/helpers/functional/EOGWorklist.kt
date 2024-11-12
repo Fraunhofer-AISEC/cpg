@@ -25,20 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import java.util.IdentityHashMap
 
-inline fun <reified K : Edge<Node>, V> iterateEOGClean(
-    startEdges: List<K>,
+inline fun <reified V> iterateEOGClean(
+    startEdges: List<EvaluationOrder>,
     startState: LatticeElement<V>,
-    transformation: (K, LatticeElement<V>) -> LatticeElement<V>
+    transformation: (EvaluationOrder, LatticeElement<V>) -> LatticeElement<V>
 ): LatticeElement<V> {
-    val globalState = IdentityHashMap<K, LatticeElement<V>>()
+    val globalState = IdentityHashMap<EvaluationOrder, LatticeElement<V>>()
     for (startEdge in startEdges) {
         globalState[startEdge] = startState
     }
-    val edgesList = mutableListOf<K>()
+    val edgesList = mutableListOf<EvaluationOrder>()
     startEdges.forEach { edgesList.add(it) }
 
     while (edgesList.isNotEmpty()) {
@@ -47,20 +46,16 @@ inline fun <reified K : Edge<Node>, V> iterateEOGClean(
 
         val nextGlobal = globalState[nextEdge] ?: continue
         val newState = transformation(nextEdge, nextGlobal)
-        if (newState != nextGlobal) {
-            nextEdge.end.nextEOGEdges.forEach {
-                if (it is K) {
-                    /*val oldStateForIt = globalState[it]
-                    val newStateForIt = oldStateForIt?.let { newState.lub(it) } ?: newState
-                    if (oldStateForIt == null || newStateForIt != oldStateForIt) {
-                        globalState[it] = newStateForIt*/
-                    globalState[it] = newState
-                    if (it !in edgesList) edgesList.add(0, it)
-                    // }
-                }
-            }
+        nextEdge.end.nextEOGEdges.forEach {
+            val oldGlobalIt = globalState[it]
+            val newGlobalIt = oldGlobalIt?.let { newState.lub(it) } ?: newState
+            globalState[it] = newGlobalIt
+            if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt))
+                edgesList.add(0, it)
         }
     }
 
-    return globalState.values.fold(globalState.values.first()) { state, value -> state.lub(value) }
+    return globalState.values.fold(globalState.values.firstOrNull()) { state, value ->
+        state?.lub(value)
+    } ?: startState
 }
