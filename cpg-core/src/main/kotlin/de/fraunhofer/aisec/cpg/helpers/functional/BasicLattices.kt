@@ -98,15 +98,21 @@ open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
     override fun lub(
         other: LatticeElement<Map<K, LatticeElement<V>>>
     ): LatticeElement<Map<K, LatticeElement<V>>> {
-        return MapLattice(
-            this.elements.entries.fold(other.elements) { current, (thisKey, thisValue) ->
-                val mutableMap = current.toMutableMap()
-                mutableMap.compute(thisKey) { k, v ->
-                    if (v == null) thisValue else thisValue.lub(v)
-                }
-                mutableMap
+        val allKeys = other.elements.keys.union(this.elements.keys)
+        val newMap =
+            allKeys.fold(mutableMapOf<K, LatticeElement<V>>()) { current, key ->
+                val otherValue = other.elements[key]
+                val thisValue = this.elements[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null) {
+                        thisValue.lub(otherValue)
+                    } else if (thisValue != null) {
+                        thisValue
+                    } else otherValue
+                newValue?.let { current[key] = it }
+                current
             }
-        )
+        return MapLattice(newMap)
     }
 
     override fun duplicate(): LatticeElement<Map<K, LatticeElement<V>>> {
