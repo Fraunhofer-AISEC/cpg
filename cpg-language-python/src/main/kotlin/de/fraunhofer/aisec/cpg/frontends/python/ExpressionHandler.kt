@@ -363,7 +363,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                             node.keys[i]?.let { handle(it) } ?: newProblemExpression("missing key"),
                         value = handle(node.values[i]),
                     )
-                    .codeAndLocationFromChildren(node)
+                    .codeAndLocationFromChildren(node, frontend.lineSeparator)
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = frontend.objectType("dict")
