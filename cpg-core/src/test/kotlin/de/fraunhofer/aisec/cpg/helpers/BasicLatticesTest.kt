@@ -40,6 +40,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class BasicLatticesTest {
     @Test
@@ -124,11 +125,11 @@ class BasicLatticesTest {
 
         val aBlaLattice1 =
             MapLattice<String, Set<String>>(mapOf("a" to PowersetLattice(setOf("bla"))))
-        val bBlaLattice2 =
+        val aBlaLattice2 =
             MapLattice<String, Set<String>>(mapOf("a" to PowersetLattice(setOf("bla"))))
-        assertEquals(0, aBlaLattice1.compareTo(bBlaLattice2))
-        assertEquals(aBlaLattice1, bBlaLattice2)
-        assertNotSame(aBlaLattice1, bBlaLattice2)
+        assertEquals(0, aBlaLattice1.compareTo(aBlaLattice2))
+        assertEquals(aBlaLattice1, aBlaLattice2)
+        assertNotSame(aBlaLattice1, aBlaLattice2)
 
         val aBlaFooLattice =
             MapLattice<String, Set<String>>(mapOf("a" to PowersetLattice(setOf("bla", "foo"))))
@@ -214,6 +215,8 @@ class BasicLatticesTest {
         assertEquals(setOf("bla"), aBlaFooBBla.elements["b"]?.elements)
 
         assertFalse(aBlaFooBBla == emptyLattice1) // Wrong elements
+        assertTrue(emptyLattice1 == emptyLattice2) // This is equal
+        assertTrue(aBlaLattice1 == aBlaLattice2) // This is equal
         assertFalse(aBlaFooBBla == aBlaFooBBla.elements["a"]) // Wrong types
         assertFalse(aBlaFooBBla.elements["a"] == aBlaFooBBla) // Wrong types
     }
@@ -262,6 +265,8 @@ class BasicLatticesTest {
 
         // We explicitly want to call equals here
         assertFalse(blaBla == emptyBla) // Wrong elements
+        assertFalse(blaBla == blaEmpty) // Wrong elements
+        assertTrue(emptyBla2 == emptyBla) // Wrong elements
         assertFalse(blaBla == emptyBlaFirst) // Wrong types
         assertFalse(emptyBlaFirst == blaBla) // Wrong types
     }
@@ -300,21 +305,21 @@ class BasicLatticesTest {
                     emptyPowersetLattice<String>()
                 )
             )
-        val emptyBla2 = emptyEmptyBla.duplicate()
-        assertEquals(0, emptyEmptyBla.compareTo(emptyBla2))
-        assertEquals(emptyEmptyBla, emptyBla2)
-        assertNotSame(emptyEmptyBla, emptyBla2)
-        assertNotSame(emptyEmptyBla.hashCode(), emptyBla2.hashCode())
+        val emptyEmptyBla2 = emptyEmptyBla.duplicate()
+        assertEquals(0, emptyEmptyBla.compareTo(emptyEmptyBla2))
+        assertEquals(emptyEmptyBla, emptyEmptyBla2)
+        assertNotSame(emptyEmptyBla, emptyEmptyBla2)
+        assertNotSame(emptyEmptyBla.hashCode(), emptyEmptyBla2.hashCode())
         val (emptyBlaFirst, emptyBlaSecond, emptyBlaThird) = emptyEmptyBla
         assertSame(emptyBlaFirst, emptyEmptyBla.elements.first)
         assertSame(emptyBlaSecond, emptyEmptyBla.elements.second)
         assertSame(emptyBlaThird, emptyEmptyBla.elements.third)
-        assertNotSame(emptyBlaFirst, emptyBla2.elements.first)
-        assertEquals(emptyBlaFirst, emptyBla2.elements.first)
-        assertNotSame(emptyBlaSecond, emptyBla2.elements.second)
-        assertEquals(emptyBlaSecond, emptyBla2.elements.second)
-        assertNotSame(emptyBlaThird, emptyBla2.elements.third)
-        assertEquals(emptyBlaThird, emptyBla2.elements.third)
+        assertNotSame(emptyBlaFirst, emptyEmptyBla2.elements.first)
+        assertEquals(emptyBlaFirst, emptyEmptyBla2.elements.first)
+        assertNotSame(emptyBlaSecond, emptyEmptyBla2.elements.second)
+        assertEquals(emptyBlaSecond, emptyEmptyBla2.elements.second)
+        assertNotSame(emptyBlaThird, emptyEmptyBla2.elements.third)
+        assertEquals(emptyBlaThird, emptyEmptyBla2.elements.third)
 
         assertEquals(-1, emptyEmptyEmpty.compareTo(emptyEmptyBla))
         assertEquals(-1, emptyEmptyEmpty.compareTo(emptyBlaEmpty))
@@ -337,6 +342,10 @@ class BasicLatticesTest {
 
         // We explicitly want to call equals here
         assertFalse(blaEmptyBla == emptyEmptyBla) // Wrong elements
+        assertFalse(emptyEmptyEmpty == emptyEmptyBla) // Wrong elements
+        assertFalse(emptyEmptyEmpty == emptyBlaEmpty) // Wrong elements
+        assertFalse(emptyEmptyEmpty == blaEmptyEmpty) // Wrong elements
+        assertTrue(emptyEmptyBla2 == emptyEmptyBla) // Same type and same elements
         assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
         assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
     }
