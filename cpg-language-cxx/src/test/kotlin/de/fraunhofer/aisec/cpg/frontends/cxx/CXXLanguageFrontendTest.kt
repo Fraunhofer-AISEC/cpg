@@ -1585,11 +1585,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // We do not want any inferred functions
         assertTrue(tu.functions.none { it.isInferred })
 
-        val noParamPointerCall = tu.calls("no_param").firstOrNull { it.callee is UnaryOperator }
+        val noParamPointerCall =
+            tu.calls("no_param").firstOrNull { it.callee is PointerDereference }
         assertInvokes(assertNotNull(noParamPointerCall), target)
 
         val noParamNoInitPointerCall =
-            tu.calls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
+            tu.calls("no_param_uninitialized").firstOrNull { it.callee is PointerDereference }
         assertInvokes(assertNotNull(noParamNoInitPointerCall), target)
 
         val noParamCall = tu.calls("no_param").firstOrNull { it.callee is Reference }
