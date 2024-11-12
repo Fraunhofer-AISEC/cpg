@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.neo4j.ogm.annotation.Relationship
 
 /** A c-style dereference, such as *i->f. */
@@ -39,4 +41,23 @@ open class PointerDereference : Reference() {
         )
     /** The expression on which the operation is applied. */
     var input by unwrapping(PointerDereference::inputEdge)
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // Only accept type changes from out input
+        if (src != input) {
+            return
+        }
+
+        this.type = newType.dereference()
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Only accept type changes from out input
+        if (src != input) {
+            return
+        }
+
+        // Apply our operator to all assigned types and forward them to us
+        this.addAssignedTypes(assignedTypes.map(Type::dereference).toSet())
+    }
 }
