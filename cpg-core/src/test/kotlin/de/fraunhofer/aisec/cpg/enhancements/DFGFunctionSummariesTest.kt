@@ -297,7 +297,9 @@ class DFGFunctionSummariesTest {
     }
 
     @Test
-    @Ignore
+    @Ignore(
+        "This test does not make sense because the DFGPass does not draw the edges between a reference to the Declaration any more, which is, however, the functionality that this test aims at."
+    )
     fun testPropagateArgumentsControlFlowInsensitive() {
         // We don't use the ControlFlowSensitiveDFGPass here to check the method
         // DFGPass.connectInferredCallArguments
