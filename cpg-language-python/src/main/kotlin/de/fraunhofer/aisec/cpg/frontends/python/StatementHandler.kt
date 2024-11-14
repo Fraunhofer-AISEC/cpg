@@ -149,7 +149,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleMatchCase(node: Python.AST.match_case, subject: String): List<Statement> {
         val statements = mutableListOf<Statement>()
-        // First, we add the CaseStatement. If the pattern is a `MatchAs` without a pattern, then
+        // First, we add the CaseStatement. A `MatchAs` without a `pattern` implies
         // it's a default statement.
         // We have to handle this here since we do not want to generate the CaseStatement in this
         // case.
@@ -193,7 +193,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * Translates a Python [`Match`](https://docs.python.org/3/library/ast.html#ast.Match) into a
      * [SwitchStatement].
      */
-    private fun handleMatch(node: Python.AST.Match) =
+    private fun handleMatch(node: Python.AST.Match): SwitchStatement =
         newSwitchStatement(rawNode = node).apply {
             val subject = frontend.expressionHandler.handle(ctx = node.subject)
             this.selector = subject
