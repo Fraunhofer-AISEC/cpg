@@ -429,7 +429,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         when {
             reference is MemberExpression -> {
                 val baseType = reference.base.type.root
-                assert(baseType !is SecondOrderType)
+                if (baseType is SecondOrderType) {
+                    return newProblemExpression(
+                        problem = "Expected something other than a `SecondOrderType` as base.",
+                        rawNode = ctx
+                    )
+                }
                 callExpression = newMemberCallExpression(reference, rawNode = ctx)
                 if (
                     (ctx.functionNameExpression as? IASTFieldReference)?.fieldName
