@@ -153,12 +153,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // it's a default statement.
         // We have to handle this here since we do not want to generate the CaseStatement in this
         // case.
+        val pattern = node.pattern
         statements +=
             if (
-                node.pattern is Python.AST.MatchAs &&
-                    (node.pattern as Python.AST.MatchAs).pattern == null
+                pattern is Python.AST.MatchAs &&
+                   pattern.pattern == null
             ) {
-                newDefaultStatement(rawNode = node.pattern)
+                newDefaultStatement(rawNode = pattern)
             } else {
                 newCaseStatement(rawNode = node).apply {
                     this.caseExpression =
