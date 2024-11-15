@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
@@ -428,13 +427,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val callExpression: CallExpression
         when {
             reference is MemberExpression -> {
-                val baseType = reference.base.type.root
-                if (baseType is SecondOrderType) {
-                    return newProblemExpression(
-                        problem = "Expected something other than a `SecondOrderType` as base.",
-                        rawNode = ctx
-                    )
-                }
                 callExpression = newMemberCallExpression(reference, rawNode = ctx)
                 if (
                     (ctx.functionNameExpression as? IASTFieldReference)?.fieldName
