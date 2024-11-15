@@ -300,7 +300,7 @@ fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: De
 }
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
-    assertNotNull(node)
+    assertNotNull(node, message)
     assertEquals(fqn, node.name.toString(), message)
 }
 

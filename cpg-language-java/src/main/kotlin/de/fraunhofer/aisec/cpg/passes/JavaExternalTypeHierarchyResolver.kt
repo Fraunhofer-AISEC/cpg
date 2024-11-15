@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -71,10 +72,12 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         }
 
         // Iterate over all known types and add their (direct) supertypes.
-        for (t in typeManager.firstOrderTypes) {
+        var types = typeManager.firstOrderTypes.toList()
+        for (t in types) {
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {
                 try {
+
                     val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
                     for (anc in resolvedSuperTypes) {
                         // We need to try to resolve the type first in order to create weirdly
@@ -90,10 +93,11 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
                         // Add all resolved supertypes to the type.
                         t.superTypes.add(superType)
                     }
-                } catch (e: UnsolvedSymbolException) {
-                    // Even if the symbol itself is resolved, "getAncestors()" may throw exception.
+                } catch (_: UnsolvedSymbolException) {
+                    // Even if the symbol itself is resolved, "getAncestors()" may throw
+                    // exception.
                     LOGGER.warn(
-                        "Could not resolve supertypes of ${symbol.correspondingDeclaration}"
+                        "Could not resolve supertypes of ${symbol?.correspondingDeclaration}"
                     )
                 }
             }
