@@ -32,7 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.ListType
+import de.fraunhofer.aisec.cpg.graph.types.MapType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.SetType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -1312,25 +1315,25 @@ class PythonFrontendTest : BaseTest() {
         assertIs<AssignExpression>(aStmt)
         val aStmtRhs = aStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(aStmtRhs)
-        assertEquals("list", aStmtRhs.type.name.localName)
+        assertIs<ListType>(aStmtRhs.type)
 
         val bStmt = namespace.statements[1]
         assertIs<AssignExpression>(bStmt)
         val bStmtRhs = bStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(bStmtRhs)
-        assertEquals("set", bStmtRhs.type.name.localName)
+        assertIs<SetType>(bStmtRhs.type)
 
         val cStmt = namespace.statements[2]
         assertIs<AssignExpression>(cStmt)
         val cStmtRhs = cStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(cStmtRhs)
-        assertEquals("tuple", cStmtRhs.type.name.localName)
+        assertIs<ListType>(cStmtRhs.type)
 
         val dStmt = namespace.statements[3]
         assertIs<AssignExpression>(dStmt)
         val dStmtRhs = dStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(dStmtRhs)
-        assertEquals("dict", dStmtRhs.type.name.localName)
+        assertIs<MapType>(dStmtRhs.type)
 
         val fourthStmt = namespace.statements[4]
         assertIs<AssignExpression>(fourthStmt)
