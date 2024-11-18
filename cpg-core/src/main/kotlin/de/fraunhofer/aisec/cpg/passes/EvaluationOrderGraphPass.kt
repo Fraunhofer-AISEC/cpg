@@ -84,7 +84,6 @@ import org.slf4j.LoggerFactory
 @Suppress("MemberVisibilityCanBePrivate")
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
-    protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
     protected var currentPredecessors = mutableListOf<Node>()
     protected var nextEdgeBranch: Boolean? = null
 
