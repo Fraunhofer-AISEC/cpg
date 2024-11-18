@@ -311,7 +311,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         intermediateNodes.add(node)
 
-        when(node){
+        when (node) {
             is TranslationUnitDeclaration -> handleTranslationUnitDeclaration(node)
             is NamespaceDeclaration -> handleNamespaceDeclaration(node)
             is RecordDeclaration -> handleRecordDeclaration(node)
@@ -367,7 +367,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is IncludeDeclaration -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
-
     }
 
     /**
