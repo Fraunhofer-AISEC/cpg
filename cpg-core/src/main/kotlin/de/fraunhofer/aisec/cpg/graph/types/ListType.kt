@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-/** Second-order types are generic container types (e.g., List, Set, Map) or pointer types. */
-interface SecondOrderType {
-    var elementType: Type
+import de.fraunhofer.aisec.cpg.frontends.Language
 
-    val referenceDepth: Int
-        get() {
-            var depth = 1
-            var containedType = elementType
-            while (containedType is SecondOrderType) {
-                depth++
-                containedType = containedType.elementType
-            }
-            return depth
-        }
-}
+/** Represents a [List] type that contains multiple elements. */
+class ListType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
+    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType
