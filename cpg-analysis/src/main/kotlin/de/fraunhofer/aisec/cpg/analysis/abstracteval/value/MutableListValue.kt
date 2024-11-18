@@ -41,7 +41,7 @@ import org.apache.commons.lang3.NotImplementedException
  * the below TODOs and write a test file.
  */
 @Suppress("UNUSED")
-class MutableList : Value {
+class MutableListValue : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name

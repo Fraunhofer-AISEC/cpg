@@ -54,7 +54,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            MutableList().applyEffect(current, correctDeclaration, name.localName)
+            MutableListValue().applyEffect(current, correctDeclaration, name.localName)
         )
 
         val wrongNameDeclaration = run {
@@ -67,7 +67,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            MutableList().applyEffect(current, wrongNameDeclaration, name.localName)
+            MutableListValue().applyEffect(current, wrongNameDeclaration, name.localName)
         )
 
         val noInitializerDeclaration = run {
@@ -77,7 +77,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            MutableList().applyEffect(current, noInitializerDeclaration, name.localName)
+            MutableListValue().applyEffect(current, noInitializerDeclaration, name.localName)
         )
     }
 
@@ -93,7 +93,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            MutableList().applyEffect(current, add, name.localName)
+            MutableListValue().applyEffect(current, add, name.localName)
         )
 
         val addAll = run {
@@ -106,7 +106,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, INFINITE),
-            MutableList().applyEffect(current, addAll, name.localName)
+            MutableListValue().applyEffect(current, addAll, name.localName)
         )
 
         val clear = run {
@@ -119,7 +119,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            MutableList().applyEffect(current, clear, name.localName)
+            MutableListValue().applyEffect(current, clear, name.localName)
         )
 
         val removeInt = run {
@@ -135,7 +135,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            MutableList().applyEffect(current, removeInt, name.localName)
+            MutableListValue().applyEffect(current, removeInt, name.localName)
         )
 
         val removeObject = run {
@@ -150,7 +150,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 1),
-            MutableList().applyEffect(current, removeObject, name.localName)
+            MutableListValue().applyEffect(current, removeObject, name.localName)
         )
 
         val removeAll = run {
@@ -163,7 +163,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 1),
-            MutableList().applyEffect(current, removeAll, name.localName)
+            MutableListValue().applyEffect(current, removeAll, name.localName)
         )
 
         val wrongName = run {
@@ -175,7 +175,7 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            MutableList().applyEffect(current, wrongName, name.localName)
+            MutableListValue().applyEffect(current, wrongName, name.localName)
         )
     }
 

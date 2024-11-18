@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import org.apache.commons.lang3.NotImplementedException
 
 /** This class implements the [Value] interface for Integer values. */
-class Integer : Value {
+class IntegerValue : Value {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // (Re-)Declarations of the Variable
         if (

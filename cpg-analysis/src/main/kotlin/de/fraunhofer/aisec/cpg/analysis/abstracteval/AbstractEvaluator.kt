@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Array
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Integer
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
@@ -221,8 +219,8 @@ class AbstractEvaluator {
         }
         val name = node.type.name.toString()
         return when {
-            name.endsWith("[]") -> Array::class
-            name == "int" -> Integer::class
+            name.endsWith("[]") -> ArrayValue::class
+            name == "int" -> IntegerValue::class
             else -> throw NotImplementedException()
         }
     }
