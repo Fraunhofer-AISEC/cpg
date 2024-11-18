@@ -85,8 +85,8 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Get the last statement in a [Block] and replace a goto statement iff it is the only one jumping
-     * to the target
+     * Get the last statement in a [Block] and replace a goto statement iff it is the only one
+     * jumping to the target
      */
     private fun handleBlock(node: Block, gotosToReplace: List<GotoStatement>) {
         val goto = node.statements.lastOrNull() as? GotoStatement ?: return
