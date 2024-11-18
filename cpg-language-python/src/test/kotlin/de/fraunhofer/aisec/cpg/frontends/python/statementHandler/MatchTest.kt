@@ -173,7 +173,7 @@ class MatchTest {
     }
 
     @Test
-    fun testMatchAnd() {
+    fun testMatchGuard() {
         val func = result.functions["matchAnd"]
         assertNotNull(func)
 
