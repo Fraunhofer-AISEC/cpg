@@ -155,10 +155,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // case.
         val pattern = node.pattern
         statements +=
-            if (
-                pattern is Python.AST.MatchAs &&
-                   pattern.pattern == null
-            ) {
+            if (pattern is Python.AST.MatchAs && pattern.pattern == null) {
                 newDefaultStatement(rawNode = pattern)
             } else {
                 newCaseStatement(rawNode = node).apply {
