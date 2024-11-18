@@ -117,86 +117,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      */
     protected val intermediateNodes = mutableListOf<Node>()
 
-    init {
-        map[IncludeDeclaration::class.java] = { doNothing() }
-        map[TranslationUnitDeclaration::class.java] = {
-            handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
-        }
-        map[NamespaceDeclaration::class.java] = {
-            handleNamespaceDeclaration(it as NamespaceDeclaration)
-        }
-        map[RecordDeclaration::class.java] = { handleRecordDeclaration(it as RecordDeclaration) }
-        map[FunctionDeclaration::class.java] = {
-            handleFunctionDeclaration(it as FunctionDeclaration)
-        }
-        map[TupleDeclaration::class.java] = { handleTupleDeclaration(it as TupleDeclaration) }
-        map[VariableDeclaration::class.java] = {
-            handleVariableDeclaration(it as VariableDeclaration)
-        }
-        map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
-        map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
-        map[SubscriptExpression::class.java] = {
-            handleSubscriptExpression(it as SubscriptExpression)
-        }
-        map[NewArrayExpression::class.java] = { handleNewArrayExpression(it as NewArrayExpression) }
-        map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
-        map[DeclarationStatement::class.java] = {
-            handleDeclarationStatement(it as DeclarationStatement)
-        }
-        map[ReturnStatement::class.java] = { handleReturnStatement(it as ReturnStatement) }
-        map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
-        map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
-        map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[Block::class.java] = { handleBlock(it as Block) }
-        map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
-        map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
-        map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
-        map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
-        map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
-        map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
-        map[TypeExpression::class.java] = { handleTypeExpression(it as TypeExpression) }
-        map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
-        map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
-        map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
-        map[BreakStatement::class.java] = { handleBreakStatement(it as BreakStatement) }
-        map[SwitchStatement::class.java] = { handleSwitchStatement(it as SwitchStatement) }
-        map[LabelStatement::class.java] = { handleLabelStatement(it as LabelStatement) }
-        map[GotoStatement::class.java] = { handleGotoStatement(it as GotoStatement) }
-        map[CaseStatement::class.java] = { handleCaseStatement(it as CaseStatement) }
-        map[SynchronizedStatement::class.java] = {
-            handleSynchronizedStatement(it as SynchronizedStatement)
-        }
-        map[NewExpression::class.java] = { handleNewExpression(it as NewExpression) }
-        map[KeyValueExpression::class.java] = { handleKeyValueExpression(it as KeyValueExpression) }
-        map[CastExpression::class.java] = { handleCastExpression(it as CastExpression) }
-        map[ExpressionList::class.java] = { handleExpressionList(it as ExpressionList) }
-        map[ConditionalExpression::class.java] = {
-            handleConditionalExpression(it as ConditionalExpression)
-        }
-        map[InitializerListExpression::class.java] = {
-            handleInitializerListExpression(it as InitializerListExpression)
-        }
-        map[ConstructExpression::class.java] = {
-            handleConstructExpression(it as ConstructExpression)
-        }
-        map[EmptyStatement::class.java] = { handleDefault(it as EmptyStatement) }
-        map[Literal::class.java] = { handleDefault(it) }
-        map[DefaultStatement::class.java] = { handleDefault(it) }
-        map[TypeIdExpression::class.java] = { handleDefault(it) }
-        map[Reference::class.java] = { handleDefault(it) }
-        map[CollectionComprehension::class.java] = {
-            handleCollectionComprehension(it as CollectionComprehension)
-        }
-        map[ComprehensionExpression::class.java] = {
-            handleComprehensionExpression(it as ComprehensionExpression)
-        }
-        map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
-        map[LookupScopeStatement::class.java] = {
-            handleLookupScopeStatement(it as LookupScopeStatement)
-        }
-        map[ThrowExpression::class.java] = { handleThrowExpression(it as ThrowExpression) }
-    }
-
     protected fun doNothing() {
         // Nothing to do for this node type
     }
@@ -387,23 +307,67 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      */
     protected fun handleEOG(node: Node?) {
         if (node == null) {
-            // nothing to do
             return
         }
-
         intermediateNodes.add(node)
-        var toHandle: Class<*> = node.javaClass
-        var callable = map[toHandle]
-        while (callable == null) {
-            toHandle = toHandle.superclass
-            callable = map[toHandle]
-            if (toHandle == Node::class.java || !Node::class.java.isAssignableFrom(toHandle)) break
+
+        when(node){
+            is TranslationUnitDeclaration -> handleTranslationUnitDeclaration(node)
+            is NamespaceDeclaration -> handleNamespaceDeclaration(node)
+            is RecordDeclaration -> handleRecordDeclaration(node)
+            is FunctionDeclaration -> handleFunctionDeclaration(node)
+            is TupleDeclaration -> handleTupleDeclaration(node)
+            is VariableDeclaration -> handleVariableDeclaration(node)
+            is ConstructExpression -> handleConstructExpression(node)
+            is CallExpression -> handleCallExpression(node)
+            is MemberExpression -> handleMemberExpression(node)
+            is SubscriptExpression -> handleSubscriptExpression(node)
+            is NewArrayExpression -> handleNewArrayExpression(node)
+            is RangeExpression -> handleRangeExpression(node)
+            is DeclarationStatement -> handleDeclarationStatement(node)
+            is ReturnStatement -> handleReturnStatement(node)
+            is BinaryOperator -> handleBinaryOperator(node)
+            is AssignExpression -> handleAssignExpression(node)
+            is UnaryOperator -> handleUnaryOperator(node)
+            is Block -> handleBlock(node)
+            is IfStatement -> handleIfStatement(node)
+            is AssertStatement -> handleAssertStatement(node)
+            is WhileStatement -> handleWhileStatement(node)
+            is DoStatement -> handleDoStatement(node)
+            is ForStatement -> handleForStatement(node)
+            is ForEachStatement -> handleForEachStatement(node)
+            is TypeExpression -> handleTypeExpression(node)
+            is TryStatement -> handleTryStatement(node)
+            is ContinueStatement -> handleContinueStatement(node)
+            is DeleteExpression -> handleDeleteExpression(node)
+            is BreakStatement -> handleBreakStatement(node)
+            is SwitchStatement -> handleSwitchStatement(node)
+            is LabelStatement -> handleLabelStatement(node)
+            is GotoStatement -> handleGotoStatement(node)
+            is CaseStatement -> handleCaseStatement(node)
+            is SynchronizedStatement -> handleSynchronizedStatement(node)
+            is NewExpression -> handleNewExpression(node)
+            is KeyValueExpression -> handleKeyValueExpression(node)
+            is CastExpression -> handleCastExpression(node)
+            is ExpressionList -> handleExpressionList(node)
+            is ConditionalExpression -> handleConditionalExpression(node)
+            is InitializerListExpression -> handleInitializerListExpression(node)
+            is CollectionComprehension -> handleCollectionComprehension(node)
+            is ComprehensionExpression -> handleComprehensionExpression(node)
+            is LambdaExpression -> handleLambdaExpression(node)
+            is LookupScopeStatement -> handleLookupScopeStatement(node)
+            is ThrowExpression -> handleThrowExpression(node)
+            // These nodes will be added to the eog graph but no children will be handled
+            is EmptyStatement -> handleDefault(node)
+            is Literal<*> -> handleDefault(node)
+            is DefaultStatement -> handleDefault(node)
+            is TypeIdExpression -> handleDefault(node)
+            is Reference -> handleDefault(node)
+            // These nodes are not added to the EOG
+            is IncludeDeclaration -> doNothing()
+            else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
-        if (callable != null) {
-            callable(node)
-        } else {
-            LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
-        }
+
     }
 
     /**
