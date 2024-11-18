@@ -157,7 +157,6 @@ nav:
       - "Usage as library": GettingStarted/library.md
       - "Using the Interactive CLI": GettingStarted/cli.md
       - "Using the Query API": GettingStarted/query.md
-      - "Query Examples": GettingStarted/query_examples.md
       - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
   - "Specifications":
       - CPG/specs/index.md
@@ -167,12 +166,11 @@ nav:
       - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
   - "Implementation":
       - CPG/impl/index.md
+      - "Design Principles": CPG/impl/design_principles.md
       - "Language Frontends": CPG/impl/language.md
       - "Scopes and Symbols": CPG/impl/scopes.md
       - "Passes": CPG/impl/passes.md
       - "Symbol Resolution": CPG/impl/symbol-resolver.md
-  - "Design Principles":
-      - Design Principles/index.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!
