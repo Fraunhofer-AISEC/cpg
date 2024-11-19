@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
-class MemoryAddress : Declaration() {}
+class MemoryAddress(override var name: Name) : Declaration() {}
