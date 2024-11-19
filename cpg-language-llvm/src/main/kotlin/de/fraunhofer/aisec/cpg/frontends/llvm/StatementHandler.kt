@@ -69,9 +69,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             return declarationOrNot(frontend.expressionHandler.handleCastInstruction(instr), instr)
         }
 
-        val opcode = instr.opCode
-
-        when (opcode) {
+        return when (val opcode = instr.opCode) {
             LLVMRet -> {
                 val ret = newReturnStatement(rawNode = instr)
 
@@ -80,141 +78,151 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     ret.returnValue = frontend.getOperandValueAtIndex(instr, 0)
                 }
 
-                return ret
+                ret
             }
             LLVMBr -> {
-                return handleBrStatement(instr)
+                handleBrStatement(instr)
             }
             LLVMSwitch -> {
-                return handleSwitchStatement(instr)
+                handleSwitchStatement(instr)
             }
             LLVMIndirectBr -> {
-                return handleIndirectbrStatement(instr)
+                handleIndirectbrStatement(instr)
             }
             LLVMCall,
             LLVMInvoke -> {
-                return handleFunctionCall(instr)
+                handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
                 // Does nothing
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
-                log.error("Cannot parse callbr instruction yet")
+                newProblemExpression(
+                    "Cannot handle callbr instruction yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
             LLVMFNeg -> {
                 val fneg = newUnaryOperator("-", postfix = false, prefix = true, rawNode = instr)
                 fneg.input = frontend.getOperandValueAtIndex(instr, 0)
-                return fneg
+
+                val decl = declarationOrNot(fneg, instr)
+                (decl as? DeclarationStatement)?.let {
+                    // cache binding
+                    frontend.bindingsCache[instr.symbolName] =
+                        decl.singleDeclaration as VariableDeclaration
+                }
+
+                decl
             }
             LLVMAlloca -> {
-                return handleAlloca(instr)
+                handleAlloca(instr)
             }
             LLVMLoad -> {
-                return handleLoad(instr)
+                handleLoad(instr)
             }
             LLVMStore -> {
-                return handleStore(instr)
+                handleStore(instr)
             }
             LLVMExtractValue,
             LLVMGetElementPtr -> {
-                return declarationOrNot(
-                    frontend.expressionHandler.handleGetElementPtr(instr),
-                    instr
-                )
+                declarationOrNot(frontend.expressionHandler.handleGetElementPtr(instr), instr)
             }
             LLVMICmp -> {
-                return handleIntegerComparison(instr)
+                declarationOrNot(handleIntegerComparison(instr), instr)
             }
             LLVMFCmp -> {
-                return handleFloatComparison(instr)
+                handleFloatComparison(instr)
             }
             LLVMPHI -> {
                 frontend.phiList.add(instr)
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMSelect -> {
-                return declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
+                declarationOrNot(frontend.expressionHandler.handleSelect(instr), instr)
             }
             LLVMUserOp1,
             LLVMUserOp2 -> {
                 log.info(
                     "userop instruction is not a real instruction. Replacing it with empty statement"
                 )
-                return newEmptyStatement(rawNode = instr)
+                newEmptyStatement(rawNode = instr)
             }
             LLVMVAArg -> {
-                return handleVaArg(instr)
+                handleVaArg(instr)
             }
             LLVMExtractElement -> {
-                return handleExtractelement(instr)
+                handleExtractelement(instr)
             }
             LLVMInsertElement -> {
-                return handleInsertelement(instr)
+                handleInsertelement(instr)
             }
             LLVMShuffleVector -> {
-                return handleShufflevector(instr)
+                handleShufflevector(instr)
             }
             LLVMInsertValue -> {
-                return handleInsertValue(instr)
+                handleInsertValue(instr)
             }
             LLVMFreeze -> {
-                return handleFreeze(instr)
+                handleFreeze(instr)
             }
             LLVMFence -> {
-                return handleFence(instr)
+                handleFence(instr)
             }
             LLVMAtomicCmpXchg -> {
-                return handleAtomiccmpxchg(instr)
+                handleAtomiccmpxchg(instr)
             }
             LLVMAtomicRMW -> {
-                return handleAtomicrmw(instr)
+                handleAtomicrmw(instr)
             }
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                return newThrowExpression(rawNode = instr).apply {
+                newThrowExpression(rawNode = instr).apply {
                     exception =
                         newProblemExpression("We don't know the exception while parsing this node.")
                 }
             }
             LLVMLandingPad -> {
-                return handleLandingpad(instr)
+                handleLandingpad(instr)
             }
             LLVMCleanupRet -> {
                 // End of the cleanup basic block(s)
                 // Jump to a label where handling the exception will unwind to next (e.g. a
                 // catchswitch statement)
-                return handleCatchret(instr)
+                handleCatchret(instr)
             }
             LLVMCatchRet -> {
                 // Catch (caught by catchpad instruction) is over.
                 // Jumps to a label where the "normal" function logic continues
-                return handleCatchret(instr)
+                handleCatchret(instr)
             }
             LLVMCatchPad -> {
                 // Actually handles the exception.
-                return handleCatchpad(instr)
+                handleCatchpad(instr)
             }
             LLVMCleanupPad -> {
                 // Beginning of the cleanup basic block(s).
                 // We should model this as the beginning of a catch block
-                return handleCleanuppad(instr)
+                handleCleanuppad(instr)
             }
             LLVMCatchSwitch -> {
                 // Marks the beginning of a "real" catch block
                 // Jumps to one of the handlers specified or to the default handler (if specified)
-                return handleCatchswitch(instr)
+                handleCatchswitch(instr)
+            }
+            else -> {
+                log.error("Not handling instruction opcode {} yet", opcode)
+                newProblemExpression(
+                    "Not handling instruction opcode $opcode yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
         }
-
-        log.error("Not handling instruction opcode {} yet", opcode)
-        return newProblemExpression(
-            "Not handling instruction opcode $opcode yet",
-            ProblemNode.ProblemType.TRANSLATION,
-            rawNode = instr
-        )
     }
 
     /**
@@ -228,10 +236,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val unwindDest =
             if (instr.opCode == LLVMCatchRet) {
                 LLVMGetOperand(instr, 1)
-            } else if (LLVMGetUnwindDest(instr) != null) {
-                LLVMBasicBlockAsValue(LLVMGetUnwindDest(instr))
             } else {
-                null
+                LLVMGetUnwindDest(instr)?.let { LLVMBasicBlockAsValue(it) }
             }
         val name =
             Name(
@@ -242,13 +248,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
             )
         return if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val gotoStatement = assembleGotoStatement(instr, unwindDest)
-            gotoStatement.name = name
-            gotoStatement
+            assembleGotoStatement(instr, unwindDest).apply { this.name = name }
         } else {
-            val emptyStatement = newEmptyStatement(rawNode = instr)
-            emptyStatement.name = name
-            emptyStatement
+            newEmptyStatement(rawNode = instr).apply { this.name = name }
         }
     }
 
@@ -423,57 +425,60 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /** Handles all kinds of instructions which are an arithmetic or logical binary instruction. */
     private fun handleBinaryInstruction(instr: LLVMValueRef): Statement {
-        when (instr.opCode) {
-            LLVMAdd,
-            LLVMFAdd -> {
-                return handleBinaryOperator(instr, "+", false)
+        val binaryOperator =
+            when (instr.opCode) {
+                LLVMAdd,
+                LLVMFAdd -> {
+                    handleBinaryOperator(instr, "+", false)
+                }
+                LLVMSub,
+                LLVMFSub -> {
+                    handleBinaryOperator(instr, "-", false)
+                }
+                LLVMMul,
+                LLVMFMul -> {
+                    handleBinaryOperator(instr, "*", false)
+                }
+                LLVMUDiv -> {
+                    handleBinaryOperator(instr, "/", true)
+                }
+                LLVMSDiv,
+                LLVMFDiv -> {
+                    handleBinaryOperator(instr, "/", false)
+                }
+                LLVMURem -> {
+                    handleBinaryOperator(instr, "%", true)
+                }
+                LLVMSRem,
+                LLVMFRem -> {
+                    handleBinaryOperator(instr, "%", false)
+                }
+                LLVMShl -> {
+                    handleBinaryOperator(instr, "<<", false)
+                }
+                LLVMLShr -> {
+                    handleBinaryOperator(instr, ">>", true)
+                }
+                LLVMAShr -> {
+                    handleBinaryOperator(instr, ">>", false)
+                }
+                LLVMAnd -> {
+                    handleBinaryOperator(instr, "&", false)
+                }
+                LLVMOr -> {
+                    handleBinaryOperator(instr, "|", false)
+                }
+                LLVMXor -> {
+                    handleBinaryOperator(instr, "^", false)
+                }
+                else ->
+                    newProblemExpression(
+                        "No opcode found for binary operator",
+                        ProblemNode.ProblemType.TRANSLATION,
+                        rawNode = instr
+                    )
             }
-            LLVMSub,
-            LLVMFSub -> {
-                return handleBinaryOperator(instr, "-", false)
-            }
-            LLVMMul,
-            LLVMFMul -> {
-                return handleBinaryOperator(instr, "*", false)
-            }
-            LLVMUDiv -> {
-                return handleBinaryOperator(instr, "/", true)
-            }
-            LLVMSDiv,
-            LLVMFDiv -> {
-                return handleBinaryOperator(instr, "/", false)
-            }
-            LLVMURem -> {
-                return handleBinaryOperator(instr, "%", true)
-            }
-            LLVMSRem,
-            LLVMFRem -> {
-                return handleBinaryOperator(instr, "%", false)
-            }
-            LLVMShl -> {
-                return handleBinaryOperator(instr, "<<", false)
-            }
-            LLVMLShr -> {
-                return handleBinaryOperator(instr, ">>", true)
-            }
-            LLVMAShr -> {
-                return handleBinaryOperator(instr, ">>", false)
-            }
-            LLVMAnd -> {
-                return handleBinaryOperator(instr, "&", false)
-            }
-            LLVMOr -> {
-                return handleBinaryOperator(instr, "|", false)
-            }
-            LLVMXor -> {
-                return handleBinaryOperator(instr, "^", false)
-            }
-        }
-        return newProblemExpression(
-            "Not opcode found for binary operator",
-            ProblemNode.ProblemType.TRANSLATION,
-            rawNode = instr
-        )
+        return declarationOrNot(binaryOperator, instr)
     }
 
     /**
@@ -527,7 +532,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`icmp`](https://llvm.org/docs/LangRef.html#icmp-instruction) instruction for
      * comparing integer values.
      */
-    fun handleIntegerComparison(instr: LLVMValueRef): Statement {
+    fun handleIntegerComparison(instr: LLVMValueRef): Expression {
         var unsigned = false
         val cmpPred =
             when (LLVMGetICmpPredicate(instr)) {
@@ -608,7 +613,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 else -> "unknown"
             }
 
-        return handleBinaryOperator(instr, cmpPred, false, unordered)
+        return declarationOrNot(handleBinaryOperator(instr, cmpPred, false, unordered), instr)
     }
 
     /**
@@ -736,12 +741,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         condition.lhs = undefCheck
         val poisonCheck = newBinaryOperator("!=", rawNode = instr)
         poisonCheck.lhs = operand
-        poisonCheck.rhs =
-            newLiteral(
-                "POISON",
-                operand.type,
-                rawNode = instr
-            ) // This could be e.g. NAN. Not sure for complex types
+        // This could be e.g. NAN. Not sure for complex types
+        poisonCheck.rhs = newReference("poison", operand.type, rawNode = instr)
         condition.rhs = poisonCheck
 
         // Call to a dummy function "llvm.freeze" which would fill the undef or poison values
@@ -752,7 +753,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             newCallExpression(llvmInternalRef("llvm.freeze"), "llvm.freeze", false, rawNode = instr)
         callExpression.addArgument(operand)
 
-        // res = (arg != undef && arg != poison) ? arg : llvm.freeze(in)
+        // res = (arg != undef && arg != poison) ? arg : llvm.freeze(arg)
         val conditional =
             newConditionalExpression(
                 condition,
@@ -976,7 +977,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
-                throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")
+                newProblemExpression(
+                    "LLVMAtomicRMWBinOp $operation not supported",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = instr
+                )
             }
         }
 
@@ -1027,6 +1032,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Get the label of the goto statement.
             val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
             caseStatements.statements += gotoStatement
+            caseStatements.statements += newBreakStatement().implicit()
             idx++
         }
 
@@ -1525,7 +1531,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         op: String,
         unsigned: Boolean,
         unordered: Boolean = false
-    ): Statement {
+    ): Expression {
         val op1 = frontend.getOperandValueAtIndex(instr, 0)
         val op2 = frontend.getOperandValueAtIndex(instr, 1)
 
@@ -1598,17 +1604,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
-        val declOp = if (unordered) binOpUnordered else binaryOperator
-        val decl =
-            declOp?.let { declarationOrNot(it, instr) }
-                ?: newProblemExpression("Could not parse declaration")
-
-        (decl as? DeclarationStatement)?.let {
-            // cache binding
-            frontend.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
-        }
-
-        return decl
+        return binOpUnordered ?: binaryOperator
     }
 
     /**

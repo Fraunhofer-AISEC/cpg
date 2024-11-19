@@ -26,7 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -81,6 +82,7 @@ open class BinaryOperator :
             .append("lhs", lhs.name)
             .append("rhs", rhs.name)
             .append("operatorCode", operatorCode)
+            .append("location", location)
             .toString()
     }
 
