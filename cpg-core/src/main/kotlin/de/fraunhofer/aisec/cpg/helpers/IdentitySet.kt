@@ -60,9 +60,9 @@ open class IdentitySet<T> : MutableSet<T> {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is IdentitySet<*>) return false
-        val otherSet = other as? IdentitySet<*>
-        return otherSet != null && this.containsAll(otherSet) && otherSet.containsAll(this)
+        if (other !is Set<*>) return false
+        val otherSet = other
+        return this.containsAll(otherSet) && otherSet.containsAll(this)
     }
 
     override fun add(element: T): Boolean {
