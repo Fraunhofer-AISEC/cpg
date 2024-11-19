@@ -26,13 +26,13 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.HasInitializer
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -162,7 +162,33 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): PointsToPass.PointsToState2 {
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
          */
-        println(currentNode)
+        // TODO: Check out cases where the input is no Reference
+        if (currentNode.input is Reference) {
+            val address = doubleState.getAddress(currentNode)
+            val value = doubleState.getValue(currentNode)
+            val newValue =
+                if (currentNode.operatorCode == "++" || currentNode.operatorCode == "--") {
+                    val binOp =
+                        newBinaryOperator(currentNode.operatorCode.toString().substring(0, 1))
+                    val expList = newExpressionList()
+                    value.filterIsInstance<Statement>().forEach { stmt ->
+                        expList.expressions.add(stmt)
+                    }
+                    binOp.lhs = expList
+                    binOp.rhs = newLiteral(1, currentNode.primitiveType("int"))
+                    setOf(binOp)
+                } else value
+            val newDeclState = doubleState.declarationsState.elements.toMutableMap()
+            /* Update the declarationState for the refersTo */
+            newDeclState.replace(
+                doubleState.getAddress(currentNode.input).first(),
+                TupleLattice(Pair(PowersetLattice(address), PowersetLattice(newValue)))
+            )
+            // TODO: Should we already update the input's value in the generalState, or is it
+            // enough at the next use?
+            val newDoubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
+            return newDoubleState
+        }
         return doubleState
     }
 
@@ -206,34 +232,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): PointsToPass.PointsToState2 {
         /* The MemoryAddress of a Reference is the same is from its Declaration AKA refersTo
          * Except for PointerReferences, they don't really have MemoryAddress, so we leave the set empty */
-        val address =
-            when (currentNode) {
-                is PointerReference -> setOf()
-                is PointerDereference -> currentNode.input.let { doubleState.getValue(it) }
-                else -> currentNode.refersTo?.let { doubleState.getAddress(it) } ?: setOf()
-            }
-
-        val value =
-            when (currentNode) {
-                is PointerReference -> currentNode.input.let { doubleState.getAddress(it) }
-                is PointerDereference -> {
-                    /* To find the value for PointerDereferences, we first check what's the current value of the input, which is probably a MemoryAddress
-                     * Then we look up the current value at this MemoryAddress
-                     * TODO: We assume that there the value of the input is a single MemoryAddress
-                     */
-                    val inputVal =
-                        when (currentNode.input) {
-                            is Reference ->
-                                (currentNode.input as Reference).refersTo.let {
-                                    doubleState.getValue(it!!)
-                                }
-                            else -> // TODO: How can we handle other cases?
-                            emptySet()
-                        }
-                    if (inputVal.size == 1) doubleState.getValue(inputVal.first()) else emptySet()
-                }
-                else -> currentNode.refersTo?.let { doubleState.getValue(it) } ?: setOf()
-            }
+        val address = doubleState.getAddress(currentNode)
+        val value = doubleState.getValue(currentNode)
 
         val doubleState =
             doubleState.push(
@@ -383,9 +383,20 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                      * */
                     this.getAddress(node.input)
                 }
-                /*
-                 PointerDereferences are handled by the Reference case. The correct address is identified based on the input but getAddress takes care of this
-                */
+                is PointerDereference -> {
+                    /* To find the value for PointerDereferences, we first check what's the current value of the input, which is probably a MemoryAddress
+                     * Then we look up the current value at this MemoryAddress
+                     * TODO: We assume that there the value of the input is a single MemoryAddress
+                     */
+                    val inputVal =
+                        when (node.input) {
+                            is Reference ->
+                                (node.input as Reference).refersTo.let { this.getValue(it!!) }
+                            else -> // TODO: How can we handle other cases?
+                            emptySet()
+                        }
+                    if (inputVal.size == 1) this.getValue(inputVal.first()) else emptySet()
+                }
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
                      */
@@ -405,6 +416,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 is CastExpression -> {
                     this.getValue(node.expression)
                 }
+                is UnaryOperator -> this.getValue(node.input)
                 else -> setOf(node)
             }
         }
@@ -433,9 +445,16 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     /*
                     For references, the address is the same as for the declaration, AKA the refersTo
                     */
-                    node.refersTo?.let {
-                        this.declarationsState.elements[it.memoryAddress]?.elements?.first?.elements
-                    } ?: setOf()
+                    node.refersTo.let { refersTo ->
+                        /* In some cases, the refersTo might not yet have an initialized memoryaddresse, for example if its a FunctionDeclaration. So let's to this here */
+                        if (!refersTo!!.memoryAddressIsInitialized())
+                            refersTo.memoryAddress = MemoryAddress(node.name)
+
+                        this.declarationsState.elements[refersTo.memoryAddress]
+                            ?.elements
+                            ?.first
+                            ?.elements ?: setOf()
+                    }
                 }
                 is CastExpression -> {
                     /*
