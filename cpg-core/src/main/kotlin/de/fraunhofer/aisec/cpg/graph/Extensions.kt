@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import kotlin.Throws
 import kotlin.math.absoluteValue
 
 /**
@@ -843,4 +843,21 @@ val Node.translationUnit: TranslationUnitDeclaration?
         }
 
         return null
+    }
+
+/** Checks whether the [Node] in question is imported by utilizing [getImports]. */
+val Node.isImported: Boolean
+    get() {
+        return getImports.isNotEmpty() == true
+    }
+
+/**
+ * Finds [ImportDeclaration]s matching the [Node] in question by utilizing the scope manager to look
+ * up its name.
+ */
+val Node.getImports: List<ImportDeclaration?>
+    get() {
+        return this.scope
+            ?.lookupSymbol(name.localName, replaceImports = false)
+            ?.filterIsInstance<ImportDeclaration>() ?: emptyList()
     }
