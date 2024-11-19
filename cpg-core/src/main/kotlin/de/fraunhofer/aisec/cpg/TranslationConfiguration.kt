@@ -117,8 +117,8 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
-    /** This list contains the directories which should be excluded from the analysis. */
-    val excludedDirectories: List<Path>
+    /** A list of exclusion patterns used to filter files and directories. */
+    val exclusionPatterns: List<Regex>
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -259,7 +259,7 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
-        private val excludedDirectories = mutableListOf<Path>()
+        private val exclusionPatterns = mutableListOf<Regex>()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -456,9 +456,17 @@ private constructor(
             return this.configurePass(T::class, config)
         }
 
-        /** Adds the directories to the [excludedDirectories] list. */
-        fun excludedDirs(dirs: List<String>): Builder {
-            excludedDirectories.addAll(dirs.map { Path.of(it) })
+        /**
+         * Sets a list of exclusion patterns for filtering files and directories.
+         *
+         * @param patterns List of exclusion patterns: strings are treated as Regex patterns.
+         *   Example:
+         * ```
+         * exclusionPatterns(listOf(".*test(s)?", "tests"))
+         * ```
+         */
+        fun exclusionPatterns(patterns: List<String>): Builder {
+            exclusionPatterns.addAll(patterns.map { Regex(it) })
             return this
         }
 
@@ -657,7 +665,7 @@ private constructor(
                 matchCommentsToNodes,
                 addIncludesToGraph,
                 passConfigurations,
-                excludedDirectories
+                exclusionPatterns
             )
         }
 

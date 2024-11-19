@@ -148,8 +148,8 @@ private constructor(
 
             sourceLocations =
                 sourceLocations.filter { file ->
-                    ctx.config.excludedDirectories.none { excludedDir ->
-                        file.toPath().contains(excludedDir)
+                    ctx.config.exclusionPatterns.none { pattern ->
+                        pattern.containsMatchIn(file.absolutePath)
                     }
                 }
 
