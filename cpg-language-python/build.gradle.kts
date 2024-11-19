@@ -41,7 +41,7 @@ publishing {
 
 dependencies {
     // jep for python support
-    api(libs.jep)
+    implementation(libs.jep)
 
     // to evaluate some test cases
     testImplementation(project(":cpg-analysis"))
