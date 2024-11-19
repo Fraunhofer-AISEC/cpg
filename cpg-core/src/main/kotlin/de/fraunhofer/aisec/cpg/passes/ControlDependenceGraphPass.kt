@@ -37,8 +37,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.MapLatticeT
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeT
 import de.fraunhofer.aisec.cpg.helpers.functional.iterateEOGClean
@@ -98,7 +100,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val identityMap = IdentityHashMap<Node, PowersetLattice<Node>>()
         identityMap[startNode] = PowersetLattice<Node>(identitySetOf(startNode))
         startState = startState.push(startNode, PrevEOGLattice(identityMap))
+        log.debug("Iterating EOG of {}", startNode)
         val finalState = iterateEOGClean(startNode.nextEOGEdges, startState, ::handleEdge)
+        log.debug("Done iterating EOG of {}", startNode)
 
         val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
@@ -273,8 +277,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  */
 fun handleEdge(
     currentEdge: EvaluationOrder,
-    currentState: LatticeElement<Map<Node, LatticeElement<Map<Node, LatticeElement<Set<Node>>>>>>
-): LatticeElement<Map<Node, LatticeElement<Map<Node, LatticeElement<Set<Node>>>>>> {
+    currentState:
+        LatticeElement<Map<Node, LatticeElement<Map<Node, LatticeElement<IdentitySet<Node>>>>>>
+): LatticeElement<Map<Node, LatticeElement<Map<Node, LatticeElement<IdentitySet<Node>>>>>> {
     var newState = currentState as? PrevEOGState ?: return currentState
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
@@ -373,73 +378,73 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
  * Implements the [LatticeElement] over a set of nodes and their set of "nextEOG" nodes which reach
  * this node.
  */
-class PrevEOGLattice(elements: Map<Node, PowersetLattice<Node>>) :
-    MapLattice<Node, Set<Node>>(elements) {
+class PrevEOGLattice(elements: IdentityHashMap<Node, PowersetLatticeT<Node>>) :
+    MapLatticeT<Node, PowersetLatticeT<Node>, IdentitySet<Node>>(elements) {
 
-    override fun lub(other: LatticeElement<Map<Node, LatticeElement<Set<Node>>>>): PrevEOGLattice {
-        return PrevEOGLattice(
-            this.elements.entries.fold(
-                other.elements.mapValues { (_, v) -> PowersetLattice(v.elements) }
-            ) { current, (thisKey, thisValue) ->
-                val mutableMap = current.toMutableMap()
-                mutableMap.compute(thisKey) { k, v ->
-                    PowersetLattice((if (v == null) thisValue else thisValue.lub(v)).elements)
-                }
-                mutableMap
-            }
+    override fun lub(
+        other: LatticeElement<IdentityHashMap<Node, PowersetLattice<Node>>>
+    ): PrevEOGLattice {
+        val powerset = PowersetLattice(IdentitySet<Node>())
+        MapLattice<Node, PowersetLattice<IdentitySet<Node>, Node>, IdentitySet<Node>>(
+            IdentityHashMap()
         )
+        val allKeys = other.elements.keys.union(this.elements.keys)
+        val newMap =
+            allKeys.fold(IdentityHashMap<Node, PowersetLattice<Node>>()) { current, key ->
+                val otherValue = other.elements[key]
+                val thisValue = this.elements[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null) {
+                        thisValue.lub(otherValue)
+                    } else if (thisValue != null) {
+                        thisValue
+                    } else otherValue
+                newValue?.let { current[key] = it }
+                current
+            }
+        return PrevEOGLattice(newMap)
     }
 
     override fun duplicate() =
-        PrevEOGLattice(this.elements.mapValues { (_, v) -> PowersetLattice(v.elements) })
+        PrevEOGLattice(
+            IdentityHashMap(
+                this.elements.mapValues { (_, v) -> PowersetLattice(v.elements) }.toMap()
+            )
+        )
 }
 
 /**
  * A state which actually holds a state for all [Edge]s. It maps the node to its
  * [BranchingNode]-parent and the path through which it is reached.
  */
-class PrevEOGState(elements: Map<Node, PrevEOGLattice>) :
-    MapLattice<Node, Map<Node, PowersetLatticeT<Node>>>(elements) {
+class PrevEOGState(elements: IdentityHashMap<Node, PrevEOGLattice>) :
+    MapLattice<Node, PrevEOGLattice, PowersetLattice<Node>>(elements) {
 
-    override fun lub(
-        other: LatticeElement<Map<Node, LatticeElement<Map<Node, LatticeElement<Set<Node>>>>>>
-    ): PrevEOGState {
-        return PrevEOGState(
-            this.elements
-                .mapValues { (_, v) ->
-                    PrevEOGLattice(v.elements.mapValues { (_, v2) -> PowersetLattice(v2.elements) })
-                }
-                .entries
-                .fold(
-                    other.elements.mapValues { (_, v) ->
-                        PrevEOGLattice(
-                            v.elements.mapValues { (_, v2) -> PowersetLattice(v2.elements) }
-                        )
-                    }
-                ) { current, (thisKey, thisValue) ->
-                    val mutableMap = current.toMutableMap()
-                    mutableMap.compute(thisKey) { k, v ->
-                        if (v == null) thisValue
-                        else
-                            thisValue.lub(
-                                PrevEOGLattice(
-                                    v.elements.mapValues { (_, v2) -> PowersetLattice(v2.elements) }
-                                )
-                            )
-                    }
-                    mutableMap
-                }
-        )
+    override fun lub(other: LatticeElement<IdentityHashMap<Node, PrevEOGLattice>>): PrevEOGState {
+        val allKeys = other.elements.keys.union(this.elements.keys)
+        val newMap =
+            allKeys.fold(IdentityHashMap<Node, PrevEOGLattice>()) { current, key ->
+                val otherValue = other.elements[key]
+                val thisValue = this.elements[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null) {
+                        thisValue.lub(otherValue)
+                    } else if (thisValue != null) {
+                        thisValue
+                    } else otherValue
+                newValue?.let { current[key] = it }
+                current
+            }
+        return PrevEOGState(newMap)
     }
 
-    override fun duplicate() =
-        PrevEOGState(
-            this.elements.mapValues { (_, v) ->
-                PrevEOGLattice(v.elements.mapValues { (_, v2) -> PowersetLattice(v2.elements) })
-            }
-        )
+    override fun duplicate() = PrevEOGState(this.elements)
 
     fun push(newNode: Node, newEOGLattice: PrevEOGLattice): PrevEOGState {
-        return this.lub(MapLattice(mapOf(Pair(newNode, newEOGLattice))))
+        return this.lub(
+            PrevEOGState(
+                IdentityHashMap(mutableMapOf<Node, PrevEOGLattice>(Pair(newNode, newEOGLattice)))
+            )
+        )
     }
 }
