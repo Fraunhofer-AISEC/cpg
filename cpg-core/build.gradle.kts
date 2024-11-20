@@ -52,7 +52,6 @@ tasks.test {
 }
 
 dependencies {
-    api(libs.jackson)
     api(libs.slf4j.api)
 
     implementation(libs.bundles.log4j)
