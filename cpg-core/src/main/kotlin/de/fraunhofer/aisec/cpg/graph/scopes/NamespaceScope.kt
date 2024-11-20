@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 
 /**
- * A scope which acts as a namespace with a certain name, which is prefixed to all local names
- * declared in it. This could be a package or other structural elements, like a class. In the first
- * case, the derived [NamespaceScope], in the latter case, the derived [RecordScope] should be used.
+ * This scope is opened up by a [NamespaceDeclaration] and represents the scope of the whole
+ * namespace. This scope is special in a way that it will only exist once (per [GlobalScope]) and
+ * contains all symbols declared in this namespace, even if they are spread across multiple files.
  */
-sealed class NameScope(node: Node?) : StructureDeclarationScope(node) {
-
-    init {
-        astNode = node
-        // Set the name so that we can use it as a namespace later
-        name = node?.name
-    }
-}
+class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode)

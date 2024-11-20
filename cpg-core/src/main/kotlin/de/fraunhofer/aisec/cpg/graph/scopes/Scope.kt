@@ -55,7 +55,7 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * restriction and can act as namespaces to avoid name collisions.
  */
 @NodeEntity
-abstract class Scope(
+sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
     open var astNode: Node?

@@ -245,7 +245,7 @@ class ScopeManager : ScopeProvider {
                     is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
                     is TranslationUnitDeclaration -> FileScope(nodeToScope)
-                    is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
+                    is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
@@ -266,7 +266,7 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * A small internal helper function used by [enterScope] to create a [NameScope].
+     * A small internal helper function used by [enterScope] to create a [NamespaceScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
      * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
@@ -274,15 +274,15 @@ class ScopeManager : ScopeProvider {
      * all declarations, such as classes, independently of the translation units. Therefore, we need
      * to check, whether such as node already exists. If it does already exist:
      * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
-     *   [NameScope]
+     *   [NamespaceScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
-     * Otherwise, we return a new name scope.
+     * Otherwise, we return a new namespace scope.
      */
-    private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
+    private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
         val existingScope =
-            filterScopes { it is NameScope && it.name == nodeToScope.name }.firstOrNull()
+            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -296,7 +296,7 @@ class ScopeManager : ScopeProvider {
             // does not need to push a new scope
             null
         } else {
-            NameScope(nodeToScope)
+            NamespaceScope(nodeToScope)
         }
     }
 
