@@ -204,8 +204,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates =
-            scopeManager.lookupSymbolByName(ref.name, ref.language, ref.location).toSet()
+        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
 
         // Preparation for a future without legacy call resolving. Taking the first candidate is not
         // ideal since we are running into an issue with function pointers here (see workaround
