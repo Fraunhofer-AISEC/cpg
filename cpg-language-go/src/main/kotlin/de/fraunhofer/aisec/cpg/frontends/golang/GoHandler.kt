@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -101,7 +100,8 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             val namespace =
                 frontend.scopeManager
                     .filterScopes {
-                        it is NamespaceScope && (it.astNode as? NamespaceDeclaration)?.path == filename
+                        it is NamespaceScope &&
+                            (it.astNode as? NamespaceDeclaration)?.path == filename
                     }
                     .firstOrNull()
                     ?.astNode as? NamespaceDeclaration
