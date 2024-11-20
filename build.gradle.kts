@@ -143,3 +143,9 @@ val enableJVMFrontend: Boolean by extra {
     enableJVMFrontend.toBoolean()
 }
 project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")
+
+val enableConfigfilesFrontend: Boolean by extra {
+    val enableConfigfilesFrontend: String? by project
+    enableConfigfilesFrontend.toBoolean()
+}
+project.logger.lifecycle("Configfiles frontend is ${if (enableConfigfilesFrontend) "enabled" else "disabled"}")

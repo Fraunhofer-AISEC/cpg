@@ -12,6 +12,7 @@ val enableLLVMFrontend: Boolean by rootProject.extra
 val enableTypeScriptFrontend: Boolean by rootProject.extra
 val enableRubyFrontend: Boolean by rootProject.extra
 val enableJVMFrontend: Boolean by rootProject.extra
+val enableConfigfilesFrontend: Boolean by rootProject.extra
 
 dependencies {
     if (enableJavaFrontend) {
@@ -45,5 +46,9 @@ dependencies {
     if (enableRubyFrontend) {
         api(project(":cpg-language-ruby"))
         kover(project(":cpg-language-ruby"))
+    }
+    if (enableConfigfilesFrontend) {
+        api(project(":cpg-language-configfiles"))
+        kover(project(":cpg-language-configfiles"))
     }
 }
