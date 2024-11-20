@@ -79,9 +79,6 @@ class ScopeManager : ScopeProvider {
      */
     private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
-    /** True, if the scope manager is currently in a [LocalScope]. */
-    val isInBlock: Boolean
-        get() = this.firstScopeOrNull { it is LocalScope } != null
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -92,9 +89,6 @@ class ScopeManager : ScopeProvider {
     val globalScope: GlobalScope?
         get() = scopeMap[null] as? GlobalScope
 
-    /** The current block, according to the scope that is currently active. */
-    val currentBlock: Block?
-        get() = this.firstScopeIsInstanceOrNull<LocalScope>()?.astNode as? Block
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
