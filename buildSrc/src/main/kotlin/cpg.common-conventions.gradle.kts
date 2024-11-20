@@ -1,3 +1,4 @@
+import org.gradle.accessors.dm.LibrariesForLibs
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.api.services.BuildService;
@@ -163,4 +164,10 @@ kover {
             disabledForTestTasks.add("performanceTest")
         }
     }
+}
+
+// Common dependencies that we need for all modules
+val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
+dependencies {
+    implementation(libs.apache.commons.lang3)
 }

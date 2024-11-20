@@ -52,13 +52,11 @@ tasks.test {
 }
 
 dependencies {
-    api(libs.apache.commons.lang3)
     api(libs.neo4j.ogm.core)
     api(libs.jackson)
 
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
-
     implementation(libs.jacksonyml)
 
     testImplementation(libs.junit.params)
