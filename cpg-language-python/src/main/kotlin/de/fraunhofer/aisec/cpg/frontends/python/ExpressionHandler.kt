@@ -183,11 +183,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
-        if (node.format_spec != null) {
-            return newProblemExpression(
-                "Cannot handle formatted value with format_spec ${node.format_spec} yet",
-                rawNode = node
-            )
+        val formatSpec = node.format_spec?.let { handle(it) }
+        if (formatSpec is Literal<*>) {
+            return formatSpec
         }
         return when (node.conversion) {
             formattedValConversionNoFormatting -> {
