@@ -390,7 +390,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Try to see if we already know about this namespace somehow
         val namespace =
             scopeManager.lookupSymbolByName(import.name, null).filter {
-                it is NamespaceDeclaration && it.path == import.importURL
+                it is NamespaceDeclaration &&
+                    it.path == import.importURL &&
+                    it.language == import.language
             }
 
         // If not, we can infer a namespace declaration, so we can bundle all inferred function

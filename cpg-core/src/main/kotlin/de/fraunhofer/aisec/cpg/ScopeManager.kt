@@ -900,14 +900,19 @@ class ScopeManager : ScopeProvider {
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            if (scope != null) {
-                    scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
-                } else {
+            when {
+                scope != null -> {
+                    scope
+                        .lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
+                        .toMutableList()
+                }
+                else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
-                    startScope?.lookupSymbol(n.localName, predicate = predicate)
+                    startScope?.lookupSymbol(n.localName, predicate = predicate)?.toMutableList()
+                        ?: mutableListOf()
                 }
-                ?.toMutableList() ?: return listOf()
+            }
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
