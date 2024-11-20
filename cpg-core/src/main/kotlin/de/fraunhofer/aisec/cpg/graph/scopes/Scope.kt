@@ -138,12 +138,7 @@ abstract class Scope(
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
         var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
-        var scope: Scope? =
-            if (modifiedScoped != null) {
-                modifiedScoped
-            } else {
-                this
-            }
+        var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
 
@@ -187,14 +182,6 @@ abstract class Scope(
 
     fun addLabelStatement(labelStatement: LabelStatement) {
         labelStatement.label?.let { labelStatements[it] = labelStatement }
-    }
-
-    fun isBreakable(): Boolean {
-        return this is LoopScope || this is SwitchScope
-    }
-
-    fun isContinuable(): Boolean {
-        return this is LoopScope
     }
 
     override fun equals(other: Any?): Boolean {

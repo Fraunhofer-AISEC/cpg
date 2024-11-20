@@ -25,20 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
- * Scope of validity associated to a block of statements. Variables declared inside a block are not
- * visible outside.
+ * Scope of validity associated to the local statement. Variables declared inside this statement are
+ * not visible outside.
  */
-class BlockScope(blockStatement: Block) : ValueDeclarationScope(blockStatement), Breakable {
-    private val breaks: MutableList<BreakStatement> = ArrayList()
-
-    override fun addBreakStatement(breakStatement: BreakStatement) {
-        breaks.add(breakStatement)
-    }
-
-    override val breakStatements: List<BreakStatement>
-        get() = breaks
-}
+class LocalScope(astNode: Node) : ValueDeclarationScope(astNode) {}

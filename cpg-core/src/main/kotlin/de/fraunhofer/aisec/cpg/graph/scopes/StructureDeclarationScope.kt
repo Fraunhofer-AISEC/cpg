@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 
-open class StructureDeclarationScope(final override var astNode: Node?) :
-    ValueDeclarationScope(astNode) {
+open class StructureDeclarationScope(astNode: Node?) : ValueDeclarationScope(astNode) {
     val structureDeclarations: List<Declaration>
         get() {
             return symbols

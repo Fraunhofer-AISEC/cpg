@@ -79,9 +79,9 @@ class ScopeManager : ScopeProvider {
      */
     private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
-    /** True, if the scope manager is currently in a [BlockScope]. */
+    /** True, if the scope manager is currently in a [LocalScope]. */
     val isInBlock: Boolean
-        get() = this.firstScopeOrNull { it is BlockScope } != null
+        get() = this.firstScopeOrNull { it is LocalScope } != null
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -94,7 +94,7 @@ class ScopeManager : ScopeProvider {
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
-        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? Block
+        get() = this.firstScopeIsInstanceOrNull<LocalScope>()?.astNode as? Block
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
@@ -218,7 +218,7 @@ class ScopeManager : ScopeProvider {
      * new scope, this function needs to be called. Appropriate scopes will then be created
      * on-the-fly, if they do not exist.
      *
-     * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
+     * The scope manager has an internal association between the type of scope, e.g. a [LocalScope]
      * and the CPG node it represents, e.g. a [Block].
      *
      * Afterwards, all calls to [addDeclaration] will be distributed to the
@@ -231,19 +231,19 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is Block -> BlockScope(nodeToScope)
+                    is Block,
                     is WhileStatement,
                     is DoStatement,
-                    is AssertStatement -> LoopScope(nodeToScope)
+                    is AssertStatement,
                     is ForStatement,
-                    is ForEachStatement -> LoopScope(nodeToScope as Statement)
-                    is SwitchStatement -> SwitchScope(nodeToScope)
+                    is ForEachStatement,
+                    is SwitchStatement -> LocalScope(nodeToScope)
+                    is TryStatement -> LocalScope(nodeToScope)
+                    is IfStatement -> LocalScope(nodeToScope)
+                    is CatchClause -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is IfStatement -> ValueDeclarationScope(nodeToScope)
-                    is CatchClause -> ValueDeclarationScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TryStatement -> TryScope(nodeToScope)
                     is TranslationUnitDeclaration -> FileScope(nodeToScope)
                     is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
                     else -> {
@@ -297,24 +297,6 @@ class ScopeManager : ScopeProvider {
             null
         } else {
             NameScope(nodeToScope)
-        }
-    }
-
-    /**
-     * Similar to [enterScope], but does so in a "read-only" mode, e.g. it does not modify the scope
-     * tree and does not create new scopes on the fly, as [enterScope] does.
-     */
-    fun enterScopeIfExists(nodeToScope: Node?) {
-        if (scopeMap.containsKey(nodeToScope)) {
-            val scope = scopeMap[nodeToScope]
-
-            // we need a special handling of name spaces, because
-            // they are associated to more than one AST node
-            if (scope is NameScope) {
-                // update AST (see enterScope for an explanation)
-                scope.astNode = nodeToScope
-            }
-            currentScope = scope
         }
     }
 

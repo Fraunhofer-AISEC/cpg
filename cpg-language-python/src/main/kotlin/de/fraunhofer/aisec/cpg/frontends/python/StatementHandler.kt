@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
@@ -924,7 +924,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // the function
         var outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
-                it is BlockScope && it != frontend.scopeManager.currentScope
+                it is LocalScope && it != frontend.scopeManager.currentScope
             }
 
         return newLookupScopeStatement(
