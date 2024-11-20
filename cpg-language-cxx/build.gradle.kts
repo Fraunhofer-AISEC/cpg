@@ -41,15 +41,15 @@ publishing {
 
 dependencies {
     // Eclipse dependencies
-    api(libs.eclipse.runtime) {
+    implementation(libs.eclipse.runtime) {
         // For some reason, this group name is wrong
         exclude("org.osgi.service", "org.osgi.service.prefs")
     }
-    api(libs.osgi.service)
-    api(libs.icu4j)
+    implementation(libs.osgi.service)
+    implementation(libs.icu4j)
 
     // CDT
-    api(libs.eclipse.cdt.core)
+    implementation(libs.eclipse.cdt.core)
 
     testImplementation(libs.junit.params)
     testImplementation(project(":cpg-analysis"))
