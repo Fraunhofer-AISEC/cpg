@@ -54,7 +54,7 @@ tasks.test {
 dependencies {
     api(libs.apache.commons.lang3)
     api(libs.neo4j.ogm.core)
-    implementation(libs.jackson)
+    api(libs.jackson)
 
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
