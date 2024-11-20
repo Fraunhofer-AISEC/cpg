@@ -813,8 +813,10 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name): RecordDeclaration? {
-        return lookupSymbolByName(name).filterIsInstance<RecordDeclaration>().singleOrNull()
+    fun getRecordForName(name: Name, language: Language<*>?): RecordDeclaration? {
+        return lookupSymbolByName(name, language)
+            .filterIsInstance<RecordDeclaration>()
+            .singleOrNull()
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
@@ -891,6 +893,7 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupSymbolByName(
         name: Name,
+        language: Language<*>?,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
@@ -903,14 +906,20 @@ class ScopeManager : ScopeProvider {
             when {
                 scope != null -> {
                     scope
-                        .lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
+                        .lookupSymbol(
+                            n.localName,
+                            languageOnly = language,
+                            thisScopeOnly = true,
+                            predicate = predicate
+                        )
                         .toMutableList()
                 }
                 else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
-                    startScope?.lookupSymbol(n.localName, predicate = predicate)?.toMutableList()
-                        ?: mutableListOf()
+                    startScope
+                        ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
+                        ?.toMutableList() ?: mutableListOf()
                 }
             }
 
@@ -937,9 +946,15 @@ class ScopeManager : ScopeProvider {
      * It is important to know that the lookup needs to be unique, so if multiple declarations match
      * this symbol, a warning is triggered and null is returned.
      */
-    fun lookupUniqueTypeSymbolByName(name: Name, startScope: Scope?): DeclaresType? {
+    fun lookupUniqueTypeSymbolByName(
+        name: Name,
+        language: Language<*>?,
+        startScope: Scope?
+    ): DeclaresType? {
         var symbols =
-            lookupSymbolByName(name = name, startScope = startScope) { it is DeclaresType }
+            lookupSymbolByName(name = name, language = language, startScope = startScope) {
+                    it is DeclaresType
+                }
                 .filterIsInstance<DeclaresType>()
 
         // We need to have a single match, otherwise we have an ambiguous type, and we cannot

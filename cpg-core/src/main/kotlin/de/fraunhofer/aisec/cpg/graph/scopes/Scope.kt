@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
@@ -131,6 +132,7 @@ abstract class Scope(
      */
     fun lookupSymbol(
         symbol: Symbol,
+        languageOnly: Language<*>? = null,
         thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null
@@ -158,9 +160,14 @@ abstract class Scope(
                 list.replaceImports(symbol)
             }
 
+            // Filter according to the language
+            if (languageOnly != null) {
+                list.removeIf { it.language != languageOnly }
+            }
+
             // Filter the list according to the predicate, if we have any
             if (predicate != null) {
-                list = list.filter(predicate).toMutableList()
+                list.removeIf { !predicate.invoke(it) }
             }
 
             // If we have a hit, we can break the loop

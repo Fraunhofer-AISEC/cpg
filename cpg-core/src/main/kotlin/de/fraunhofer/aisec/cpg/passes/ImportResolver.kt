@@ -222,9 +222,7 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         for (part in parts) {
             var namespaces =
                 scopeManager
-                    .lookupSymbolByName(part, import.location, import.scope) {
-                        it.language == import.language
-                    }
+                    .lookupSymbolByName(part, import.language, import.location, import.scope)
                     .filterIsInstance<NamespaceDeclaration>()
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not
@@ -274,9 +272,12 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Let's do some importing. We need to import either a wildcard
         if (import.wildcardImport) {
             val list =
-                scopeManager.lookupSymbolByName(import.import, import.location, scope) {
-                    it.language == import.language
-                }
+                scopeManager.lookupSymbolByName(
+                    import.import,
+                    import.language,
+                    import.location,
+                    scope
+                )
             val symbol = list.singleOrNull()
             if (symbol != null) {
                 // In this case, the symbol must point to a name scope
@@ -289,7 +290,7 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // or a symbol directly
             val list =
                 scopeManager
-                    .lookupSymbolByName(import.import, import.location, scope)
+                    .lookupSymbolByName(import.import, import.language, import.location, scope)
                     .toMutableList()
             import.importedSymbols = mutableMapOf(import.symbol to list)
         }

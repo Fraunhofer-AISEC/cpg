@@ -380,5 +380,5 @@ fun Reference.nameIsType(): Type? {
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return scopeManager.lookupUniqueTypeSymbolByName(name, scope)?.declaredType
+    return scopeManager.lookupUniqueTypeSymbolByName(name, language, scope)?.declaredType
 }
