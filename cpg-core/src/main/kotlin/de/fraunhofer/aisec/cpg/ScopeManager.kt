@@ -876,18 +876,16 @@ class ScopeManager : ScopeProvider {
     override val scope: Scope?
         get() = currentScope
 
-    /** A convenience function to call [lookupSymbolByName] with the properties of [node]. */
-    fun lookupSymbolByNameOfNode(node: HasNameAndLocation, scope: Scope? = currentScope): List<Declaration> {
-        return lookupSymbolByName(
-            node.name,
-            node.language,
-            node.location,
-            if (node is HasScope) {
-                node.scope
-            } else {
-                currentScope
-            }
-        )
+    /**
+     * A convenience function to call [lookupSymbolByName] with the properties of [node]. The
+     * arguments [scope] and [predicate] are forwarded.
+     */
+    fun lookupSymbolByNameOfNode(
+        node: HasNameAndLocation,
+        scope: Scope? = currentScope,
+        predicate: ((Declaration) -> Boolean)? = null,
+    ): List<Declaration> {
+        return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
     }
 
     /**
