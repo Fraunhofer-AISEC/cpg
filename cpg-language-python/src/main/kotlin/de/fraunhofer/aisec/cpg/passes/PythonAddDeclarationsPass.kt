@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -44,7 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
-class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
     override fun cleanup() {
         // nothing to do
     }
@@ -205,4 +207,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
+
+    override val language: Language<*>?
+        get() = ctx.config.languages.firstOrNull { it is PythonLanguage }
 }
