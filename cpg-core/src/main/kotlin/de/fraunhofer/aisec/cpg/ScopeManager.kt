@@ -876,6 +876,20 @@ class ScopeManager : ScopeProvider {
     override val scope: Scope?
         get() = currentScope
 
+    /** A convenience function to call [lookupSymbolByName] with the properties of [node]. */
+    fun lookupSymbolByNameOfNode(node: HasNameAndLocation, scope: Scope? = currentScope): List<Declaration> {
+        return lookupSymbolByName(
+            node.name,
+            node.language,
+            node.location,
+            if (node is HasScope) {
+                node.scope
+            } else {
+                currentScope
+            }
+        )
+    }
+
     /**
      * This function tries to convert a [Node.name] into a [Symbol] and then performs a lookup of
      * this symbol. This can either be an "unqualified lookup" if [name] is not qualified or a
@@ -887,9 +901,9 @@ class ScopeManager : ScopeProvider {
      * function overloading. But it will only return list of declarations within the same scope; the
      * list cannot be spread across different scopes.
      *
-     * This means that as soon one or more declarations for the symbol are found in a "local" scope,
-     * these shadow all other occurrences of the same / symbol in a "higher" scope and only the ones
-     * from the lower ones will be returned.
+     * This means that as soon one or more declarations (of the matching [language]) for the symbol
+     * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
+     * "higher" scope and only the ones from the lower ones will be returned.
      */
     fun lookupSymbolByName(
         name: Name,
