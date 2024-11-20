@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -160,34 +159,21 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         currentNode: UnaryOperator,
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
+        var doubleState = doubleState
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
          */
         // TODO: Check out cases where the input is no Reference
         if (currentNode.input is Reference) {
             val address = doubleState.getAddress(currentNode)
-            val value = doubleState.getValue(currentNode)
-            val newValue =
-                if (currentNode.operatorCode == "++" || currentNode.operatorCode == "--") {
-                    val binOp =
-                        newBinaryOperator(currentNode.operatorCode.toString().substring(0, 1))
-                    val expList = newExpressionList()
-                    value.filterIsInstance<Statement>().forEach { stmt ->
-                        expList.expressions.add(stmt)
-                    }
-                    binOp.lhs = expList
-                    binOp.rhs = newLiteral(1, currentNode.primitiveType("int"))
-                    setOf(binOp)
-                } else value
             val newDeclState = doubleState.declarationsState.elements.toMutableMap()
             /* Update the declarationState for the refersTo */
             newDeclState.replace(
                 doubleState.getAddress(currentNode.input).first(),
-                TupleLattice(Pair(PowersetLattice(address), PowersetLattice(newValue)))
+                TupleLattice(Pair(PowersetLattice(address), PowersetLattice(setOf(currentNode))))
             )
             // TODO: Should we already update the input's value in the generalState, or is it
             // enough at the next use?
-            val newDoubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
-            return newDoubleState
+            doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
         }
         return doubleState
     }
@@ -196,30 +182,30 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         currentNode: AssignExpression,
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
+        var doubleState = doubleState
         /* For AssignExpressions, we update the value of the rhs with the lhs
          * In C(++), both the lhs and the rhs should only have one element
          * */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
             val ref = currentNode.lhs.first() as? Reference
             if (ref?.refersTo != null) {
-                val address = doubleState.getAddress(ref.refersTo!!)
+                val address = doubleState.getAddress(ref)
                 // TODO: resolve rhs
                 val value: Set<Node> = doubleState.getValue(currentNode.rhs.first())
                 val newDeclState = doubleState.declarationsState.elements.toMutableMap()
-                val newGeneralState = doubleState.generalState.elements.toMutableMap()
                 /* Update the declarationState for the refersTo */
                 newDeclState.replace(
-                    doubleState.getAddress(ref.refersTo!!).first(),
+                    doubleState.getAddress(ref).first(),
                     TupleLattice(Pair(PowersetLattice(address), PowersetLattice(value)))
                 )
                 /* Also update the generalState for the ref */
-                newGeneralState.replace(
-                    ref,
-                    TupleLattice(Pair(PowersetLattice(address), PowersetLattice(value)))
-                )
-                val newDoubleState =
-                    PointsToState2(MapLattice(newGeneralState), MapLattice(newDeclState))
-                return newDoubleState
+                doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
+                /* Also update the generalState for the ref */
+                doubleState =
+                    doubleState.push(
+                        ref,
+                        TupleLattice(Pair(PowersetLattice(address), PowersetLattice(value)))
+                    )
             }
         }
 
@@ -230,17 +216,20 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         currentNode: Reference,
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
-        /* The MemoryAddress of a Reference is the same is from its Declaration AKA refersTo
-         * Except for PointerReferences, they don't really have MemoryAddress, so we leave the set empty */
-        val address = doubleState.getAddress(currentNode)
-        val value = doubleState.getValue(currentNode)
+        var doubleState = doubleState
+        /* If the Reference is written to, we handle it later and ignore it now */
+        if (currentNode.access != AccessValues.WRITE) {
+            /* The MemoryAddress of a Reference is the same is from its Declaration AKA refersTo
+             * Except for PointerReferences, they don't really have MemoryAddress, so we leave the set empty */
+            val address = doubleState.getAddress(currentNode)
+            val value = doubleState.getValue(currentNode)
 
-        val doubleState =
-            doubleState.push(
-                currentNode,
-                TupleLattice(Pair(PowersetLattice(address), PowersetLattice(value)))
-            )
-
+            doubleState =
+                doubleState.push(
+                    currentNode,
+                    TupleLattice(Pair(PowersetLattice(address), PowersetLattice(value)))
+                )
+        }
         return doubleState
     }
 
