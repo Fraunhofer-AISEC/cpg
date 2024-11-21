@@ -882,7 +882,7 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupSymbolByNameOfNode(
         node: HasNameAndLocation,
-        scope: Scope? = currentScope,
+        scope: Scope? = node.scope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
