@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -187,5 +188,82 @@ class PointsToPassTest {
         assertEquals(iDecl.memoryAddress, bPointerDerefLine18.memoryAddress.first())
         assertEquals(1, bPointerDerefLine18.memoryValue.size)
         assertEquals(iUO, bPointerDerefLine18.memoryValue.first())
+    }
+
+    @Test
+    fun testConditions() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // Declarations
+        val iDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 22 }.first()
+        val jDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 23 }.first()
+        val aDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 24 }.first()
+
+        // PointerDerefs
+        val aPointerDerefLine27 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 27 && it.name.localName == "a"
+                }
+                .first()
+        val aPointerDerefLine30 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 30 && it.name.localName == "a"
+                }
+                .first()
+        val aPointerDerefLine32 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 32 && it.name.localName == "a"
+                }
+                .first()
+        val aPointerDerefLine37 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 37 && it.name.localName == "a"
+                }
+                .first()
+
+        // UnaryOperator
+        val iUO = tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 35 }.first()
+
+        // Line 27
+        assertEquals(iDecl.memoryAddress, aPointerDerefLine27.memoryAddress.firstOrNull())
+        assertEquals(iDecl.memoryValue, aPointerDerefLine27.memoryValue)
+
+        // Line 30
+        assertEquals(jDecl.memoryAddress, aPointerDerefLine30.memoryAddress.firstOrNull())
+        assertEquals(jDecl.memoryValue, aPointerDerefLine30.memoryValue)
+
+        // Line 32
+        assertEquals(2, aPointerDerefLine32.memoryAddress.size)
+        assertTrue(
+            aPointerDerefLine32.memoryAddress.containsAll(
+                setOf(iDecl.memoryAddress, jDecl.memoryAddress)
+            )
+        )
+        assertEquals(2, aPointerDerefLine32.memoryValue.size)
+        assertTrue(
+            aPointerDerefLine32.memoryValue.containsAll(
+                setOf(iDecl.memoryValue.first(), jDecl.memoryValue.first())
+            )
+        )
+
+        // Line 37
+        assertEquals(2, aPointerDerefLine37.memoryAddress.size)
+        assertTrue(
+            aPointerDerefLine37.memoryAddress.containsAll(
+                setOf(iDecl.memoryAddress, jDecl.memoryAddress)
+            )
+        )
+        assertEquals(3, aPointerDerefLine37.memoryValue.size)
+        assertTrue(
+            aPointerDerefLine37.memoryValue.containsAll(
+                setOf(iDecl.memoryValue.first(), jDecl.memoryValue.first(), iUO)
+            )
+        )
     }
 }

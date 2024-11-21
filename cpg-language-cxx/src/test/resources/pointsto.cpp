@@ -18,14 +18,16 @@ int main() {
   printf("%d\n", *b);
 }
 
-/*int conditions() {
+int conditions() {
   int i=0;                                                                                                                                            
   int j=1;                                                                      
-  int* a;                                                                                                                                                                                                                                           
+  int* a;                                                                                               
   if ( 1 == 1 ) {
     a = &i;
+    printf("%d\n", *a);
   } else {
     a = &j;
+    printf("%d\n", *a);
   }
   printf("%d\n", *a);
 
@@ -36,7 +38,7 @@ int main() {
 }
 
 
-int memcpy() {
+/*int memcpy() {
   char a[3]="aa";
   char b[3]="bb";
   char c[3]="cc";
@@ -69,7 +71,7 @@ int memcpy() {
   memcpy_s(&alias4, sizeof(pa), &pa, sizeof(pa));
   
   printf("%c %c %c %c\n", *alias1, *alias2, *alias3, *alias4);
-}
+}*/
 
 int arrays() {
    int n[5];   
@@ -86,7 +88,8 @@ int arrays() {
 
 } 
 
-int ghidra(undefined8 *param_1) {
+
+/*int ghidra(undefined8 *param_1) {
   undefined8 uVar1;   
   undefined8 *local_10;
                                                                                                                                    
@@ -94,5 +97,6 @@ int ghidra(undefined8 *param_1) {
   *param_1 = CONCAT71(key._1_7_,(char)key);                                                                                                            
   param_1[1] = uVar1;
   
-  *local_10[0] = key;                                                                                                                                       local_10[1] = uVar1;
+  *local_10[0] = key;   
+  local_10[1] = uVar1;
 }*/

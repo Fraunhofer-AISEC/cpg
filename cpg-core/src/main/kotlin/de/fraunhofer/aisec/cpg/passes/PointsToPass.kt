@@ -190,7 +190,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             val ref = currentNode.lhs.first() as? Reference
             if (ref?.refersTo != null) {
                 val address = doubleState.getAddress(ref)
-                // TODO: resolve rhs
                 val value: Set<Node> = doubleState.getValue(currentNode.rhs.first())
                 val newDeclState = doubleState.declarationsState.elements.toMutableMap()
                 /* Update the declarationState for the refersTo */
@@ -251,8 +250,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 TupleLattice(Pair(PowersetLattice(address), PowersetLattice(value)))
             )
         doubleState =
-            /* In the DeclarationsState, we save the address so which we wrote the value for easier work with pointers
-             * TODO: How can we do this when we have multiple addresses?
+            /* In the DeclarationsState, we save the address which we wrote to the value for easier work with pointers
+             * Note: Since this is a Declaration, the Address-Set should only contain one element, so we only take the first one
              * */
 
             doubleState.pushToDeclarationsState(
@@ -375,16 +374,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 is PointerDereference -> {
                     /* To find the value for PointerDereferences, we first check what's the current value of the input, which is probably a MemoryAddress
                      * Then we look up the current value at this MemoryAddress
-                     * TODO: We assume that there the value of the input is a single MemoryAddress
                      */
                     val inputVal =
                         when (node.input) {
-                            is Reference ->
-                                (node.input as Reference).refersTo.let { this.getValue(it!!) }
+                            is Reference -> this.getValue(node.input)
                             else -> // TODO: How can we handle other cases?
                             emptySet()
                         }
-                    if (inputVal.size == 1) this.getValue(inputVal.first()) else emptySet()
+                    inputVal.flatMap { this.getValue(it) }.toSet()
                 }
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
