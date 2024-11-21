@@ -93,6 +93,12 @@ class ScopeManager : ScopeProvider {
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
 
+    /** The current block, according to the scope that is currently active. */
+    val currentBlock: Block?
+        get() =
+            currentScope?.astNode as? Block
+                ?: currentScope?.astNode?.firstParentOrNull { it is Block } as? Block
+
     /**
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
      * correctly if a method contains a lambda or other types of function declarations

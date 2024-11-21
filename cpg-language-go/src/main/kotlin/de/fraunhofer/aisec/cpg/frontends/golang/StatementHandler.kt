@@ -142,7 +142,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             }
 
         // We need to find the current block / scope and add the statements to it
-        val currentBlock = case.firstParentOrNull { it is Block } as? Block
+        val currentBlock = frontend.scopeManager.currentBlock
 
         if (currentBlock == null) {
             log.error("could not find block to add case clauses")
