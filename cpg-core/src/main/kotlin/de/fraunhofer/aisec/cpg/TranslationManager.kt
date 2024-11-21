@@ -146,13 +146,6 @@ private constructor(
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
-            sourceLocations =
-                sourceLocations.filter { file ->
-                    ctx.config.exclusionPatterns.none { pattern ->
-                        pattern.containsMatchIn(file.absolutePath)
-                    }
-                }
-
             var useParallelFrontends = ctx.config.useParallelFrontends
 
             val list =
@@ -163,6 +156,16 @@ private constructor(
                                 .walkTopDown()
                                 .onEnter { !it.name.startsWith(".") }
                                 .filter { it.isFile && !it.name.startsWith(".") }
+                                .filter {
+                                    ctx.config.exclusionPatternsByString.none { pattern ->
+                                        it.absolutePath.contains(pattern)
+                                    }
+                                }
+                                .filter {
+                                    ctx.config.exclusionPatternsByRegex.none { pattern ->
+                                        pattern.containsMatchIn(it.absolutePath)
+                                    }
+                                }
                                 .toList()
                         files
                     } else {
