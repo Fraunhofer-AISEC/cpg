@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a Java or C++ switch statement of the `switch (selector) {...}` that can include case
- * and default statements. Break statements break out of the switch and labeled breaks in JAva are
+ * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
 class SwitchStatement : Statement(), BranchingNode {
@@ -51,7 +51,7 @@ class SwitchStatement : Statement(), BranchingNode {
 
     @Relationship(value = "SELECTOR_DECLARATION")
     var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>()
-    /** C++ allows to use a declaration instead of a expression as selector */
+    /** C++ allows to use a declaration instead of an expression as selector */
     var selectorDeclaration by unwrapping(SwitchStatement::selectorDeclarationEdge)
 
     @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
