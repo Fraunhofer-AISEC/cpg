@@ -38,6 +38,26 @@ int conditions() {
 }
 
 
+typedef struct test {
+  int a;
+  int b;
+} S;
+
+int structs() {
+  S s;
+  S* p=&s;
+
+  s.a=1;
+  s.b=2;
+  printf("%d %d\n", s.a, s.b);
+
+  p->a=3;
+  p->b=4;
+
+  printf("%d %d\n", p->a, p->b);
+}
+
+
 /*int memcpy() {
   char a[3]="aa";
   char b[3]="bb";

@@ -266,4 +266,15 @@ class PointsToPassTest {
             )
         )
     }
+
+    @Test
+    fun testStructs() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+    }
 }

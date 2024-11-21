@@ -26,6 +26,14 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
-class MemoryAddress(override var name: Name) : Declaration() {}
+class MemoryAddress(override var name: Name) : Declaration() {
+    /*
+     * When the node represents the MemoryAddress of a struct or an array, we use the fieldAddresses map to store the MemoryAddresses of the different fields.
+     * Therefore, for structs the key should be a FieldDeclaration.
+     * For arrays, it may also be a literal if the MemoryAddress is accesses with something like `array[0]`
+     */
+    val fieldAddresses = mutableMapOf<Node, Set<MemoryAddress>>()
+}
