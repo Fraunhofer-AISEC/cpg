@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.SetType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.query.value
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -1374,6 +1375,93 @@ class PythonFrontendTest : BaseTest() {
         val fStmtRhsThird = subscriptExpression.third
         assertIs<Literal<*>>(fStmtRhsThird)
         assertEquals(2L, fStmtRhsThird.value)
+    }
+
+    @Test
+    fun testFormattedValues() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("datatypes.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+        val namespace = tu.namespaces.singleOrNull()
+        assertNotNull(namespace)
+
+        // Test for g = f'Number: {42:.2f}'
+        val gStmt = namespace.statements[6]
+        assertIs<AssignExpression>(gStmt)
+        val gStmtRhs = gStmt.rhs.singleOrNull()
+        assertIs<BinaryOperator>(gStmtRhs)
+        val gFormatCall = gStmtRhs.rhs
+        assertIs<CallExpression>(gFormatCall)
+        assertEquals("format", gFormatCall.name.localName)
+        val gArguments = gFormatCall.arguments
+        assertEquals(2, gArguments.size)
+        assertIs<Literal<*>>(gArguments[0])
+        assertEquals(42.toLong(), gArguments[0].value.value)
+        assertIs<Literal<*>>(gArguments[1])
+        assertEquals(".2f", gArguments[1].value.value)
+
+        // Test for h = f'Hexadecimal: {255:#x}'
+        val hStmt = namespace.statements[7]
+        assertIs<AssignExpression>(hStmt)
+        val hStmtRhs = hStmt.rhs.singleOrNull()
+        assertIs<BinaryOperator>(hStmtRhs)
+        val hFormatCall = hStmtRhs.rhs
+        assertIs<CallExpression>(hFormatCall)
+        assertEquals("format", hFormatCall.name.localName)
+        val hArguments = hFormatCall.arguments
+        assertEquals(2, hArguments.size)
+        assertIs<Literal<*>>(hArguments[0])
+        assertEquals(255L.toLong(), hArguments[0].value.value)
+        assertIs<Literal<*>>(hArguments[1])
+        assertEquals("#x", hArguments[1].value.value)
+
+        // Test for i = f'String with conversion: {c!r}'
+        val iStmt = namespace.statements[8]
+        assertIs<AssignExpression>(iStmt)
+        val iStmtRhs = iStmt.rhs.singleOrNull()
+        assertIs<BinaryOperator>(iStmtRhs)
+        val iConversionCall = iStmtRhs.rhs
+        assertIs<CallExpression>(iConversionCall)
+        assertEquals("repr", iConversionCall.name.localName)
+        val iArg = iConversionCall.arguments.singleOrNull()
+        assertNotNull(iArg)
+        assertEquals("c", iArg.name.localName)
+
+        // Test for j = f'ASCII representation: {d!a}'
+        val jStmt = namespace.statements[9]
+        assertIs<AssignExpression>(jStmt)
+        val jStmtRhs = jStmt.rhs.singleOrNull()
+        assertIs<BinaryOperator>(jStmtRhs)
+        val jConversionCall = jStmtRhs.rhs
+        assertIs<CallExpression>(jConversionCall)
+        assertEquals("ascii", jConversionCall.name.localName)
+        val jArg = jConversionCall.arguments.singleOrNull()
+        assertNotNull(jArg)
+        assertEquals("d", jArg.name.localName)
+
+        // Test for k = f'Combined: {b!s:10}'
+        val kStmt = namespace.statements[10]
+        assertIs<AssignExpression>(kStmt)
+        val kStmtRhs = kStmt.rhs.singleOrNull()
+        assertIs<BinaryOperator>(kStmtRhs)
+        val kFormatCall = kStmtRhs.rhs
+        assertIs<CallExpression>(kFormatCall)
+        assertEquals("format", kFormatCall.name.localName)
+        val kArguments = kFormatCall.arguments
+        assertEquals(2, kArguments.size)
+        val kConversionCall = kArguments[0]
+        assertIs<CallExpression>(kConversionCall)
+        assertEquals("str", kConversionCall.name.localName)
+        assertEquals("b", kConversionCall.arguments.singleOrNull()?.name?.localName)
+        assertIs<Literal<*>>(kArguments[1])
+        assertEquals("10", kArguments[1].value.value)
     }
 
     @Test

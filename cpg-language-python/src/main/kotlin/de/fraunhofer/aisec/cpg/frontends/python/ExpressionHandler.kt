@@ -184,39 +184,69 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
         val formatSpec = node.format_spec?.let { handle(it) }
-        if (formatSpec is Literal<*>) {
-            return formatSpec
+
+        val valueExpression = handle(node.value)
+        val conversion =
+            when (node.conversion) {
+                formattedValConversionNoFormatting -> {
+                    // No formatting, just return the value.
+                    valueExpression
+                }
+                formattedValConversionString -> {
+                    // String representation. wrap in str() call.
+                    val strCall =
+                        newCallExpression(
+                                newReference("str", rawNode = node),
+                                "str",
+                                rawNode = node
+                            )
+                            .implicit()
+                    strCall.addArgument(valueExpression)
+                    strCall
+                }
+                formattedValConversionRepr -> {
+                    // String representation. wrap in repr() call.
+                    val reprCall =
+                        newCallExpression(
+                                newReference("repr", rawNode = node),
+                                "repr",
+                                rawNode = node
+                            )
+                            .implicit()
+                    reprCall.addArgument(valueExpression)
+                    reprCall
+                }
+                formattedValConversionASCII -> {
+                    // String representation. wrap in ascii() call.
+                    val asciiCall =
+                        newCallExpression(
+                                newReference("ascii", rawNode = node),
+                                "ascii",
+                                rawNode = node
+                            )
+                            .implicit()
+                    asciiCall.addArgument(handle(node.value))
+                    asciiCall
+                }
+                else ->
+                    newProblemExpression(
+                        "Cannot handle formatted value with conversion ${node.conversion} yet",
+                        rawNode = node
+                    )
+            }
+        if (formatSpec != null) {
+            return newCallExpression(
+                    newReference("format", rawNode = node),
+                    "format",
+                    rawNode = node
+                )
+                .implicit()
+                .apply {
+                    addArgument(conversion)
+                    addArgument(formatSpec)
+                }
         }
-        return when (node.conversion) {
-            formattedValConversionNoFormatting -> {
-                // No formatting, just return the value.
-                handle(node.value)
-            }
-            formattedValConversionString -> {
-                // String representation. wrap in str() call.
-                val strCall =
-                    newCallExpression(newReference("str", rawNode = node), "str", rawNode = node)
-                strCall.addArgument(handle(node.value))
-                strCall
-            }
-            formattedValConversionRepr -> {
-                newProblemExpression(
-                    "Cannot handle conversion '114: !r repr formatting', yet.",
-                    rawNode = node
-                )
-            }
-            formattedValConversionASCII -> {
-                newProblemExpression(
-                    "Cannot handle conversion '97: !a ascii formatting', yet.",
-                    rawNode = node
-                )
-            }
-            else ->
-                newProblemExpression(
-                    "Cannot handle formatted value with conversion ${node.conversion} yet",
-                    rawNode = node
-                )
-        }
+        return conversion
     }
 
     private fun handleJoinedStr(node: Python.AST.JoinedStr): Expression {
