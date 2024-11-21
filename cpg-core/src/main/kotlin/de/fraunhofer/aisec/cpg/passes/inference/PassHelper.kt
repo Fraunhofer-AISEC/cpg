@@ -47,6 +47,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -315,6 +317,22 @@ internal fun Pass<*>.tryFunctionInference(
     } else {
         tryMethodInference(call, suitableBases, bestGuess)
     }
+}
+
+/** This function tries to infer a missing [FunctionDeclaration] from a function pointer usage. */
+internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
+    ref: Reference,
+    type: FunctionPointerType
+): ValueDeclaration? {
+    // Determine the scope where we want to start our inference
+    var (scope, _) = scopeManager.extractScope(ref)
+    if (scope !is NameScope) {
+        scope = null
+    }
+
+    return (scope?.astNode ?: ref.translationUnit)
+        ?.startInference(ctx)
+        ?.inferFunctionDeclaration(ref.name, null, false, type.parameters, type.returnType)
 }
 
 /**
