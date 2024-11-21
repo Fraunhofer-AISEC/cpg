@@ -249,7 +249,7 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
  * requirement specified in [predicate].
  */
 fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
-    val evalRes = from.followNextEOGEdgesUntilHit(predicate)
+    val evalRes = from.followNextEOGEdgesUntilHit(predicate = predicate)
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
     allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
@@ -264,7 +264,7 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> 
  * requirement specified in [predicate].
  */
 fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
-    val evalRes = to.followPrevEOGEdgesUntilHit(predicate)
+    val evalRes = to.followPrevEOGEdgesUntilHit(predicate = predicate)
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
     allPaths.addAll(evalRes.failed.map { QueryTree(it) })
     return QueryTree(
