@@ -468,7 +468,8 @@ private constructor(
          * exclusionPatterns(listOf(Regex(".*test(s)?")))
          * ```
          */
-        fun exclusionPatternsByRegex(patterns: List<Regex>): Builder {
+        @JvmName("exclusionPatternsByRegex")
+        fun exclusionPatterns(patterns: List<Regex>): Builder {
             exclusionPatternsByRegex.addAll(patterns)
             return this
         }
@@ -481,7 +482,8 @@ private constructor(
          * exclusionPatterns(listOf("tests"))
          * ```
          */
-        fun exclusionPatternsByString(patterns: List<String>): Builder {
+        @JvmName("exclusionPatternsByString")
+        fun exclusionPatterns(patterns: List<String>): Builder {
             exclusionPatternsByString.addAll(patterns)
             return this
         }
