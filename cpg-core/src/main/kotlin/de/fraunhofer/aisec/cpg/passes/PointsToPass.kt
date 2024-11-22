@@ -106,7 +106,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         for ((key, value) in finalState.generalState.elements) {
             when (key) {
-                is Reference -> {
+                is Expression -> {
                     val newMemoryValues = value.elements.second.elements
                     val newMemoryAddresses =
                         value.elements.first.elements.filterIsInstance<MemoryAddress>()
@@ -146,9 +146,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         doubleState =
             when (currentNode) {
                 is Declaration -> handleDeclaration(currentNode, doubleState)
-                is Reference -> handleReference(currentNode, doubleState)
                 is AssignExpression -> handleAssignExpression(currentNode, doubleState)
                 is UnaryOperator -> handleUnaryOperator(currentNode, doubleState)
+                is Expression -> handleExpression(currentNode, doubleState)
                 else -> doubleState
             }
 
@@ -191,39 +191,39 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
          * In C(++), both the lhs and the rhs should only have one element
          * */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            val ref = currentNode.lhs.first() as? Reference
-            if (ref?.refersTo != null) {
-                val addresses = doubleState.getAddresses(ref)
-                val values: Set<Node> = doubleState.getValues(currentNode.rhs.first())
-                val newDeclState = doubleState.declarationsState.elements.toMutableMap()
-                /* Update the declarationState for the refersTo */
-                addresses.forEach { addr ->
-                    newDeclState[addr] =
-                        TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-                }
-                /* Also update the generalState for the ref */
-                doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
-                /* Also update the generalState for the ref */
-                doubleState =
-                    doubleState.push(
-                        ref,
-                        TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-                    )
+            val ref = currentNode.lhs.first()
+            val addresses = doubleState.getAddresses(ref)
+            val values: Set<Node> = doubleState.getValues(currentNode.rhs.first())
+            val newDeclState = doubleState.declarationsState.elements.toMutableMap()
+            /* Update the declarationState for the refersTo */
+            addresses.forEach { addr ->
+                newDeclState[addr] =
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
             }
+            /* Also update the generalState for the ref */
+            doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
+            doubleState =
+                doubleState.push(
+                    ref,
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                )
         }
 
         return doubleState
     }
 
-    private fun handleReference(
-        currentNode: Reference,
+    private fun handleExpression(
+        currentNode: Expression,
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
-        /* If the Reference is written to, we handle it later and ignore it now */
-        if (currentNode.access != AccessValues.WRITE) {
-            /* The MemoryAddress of a Reference is the same is from its Declaration AKA refersTo
-             * Except for PointerReferences, they don't really have MemoryAddress, so we leave the set empty */
+        /* If we have an Expression that is written to, we handle it later and ignore it now */
+        val access =
+            if (currentNode is Reference) currentNode.access
+            else if (currentNode is SubscriptExpression && currentNode.arrayExpression is Reference)
+                (currentNode.arrayExpression as Reference).access
+            else null
+        if (access == AccessValues.READ) {
             val addresses = doubleState.getAddresses(currentNode)
             val values = doubleState.getValues(currentNode)
 
@@ -406,6 +406,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     this.getValues(node.expression)
                 }
                 is UnaryOperator -> this.getValues(node.input)
+                is SubscriptExpression ->
+                    this.getAddresses(node)
+                        .flatMap {
+                            this.declarationsState.elements[it]?.elements?.second?.elements
+                                ?: setOf()
+                        }
+                        .toSet()
                 else -> setOf(node)
             }
         }
@@ -436,27 +443,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                      */
                     // TODO: Are there any cases where the address of the base is no MemoryAddress?
                     // but still relevant for us?
-                    val baseAddresses =
-                        this.getAddresses(node.base).filterIsInstance<MemoryAddress>()
-                    val fieldAddresses = mutableSetOf<MemoryAddress>()
-
-                    /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
-                    baseAddresses.forEach { addr ->
-                        addr.fieldAddresses[node.refersTo?.name.toString()]?.forEach {
-                            fieldAddresses.add(it)
-                        }
-                    }
-                    /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
-                    if (fieldAddresses.isEmpty()) {
-                        val newMemoryAddress = MemoryAddress(node.name)
-
-                        fieldAddresses.add(newMemoryAddress)
-                        baseAddresses.forEach { addr ->
-                            addr.fieldAddresses[node.refersTo?.name.toString()] =
-                                setOf(newMemoryAddress)
-                        }
-                    }
-                    fieldAddresses
+                    getFieldAddresses(
+                        this.getAddresses(node.base).filterIsInstance<MemoryAddress>(),
+                        /*node.refersTo?.name.toString(),*/
+                        node.name
+                    )
                 }
                 is Reference -> {
                     /*
@@ -479,8 +470,45 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                      */
                     this.getAddresses(node.expression)
                 }
+                is SubscriptExpression -> {
+                    val localName =
+                        if (node.subscriptExpression is Literal<*>)
+                            (node.subscriptExpression as? Literal<*>)?.value.toString()
+                        else node.subscriptExpression.name.toString()
+                    getFieldAddresses(
+                        this.getAddresses(node.base).filterIsInstance<MemoryAddress>(),
+                        Name(localName, node.arrayExpression.name)
+                    )
+                }
                 else -> setOf()
             }
+        }
+
+        /*
+         * Look up the `indexString` in the `baseAddress`es and return the fieldAddresses
+         * If no MemoryAddress exits at `indexString`, it will be created
+         */
+        fun getFieldAddresses(
+            baseAddresses: List<MemoryAddress>,
+            /*indexString: String,*/
+            nodeName: Name
+        ): Set<Node> {
+            val fieldAddresses = mutableSetOf<MemoryAddress>()
+
+            /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
+            baseAddresses.forEach { addr ->
+                addr.fieldAddresses[nodeName.localName]?.forEach { fieldAddresses.add(it) }
+            }
+            /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
+            if (fieldAddresses.isEmpty()) {
+                val newMemoryAddress = MemoryAddress(nodeName)
+
+                fieldAddresses.add(newMemoryAddress)
+                baseAddresses.forEach { addr ->
+                    addr.fieldAddresses[nodeName.localName] = setOf(newMemoryAddress)
+                }
+            }
+            return fieldAddresses
         }
     }
 }

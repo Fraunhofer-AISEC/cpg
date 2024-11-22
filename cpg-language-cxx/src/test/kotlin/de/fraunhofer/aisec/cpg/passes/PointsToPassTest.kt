@@ -423,4 +423,32 @@ class PointsToPassTest {
         assertEquals(1, pbLine59.memoryValue.size)
         assertEquals(literal4, pbLine59.memoryValue.first())
     }
+
+    @Test
+    fun testArrays() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // References
+        val n0Line66 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 66 }.first()
+        val n0Line67 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 67 }.first()
+        val n0Line68 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 68 }.first()
+
+        // Literals
+        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 67 }.first()
+
+        assertEquals(1, n0Line66.memoryAddress.size)
+        assertEquals(
+            n0Line66.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
+            n0Line66.memoryAddress.first()
+        )
+    }
 }

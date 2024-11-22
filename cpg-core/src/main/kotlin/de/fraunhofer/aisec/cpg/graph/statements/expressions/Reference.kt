@@ -73,18 +73,6 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         }
 
     /**
-     * Each reference also has an address. For most References, it should not change, but it may do
-     * so for PointerDereferences
-     */
-    var memoryAddress = mutableSetOf<MemoryAddress>()
-
-    /**
-     * Each reference also contains one or more values (in case of branches). May contain a memory
-     * address (in case of pointers) or some kind of expression
-     */
-    var memoryValue = mutableSetOf<Node?>(null)
-
-    /**
      * For some more complex resolutions, such as call resolutions, we need to do a two-step
      * process:
      * - First, identify possible candidates with a matching name / symbol

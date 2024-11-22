@@ -59,6 +59,24 @@ int structs() {
   printf("%d %d\n", p->a, p->b);
 }
 
+int arrays() {
+   int n[5];   
+   int i, j;
+   
+   printf("%d\n", n[0]);
+   n[0] = 1;
+   printf("%d\n", n[0]);
+        
+   for(i = 0; i < 5; i++){
+      n[i] = i + 100;
+   }
+   
+   for(j = 0; j < 5; j++){
+      printf("n[%d] = %d\n", j, n[j]);
+   }
+   return 0;
+
+} 
 
 /*int memcpy() {
   char a[3]="aa";
@@ -95,20 +113,6 @@ int structs() {
   printf("%c %c %c %c\n", *alias1, *alias2, *alias3, *alias4);
 }*/
 
-int arrays() {
-   int n[5];   
-   int i, j;
-          
-   for(i = 0; i < 5; i++){
-      n[i] = i + 100;
-   }
-   
-   for(j = 0; j < 5; j++){
-      printf("n[%d] = %d\n", j, n[j]);
-   }
-   return 0;
-
-} 
 
 
 /*int ghidra(undefined8 *param_1) {

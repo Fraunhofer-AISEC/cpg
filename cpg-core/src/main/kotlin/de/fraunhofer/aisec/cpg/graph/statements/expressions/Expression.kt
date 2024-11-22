@@ -86,6 +86,12 @@ abstract class Expression : Statement(), HasType {
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
 
+    /** Each Expression also has a MemoryAddress. */
+    var memoryAddress = mutableSetOf<MemoryAddress>()
+
+    /** Each Expression also contains one or more values (in case of branches). */
+    var memoryValue = mutableSetOf<Node?>(null)
+
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
