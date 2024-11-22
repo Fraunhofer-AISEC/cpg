@@ -182,9 +182,15 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return assignExpression
     }
 
+    /**
+     * Translates a Python
+     * [`FormattedValue`](https://docs.python.org/3/library/ast.html#ast.FormattedValue) into a
+     * [Expression].
+     *
+     * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
+     */
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
         val formatSpec = node.format_spec?.let { handle(it) }
-
         val valueExpression = handle(node.value)
         val conversion =
             when (node.conversion) {
@@ -249,6 +255,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return conversion
     }
 
+    /**
+     * Translates a Python [`JoinedStr`](https://docs.python.org/3/library/ast.html#ast.JoinedStr)
+     * into a [Expression].
+     */
     private fun handleJoinedStr(node: Python.AST.JoinedStr): Expression {
         val values = node.values.map(::handle)
         return if (values.isEmpty()) {
