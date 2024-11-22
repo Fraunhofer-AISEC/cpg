@@ -1677,27 +1677,6 @@ class PythonFrontendTest : BaseTest() {
         }
     }
 
-    @Test
-    fun testTest() {
-        val directoryPath = Path.of("/home", "lshala", "repos", "nova")
-        val tr =
-            analyze(fileExtension = ".py", directoryPath, usePasses = true) {
-                it.registerLanguage<PythonLanguage>()
-            }
-
-        val problemsList = tr.components.flatMap { it.translationUnits }.flatMap { it.problems }
-
-        val msg =
-            (problemsList)
-                .groupBy { it.problem }
-                .toList()
-                .sortedBy { it.second.size }
-                .reversed()
-                .map { "${it.second.size}: ${it.first}" }
-
-        msg.forEach(System.out::println)
-    }
-
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,
