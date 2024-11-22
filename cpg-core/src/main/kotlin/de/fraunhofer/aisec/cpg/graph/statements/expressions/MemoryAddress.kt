@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
 class MemoryAddress(override var name: Name) : Declaration() {
@@ -35,5 +34,7 @@ class MemoryAddress(override var name: Name) : Declaration() {
      * Therefore, for structs the key should be a FieldDeclaration.
      * For arrays, it may also be a literal if the MemoryAddress is accesses with something like `array[0]`
      */
-    val fieldAddresses = mutableMapOf<Node, Set<MemoryAddress>>()
+    // FIXME: The FieldDeclarations don't seem to be unique. Also, for arrays, the literals in
+    // different lines won't be the same, so we try a string as index
+    val fieldAddresses = mutableMapOf<String, Set<MemoryAddress>>()
 }

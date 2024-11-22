@@ -45,12 +45,14 @@ typedef struct test {
 
 int structs() {
   S s;
+  S t;
   S* p=&s;
 
   s.a=1;
   s.b=2;
   printf("%d %d\n", s.a, s.b);
 
+  printf("%d %d\n", p->a, p->b);
   p->a=3;
   p->b=4;
 

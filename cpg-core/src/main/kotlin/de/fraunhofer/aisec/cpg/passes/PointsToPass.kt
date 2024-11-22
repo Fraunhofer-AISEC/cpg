@@ -197,11 +197,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 val values: Set<Node> = doubleState.getValues(currentNode.rhs.first())
                 val newDeclState = doubleState.declarationsState.elements.toMutableMap()
                 /* Update the declarationState for the refersTo */
-                doubleState.getAddresses(ref).forEach { addr ->
-                    newDeclState.replace(
-                        addr,
+                addresses.forEach { addr ->
+                    newDeclState[addr] =
                         TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-                    )
                 }
                 /* Also update the generalState for the ref */
                 doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
@@ -395,7 +393,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         ?: setOf()
                 }
                 is Reference -> {
-                    /* For References, we have to lookup the last value written to its declaration.
+                    /* For References, we have to look up the last value written to its declaration.
                      */
                     this.getAddresses(node)
                         .flatMap {
@@ -434,29 +432,30 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 }
                 is MemberExpression -> {
                     /*
-                    * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
-                    * Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set
-                    */
+                     * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
+                     */
                     // TODO: Are there any cases where the address of the base is no MemoryAddress?
                     // but still relevant for us?
                     val baseAddresses =
                         this.getAddresses(node.base).filterIsInstance<MemoryAddress>()
                     val fieldAddresses = mutableSetOf<MemoryAddress>()
 
+                    /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
                     baseAddresses.forEach { addr ->
-                        addr.fieldAddresses[node.refersTo as Node]?.forEach {
+                        addr.fieldAddresses[node.refersTo?.name.toString()]?.forEach {
                             fieldAddresses.add(it)
                         }
                     }
                     /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
                     if (fieldAddresses.isEmpty()) {
-                        val newName = node.refersTo?.name ?: Name("")
+                        val newMemoryAddress = MemoryAddress(node.name)
+
+                        fieldAddresses.add(newMemoryAddress)
                         baseAddresses.forEach { addr ->
-                            addr.fieldAddresses[node.refersTo as Node] =
-                                setOf(MemoryAddress(newName))
+                            addr.fieldAddresses[node.refersTo?.name.toString()] =
+                                setOf(newMemoryAddress)
                         }
                     }
-                    // TODO: Update DeclState
                     fieldAddresses
                 }
                 is Reference -> {
@@ -464,7 +463,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     For references, the address is the same as for the declaration, AKA the refersTo
                     */
                     node.refersTo.let { refersTo ->
-                        /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if its a FunctionDeclaration. So let's to this here */
+                        /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
                         if (!refersTo!!.memoryAddressIsInitialized())
                             refersTo.memoryAddress = MemoryAddress(node.name)
 

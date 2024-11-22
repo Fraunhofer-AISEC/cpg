@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
-import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -276,5 +275,152 @@ class PointsToPassTest {
                 it.registerPass<PointsToPass>()
             }
         assertNotNull(tu)
+
+        // References
+        val saLine51 =
+            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 51 }.first()
+        val sbLine52 =
+            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 52 }.first()
+        val saLine53 =
+            tu.allChildren<MemberExpression> {
+                    it.location?.region?.startLine == 53 && it.name.localName == "a"
+                }
+                .first()
+        val sbLine53 =
+            tu.allChildren<MemberExpression> {
+                    it.location?.region?.startLine == 53 && it.name.localName == "b"
+                }
+                .first()
+        val paLine55 =
+            tu.allChildren<MemberExpression> {
+                    it.location?.region?.startLine == 55 && it.name.localName == "a"
+                }
+                .first()
+        val pbLine55 =
+            tu.allChildren<MemberExpression> {
+                    it.location?.region?.startLine == 55 && it.name.localName == "b"
+                }
+                .first()
+        val paLine56 =
+            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 56 }.first()
+        val pbLine57 =
+            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 57 }.first()
+        val paLine59 =
+            tu.allChildren<MemberExpression> {
+                    it.location?.region?.startLine == 59 && it.name.localName == "a"
+                }
+                .first()
+        val pbLine59 =
+            tu.allChildren<MemberExpression> {
+                    it.location?.region?.startLine == 59 && it.name.localName == "b"
+                }
+                .first()
+
+        // Literals
+        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 51 }.first()
+        val literal2 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 52 }.first()
+        val literal3 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 56 }.first()
+        val literal4 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 57 }.first()
+
+        // Line 51
+        assertEquals(1, saLine51.memoryAddress.size)
+        assertEquals(
+            (saLine51.base as? Reference)
+                ?.memoryAddress
+                ?.firstOrNull()
+                ?.fieldAddresses
+                ?.filter { it.key == saLine51.refersTo?.name.toString() }
+                ?.entries
+                ?.firstOrNull()
+                ?.value
+                ?.firstOrNull(),
+            saLine51.memoryAddress.firstOrNull()
+        )
+        assertEquals(1, saLine51.memoryValue.size)
+        assertEquals(literal1, saLine51.memoryValue.firstOrNull())
+
+        // Line 52
+        assertEquals(1, sbLine52.memoryAddress.size)
+        assertEquals(
+            (sbLine52.base as? Reference)
+                ?.memoryAddress
+                ?.firstOrNull()
+                ?.fieldAddresses
+                ?.filter { it.key == sbLine52.refersTo?.name.toString() }
+                ?.entries
+                ?.firstOrNull()
+                ?.value
+                ?.firstOrNull(),
+            sbLine52.memoryAddress.firstOrNull()
+        )
+        assertEquals(1, sbLine52.memoryValue.size)
+        assertEquals(literal2, sbLine52.memoryValue.firstOrNull())
+
+        // Line 53
+        assertEquals(1, saLine53.memoryAddress.size)
+        assertEquals(
+            (saLine53.base as? Reference)
+                ?.memoryAddress
+                ?.firstOrNull()
+                ?.fieldAddresses
+                ?.filter { it.key == saLine53.refersTo?.name.toString() }
+                ?.entries
+                ?.firstOrNull()
+                ?.value
+                ?.firstOrNull(),
+            saLine53.memoryAddress.firstOrNull()
+        )
+        assertEquals(1, saLine53.memoryValue.size)
+        assertEquals(literal1, saLine53.memoryValue.firstOrNull())
+
+        assertEquals(1, sbLine53.memoryAddress.size)
+        assertEquals(
+            (sbLine53.base as? Reference)
+                ?.memoryAddress
+                ?.firstOrNull()
+                ?.fieldAddresses
+                ?.filter { it.key == sbLine53.refersTo?.name.toString() }
+                ?.entries
+                ?.firstOrNull()
+                ?.value
+                ?.firstOrNull(),
+            sbLine53.memoryAddress.firstOrNull()
+        )
+        assertEquals(1, sbLine53.memoryValue.size)
+        assertEquals(literal2, sbLine53.memoryValue.firstOrNull())
+
+        // Line 55
+        assertEquals(1, paLine55.memoryAddress.size)
+        assertEquals(saLine51.memoryAddress.first(), paLine55.memoryAddress.first())
+        assertEquals(1, paLine55.memoryValue.size)
+        assertEquals(literal1, paLine55.memoryValue.first())
+
+        assertEquals(1, pbLine55.memoryAddress.size)
+        assertEquals(sbLine52.memoryAddress.first(), pbLine55.memoryAddress.first())
+        assertEquals(1, pbLine55.memoryValue.size)
+        assertEquals(literal2, pbLine55.memoryValue.first())
+
+        // Line 56
+        assertEquals(1, paLine56.memoryAddress.size)
+        assertEquals(saLine51.memoryAddress.first(), paLine56.memoryAddress.first())
+        assertEquals(1, paLine56.memoryValue.size)
+        assertEquals(literal3, paLine56.memoryValue.first())
+
+        // Line 57
+        assertEquals(1, pbLine57.memoryAddress.size)
+        assertEquals(sbLine52.memoryAddress.first(), pbLine57.memoryAddress.first())
+        assertEquals(1, pbLine57.memoryValue.size)
+        assertEquals(literal4, pbLine57.memoryValue.first())
+
+        // Line 59
+        assertEquals(1, paLine59.memoryAddress.size)
+        assertEquals(saLine51.memoryAddress.first(), paLine59.memoryAddress.first())
+        assertEquals(1, paLine59.memoryValue.size)
+        assertEquals(literal3, paLine59.memoryValue.first())
+
+        assertEquals(1, pbLine59.memoryAddress.size)
+        assertEquals(sbLine52.memoryAddress.first(), pbLine59.memoryAddress.first())
+        assertEquals(1, pbLine59.memoryValue.size)
+        assertEquals(literal4, pbLine59.memoryValue.first())
     }
 }
