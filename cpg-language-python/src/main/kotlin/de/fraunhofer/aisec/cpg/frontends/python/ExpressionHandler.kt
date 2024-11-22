@@ -265,19 +265,24 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
      * The last operands are further down the tree.
      */
-    private fun joinListWithBinOp(
+    internal fun joinListWithBinOp(
         operatorCode: String,
         nodes: List<Expression>,
-        rawNode: Python.AST.AST? = null
+        rawNode: Python.AST.AST? = null,
+        isImplicit: Boolean = true
     ): BinaryOperator {
-        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
-        lastTwo.rhs = nodes.last()
-        lastTwo.lhs = nodes[nodes.size - 2]
+        val lastTwo =
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = nodes.last()
+                lhs = nodes[nodes.size - 2]
+                this.isImplicit = isImplicit
+            }
         return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
-            val nextValue = newBinaryOperator(operatorCode)
-            nextValue.rhs = start
-            nextValue.lhs = newVal
-            nextValue
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = start
+                lhs = newVal
+                this.isImplicit = isImplicit
+            }
         }
     }
 
@@ -325,18 +330,12 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 rawNode = node
             )
         } else {
-            // Start with the last two operands, then keep prepending the previous ones until the
-            // list is finished.
-            val lastTwo = newBinaryOperator(op, rawNode = node)
-            lastTwo.rhs = handle(node.values.last())
-            lastTwo.lhs = handle(node.values[node.values.size - 2])
-            return node.values.subList(0, node.values.size - 2).foldRight(lastTwo) { newVal, start
-                ->
-                val nextValue = newBinaryOperator(op, rawNode = node)
-                nextValue.rhs = start
-                nextValue.lhs = handle(newVal)
-                nextValue
-            }
+            joinListWithBinOp(
+                operatorCode = op,
+                nodes = node.values.map(::handle),
+                rawNode = node,
+                isImplicit = true
+            )
         }
     }
 
