@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.inference
 
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalFunctions
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
@@ -331,7 +332,7 @@ internal fun Pass<*>.tryMethodInference(
     bestGuess: Type?,
 ): List<FunctionDeclaration> {
     // We need to decide whether we want to infer a global function or not. We do this with a
-    // simple heuristic. This will of course not be 100 % error-prone, but this is the burden of
+    // simple heuristic. This will of course not be 100 % error-free, but this is the burden of
     // inference.
     // 1a) If the language does not even support functions at a global level, it's easy
     // 1b) If this is a member call expression, it's also easy
@@ -424,9 +425,7 @@ private fun methodExists(
         return false
     }
 
-    var types = mutableListOf(type)
-    types.addAll(type.superTypes)
-
+    var types = type.ancestors.map { it.type }
     var methods = types.map { it.recordDeclaration }.flatMap { it.methods }
     return methods.any { it.name.localName == name }
 }

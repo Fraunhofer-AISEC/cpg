@@ -112,11 +112,12 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 hint,
                 log,
-                "Inferred a new {} declaration {} with parameter types {} and return types {} in $it",
+                "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
                 if (inferred is MethodDeclaration) "method" else "function",
                 inferred.name,
                 signature.map { it?.name },
-                inferred.returnTypes.map { it.name }
+                inferred.returnTypes.map { it.name },
+                it
             )
 
             // Create parameter declarations and receiver (only for methods).
@@ -129,7 +130,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             var returnType =
                 if (
                     ctx.config.inferenceConfiguration.inferReturnTypes &&
-                        incomingReturnType is UnknownType
+                        incomingReturnType is UnknownType &&
+                        hint != null
                 ) {
                     inferReturnType(hint)
                 } else {
@@ -540,32 +542,32 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         this.typeManager = ctx.typeManager
     }
 
-    fun inferReturnType(call: CallExpression?): Type {
-        if (call == null) {
-            return unknownType()
-        }
-
+    /**
+     * This function tries to infer a return type for an inferred [FunctionDeclaration] based the
+     * original [CallExpression] (as the [hint]) parameter that was used to infer the function.
+     */
+    fun inferReturnType(hint: CallExpression): Type {
         // Try to find out, if the supplied hint is part of an assignment.  If yes, we can use their
         // type as the return type of the function
         var targetType =
-            ctx.currentComponent.assignments.firstOrNull { it.value == call }?.target?.type
+            ctx.currentComponent.assignments.singleOrNull { it.value == hint }?.target?.type
         if (targetType != null && targetType !is UnknownType) {
             return targetType
         }
 
         // Look for an "argument holder". These can be different kind of nodes
         val holder =
-            ctx.currentComponent.allChildren<ArgumentHolder> { it.hasArgument(call) }.singleOrNull()
+            ctx.currentComponent.allChildren<ArgumentHolder> { it.hasArgument(hint) }.singleOrNull()
         when (holder) {
             is UnaryOperator -> {
                 // If it's a boolean operator, the return type is probably a boolean
                 if (holder.operatorCode == "!") {
-                    return call.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
+                    return hint.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
                         ?: unknownType()
                 }
                 // If it's a numeric operator, return the fist numeric type that we have
                 if (holder.operatorCode in listOf("+", "-", "++", "--")) {
-                    return call.language?.builtInTypes?.values?.firstOrNull { it is NumericType }
+                    return hint.language?.builtInTypes?.values?.firstOrNull { it is NumericType }
                         ?: unknownType()
                 }
             }
@@ -574,10 +576,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             }
             is BinaryOperator -> {
                 // If it is on the right side, it's probably the same as on the left-side (and
-                // vice-versa)
-                if (call == holder.rhs) {
+                // vice versa)
+                if (hint == holder.rhs) {
                     return holder.lhs.type
-                } else if (call == holder.lhs) {
+                } else if (hint == holder.lhs) {
                     return holder.rhs.type
                 }
             }
