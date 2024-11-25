@@ -148,10 +148,50 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 is Declaration -> handleDeclaration(currentNode, doubleState)
                 is AssignExpression -> handleAssignExpression(currentNode, doubleState)
                 is UnaryOperator -> handleUnaryOperator(currentNode, doubleState)
+                is CallExpression -> handleCallExpression(currentNode, doubleState)
                 is Expression -> handleExpression(currentNode, doubleState)
                 else -> doubleState
             }
 
+        return doubleState
+    }
+
+    private fun handleCallExpression(
+        currentNode: CallExpression,
+        doubleState: PointsToPass.PointsToState2
+    ): PointsToPass.PointsToState2 {
+        var doubleState = doubleState
+        /*
+        For now, we only care about memcpy*, which can influence memoryAddresses or memoryValues
+         */
+        var src: Expression? = null
+        var dst: Expression? = null
+        if (
+            (currentNode.name.localName in listOf("memcpy_s", "memcpy_verw_s")) &&
+                currentNode.arguments.size == 4
+        ) {
+            dst = currentNode.arguments[0]
+            src = currentNode.arguments[2]
+        } else if (
+            (currentNode.name.localName in listOf("memcpy", "memcpy_verw")) &&
+                currentNode.arguments.size == 3
+        ) {
+            dst = currentNode.arguments[0]
+            src = currentNode.arguments[1]
+        }
+
+        /*
+        Something is getting copied here, so we need to update the state
+         */
+        if (src != null && dst != null) {
+            // Since memcpy takes pointers as arguments, we need to resolve them here to determine
+            // the values we need to read/write
+            doubleState =
+                doubleState.updateValues(
+                    doubleState.getValues(src).first(),
+                    doubleState.getValues(dst).first()
+                )
+        }
         return doubleState
     }
 
@@ -163,7 +203,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
          */
         // TODO: Check out cases where the input is no Reference
-        if (currentNode.input is Reference) {
+        if (currentNode.operatorCode in (listOf("++", "--")) && currentNode.input is Reference) {
             val addresses = doubleState.getAddresses(currentNode)
             val newDeclState = doubleState.declarationsState.elements.toMutableMap()
             /* Update the declarationState for the refersTo */
@@ -191,22 +231,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
          * In C(++), both the lhs and the rhs should only have one element
          * */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            val ref = currentNode.lhs.first()
-            val addresses = doubleState.getAddresses(ref)
-            val values: Set<Node> = doubleState.getValues(currentNode.rhs.first())
-            val newDeclState = doubleState.declarationsState.elements.toMutableMap()
-            /* Update the declarationState for the refersTo */
-            addresses.forEach { addr ->
-                newDeclState[addr] =
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-            }
-            /* Also update the generalState for the ref */
-            doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
-            doubleState =
-                doubleState.push(
-                    ref,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-                )
+            doubleState = doubleState.updateValues(currentNode.rhs.first(), currentNode.lhs.first())
         }
 
         return doubleState
@@ -509,6 +534,29 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 }
             }
             return fieldAddresses
+        }
+
+        /**
+         * Update the node `dst` to the values of `src`. Updates the declarationState and the
+         * generalState for `dst`
+         */
+        fun updateValues(src: Node, dst: Node): PointsToState2 {
+            val addresses = this.getAddresses(dst)
+            val values: Set<Node> = this.getValues(src)
+            val newDeclState = this.declarationsState.elements.toMutableMap()
+            /* Update the declarationState for the refersTo */
+            addresses.forEach { addr ->
+                newDeclState[addr] =
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+            }
+            /* Also update the generalState for the ref */
+            var doubleState = PointsToState2(this.generalState, MapLattice(newDeclState))
+            doubleState =
+                doubleState.push(
+                    dst,
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                )
+            return doubleState
         }
     }
 }

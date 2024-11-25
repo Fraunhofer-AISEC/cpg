@@ -78,51 +78,53 @@ int arrays() {
 
 } 
 
-/*int memcpy() {
-  char a[3]="aa";
-  char b[3]="bb";
-  char c[3]="cc";
 
-  char* pa=a;
 
-  char* noalias1=b;
-  char* noalias2=b;
-  char* noalias3=b;
-  char* noalias4=b;
 
-  char* alias1=c;
-  char* alias2=c; 
-  char* alias3=c;
-  char* alias4=c; 
-  
-//  printf("%s, %s, %s, %p, %p, %p\n", pa, pb, pc, pa, pb, pc);
-
-  // No aliases
-  memcpy(noalias1,pa,sizeof(pa));
-  memcpy_verw_s(noalias2, sizeof(pa), pa, sizeof(pa));
-  memcpy_s(noalias3, sizeof(pa), &pa, sizeof(pa));
-  memcpy_verw(&noalias4, pa, sizeof(pa));
-
-  // Create aliases
-  memcpy(&alias1, &pa, sizeof(pa));
-  printf("%s\n", pa);
-  memcpy_verw_s(&alias2, sizeof(pa), &pa, sizeof(pa));
-  memcpy_verw(&alias3, &pa, sizeof(pa));
-  memcpy_s(&alias4, sizeof(pa), &pa, sizeof(pa));
-  
-  printf("%c %c %c %c\n", *alias1, *alias2, *alias3, *alias4);
+/*long memcpy_s(long *dst, int dstlen, long *src, int srclen){ 
+  memcpy(src,dst,dstlen);
 }*/
 
+int main() {
+  long a=0;
+  long b=1;
+  long c=2;
+  long caddr=(long)&c;
+  long d=3;
+  long e=4;
+  long f=5;
+  long g=6;
+  long h=7;
 
+  long* pa=&a;
+  long* pb=&b;
+  long* pc=&c;
+  long* pd=&d;
+  long* pe=&e;
+  long* pf=&f;
+  long* pg=&g;
+  long* ph=&h;
 
-/*int ghidra(undefined8 *param_1) {
-  undefined8 uVar1;   
-  undefined8 *local_10;
-                                                                                                                                   
-  uVar1 = DAT_0011b1c8;                                                                                                                                  
-  *param_1 = CONCAT71(key._1_7_,(char)key);                                                                                                            
-  param_1[1] = uVar1;
+  printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
+  printf("pa: %d, %p; pb: %d, %p, pc: %d, %p, pd: %d, %p, pe: %d, %p, pf: %d, %p\n", *pa, pa, *pb, pb, *pc, pc, *pd, pd, *pe, pe, *pf, pf);
+
+  // Copy the data at pa.memoryValue (AKA &a) to the address at pb.memoryValue (AKA &b)
+  memcpy(pb,pa,sizeof(a));
+
+  // Copy the data at pa.memoryValue (AKA &a) to the address at caddr.memoryValue (AKA &c)
+  //memcpy((void *)caddr,pa,sizeof(pa));
+
+  // Copy the data at pa.memoryValue (AKA &a) to the address at &d.memoryValue (AKA d.memoryAddress) 
+  //memcpy(&d,pa,sizeof(a));
   
-  *local_10[0] = key;   
-  local_10[1] = uVar1;
-}*/
+  // Copy the data at &a (AKA a.memoryAddress) to the address at pe.memoryValue (AKA e.memoryAddress) 
+  //memcpy(pe,&a,sizeof(a));
+
+  // Copy the data at &pa (AKA pa.memoryAddress, wich contains &a) to the address at &pf (which so far contained f.memoryAddress) 
+  // Simplified: Set the value of pa to &a
+  //memcpy(&pf,&pa,sizeof(a));
+
+
+  printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
+  printf("pa: %d, %p; pb: %d, %p, pc: %d, %p, pd: %d, %p, pe: %d, %p, pf: %d, %p\n", *pa, pa, *pb, pb, *pc, pc, *pd, pd, *pe, pe, *pf, pf);
+}

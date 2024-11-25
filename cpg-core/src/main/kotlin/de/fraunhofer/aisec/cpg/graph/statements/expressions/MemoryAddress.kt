@@ -37,4 +37,19 @@ class MemoryAddress(override var name: Name) : Declaration() {
     // FIXME: The FieldDeclarations don't seem to be unique. Also, for arrays, the literals in
     // different lines won't be the same, so we try a string as index
     val fieldAddresses = mutableMapOf<String, Set<MemoryAddress>>()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is MemoryAddress) {
+            return false
+        }
+        // TODO: What else do we need to compare?
+        return name == other.name && fieldAddresses == other.fieldAddresses
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }

@@ -502,4 +502,250 @@ class PointsToPassTest {
         assertEquals(1, njLine75.memoryValue.size)
         assertEquals(null, njLine75.memoryValue.first())
     }
+
+    @Test
+    fun testMemcpy() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // Declarations
+        val aDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 89 }.firstOrNull()
+        assertNotNull(aDecl)
+        val bDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 90 }.firstOrNull()
+        assertNotNull(bDecl)
+        val cDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 91 }.firstOrNull()
+        assertNotNull(cDecl)
+        val caddrDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 92 }.firstOrNull()
+        assertNotNull(caddrDecl)
+        val dDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 93 }.firstOrNull()
+        assertNotNull(dDecl)
+        val eDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 94 }.firstOrNull()
+        assertNotNull(eDecl)
+        val fDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 95 }.firstOrNull()
+        assertNotNull(fDecl)
+        val gDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 96 }.firstOrNull()
+        assertNotNull(gDecl)
+        val hDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 97 }.firstOrNull()
+        assertNotNull(hDecl)
+
+        val paDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 99 }.firstOrNull()
+        assertNotNull(paDecl)
+        val pbDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 100 }.firstOrNull()
+        assertNotNull(pbDecl)
+        val pcDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 101 }.firstOrNull()
+        assertNotNull(pcDecl)
+        val pdDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 102 }.firstOrNull()
+        assertNotNull(pdDecl)
+        val peDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 103 }.firstOrNull()
+        assertNotNull(peDecl)
+        val pfDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 104 }.firstOrNull()
+        assertNotNull(pfDecl)
+        val pgDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 105 }.firstOrNull()
+        assertNotNull(pgDecl)
+        val phDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 106 }.firstOrNull()
+        assertNotNull(phDecl)
+
+        // References
+        val aRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 128 &&
+                        it.location?.region?.startColumn == 86 &&
+                        it.name.localName == "a"
+                }
+                .firstOrNull()
+        assertNotNull(aRef)
+        val bRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 128 &&
+                        it.location?.region?.startColumn == 93 &&
+                        it.name.localName == "b"
+                }
+                .firstOrNull()
+        assertNotNull(bRef)
+        val cRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 128 &&
+                        it.location?.region?.startColumn == 100 &&
+                        it.name.localName == "c"
+                }
+                .firstOrNull()
+        assertNotNull(cRef)
+        val dRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 128 &&
+                        it.location?.region?.startColumn == 107 &&
+                        it.name.localName == "d"
+                }
+                .firstOrNull()
+        assertNotNull(dRef)
+        val eRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 128 &&
+                        it.location?.region?.startColumn == 114 &&
+                        it.name.localName == "e"
+                }
+                .firstOrNull()
+        assertNotNull(eRef)
+        val fRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 128 &&
+                        it.location?.region?.startColumn == 121 &&
+                        it.name.localName == "f"
+                }
+                .firstOrNull()
+        assertNotNull(fRef)
+        val paRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 129 &&
+                        it.location?.region?.startColumn == 91 &&
+                        it.name.localName == "pa"
+                }
+                .firstOrNull()
+        assertNotNull(paRef)
+        val pbRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 129 &&
+                        it.location?.region?.startColumn == 100 &&
+                        it.name.localName == "pb"
+                }
+                .firstOrNull()
+        assertNotNull(pbRef)
+        val pcRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 129 &&
+                        it.location?.region?.startColumn == 109 &&
+                        it.name.localName == "pc"
+                }
+                .firstOrNull()
+        assertNotNull(pcRef)
+        val pdRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 129 &&
+                        it.location?.region?.startColumn == 118 &&
+                        it.name.localName == "pd"
+                }
+                .firstOrNull()
+        assertNotNull(pdRef)
+        val peRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 129 &&
+                        it.location?.region?.startColumn == 127 &&
+                        it.name.localName == "pe"
+                }
+                .firstOrNull()
+        assertNotNull(peRef)
+        val pfRef =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 129 &&
+                        it.location?.region?.startColumn == 136 &&
+                        it.name.localName == "pf"
+                }
+                .firstOrNull()
+        assertNotNull(pfRef)
+
+        val aPointerRef =
+            tu.allChildren<PointerReference> {
+                    it.location?.region?.startLine == 128 && it.name.localName == "a"
+                }
+                .firstOrNull()
+        assertNotNull(aPointerRef)
+        val bPointerRef =
+            tu.allChildren<PointerReference> {
+                    it.location?.region?.startLine == 128 && it.name.localName == "b"
+                }
+                .firstOrNull()
+        assertNotNull(bPointerRef)
+        val cPointerRef =
+            tu.allChildren<PointerReference> {
+                    it.location?.region?.startLine == 128 && it.name.localName == "c"
+                }
+                .firstOrNull()
+        assertNotNull(cPointerRef)
+        val dPointerRef =
+            tu.allChildren<PointerReference> {
+                    it.location?.region?.startLine == 128 && it.name.localName == "d"
+                }
+                .firstOrNull()
+        assertNotNull(dPointerRef)
+        val ePointerRef =
+            tu.allChildren<PointerReference> {
+                    it.location?.region?.startLine == 128 && it.name.localName == "e"
+                }
+                .firstOrNull()
+        assertNotNull(ePointerRef)
+        val fPointerRef =
+            tu.allChildren<PointerReference> {
+                    it.location?.region?.startLine == 128 && it.name.localName == "f"
+                }
+                .firstOrNull()
+        assertNotNull(fPointerRef)
+
+        // PointerDerefs
+        val paPointerDeref =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 129 && it.name.localName == "pa"
+                }
+                .firstOrNull()
+        assertNotNull(paPointerDeref)
+        val pbPointerDeref =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 129 && it.name.localName == "pb"
+                }
+                .firstOrNull()
+        assertNotNull(pbPointerDeref)
+        val pcPointerDeref =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 129 && it.name.localName == "pc"
+                }
+                .firstOrNull()
+        assertNotNull(pcPointerDeref)
+        val pdPointerDeref =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 129 && it.name.localName == "pd"
+                }
+                .firstOrNull()
+        assertNotNull(pdPointerDeref)
+        val pePointerDeref =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 129 && it.name.localName == "pe"
+                }
+                .firstOrNull()
+        assertNotNull(pePointerDeref)
+        val pfPointerDeref =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 129 && it.name.localName == "pf"
+                }
+                .firstOrNull()
+        assertNotNull(pfPointerDeref)
+
+        // Result of memcpy in Line 112
+        assertEquals(1, bRef.memoryAddress.size)
+        assertEquals(bDecl.memoryAddress, bRef.memoryAddress.first())
+        assertEquals(1, bRef.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), bRef.memoryValue.first())
+
+        // Result of memcpy in Line 112
+    }
 }
