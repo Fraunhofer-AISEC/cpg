@@ -40,7 +40,7 @@ import kotlin.reflect.KClass
  */
 class IniFilesLanguage : Language<IniFilesFrontend>() {
     override val fileExtensions = listOf("ini", "conf")
-    override val namespaceDelimiter: String = "" // no such thing
+    override val namespaceDelimiter: String = "." // no such thing
 
     @Transient override val frontend: KClass<out IniFilesFrontend> = IniFilesFrontend::class
     override val builtInTypes: Map<String, Type> =
