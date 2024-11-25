@@ -460,30 +460,27 @@ private constructor(
         }
 
         /**
-         * Sets a list of exclusion patterns using regular expressions for filtering files and
-         * directories.
+         * Adds exclusion patterns using regular expressions for filtering files and directories.
          *
-         * @param patterns List of exclusion patterns. Example:
+         * @param patterns Exclusion patterns. Example:
          * ```
-         * exclusionPatterns(listOf(Regex(".*test(s)?")))
+         * exclusionPatterns(Regex(".*test(s)?"))
          * ```
          */
-        @JvmName("exclusionPatternsByRegex")
-        fun exclusionPatterns(patterns: List<Regex>): Builder {
+        fun exclusionPatterns(vararg patterns: Regex): Builder {
             exclusionPatternsByRegex.addAll(patterns)
             return this
         }
 
         /**
-         * Sets a list of exclusion patterns for filtering files and directories.
+         * Adds exclusion patterns for filtering files and directories.
          *
-         * @param patterns List of exclusion patterns. Example:
+         * @param patterns Exclusion patterns. Example:
          * ```
-         * exclusionPatterns(listOf("tests"))
+         * exclusionPatterns("tests")
          * ```
          */
-        @JvmName("exclusionPatternsByString")
-        fun exclusionPatterns(patterns: List<String>): Builder {
+        fun exclusionPatterns(vararg patterns: String): Builder {
             exclusionPatternsByString.addAll(patterns)
             return this
         }
