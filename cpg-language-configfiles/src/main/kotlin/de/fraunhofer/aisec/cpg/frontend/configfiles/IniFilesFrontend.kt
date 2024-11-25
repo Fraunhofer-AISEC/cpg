@@ -34,8 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.FileInputStream
+import java.net.URI
 import org.ini4j.Ini
 import org.ini4j.Profile
 
@@ -66,7 +68,13 @@ import org.ini4j.Profile
 class IniFilesFrontend(language: Language<IniFilesFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Any, Any?>(language, ctx) {
 
+    private lateinit var uri: URI
+    private lateinit var region: Region
+
     override fun parse(file: File): TranslationUnitDeclaration {
+        uri = file.toURI()
+        region = Region()
+
         val ini = Ini()
         try {
             ini.load(FileInputStream(file))
@@ -118,8 +126,16 @@ class IniFilesFrontend(language: Language<IniFilesFrontend>, ctx: TranslationCon
         return astNode.toString()
     }
 
+    /**
+     * Return the entire file as the location of any node. The parsing library in use does not
+     * provide more fine granular access to a node's location.
+     */
     override fun locationOf(astNode: Any): PhysicalLocation? {
-        return null // currently, the line number / column cannot be accessed given an Ini object
+        return PhysicalLocation(
+            uri,
+            region
+        ) // currently, the line number / column cannot be accessed given an Ini object -> we only
+        // provide a precise uri
     }
 
     override fun setComment(node: Node, astNode: Any) {
