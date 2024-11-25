@@ -39,7 +39,7 @@ import kotlin.reflect.KClass
  * - the file is accepted by the [ini4j library](https://ini4j.sourceforge.net/)
  */
 class IniFilesLanguage : Language<IniFilesFrontend>() {
-    override val fileExtensions = listOf("ini")
+    override val fileExtensions = listOf("ini", "conf")
     override val namespaceDelimiter: String = "" // no such thing
 
     @Transient override val frontend: KClass<out IniFilesFrontend> = IniFilesFrontend::class
