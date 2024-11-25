@@ -441,14 +441,65 @@ class PointsToPassTest {
             tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 67 }.first()
         val n0Line68 =
             tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 68 }.first()
+        val niLine71 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 71 }.first()
+        val njLine75 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 75 }.first()
 
         // Literals
-        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 67 }.first()
+        val literal1 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 67 && it.value == 1 }
+                .first()
 
+        // Expressions
+        val exprLine71 =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 71 }.first()
+
+        // Line 66
         assertEquals(1, n0Line66.memoryAddress.size)
         assertEquals(
             n0Line66.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
             n0Line66.memoryAddress.first()
         )
+        assertEquals(1, n0Line66.memoryValue.size)
+        assertEquals(null, n0Line66.memoryValue.first())
+
+        // Line 67
+        assertEquals(1, n0Line67.memoryAddress.size)
+        assertEquals(
+            n0Line67.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
+            n0Line67.memoryAddress.first()
+        )
+        assertEquals(1, n0Line67.memoryValue.size)
+        assertEquals(literal1, n0Line67.memoryValue.firstOrNull())
+
+        // Line 68
+        assertEquals(1, n0Line68.memoryAddress.size)
+        assertEquals(
+            n0Line68.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
+            n0Line68.memoryAddress.first()
+        )
+        assertEquals(1, n0Line68.memoryValue.size)
+        assertEquals(literal1, n0Line68.memoryValue.firstOrNull())
+
+        // Line 71
+        assertEquals(1, niLine71.memoryAddress.size)
+        assertEquals(
+            niLine71.arrayExpression.memoryAddress.first().fieldAddresses["i"]?.first(),
+            niLine71.memoryAddress.first()
+        )
+        assertEquals(1, niLine71.memoryValue.size)
+        assertEquals(exprLine71, niLine71.memoryValue.firstOrNull())
+
+        // Line 75
+        assertEquals(1, njLine75.memoryAddress.size)
+        assertEquals(
+            njLine75.arrayExpression.memoryAddress.first().fieldAddresses["j"]?.first(),
+            njLine75.memoryAddress.first()
+        )
+        // TODO: What are our expections for njLine75.memoryValue? I think null is fine, since we
+        // never defined that
+        assertEquals(1, njLine75.memoryValue.size)
+        assertEquals(null, njLine75.memoryValue.first())
     }
 }
