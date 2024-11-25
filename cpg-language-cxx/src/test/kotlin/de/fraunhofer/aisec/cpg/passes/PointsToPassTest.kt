@@ -746,6 +746,53 @@ class PointsToPassTest {
         assertEquals(1, bRef.memoryValue.size)
         assertEquals(aDecl.memoryValue.first(), bRef.memoryValue.first())
 
-        // Result of memcpy in Line 112
+        assertEquals(1, pbPointerDeref.memoryAddress.size)
+        assertEquals(bDecl.memoryAddress, pbPointerDeref.memoryAddress.first())
+        assertEquals(1, pbPointerDeref.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), pbPointerDeref.memoryValue.first())
+
+        // Result of memcpy in Line 115
+        assertEquals(1, cRef.memoryAddress.size)
+        assertEquals(cDecl.memoryAddress, cRef.memoryAddress.first())
+        assertEquals(1, cRef.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), cRef.memoryValue.first())
+
+        assertEquals(1, pcPointerDeref.memoryAddress.size)
+        assertEquals(cDecl.memoryAddress, pcPointerDeref.memoryAddress.first())
+        assertEquals(1, pcPointerDeref.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), pcPointerDeref.memoryValue.first())
+
+        // Result of memcpy in Line 118
+        assertEquals(1, dRef.memoryAddress.size)
+        assertEquals(dDecl.memoryAddress, dRef.memoryAddress.first())
+        assertEquals(1, dRef.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), dRef.memoryValue.first())
+
+        assertEquals(1, pdPointerDeref.memoryAddress.size)
+        assertEquals(dDecl.memoryAddress, pdPointerDeref.memoryAddress.first())
+        assertEquals(1, pdPointerDeref.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), pdPointerDeref.memoryValue.first())
+
+        // Result of memcpy in Line 121
+        assertEquals(1, eRef.memoryAddress.size)
+        assertEquals(eDecl.memoryAddress, eRef.memoryAddress.first())
+        assertEquals(1, eRef.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), eRef.memoryValue.first())
+
+        assertEquals(1, pePointerDeref.memoryAddress.size)
+        assertEquals(eDecl.memoryAddress, pePointerDeref.memoryAddress.first())
+        assertEquals(1, pePointerDeref.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), pePointerDeref.memoryValue.first())
+
+        // Result of memcpy in Line 125
+        assertEquals(1, fRef.memoryAddress.size)
+        assertEquals(fDecl.memoryAddress, fRef.memoryAddress.first())
+        assertEquals(1, fRef.memoryValue.size)
+        assertEquals(fDecl.memoryValue.first(), fRef.memoryValue.first())
+
+        assertEquals(1, pfPointerDeref.memoryAddress.size)
+        assertEquals(aDecl.memoryAddress, pfPointerDeref.memoryAddress.first())
+        assertEquals(1, pfPointerDeref.memoryValue.size)
+        assertEquals(aDecl.memoryValue.first(), pfPointerDeref.memoryValue.first())
     }
 }

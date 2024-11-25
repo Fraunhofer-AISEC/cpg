@@ -112,17 +112,17 @@ int main() {
   memcpy(pb,pa,sizeof(a));
 
   // Copy the data at pa.memoryValue (AKA &a) to the address at caddr.memoryValue (AKA &c)
-  //memcpy((void *)caddr,pa,sizeof(pa));
+  memcpy((void *)caddr,pa,sizeof(pa));
 
   // Copy the data at pa.memoryValue (AKA &a) to the address at &d.memoryValue (AKA d.memoryAddress) 
-  //memcpy(&d,pa,sizeof(a));
+  memcpy(&d,pa,sizeof(a));
   
   // Copy the data at &a (AKA a.memoryAddress) to the address at pe.memoryValue (AKA e.memoryAddress) 
-  //memcpy(pe,&a,sizeof(a));
+  memcpy(pe,&a,sizeof(a));
 
-  // Copy the data at &pa (AKA pa.memoryAddress, wich contains &a) to the address at &pf (which so far contained f.memoryAddress) 
-  // Simplified: Set the value of pa to &a
-  //memcpy(&pf,&pa,sizeof(a));
+  // Copy the data at &pa (AKA pa.memoryAddress, which contains &a) to the address at &pf (which so far contained f.memoryAddress) 
+  // Simplified: Set the value of pf to &a
+  memcpy(&pf,&pa,sizeof(a));
 
 
   printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
