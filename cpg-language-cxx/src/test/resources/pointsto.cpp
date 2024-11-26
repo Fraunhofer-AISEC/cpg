@@ -85,7 +85,7 @@ int arrays() {
   memcpy(src,dst,dstlen);
 }*/
 
-int main() {
+int memcpy() {
   long a=0;
   long b=1;
   long c=2;
@@ -127,4 +127,17 @@ int main() {
 
   printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
   printf("pa: %d, %p; pb: %d, %p, pc: %d, %p, pd: %d, %p, pe: %d, %p, pf: %d, %p\n", *pa, pa, *pb, pb, *pc, pc, *pd, pd, *pe, pe, *pf, pf);
+}
+
+int pointertopointer(){
+
+   int a = 10;
+   int *b = &a;
+   int **c = &b;
+
+   printf("a: %d \nAddress of 'a': %d \nValue at a: %d\n\n", a, b, *b);
+   printf("b: %d \nPointer to 'b' is c: %d \nValue at b: %d\n", b, c, *c);
+   printf("Value of 'a' from 'c': %d", **c);
+
+   return 0;
 }

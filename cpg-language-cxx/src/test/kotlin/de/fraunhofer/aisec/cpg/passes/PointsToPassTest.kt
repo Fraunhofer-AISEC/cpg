@@ -795,4 +795,120 @@ class PointsToPassTest {
         assertEquals(1, pfPointerDeref.memoryValue.size)
         assertEquals(aDecl.memoryValue.first(), pfPointerDeref.memoryValue.first())
     }
+
+    @Test
+    fun testPointerToPointer() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // Declarations
+        val aDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 134 }.firstOrNull()
+        assertNotNull(aDecl)
+        val bDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 135 }.firstOrNull()
+        assertNotNull(bDecl)
+        val cDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 136 }.firstOrNull()
+        assertNotNull(cDecl)
+
+        // References
+        val aRefLine138 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 138 && it.name.localName == "a"
+                }
+                .firstOrNull()
+        assertNotNull(aRefLine138)
+        val bRefLine138 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 138 &&
+                        it.name.localName == "b" &&
+                        it.location?.region?.startColumn == 65
+                }
+                .firstOrNull()
+        assertNotNull(bRefLine138)
+        val bRefLine139 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 139 && it.name.localName == "b"
+                }
+                .firstOrNull()
+        assertNotNull(bRefLine139)
+        val cRefLine139 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 139 &&
+                        it.name.localName == "c" &&
+                        it.location?.region?.startColumn == 68
+                }
+                .firstOrNull()
+        assertNotNull(cRefLine139)
+
+        // PointerDereferences
+        val bPointerDerefLine138 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 138 && it.name.localName == "b"
+                }
+                .firstOrNull()
+        assertNotNull(bPointerDerefLine138)
+        val cPointerDerefLine139 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 139 && it.name.localName == "c"
+                }
+                .firstOrNull()
+        assertNotNull(cPointerDerefLine139)
+        val cPointerDerefLine140 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 140 && it.name.localName == "c"
+                }
+                .firstOrNull()
+
+        // Literals
+        val literal10 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 134 }.firstOrNull()
+        assertNotNull(literal10)
+
+        assertNotNull(cPointerDerefLine140)
+
+        // Line 138
+        assertEquals(1, aRefLine138.memoryAddress.size)
+        assertEquals(aDecl.memoryAddress, aRefLine138.memoryAddress.first())
+        assertEquals(1, aRefLine138.memoryValue.size)
+        assertEquals(literal10, aRefLine138.memoryValue.first())
+
+        assertEquals(1, bRefLine138.memoryAddress.size)
+        assertEquals(bDecl.memoryAddress, bRefLine138.memoryAddress.first())
+        assertEquals(1, bRefLine138.memoryValue.size)
+        assertEquals(aDecl.memoryAddress, bRefLine138.memoryValue.first())
+
+        assertEquals(1, bPointerDerefLine138.memoryAddress.size)
+        assertEquals(aDecl.memoryAddress, bPointerDerefLine138.memoryAddress.first())
+        assertEquals(1, bPointerDerefLine138.memoryValue.size)
+        assertEquals(literal10, bPointerDerefLine138.memoryValue.first())
+
+        // Line 139
+        assertEquals(1, bRefLine139.memoryAddress.size)
+        assertEquals(bDecl.memoryAddress, bRefLine139.memoryAddress.first())
+        assertEquals(1, bRefLine139.memoryValue.size)
+        assertEquals(aDecl.memoryAddress, bRefLine139.memoryValue.first())
+
+        assertEquals(1, cRefLine139.memoryAddress.size)
+        assertEquals(cDecl.memoryAddress, cRefLine139.memoryAddress.first())
+        assertEquals(1, cRefLine139.memoryValue.size)
+        assertEquals(bDecl.memoryAddress, cRefLine139.memoryValue.first())
+
+        assertEquals(1, cPointerDerefLine139.memoryAddress.size)
+        assertEquals(bDecl.memoryAddress, cPointerDerefLine139.memoryAddress.first())
+        assertEquals(1, cPointerDerefLine139.memoryValue.size)
+        assertEquals(aDecl.memoryAddress, cPointerDerefLine139.memoryValue.first())
+
+        // Line 140
+        assertEquals(1, cPointerDerefLine140.memoryAddress.size)
+        assertEquals(aDecl.memoryAddress, cPointerDerefLine140.memoryAddress.first())
+        assertEquals(1, cPointerDerefLine140.memoryValue.size)
+        assertEquals(literal10, cPointerDerefLine140.memoryValue.first())
+    }
 }
