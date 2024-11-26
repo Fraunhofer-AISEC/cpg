@@ -52,7 +52,7 @@ import org.ini4j.Profile
  * - a [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration] per entry in a section. The
  *   [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration.name] matches the `entry`s `name`
  *   field and the [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration.initializer] is set
- *   to a [Literal] with the corresponding `entry`s `value`.
+ *   to a [statements.expressions.Literal] with the corresponding `entry`s `value`.
  *
  * Note:
  * - the "ini4j" library does not provide any super type for all nodes. Thus, the frontend accepts
@@ -81,9 +81,21 @@ class IniFilesFrontend(language: Language<IniFilesFrontend>, ctx: TranslationCon
         } catch (ex: Exception) {
             throw TranslationException("Parsing failed with exception: $ex")
         }
+
+        /*
+         * build a namespace name relative to the configured
+         * [de.fraunhofer.aisec.cpg.TranslationConfiguration.topLevel] using
+         * [Language.namespaceDelimiter] as a separator
+         */
+        val topLevel = config.topLevel ?: file.parent
+        val namespace =
+            (topLevel.toString().split("/") + file.nameWithoutExtension).joinToString(
+                language.namespaceDelimiter
+            ) // TODO: Windows?
+
         val tud = newTranslationUnitDeclaration(name = file.name, rawNode = ini)
         scopeManager.resetToGlobal(tud)
-        val nsd = newNamespaceDeclaration(name = file.name, rawNode = ini)
+        val nsd = newNamespaceDeclaration(name = namespace, rawNode = ini)
         scopeManager.addDeclaration(nsd)
         scopeManager.enterScope(nsd)
 

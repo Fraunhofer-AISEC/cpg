@@ -32,11 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertFullName
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 class IniFilesTest : BaseTest() {
 
@@ -48,6 +50,15 @@ class IniFilesTest : BaseTest() {
                 it.registerLanguage<IniFilesLanguage>()
             }
         assertIs<TranslationUnitDeclaration>(tu)
+
+        val namespace = tu.namespaces.firstOrNull()
+        assertNotNull(namespace)
+        assertFullName(
+            listOf("src", "test", "resources", "config")
+                .joinToString(tu.language?.namespaceDelimiter ?: "."),
+            namespace,
+            "Namespace name mismatch."
+        )
 
         assertEquals(2, tu.records.size, "Expected two records")
 
