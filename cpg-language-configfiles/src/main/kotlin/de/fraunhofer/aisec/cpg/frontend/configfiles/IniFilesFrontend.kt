@@ -63,7 +63,9 @@ import org.ini4j.Profile
  *   `.toString()`
  * - [locationOf] always returns `null` as the "ini4j" library does not provide any means of getting
  *   a location given a node
- * - [setComment] TODO what's this?
+ * - [setComment] not implemented as this is not used (no
+ *   [de.fraunhofer.aisec.cpg.frontends.Handler] pattern implemented)
+ * - Comments in general are not supported.
  */
 class IniFilesFrontend(language: Language<IniFilesFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Any, Any?>(language, ctx) {
@@ -151,6 +153,6 @@ class IniFilesFrontend(language: Language<IniFilesFrontend>, ctx: TranslationCon
     }
 
     override fun setComment(node: Node, astNode: Any) {
-        TODO("Not yet implemented")
+        return // not used as this function does not implement [Handler]
     }
 }
