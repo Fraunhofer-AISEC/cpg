@@ -29,19 +29,18 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
 
     /*
-    Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
-    conversion is an integer:
-        -1: no formatting
-        115: !s string formatting
-        114: !r repr formatting
-        97: !a ascii formatting
+     * Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue): conversion is
+     * an integer:
+     * - `-1`: no formatting
+     * - `115`: `!s` string formatting
+     * - `114`: `!r` repr formatting
+     * - `97`: `!a` ascii formatting
      */
     private val formattedValConversionNoFormatting = -1L
     private val formattedValConversionString = 115L
@@ -184,7 +183,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python
-     * [`FormattedValue`](https://docs.python.org/3/library/ast.html#ast.FormattedValue) into a
+     * [`FormattedValue`](https://docs.python.org/3/library/ast.html#ast.FormattedValue) into an
      * [Expression].
      *
      * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
@@ -199,11 +198,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     valueExpression
                 }
                 formattedValConversionString -> {
-                    // String representation. wrap in str() call.
+                    // String representation: wrap in `str()` call.
                     val strCall =
                         newCallExpression(
-                                newReference("str", rawNode = node),
-                                "str",
+                                callee = newReference(name = "str", rawNode = node),
+                                fqn = "str",
                                 rawNode = node
                             )
                             .implicit()
@@ -211,11 +210,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     strCall
                 }
                 formattedValConversionRepr -> {
-                    // String representation. wrap in repr() call.
+                    // Repr-String representation: wrap in `repr()` call.
                     val reprCall =
                         newCallExpression(
-                                newReference("repr", rawNode = node),
-                                "repr",
+                                callee = newReference(name = "repr", rawNode = node),
+                                fqn = "repr",
                                 rawNode = node
                             )
                             .implicit()
@@ -223,7 +222,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     reprCall
                 }
                 formattedValConversionASCII -> {
-                    // String representation. wrap in ascii() call.
+                    // ASCII-String representation: wrap in `ascii()` call.
                     val asciiCall =
                         newCallExpression(
                                 newReference("ascii", rawNode = node),
@@ -236,14 +235,15 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 }
                 else ->
                     newProblemExpression(
-                        "Cannot handle formatted value with conversion ${node.conversion} yet",
+                        problem =
+                            "Cannot handle formatted value with conversion code ${node.conversion} yet",
                         rawNode = node
                     )
             }
         if (formatSpec != null) {
             return newCallExpression(
-                    newReference("format", rawNode = node),
-                    "format",
+                    callee = newReference(name = "format", rawNode = node),
+                    fqn = "format",
                     rawNode = node
                 )
                 .implicit()
