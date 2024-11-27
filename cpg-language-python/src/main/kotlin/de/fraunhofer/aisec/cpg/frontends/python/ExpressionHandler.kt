@@ -174,6 +174,25 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * [Expression].
      *
      * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
+     *
+     * The following example
+     *
+     * ```python
+     *  f"{value:.2f}"
+     * ```
+     *
+     * is modeled:
+     * 1. The value `value` is wrapped in a `format()` call.
+     * 2. The `format()` call has two arguments:
+     *     - The value to format (`value`).
+     *     - The format specification (`".2f"`).
+     *
+     * CPG Representation:
+     * - `CallExpression` node:
+     *         - `callee`: `Reference` to `format`.
+     *         - `arguments`:
+     *             1. A node representing `value`.
+     *             2. A node representing the string `".2f"`.
      */
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
         /*
