@@ -36,10 +36,39 @@ import kotlin.collections.flatMap
 import kotlin.collections.iterator
 
 /**
- * Analyzes the call graph stored in [functionCalleesMap] to identify an ordering for analyzing
- * [FunctionDeclarations] in which the dependencies (in terms of required function calls which could
- * affect the currently analyzed function) are hopefully resolved most of the time. Here, a function
- * f1 depends on function f2 exist if f1 calls f2. This might be unsuitable for other analyses.
+ * Add all functions in [dependencies] which do not have a dependency (i.e., the value of the
+ * respective entry is empty) to the [orderedList] since all of their dependencies are fulfilled. We
+ * also delete the entries from the [dependencies].
+ */
+fun addFunctionsWithoutDependency(
+    orderedList: MutableList<Node>,
+    dependencies: IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>>
+) {
+    // All functions which do not have a dependency will never get one.
+    // We already remove them to save a bit of time in the subsequent really slow part...
+    // We also do this multiple times to have the next part as small as possible because it has
+    // a much higher performance penalty
+    while (dependencies.isNotEmpty() && dependencies.any { (_, v) -> v.isEmpty() }) {
+        // We always try to find functions without any (unsatisfied) dependencies. That's
+        // obviously the best scenario because we can be sure that all prerequisites have been
+        // fulfilled.
+        val nextFunctions = dependencies.filterValues { it.isEmpty() }.keys
+
+        nextFunctions.forEach { nextFunction ->
+            // It's no longer needed in the map
+            dependencies.remove(nextFunction)
+            // It's no longer an unsatisfied dependency.
+            dependencies.forEach { (_, v) -> v.remove(nextFunction) }
+        }
+        orderedList.addAll(nextFunctions.sortedBy { it.name })
+    }
+}
+
+/**
+ * Analyzes the call graph to identify an ordering for analyzing the [eogStarters] in which the
+ * dependencies (in terms of required function calls which could affect the currently analyzed
+ * function) are hopefully resolved most of the time. Here, a function f1 depends on function f2
+ * exist if f1 calls f2. This might be unsuitable for other analyses.
  */
 fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node> {
     val functions = eogStarters.filterIsInstance<FunctionDeclaration>()
@@ -69,24 +98,8 @@ fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node>
         )
 
     val orderedList = mutableListOf<Node>()
-    // We make a small optimization: All functions which do not have a dependency will never get
-    // one. We already remove them to save a bit of time in the subsequent really slow part...
-    // We also do this multiple times to have the next part as small as possible because it has
-    // a much higher performance penalty
-    while (dependencies.isNotEmpty() && dependencies.any { (_, v) -> v.isEmpty() }) {
-        // We always try to find functions without any (unsatisfied) dependencies. That's
-        // obviously the best scenario because we can be sure that all prerequisites have been
-        // fulfilled.
-        val nextFunctions = dependencies.filterValues { it.isEmpty() }.keys
 
-        nextFunctions.forEach { nextFunction ->
-            // It's no longer needed in the map
-            dependencies.remove(nextFunction)
-            // It's no longer an unsatisfied dependency.
-            dependencies.forEach { (_, v) -> v.remove(nextFunction) }
-        }
-        orderedList.addAll(nextFunctions.sortedBy { it.name })
-    }
+    addFunctionsWithoutDependency(orderedList, dependencies)
 
     // All remaining nodes still have some unfulfilled dependencies. We make some heuristics
     // based on how many dependencies we cannot fulfill. We therefore first collect all
