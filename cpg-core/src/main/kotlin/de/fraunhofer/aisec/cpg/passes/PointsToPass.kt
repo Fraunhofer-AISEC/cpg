@@ -53,6 +53,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         if (node !is FunctionDeclaration) {
             return
         }
+        // TODO: If node already has a function summary, we have visited it before and can return
+        // here.
 
         // Skip empty functions
         if (node.body == null) {
@@ -85,6 +87,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         /*MapLattice(
         mapOf(Pair(null)) TupleLattice(Pair(emptyPowersetLattice<Node?>() , emptyPowersetLattice<Node?>()))*/
 
+        // TODO: Use the PlaceholderMemoryValue
         var startState = PointsToState2()
         startState =
             startState.pushToDeclarationsState(
@@ -103,6 +106,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
         val finalState = iterateEOGClean(node.nextEOGEdges, startState, ::transfer)
         if (finalState !is PointsToState2) return
+
+        // TODO: Store function summary for this f´FunctionDeclaration.
 
         for ((key, value) in finalState.generalState.elements) {
             when (key) {
@@ -161,6 +166,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
+
+        // TODO: Check if we have a function summary for everything in currentNode.invokes. If not,
+        // we should process the respective FunctionDeclaration now. Set the arguments. Push the
+        // values of the arguments and return value after executing the function call to our
+        // doubleState.
+
         /*
         For now, we only care about memcpy*, which can influence memoryAddresses or memoryValues
          */

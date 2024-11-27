@@ -286,6 +286,7 @@ fun executePass(
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
+                // TODO: It would be cool to process these nodes in the "best" order.
                 result.allEOGStarters,
                 executedFrontends
             )

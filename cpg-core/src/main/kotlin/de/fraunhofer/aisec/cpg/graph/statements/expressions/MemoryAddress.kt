@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
 class MemoryAddress(override var name: Name) : Declaration() {
@@ -53,3 +54,14 @@ class MemoryAddress(override var name: Name) : Declaration() {
         return super.hashCode()
     }
 }
+
+/**
+ * There is a value, but we cannot determine it while processing this node. We assume that this
+ * value will definitely be set when we really execute the code. E.g., it's set outside the
+ * function's context. This is used for a [ParameterDeclaration] and serves as some sort of stepping
+ * stone.
+ */
+class PlaceholderMemoryValue() : Node()
+
+/** We don't know the value. It might be set somewhere else or not. No idea. */
+class UnknownMemoryValue() : Node()
