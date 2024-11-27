@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @ExecuteBefore(ControlFlowSensitiveDFGPass::class)
-class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
     override fun cleanup() {
         // Nothing to do
     }
