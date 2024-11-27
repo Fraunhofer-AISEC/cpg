@@ -124,6 +124,7 @@ class FormattedValueHandlerTest {
         assertLiteralValue("50$", dArguments)
 
         // Test for e = f'Combined: {42!s:10}'
+        // This is translated to `'Combined: ' +  format(str(b), "10")`
         val eAssExpression = result.variables["e"]?.astParent
         assertIs<AssignExpression>(eAssExpression)
         val eExprRhs = eAssExpression.rhs.singleOrNull()
