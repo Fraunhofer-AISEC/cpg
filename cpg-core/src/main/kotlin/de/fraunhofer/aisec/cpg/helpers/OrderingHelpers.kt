@@ -65,15 +65,14 @@ fun addFunctionsWithoutDependency(
 }
 
 /**
- * Analyzes the call graph to identify an ordering for analyzing the [eogStarters] in which the
- * dependencies (in terms of required function calls which could affect the currently analyzed
- * function) are hopefully resolved most of the time. Here, a function f1 depends on function f2
- * exist if f1 calls f2. This might be unsuitable for other analyses.
+ * Maps a function to its callees which won't have been analyzed yet and thus represents an
+ * unsatisfied dependency. Whenever we add a function to the "orderedList" (which indicates in which
+ * order to analyze the functions), we remove them from the dependencies (as a key but also in the
+ * value of other functions' dependencies because we will definitely analyze it before).
  */
-fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node> {
-    val functions = eogStarters.filterIsInstance<FunctionDeclaration>()
-    val noFunction = eogStarters.subtract(functions)
-
+fun prepareCallGraph(
+    functions: Iterable<FunctionDeclaration>
+): IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>> {
     val functionCalleesMap = IdentityHashMap(functions.associateWith { it.callees.toIdentitySet() })
 
     var functionCallersMap =
@@ -85,17 +84,29 @@ fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node>
         }
     }
 
+    return IdentityHashMap(
+        mutableMapOf(
+            *functionCalleesMap.map { (k, v) -> Pair(k, v.toIdentitySet()) }.toTypedArray()
+        )
+    )
+}
+
+/**
+ * Analyzes the call graph to identify an ordering for analyzing the [eogStarters] in which the
+ * dependencies (in terms of required function calls which could affect the currently analyzed
+ * function) are hopefully resolved most of the time. Here, a function f1 depends on function f2
+ * exist if f1 calls f2. This might be unsuitable for other analyses.
+ */
+fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node> {
+    val functions = eogStarters.filterIsInstance<FunctionDeclaration>()
+    val noFunction = eogStarters.subtract(functions)
+
     // Maps a function to its callees which won't have been analyzed yet and thus represents an
     // unsatisfied dependency. Whenever we add a function to the "orderedList" (which indicates
     // in which order to analyze the functions), we remove them from the dependencies (as a key
     // but also in the value of other functions' dependencies because we will definitely analyze
     // it before).
-    val dependencies =
-        IdentityHashMap(
-            mutableMapOf(
-                *functionCalleesMap.map { (k, v) -> Pair(k, v.toIdentitySet()) }.toTypedArray()
-            )
-        )
+    val dependencies = prepareCallGraph(functions)
 
     val orderedList = mutableListOf<Node>()
 
@@ -150,6 +161,9 @@ fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node>
         }
         orderedList.addAll(nextFunctions.sortedBy { it.name })
     }
+
+    // We add all things which are not a function declaration to the end because they won't be
+    // called at a specific point in time (we hope)
     orderedList.addAll(noFunction)
     return orderedList
 }
