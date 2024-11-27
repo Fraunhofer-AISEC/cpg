@@ -34,19 +34,6 @@ import jep.python.PyObject
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
 
-    /*
-     * Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue): conversion is
-     * an integer:
-     * - `-1`: no formatting
-     * - `115`: `!s` string formatting
-     * - `114`: `!r` repr formatting
-     * - `97`: `!a` ascii formatting
-     */
-    private val formattedValConversionNoFormatting = -1L
-    private val formattedValConversionString = 115L
-    private val formattedValConversionRepr = 114L
-    private val formattedValConversionASCII = 97L
-
     override fun handleNode(node: Python.AST.BaseExpr): Expression {
         return when (node) {
             is Python.AST.Name -> handleName(node)
@@ -189,6 +176,19 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
      */
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
+        /*
+        Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
+        conversion is an integer:
+        -1: no formatting
+        115: !s string formatting
+        114: !r repr formatting
+        97: !a ascii formatting
+        */
+        val formattedValConversionNoFormatting = -1L
+        val formattedValConversionString = 115L
+        val formattedValConversionRepr = 114L
+        val formattedValConversionASCII = 97L
+
         val formatSpec = node.format_spec?.let { handle(it) }
         val valueExpression = handle(node.value)
         val conversion =
