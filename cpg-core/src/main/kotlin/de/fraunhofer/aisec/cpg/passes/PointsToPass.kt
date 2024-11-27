@@ -27,10 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.*
@@ -87,7 +84,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         /*MapLattice(
         mapOf(Pair(null)) TupleLattice(Pair(emptyPowersetLattice<Node?>() , emptyPowersetLattice<Node?>()))*/
 
-        // TODO: Use the PlaceholderMemoryValue
         var startState = PointsToState2()
         startState =
             startState.pushToDeclarationsState(
@@ -96,13 +92,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     Pair(PowersetLattice(identitySetOf()), PowersetLattice(identitySetOf()))
                 )
             )
-        node.parameters.forEach {
+        node.parameters.forEach { param ->
+            val addresses = startState.getAddresses(param)
             val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
                 TupleLattice(
-                    Pair(PowersetLattice(identitySetOf()), PowersetLattice(identitySetOf()))
+                    Pair(
+                        PowersetLattice(addresses),
+                        PowersetLattice(setOf(PlaceholderMemoryValue()))
+                    )
                 )
-            // startState.push(it, paramState)
-            startState = startState.pushToDeclarationsState(it, paramState)
+            startState.push(param, paramState)
+            addresses.forEach { addr ->
+                startState = startState.pushToDeclarationsState(addr, paramState)
+            }
         }
         val finalState = iterateEOGClean(node.nextEOGEdges, startState, ::transfer)
         if (finalState !is PointsToState2) return
@@ -197,11 +199,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         if (src != null && dst != null) {
             // Since memcpy takes pointers as arguments, we need to resolve them here to determine
             // the values we need to read/write
-            doubleState =
-                doubleState.updateValues(
-                    doubleState.getValues(src).first(),
-                    doubleState.getValues(dst).first()
-                )
+            doubleState.getValues(src).forEach { s ->
+                doubleState.getValues(dst).forEach { d ->
+                    doubleState = doubleState.updateValues(s, d)
+                }
+            }
         }
         return doubleState
     }
@@ -403,7 +405,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             return when (node) {
                 is MemoryAddress ->
                     /* In this case, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                    this.declarationsState.elements[node]?.elements?.second?.elements ?: setOf()
+                    this.declarationsState.elements[node]?.elements?.second?.elements
+                        ?: setOf(UnknownMemoryValue())
                 is PointerReference -> {
                     /* For PointerReferences, the value is the address of the input
                      * For example, the value of `&i` is the address of `i`
@@ -418,15 +421,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         when (node.input) {
                             is Reference -> this.getValues(node.input)
                             else -> // TODO: How can we handle other cases?
-                            emptySet()
+                            setOf(UnknownMemoryValue())
                         }
                     inputVal.flatMap { this.getValues(it) }.toSet()
+                }
+                is ParameterDeclaration -> {
+                    this.declarationsState.elements[node.memoryAddress]?.elements?.second?.elements
+                        ?: setOf(UnknownMemoryValue())
                 }
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
                      */
                     this.declarationsState.elements[node.memoryAddress]?.elements?.second?.elements
-                        ?: setOf()
+                        ?: setOf(UnknownMemoryValue())
                 }
                 is Reference -> {
                     /* For References, we have to look up the last value written to its declaration.
@@ -434,7 +441,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     this.getAddresses(node)
                         .flatMap {
                             this.declarationsState.elements[it]?.elements?.second?.elements
-                                ?: setOf()
+                                ?: setOf(UnknownMemoryValue())
                         }
                         .toSet()
                 }
@@ -446,10 +453,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     this.getAddresses(node)
                         .flatMap {
                             this.declarationsState.elements[it]?.elements?.second?.elements
-                                ?: setOf()
+                                ?: setOf(UnknownMemoryValue())
                         }
                         .toSet()
-                else -> setOf(node)
+                is Literal<*> -> setOf(node)
+                is BinaryOperator -> setOf(node)
+                else -> setOf(UnknownMemoryValue()) /*setOf(node)*/
             }
         }
 
@@ -494,10 +503,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         if (!refersTo!!.memoryAddressIsInitialized())
                             refersTo.memoryAddress = MemoryAddress(node.name)
 
-                        this.declarationsState.elements[refersTo.memoryAddress]
-                            ?.elements
-                            ?.first
-                            ?.elements ?: setOf()
+                        setOf(refersTo.memoryAddress)
                     }
                 }
                 is CastExpression -> {
@@ -555,18 +561,37 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             val addresses = this.getAddresses(dst)
             val values: Set<Node> = this.getValues(src)
             val newDeclState = this.declarationsState.elements.toMutableMap()
+            val newGenState = this.generalState.elements.toMutableMap()
             /* Update the declarationState for the refersTo */
             addresses.forEach { addr ->
                 newDeclState[addr] =
                     TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
             }
             /* Also update the generalState for the ref */
-            var doubleState = PointsToState2(this.generalState, MapLattice(newDeclState))
-            doubleState =
-                doubleState.push(
-                    dst,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-                )
+            newGenState[dst] =
+                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+            var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
+
+            /* When we are dealing with SubscriptExpression, we also have to initially the arrayExpression, since that hasn't been done yet
+             */
+            if (dst is SubscriptExpression) {
+                val AEaddresses = this.getAddresses(dst.arrayExpression)
+                val AEvalues = this.getValues(dst.arrayExpression)
+
+                doubleState =
+                    doubleState.push(
+                        dst.arrayExpression,
+                        TupleLattice(Pair(PowersetLattice(AEaddresses), PowersetLattice(AEvalues)))
+                    )
+            }
+
+            //            var doubleState = PointsToState2(this.generalState,
+            // MapLattice(newDeclState))
+            /*            doubleState =
+            doubleState.push(
+                dst,
+                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+            )*/
             return doubleState
         }
     }

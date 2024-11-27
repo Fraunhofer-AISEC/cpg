@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -462,7 +463,7 @@ class PointsToPassTest {
             n0Line66.memoryAddress.first()
         )
         assertEquals(1, n0Line66.memoryValue.size)
-        assertEquals(null, n0Line66.memoryValue.first())
+        assertTrue(n0Line66.memoryValue.first() is UnknownMemoryValue)
 
         // Line 67
         assertEquals(1, n0Line67.memoryAddress.size)
@@ -500,7 +501,7 @@ class PointsToPassTest {
         // TODO: What are our expections for njLine75.memoryValue? I think null is fine, since we
         // never defined that
         assertEquals(1, njLine75.memoryValue.size)
-        assertEquals(null, njLine75.memoryValue.first())
+        assertTrue(njLine75.memoryValue.first() is UnknownMemoryValue)
     }
 
     @Test
@@ -862,7 +863,9 @@ class PointsToPassTest {
         assertNotNull(cPointerDerefLine139)
         val cPointerDerefLine140 =
             tu.allChildren<PointerDereference> {
-                    it.location?.region?.startLine == 140 && it.name.localName == "c"
+                    it.location?.region?.startLine == 140 &&
+                        it.name.localName == "c" &&
+                        it.input is PointerDereference
                 }
                 .firstOrNull()
 
@@ -910,5 +913,64 @@ class PointsToPassTest {
         assertEquals(aDecl.memoryAddress, cPointerDerefLine140.memoryAddress.first())
         assertEquals(1, cPointerDerefLine140.memoryValue.size)
         assertEquals(literal10, cPointerDerefLine140.memoryValue.first())
+    }
+
+    @Test
+    fun testGhidraCode() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // ParameterDeclaration
+        val param_1 =
+            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 145 }.first()
+        assertNotNull(param_1)
+
+        // References
+        val local_20Line159 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 159 && it.name.localName == "local_20"
+                }
+                .first()
+        assertNotNull(local_20Line159)
+        val param_1Line159 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 159 && it.name.localName == "param_1"
+                }
+                .first()
+        assertNotNull(param_1Line159)
+
+        val local_30Line160 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 160 && it.name.localName == "local_30"
+                }
+                .first()
+        assertNotNull(local_30Line160)
+        val param_1Line160 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 160 && it.name.localName == "param_1"
+                }
+                .first()
+        assertNotNull(param_1Line160)
+
+        val local_30Line165 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 165 && it.name.localName == "local_30"
+                }
+                .first()
+        assertNotNull(local_30Line165)
+
+        // Line 159
+        // TODO: for some reason, the parameterDeclaration does not get the value, so we take the
+        // rhs instead
+        assertEquals(1, local_20Line159.memoryValue.size)
+        assertTrue(local_20Line159.memoryValue.firstOrNull() is PlaceholderMemoryValue)
+
+        // Line 160
+        assertEquals(param_1Line160.memoryValue, local_30Line160.memoryValue)
     }
 }

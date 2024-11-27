@@ -74,7 +74,10 @@ class AssignExpression :
                 }
 
                 if (isSimpleAssignment) {
-                    val unwrapped = end.unwrapReference()
+                    val unwrapped =
+                        if (end is SubscriptExpression) end.arrayExpression
+                        else end.unwrapReference()
+
                     if (unwrapped is Reference) {
                         unwrapped.let {
                             it.access = AccessValues.WRITE

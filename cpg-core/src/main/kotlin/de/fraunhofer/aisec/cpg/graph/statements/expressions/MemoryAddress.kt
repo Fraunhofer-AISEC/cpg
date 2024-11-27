@@ -61,7 +61,35 @@ class MemoryAddress(override var name: Name) : Declaration() {
  * function's context. This is used for a [ParameterDeclaration] and serves as some sort of stepping
  * stone.
  */
-class PlaceholderMemoryValue() : Node()
+class PlaceholderMemoryValue() : Node() {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is UnknownMemoryValue) {
+            return false
+        }
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
-class UnknownMemoryValue() : Node()
+class UnknownMemoryValue() : Node() {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is UnknownMemoryValue) {
+            return false
+        }
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}
