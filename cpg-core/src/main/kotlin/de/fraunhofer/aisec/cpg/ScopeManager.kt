@@ -111,9 +111,6 @@ class ScopeManager : ScopeProvider {
     val currentRecord: RecordDeclaration?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
 
-    val currentTypedefs: Collection<TypedefDeclaration>
-        get() = this.getCurrentTypedefs(currentScope)
-
     val currentNamespace: Name?
         get() {
             val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
@@ -237,7 +234,7 @@ class ScopeManager : ScopeProvider {
                     is Block -> BlockScope(nodeToScope)
                     is WhileStatement,
                     is DoStatement,
-                    is AssertStatement -> LoopScope(nodeToScope as Statement)
+                    is AssertStatement -> LoopScope(nodeToScope)
                     is ForStatement,
                     is ForEachStatement -> LoopScope(nodeToScope as Statement)
                     is SwitchStatement -> SwitchScope(nodeToScope)
@@ -506,29 +503,6 @@ class ScopeManager : ScopeProvider {
      */
     fun addTypedef(typedef: TypedefDeclaration, scope: ValueDeclarationScope? = globalScope) {
         scope?.addTypedef(typedef)
-    }
-
-    private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
-        val typedefs = mutableMapOf<Name, TypedefDeclaration>()
-
-        val path = mutableListOf<ValueDeclarationScope>()
-        var current = searchScope
-
-        // We need to build a path from the current scope to the top most one
-        while (current != null) {
-            if (current is ValueDeclarationScope) {
-                path += current
-            }
-            current = current.parent
-        }
-
-        // And then follow the path in reverse. This ensures us that a local definition
-        // overwrites / shadows one that was there on a higher scope.
-        for (scope in path.reversed()) {
-            typedefs.putAll(scope.typedefs)
-        }
-
-        return typedefs.values
     }
 
     /**
