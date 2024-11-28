@@ -136,6 +136,29 @@ class InferenceTest {
     }
 
     @Test
+    fun testBinaryOperatorReturnType() {
+        val tu =
+            GraphExamples.getInferenceBinaryOperatorReturnType()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
+        assertNotNull(tu)
+        with(tu) {
+            val intType = assertResolvedType("int")
+            val longType = assertResolvedType("long")
+
+            val bar = tu.functions["bar"]
+            assertNotNull(bar)
+            assertEquals(intType, bar.returnTypes.singleOrNull())
+
+            val baz = tu.functions["baz"]
+            assertNotNull(baz)
+            assertEquals(longType, baz.returnTypes.singleOrNull())
+        }
+    }
+
+    @Test
     fun testNestedNamespace() {
         val result = GraphExamples.getInferenceNestedNamespace()
         with(result) {

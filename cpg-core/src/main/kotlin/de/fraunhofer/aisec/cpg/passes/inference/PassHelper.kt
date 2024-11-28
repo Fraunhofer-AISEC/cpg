@@ -345,7 +345,7 @@ internal fun Pass<*>.tryMethodInference(
     var inferGlobalFunction =
         if (call.language !is HasGlobalFunctions || call is MemberCallExpression) {
             false
-        } else if (methodExists(bestGuess, call.name.localName)) {
+        } else if (bestGuess is ObjectType && methodExists(bestGuess, call.name.localName)) {
             // 2) We do a quick check, whether we would have a method with our name in the "best
             // guess" class. Because if we do, we most likely ended up here because of an
             // argument type mismatch. Once we use the new call resolution also for member
@@ -424,13 +424,9 @@ internal fun Pass<*>.tryScopeInference(scopeName: Name, locationHint: Node?): De
  * This function should solely be used in [tryMethodInference].
  */
 private fun methodExists(
-    type: Type?,
+    type: ObjectType,
     name: String,
 ): Boolean {
-    if (type == null) {
-        return false
-    }
-
     var types = type.ancestors.map { it.type }
     var methods = types.map { it.recordDeclaration }.flatMap { it.methods }
     return methods.any { it.name.localName == name }

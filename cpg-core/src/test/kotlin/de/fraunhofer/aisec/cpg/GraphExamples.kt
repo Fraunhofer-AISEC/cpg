@@ -339,6 +339,34 @@ class GraphExamples {
                 }
             }
 
+        fun getInferenceBinaryOperatorReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("test.python") {
+                        function("foo", t("int")) {
+                            body {
+                                declare { variable("a") }
+                                declare { variable("b") }
+                                ref("a") assign { call("bar") + literal(2, t("int")) }
+                                ref("b") assign { literal(2L, t("long")) + call("baz") }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getInferenceTupleReturnType(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
