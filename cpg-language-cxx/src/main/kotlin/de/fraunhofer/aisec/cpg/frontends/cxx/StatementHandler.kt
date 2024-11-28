@@ -35,13 +35,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
+import org.eclipse.cdt.core.dom.ast.*
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import java.util.*
 import java.util.function.BiConsumer
 import java.util.function.Supplier
 import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.*
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Statement, IASTStatement>(Supplier(::ProblemExpression), lang) {
@@ -160,6 +160,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newLabelStatement(rawNode = ctx)
         statement.subStatement = handle(ctx.nestedStatement)
         statement.label = ctx.name.toString()
+        statement.name = newName(name = ctx.name.toString())
         return statement
     }
 
@@ -167,12 +168,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newGotoStatement(rawNode = ctx)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             statement.targetLabel = to as LabelStatement
+            to.label?.let { statement.labelName = it }
         }
         val b: IBinding?
         try {
             b = ctx.name.resolveBinding()
             if (b is ILabel) {
-                b.labelStatement
                 // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
                 // to the CPG goto statement
                 frontend.registerObjectListener(b.labelStatement, assigneeTargetLabel)
