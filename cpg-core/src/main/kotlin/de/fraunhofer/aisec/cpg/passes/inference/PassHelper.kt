@@ -325,6 +325,12 @@ internal fun Pass<*>.tryFunctionInference(
  * behind that is that most languages allow to omit `this` when calling methods in the current
  * class. So a call to `foo()` inside record `Bar` could either be a call to a global function `foo`
  * or a call to `Bar::foo`.
+ *
+ * We need to decide whether we want to infer a global function or not; the heuristic is based on a
+ * multitude of factors such as:
+ * - Whether the language even allows for [HasGlobalFunctions].
+ * - Whether we have multiple calls to the same function `func()` from multiple locations, everytime
+ *   without an explicit receiver.
  */
 internal fun Pass<*>.tryMethodInference(
     call: CallExpression,

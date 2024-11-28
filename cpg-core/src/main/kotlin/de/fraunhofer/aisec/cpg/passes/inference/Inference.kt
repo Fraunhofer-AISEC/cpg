@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -547,7 +548,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
      * original [CallExpression] (as the [hint]) parameter that was used to infer the function.
      */
     fun inferReturnType(hint: CallExpression): Type {
-        // Try to find out, if the supplied hint is part of an assignment.  If yes, we can use their
+        // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
         // type as the return type of the function
         var targetType =
             ctx.currentComponent.assignments.singleOrNull { it.value == hint }?.target?.type
@@ -581,6 +582,18 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     return holder.lhs.type
                 } else if (hint == holder.lhs) {
                     return holder.rhs.type
+                }
+            }
+            is ReturnStatement -> {
+                // If this is part of a return statement, we can take the return type
+                val func =
+                    hint.firstParentOrNull { it is FunctionDeclaration } as? FunctionDeclaration
+                val returnTypes = func?.returnTypes
+
+                return if (returnTypes != null && returnTypes.size > 1) {
+                    TupleType(returnTypes)
+                } else {
+                    returnTypes?.singleOrNull() ?: unknownType()
                 }
             }
         }

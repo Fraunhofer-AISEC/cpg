@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertIsNot
 import kotlin.test.assertNotNull
@@ -188,5 +189,14 @@ class CXXInferenceTest {
                 )
             }
         assertNotNull(result)
+        with(result) {
+            val pairType = assertResolvedType("Pair")
+            assertNotNull(pairType)
+
+            val pair = result.functions["Pair"]
+            assertNotNull(pair)
+            assertTrue(pair.isInferred)
+            assertEquals(pairType, pair.returnTypes.singleOrNull())
+        }
     }
 }
