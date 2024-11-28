@@ -123,11 +123,17 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                         incomingReturnType is UnknownType &&
                         hint != null
                 ) {
-                    inferReturnType(hint)
+                    inferReturnType(hint) ?: unknownType()
                 } else {
                     incomingReturnType
                 }
-            returnType?.let { inferred.returnTypes = listOf(it) }
+
+            if (returnType is TupleType) {
+                inferred.returnTypes = returnType.types
+            } else if (returnType != null) {
+                inferred.returnTypes = listOf(returnType)
+            }
+
             inferred.type = FunctionType.computeType(inferred)
 
             debugWithFileLocation(
@@ -547,7 +553,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
      * This function tries to infer a return type for an inferred [FunctionDeclaration] based the
      * original [CallExpression] (as the [hint]) parameter that was used to infer the function.
      */
-    fun inferReturnType(hint: CallExpression): Type {
+    fun inferReturnType(hint: CallExpression): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
         // type as the return type of the function
         var targetType =
@@ -564,10 +570,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 // If it's a boolean operator, the return type is probably a boolean
                 if (holder.operatorCode == "!") {
                     return hint.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
-                        ?: unknownType()
                 }
                 // If it's a numeric operator, return the largest numeric type that we have; we
-                // prefer integers over floats
+                // prefer integers to floats
                 if (holder.operatorCode in listOf("+", "-", "++", "--")) {
                     val numericTypes =
                         hint.language
@@ -579,7 +584,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                                     .then { a, b -> preferIntegerType(a, b) }
                             )
 
-                    return numericTypes?.lastOrNull() ?: unknownType()
+                    return numericTypes?.lastOrNull()
                 }
             }
             is ConstructExpression -> {
@@ -603,12 +608,12 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 return if (returnTypes != null && returnTypes.size > 1) {
                     TupleType(returnTypes)
                 } else {
-                    returnTypes?.singleOrNull() ?: unknownType()
+                    returnTypes?.singleOrNull()
                 }
             }
         }
 
-        return unknownType()
+        return null
     }
 }
 

@@ -339,6 +339,29 @@ class GraphExamples {
                 }
             }
 
+        fun getInferenceTupleReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("test.python") {
+                        function("foo", returnTypes = listOf(t("Foo"), t("Bar"))) {
+                            body { returnStmt { call("bar") } }
+                        }
+                    }
+                }
+            }
+
         fun getInferenceUnaryOperatorReturnType(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()

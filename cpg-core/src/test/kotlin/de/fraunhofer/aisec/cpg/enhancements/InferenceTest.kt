@@ -116,6 +116,26 @@ class InferenceTest {
     }
 
     @Test
+    fun testTupleTypeReturnType() {
+        val tu =
+            GraphExamples.getInferenceTupleReturnType()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
+        assertNotNull(tu)
+        with(tu) {
+            val fooType = assertResolvedType("Foo")
+            val barType = assertResolvedType("Bar")
+
+            val bar = tu.functions["bar"]
+            assertNotNull(bar)
+
+            assertEquals(listOf(fooType, barType), bar.returnTypes)
+        }
+    }
+
+    @Test
     fun testNestedNamespace() {
         val result = GraphExamples.getInferenceNestedNamespace()
         with(result) {
