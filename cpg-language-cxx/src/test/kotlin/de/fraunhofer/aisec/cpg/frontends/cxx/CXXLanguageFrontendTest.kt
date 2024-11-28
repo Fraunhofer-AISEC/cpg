@@ -1777,7 +1777,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testGoto() {
         val file = File("src/test/resources/c/goto.c")
         val tu =
