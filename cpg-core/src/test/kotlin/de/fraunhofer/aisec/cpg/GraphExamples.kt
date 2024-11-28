@@ -339,6 +339,31 @@ class GraphExamples {
                 }
             }
 
+        fun getInferenceNestedNamespace(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder().inferRecords(true).build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Test.java") {
+                        record("Test") {
+                            function("foo") {
+                                body {
+                                    declare { variable("node", t("java.lang.String")) }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getVariables(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()

@@ -95,4 +95,26 @@ class InferenceTest {
         assertNotNull(nextField)
         assertLocalName("T*", nextField.type)
     }
+
+    @Test
+    fun testNestedNamespace() {
+        val result = GraphExamples.getInferenceNestedNamespace()
+        with(result) {
+            val java = result.namespaces["java"]
+            assertNotNull(java)
+            assertLocalName("java", java)
+
+            val javaLang = result.namespaces["java.lang"]
+            assertNotNull(javaLang)
+            assertLocalName("lang", javaLang)
+            // should exist in the scope of "java"
+            assertEquals(java, javaLang.scope?.astNode)
+
+            val javaLangString = result.records["java.lang.String"]
+            assertNotNull(javaLangString)
+            assertLocalName("String", javaLangString)
+            // should exist in the scope of "java.lang"
+            assertEquals(javaLang, javaLangString.scope?.astNode)
+        }
+    }
 }
