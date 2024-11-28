@@ -1785,11 +1785,15 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
+        val labelCName = "LAB_123"
+
         val goto = tu.allChildren<GotoStatement>().firstOrNull()
         assertIs<GotoStatement>(goto)
+        assertEquals(labelCName, goto.labelName)
 
-        val label = tu.labels["LAB_123"]
+        val label = tu.labels[labelCName]
         assertIs<LabelStatement>(label)
+        assertLocalName(labelCName, label)
 
         assertEquals(label, goto.targetLabel)
     }
