@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -41,9 +41,8 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.nio.file.Path
-import java.util.*
 import java.util.function.Consumer
-import kotlin.collections.set
+import kotlin.Throws
 import kotlin.test.*
 
 internal class CXXLanguageFrontendTest : BaseTest() {
@@ -1775,5 +1774,24 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val cast = assign.rhs.singleOrNull()
         assertIs<CastExpression>(cast)
         assertLocalName("mytype", cast.castType)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testGoto() {
+        val file = File("src/test/resources/c/goto.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val goto = tu.allChildren<GotoStatement>().firstOrNull()
+        assertIs<GotoStatement>(goto)
+
+        val label = tu.labels["LAB_123"]
+        assertIs<LabelStatement>(label)
+
+        assertEquals(label, goto.targetLabel)
     }
 }
