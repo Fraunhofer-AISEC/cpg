@@ -244,7 +244,11 @@ open class CPPLanguage :
         needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
-            ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
+            ctx.scopeManager
+                .lookupSymbolByName(templateCall.name, templateCall.location, templateCall.scope) {
+                    it is FunctionTemplateDeclaration
+                }
+                .filterIsInstance<FunctionTemplateDeclaration>()
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
                 mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
