@@ -110,17 +110,6 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 }
             inferred.code = code
 
-            debugWithFileLocation(
-                hint,
-                log,
-                "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
-                if (inferred is MethodDeclaration) "method" else "function",
-                inferred.name,
-                signature.map { it?.name },
-                inferred.returnTypes.map { it.name },
-                it
-            )
-
             // Create parameter declarations and receiver (only for methods).
             if (inferred is MethodDeclaration) {
                 createInferredReceiver(inferred, record)
@@ -140,6 +129,17 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 }
             returnType?.let { inferred.returnTypes = listOf(it) }
             inferred.type = FunctionType.computeType(inferred)
+
+            debugWithFileLocation(
+                hint,
+                log,
+                "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
+                if (inferred is MethodDeclaration) "method" else "function",
+                inferred.name,
+                signature.map { it?.name },
+                inferred.returnTypes.map { it.name },
+                it
+            )
 
             // Add it to the scope
             scopeManager.addDeclaration(inferred)
@@ -566,10 +566,20 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     return hint.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
                         ?: unknownType()
                 }
-                // If it's a numeric operator, return the fist numeric type that we have
+                // If it's a numeric operator, return the largest numeric type that we have; we
+                // prefer integers over floats
                 if (holder.operatorCode in listOf("+", "-", "++", "--")) {
-                    return hint.language?.builtInTypes?.values?.firstOrNull { it is NumericType }
-                        ?: unknownType()
+                    val numericTypes =
+                        hint.language
+                            ?.builtInTypes
+                            ?.values
+                            ?.filterIsInstance<NumericType>()
+                            ?.sortedWith(
+                                compareBy<NumericType> { it.bitWidth }
+                                    .then { a, b -> preferIntegerType(a, b) }
+                            )
+
+                    return numericTypes?.lastOrNull() ?: unknownType()
                 }
             }
             is ConstructExpression -> {
@@ -676,4 +686,13 @@ fun RecordDeclaration.inferMethod(
             call.type,
             call
         ) as? MethodDeclaration
+}
+
+/** A small helper function that prefers [IntegerType] when comparing two [NumericType] types. */
+fun preferIntegerType(a: NumericType, b: NumericType): Int {
+    return when {
+        a is IntegerType && b is IntegerType -> 0
+        a is IntegerType && b !is IntegerType -> 1
+        else -> -1
+    }
 }

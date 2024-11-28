@@ -97,6 +97,25 @@ class InferenceTest {
     }
 
     @Test
+    fun testUnaryOperatorReturnType() {
+        val tu =
+            GraphExamples.getInferenceUnaryOperatorReturnType()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
+        assertNotNull(tu)
+        with(tu) {
+            val longType = assertResolvedType("long")
+
+            val bar = tu.functions["bar"]
+            assertNotNull(bar)
+
+            assertEquals(longType, bar.returnTypes.singleOrNull())
+        }
+    }
+
+    @Test
     fun testNestedNamespace() {
         val result = GraphExamples.getInferenceNestedNamespace()
         with(result) {

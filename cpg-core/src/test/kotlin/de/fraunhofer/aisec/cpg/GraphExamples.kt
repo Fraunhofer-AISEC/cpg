@@ -339,13 +339,37 @@ class GraphExamples {
                 }
             }
 
+        fun getInferenceUnaryOperatorReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Test.java") {
+                        record("Test") { method("foo") { body { returnStmt { -call("bar") } } } }
+                    }
+                }
+            }
+
         fun getInferenceNestedNamespace(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage(StructTestLanguage("."))
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder().inferRecords(true).build()
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferNamespaces(true)
+                            .build()
                     )
                     .build()
         ) =
@@ -353,7 +377,7 @@ class GraphExamples {
                 translationResult {
                     translationUnit("Test.java") {
                         record("Test") {
-                            function("foo") {
+                            method("foo") {
                                 body {
                                     declare { variable("node", t("java.lang.String")) }
                                     returnStmt { isImplicit = true }
