@@ -168,7 +168,10 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newGotoStatement(rawNode = ctx)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             statement.targetLabel = to as LabelStatement
-            to.label?.let { statement.labelName = it }
+            to.label?.let {
+                statement.labelName = it
+                statement.name = newName(it)
+            }
         }
         val b: IBinding?
         try {
