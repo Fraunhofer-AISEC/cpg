@@ -1759,7 +1759,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testGoto() {
         val file = File("src/test/resources/c/goto.c")
         val tu =
@@ -1768,11 +1767,15 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
+        val labelCName = "LAB_123"
+
         val goto = tu.allChildren<GotoStatement>().firstOrNull()
         assertIs<GotoStatement>(goto)
+        assertEquals(labelCName, goto.labelName)
 
-        val label = tu.labels["LAB_123"]
+        val label = tu.labels[labelCName]
         assertIs<LabelStatement>(label)
+        assertLocalName(labelCName, label)
 
         assertEquals(label, goto.targetLabel)
     }
