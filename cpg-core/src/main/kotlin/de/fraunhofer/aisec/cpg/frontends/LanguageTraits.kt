@@ -205,6 +205,14 @@ interface HasAnonymousIdentifier : LanguageTrait {
 interface HasGlobalVariables : LanguageTrait
 
 /**
+ * A language trait, that specifies that this language has global functions directly in the
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a
+ * [TranslationUnitDeclaration]. For example, C++ has global functions, Java and Go do not (as every
+ * function is either in a class or a namespace).
+ */
+interface HasGlobalFunctions : LanguageTrait
+
+/**
  * A common super-class for all language traits that arise because they are an ambiguity of a
  * function call, e.g., function-style casts. This means that we cannot differentiate between a
  * [CallExpression] and other expressions during the frontend and we need to invoke the
