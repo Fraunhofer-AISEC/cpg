@@ -33,7 +33,7 @@ import kotlin.reflect.KClass
 /**
  * A simple language representing classical [INI files](https://en.wikipedia.org/wiki/INI_file). As
  * there are conflicting definitions of an INI file, we go with:
- * - the file extension is `.ini`
+ * - the file extension is `.ini` or `.conf`
  * - all entries live in a unique `section`
  * - all `key`s are unique per section
  * - the file is accepted by the [ini4j library](https://ini4j.sourceforge.net/)

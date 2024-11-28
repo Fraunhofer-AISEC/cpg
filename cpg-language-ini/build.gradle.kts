@@ -32,8 +32,8 @@ publishing {
         named<MavenPublication>("cpg-language-ini") {
             pom {
                 artifactId = "cpg-language-ini"
-                name.set("Code Property Graph - Configfiles Frontend")
-                description.set("An INI-configuration file frontend for the CPG")
+                name.set("Code Property Graph - INI Frontend")
+                description.set("An INI configuration file frontend for the CPG")
             }
         }
     }
