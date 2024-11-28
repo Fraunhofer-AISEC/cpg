@@ -32,10 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
@@ -71,13 +70,6 @@ class ScopeManager : ScopeProvider {
 
     /** Represents an alias with the name [to] for the particular name [from]. */
     data class Alias(var from: Name, var to: Name)
-
-    /**
-     * A cache map of reference tags (computed with [Reference.referenceTag]) and their respective
-     * pair of original [Reference] and resolved [ValueDeclaration]. This is used by
-     * [resolveReference] as a caching mechanism.
-     */
-    private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
@@ -301,24 +293,6 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Similar to [enterScope], but does so in a "read-only" mode, e.g. it does not modify the scope
-     * tree and does not create new scopes on the fly, as [enterScope] does.
-     */
-    fun enterScopeIfExists(nodeToScope: Node?) {
-        if (scopeMap.containsKey(nodeToScope)) {
-            val scope = scopeMap[nodeToScope]
-
-            // we need a special handling of name spaces, because
-            // they are associated to more than one AST node
-            if (scope is NameScope) {
-                // update AST (see enterScope for an explanation)
-                scope.astNode = nodeToScope
-            }
-            currentScope = scope
-        }
-    }
-
-    /**
      * The counter-part of [enterScope]. Language frontends need to call this function, when the
      * scope of the currently processed AST node ends. There MUST have been a corresponding
      * [enterScope] call with the same [nodeToLeave], otherwise the scope-tree might be corrupted.
@@ -503,73 +477,6 @@ class ScopeManager : ScopeProvider {
      */
     fun addTypedef(typedef: TypedefDeclaration, scope: ValueDeclarationScope? = globalScope) {
         scope?.addTypedef(typedef)
-    }
-
-    /**
-     * Resolves only references to Values in the current scope, static references to other visible
-     * records are not resolved over the ScopeManager.
-     *
-     * @param ref
-     * @return
-     */
-    fun resolveReference(ref: Reference): ValueDeclaration? {
-        val startScope = ref.scope
-
-        // Retrieve a unique tag for the particular reference based on the current scope
-        val tag = ref.referenceTag
-
-        // If we find a match in our symbol table, we can immediately return the declaration. We
-        // need to be careful about potential collisions in our tags, since they are based on the
-        // hash-code of the scope. We therefore take the extra precaution to compare the scope in
-        // case we get a hit. This should not take too much performance overhead.
-        val pair = symbolTable[tag]
-        if (pair != null && ref.scope == pair.first.scope) {
-            return pair.second
-        }
-
-        var (scope, name) = extractScope(ref, startScope)
-        if (scope == null) {
-            scope = startScope
-        }
-
-        // Try to resolve value declarations according to our criteria
-        val decl =
-            resolve<ValueDeclaration>(scope) {
-                    if (it.name.lastPartsMatch(name)) {
-                        val helper = ref.resolutionHelper
-                        return@resolve when {
-                            // If the reference seems to point to a function (using a function
-                            // pointer) the entire signature is checked for equality
-                            helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
-                                val fptrType = helper.type as FunctionPointerType
-                                // TODO(oxisto): Support multiple return values
-                                val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
-                                returnType == fptrType.returnType &&
-                                    it.matchesSignature(fptrType.parameters) !=
-                                        IncompatibleSignature
-                            }
-                            // If our language has first-class functions, we can safely return them
-                            // as a reference
-                            ref.language is HasFirstClassFunctions -> {
-                                true
-                            }
-                            // Otherwise, we are not looking for functions here
-                            else -> {
-                                it !is FunctionDeclaration
-                            }
-                        }
-                    }
-
-                    return@resolve false
-                }
-                .firstOrNull()
-
-        // Update the symbol cache, if we found a declaration for the tag
-        if (decl != null) {
-            symbolTable[tag] = Pair(ref, decl)
-        }
-
-        return decl
     }
 
     /**
