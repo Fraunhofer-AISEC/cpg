@@ -29,11 +29,11 @@ plugins {
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-language-configfiles") {
+        named<MavenPublication>("cpg-language-ini") {
             pom {
-                artifactId = "cpg-language-configfiles"
+                artifactId = "cpg-language-ini"
                 name.set("Code Property Graph - Configfiles Frontend")
-                description.set("A configuration file (ini/yaml/toml/...) frontend for the CPG")
+                description.set("An INI-configuration file frontend for the CPG")
             }
         }
     }

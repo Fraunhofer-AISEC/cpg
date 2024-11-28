@@ -29,4 +29,4 @@ cpg-neo4j               @peckto
 build.gradle.kts        @oxisto
 .github                 @oxisto
 
-cpg-language-configfiles  @maximiliankaul
+cpg-language-ini        @maximiliankaul

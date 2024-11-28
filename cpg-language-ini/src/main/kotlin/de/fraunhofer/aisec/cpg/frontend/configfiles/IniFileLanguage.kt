@@ -38,11 +38,11 @@ import kotlin.reflect.KClass
  * - all `key`s are unique per section
  * - the file is accepted by the [ini4j library](https://ini4j.sourceforge.net/)
  */
-class IniFilesLanguage : Language<IniFilesFrontend>() {
+class IniFileLanguage : Language<IniFileFrontend>() {
     override val fileExtensions = listOf("ini", "conf")
     override val namespaceDelimiter: String = "." // no such thing
 
-    @Transient override val frontend: KClass<out IniFilesFrontend> = IniFilesFrontend::class
+    @Transient override val frontend: KClass<out IniFileFrontend> = IniFileFrontend::class
     override val builtInTypes: Map<String, Type> =
         mapOf("string" to StringType("string", language = this)) // everything is a string
 

@@ -67,7 +67,7 @@ import org.ini4j.Profile
  *   [de.fraunhofer.aisec.cpg.frontends.Handler] pattern implemented)
  * - Comments in general are not supported.
  */
-class IniFilesFrontend(language: Language<IniFilesFrontend>, ctx: TranslationContext) :
+class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Any, Any?>(language, ctx) {
 
     private lateinit var uri: URI

@@ -40,14 +40,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-class IniFilesTest : BaseTest() {
+class IniFileTest : BaseTest() {
 
     @Test
-    fun gettingStartedWithINIConfigfiles() {
+    fun testGettingStartedWithINIConfigfiles() {
         val topLevel = Path.of("src", "test", "resources")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("config.ini").toFile()), topLevel, true) {
-                it.registerLanguage<IniFilesLanguage>()
+                it.registerLanguage<IniFileLanguage>()
             }
         assertIs<TranslationUnitDeclaration>(tu)
 
@@ -62,32 +62,32 @@ class IniFilesTest : BaseTest() {
 
         assertEquals(2, tu.records.size, "Expected two records")
 
-        val ownerRecord = tu.records["owner"]
-        assertIs<RecordDeclaration>(ownerRecord)
-        assertEquals(2, ownerRecord.fields.size, "Expected two fields")
+        val sectionA = tu.records["SectionA"]
+        assertIs<RecordDeclaration>(sectionA)
+        assertEquals(2, sectionA.fields.size, "Expected two fields")
 
-        val nameField = ownerRecord.fields["name"]
-        assertIs<FieldDeclaration>(nameField)
-        assertLiteralValue("John Doe", nameField.initializer)
+        val sectionAEntry1 = sectionA.fields["key1"]
+        assertIs<FieldDeclaration>(sectionAEntry1)
+        assertLiteralValue("value1", sectionAEntry1.initializer)
 
-        val organizationField = ownerRecord.fields["organization"]
-        assertIs<FieldDeclaration>(organizationField)
-        assertLiteralValue("Acme Widgets Inc.", organizationField.initializer)
+        val sectionAEntry2 = sectionA.fields["key2"]
+        assertIs<FieldDeclaration>(sectionAEntry2)
+        assertLiteralValue("value2.", sectionAEntry2.initializer)
 
-        val databaseRecord = tu.records["database"]
-        assertIs<RecordDeclaration>(databaseRecord)
-        assertEquals(3, databaseRecord.fields.size, "Expected three fields")
+        val sectionB = tu.records["SectionB"]
+        assertIs<RecordDeclaration>(sectionB)
+        assertEquals(3, sectionB.fields.size, "Expected three fields")
 
-        val serverField = databaseRecord.fields["server"]
-        assertIs<FieldDeclaration>(serverField)
-        assertLiteralValue("192.0.2.62", serverField.initializer)
+        val sectionBEntry1 = sectionB.fields["key1"]
+        assertIs<FieldDeclaration>(sectionBEntry1)
+        assertLiteralValue("123", sectionBEntry1.initializer)
 
-        val portField = databaseRecord.fields["port"]
-        assertIs<FieldDeclaration>(portField)
-        assertLiteralValue("143", portField.initializer)
+        val sectionBEntry2 = sectionB.fields["key2"]
+        assertIs<FieldDeclaration>(sectionBEntry2)
+        assertLiteralValue("1.2.3.4", sectionBEntry2.initializer)
 
-        val fileField = databaseRecord.fields["file"]
-        assertIs<FieldDeclaration>(fileField)
-        assertLiteralValue("\"payroll.dat\"", fileField.initializer)
+        val sectionBEntry3 = sectionB.fields["file"]
+        assertIs<FieldDeclaration>(sectionBEntry3)
+        assertLiteralValue("\"abc\"", sectionBEntry3.initializer)
     }
 }
