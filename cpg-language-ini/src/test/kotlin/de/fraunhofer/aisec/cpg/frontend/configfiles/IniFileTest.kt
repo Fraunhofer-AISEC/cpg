@@ -72,7 +72,7 @@ class IniFileTest : BaseTest() {
 
         val sectionAEntry2 = sectionA.fields["key2"]
         assertIs<FieldDeclaration>(sectionAEntry2)
-        assertLiteralValue("value2.", sectionAEntry2.initializer)
+        assertLiteralValue("value2", sectionAEntry2.initializer)
 
         val sectionB = tu.records["SectionB"]
         assertIs<RecordDeclaration>(sectionB)
@@ -86,7 +86,7 @@ class IniFileTest : BaseTest() {
         assertIs<FieldDeclaration>(sectionBEntry2)
         assertLiteralValue("1.2.3.4", sectionBEntry2.initializer)
 
-        val sectionBEntry3 = sectionB.fields["file"]
+        val sectionBEntry3 = sectionB.fields["key3"]
         assertIs<FieldDeclaration>(sectionBEntry3)
         assertLiteralValue("\"abc\"", sectionBEntry3.initializer)
     }
