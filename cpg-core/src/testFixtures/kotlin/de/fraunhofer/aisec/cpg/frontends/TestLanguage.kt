@@ -60,10 +60,6 @@ open class TestLanguage(final override var namespaceDelimiter: String = "::") :
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
-
-    override fun newFrontend(ctx: TranslationContext): TestLanguageFrontend {
-        return TestLanguageFrontend(language = this, ctx = ctx)
-    }
 }
 
 class StructTestLanguage(namespaceDelimiter: String = "::") :
