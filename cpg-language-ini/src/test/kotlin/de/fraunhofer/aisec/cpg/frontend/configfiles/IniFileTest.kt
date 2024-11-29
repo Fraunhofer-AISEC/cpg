@@ -54,11 +54,10 @@ class IniFileTest : BaseTest() {
         val namespace = tu.namespaces.firstOrNull()
         assertNotNull(namespace)
         assertFullName(
-            listOf("src", "test", "resources", "config")
-                .joinToString(tu.language?.namespaceDelimiter ?: "."),
+            "config",
             namespace,
             "Namespace name mismatch."
-        )
+        ) // analyzeAndGetFirstTU does not provide the full path
 
         assertEquals(2, tu.records.size, "Expected two records")
 

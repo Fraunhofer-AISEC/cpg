@@ -89,11 +89,16 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
          * [de.fraunhofer.aisec.cpg.TranslationConfiguration.topLevel] using
          * [Language.namespaceDelimiter] as a separator
          */
-        val topLevel = (config.topLevel?.let { file.relativeToOrNull(it) } ?: file).parent
+        val topLevel = config.topLevel?.let { file.relativeToOrNull(it) } ?: file
+        val parentDir = topLevel.parent
+
         val namespace =
-            (topLevel.toString().split("/") + file.nameWithoutExtension).joinToString(
-                language.namespaceDelimiter
-            ) // TODO: Windows?
+            if (parentDir != null) {
+                val pathSegments = parentDir.toString().split(File.separator)
+                (pathSegments + file.nameWithoutExtension).joinToString(language.namespaceDelimiter)
+            } else {
+                file.nameWithoutExtension
+            }
 
         val tud = newTranslationUnitDeclaration(name = file.name, rawNode = ini)
         scopeManager.resetToGlobal(tud)
