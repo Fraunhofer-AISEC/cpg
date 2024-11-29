@@ -112,17 +112,19 @@ internal class StaticImportsTest : BaseTest() {
             }
         }
         val testFields = a.fields
-        val staticField = findByUniqueName(testFields, "staticField")
-        val nonStaticField = findByUniqueName(testFields, "nonStaticField")
+        val staticField = a.fields["staticField"]
+        val inferredNonStaticField = b.fields["nonStaticField"]
+        assertNotNull(staticField)
+        assertNotNull(inferredNonStaticField)
         assertTrue(staticField.modifiers.contains("static"))
-        assertFalse(nonStaticField.modifiers.contains("static"))
+        assertFalse(inferredNonStaticField.modifiers.contains("static"))
 
-        val declaredReferences = main.allChildren<MemberExpression>()
+        val declaredReferences = main.refs
         val usage = findByUniqueName(declaredReferences, "staticField")
-        assertEquals(staticField, usage.refersTo)
+        assertRefersTo(usage, staticField)
 
         val nonStatic = findByUniqueName(declaredReferences, "nonStaticField")
-        assertNotEquals(nonStaticField, nonStatic.refersTo)
-        assertTrue(nonStatic.refersTo!!.isInferred)
+        assertRefersTo(nonStatic, inferredNonStaticField)
+        assertTrue(nonStatic.refersTo?.isInferred == true)
     }
 }
