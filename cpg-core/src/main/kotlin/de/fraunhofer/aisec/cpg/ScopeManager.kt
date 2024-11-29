@@ -359,6 +359,11 @@ class ScopeManager : ScopeProvider {
         return leaveScope
     }
 
+    /** Declares this [declaration] as a symbol in the [currentScope]. */
+    fun declare(declaration: Declaration) {
+        currentScope?.addSymbol(declaration.symbol, declaration)
+    }
+
     /**
      * This function MUST be called when a language frontend first handles a [Declaration]. It adds
      * a declaration to the scope manager, taking into account the currently active scope.
@@ -380,7 +385,7 @@ class ScopeManager : ScopeProvider {
     fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
         if (declaration != null) {
             // New stuff here
-            currentScope?.addSymbol(declaration.symbol, declaration)
+            declare(declaration)
         }
 
         // Legacy stuff here
