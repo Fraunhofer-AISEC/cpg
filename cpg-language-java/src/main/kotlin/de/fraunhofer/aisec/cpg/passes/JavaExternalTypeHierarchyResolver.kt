@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
@@ -36,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -76,29 +74,20 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         for (t in types) {
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {
-                try {
+                val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
+                for (anc in resolvedSuperTypes) {
+                    // We need to try to resolve the type first in order to create weirdly
+                    // scoped types
+                    var superType = typeManager.lookupResolvedType(anc.qualifiedName)
 
-                    val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
-                    for (anc in resolvedSuperTypes) {
-                        // We need to try to resolve the type first in order to create weirdly
-                        // scoped types
-                        var superType = typeManager.lookupResolvedType(anc.qualifiedName)
-
-                        // Otherwise, we can create this in the global scope
-                        if (superType == null) {
-                            superType = provider.objectType(anc.qualifiedName)
-                            superType.typeOrigin = Type.Origin.RESOLVED
-                        }
-
-                        // Add all resolved supertypes to the type.
-                        t.superTypes.add(superType)
+                    // Otherwise, we can create this in the global scope
+                    if (superType == null) {
+                        superType = provider.objectType(anc.qualifiedName)
+                        superType.typeOrigin = Type.Origin.RESOLVED
                     }
-                } catch (_: UnsolvedSymbolException) {
-                    // Even if the symbol itself is resolved, "getAncestors()" may throw
-                    // exception.
-                    LOGGER.warn(
-                        "Could not resolve supertypes of ${symbol?.correspondingDeclaration}"
-                    )
+
+                    // Add all resolved supertypes to the type.
+                    t.superTypes.add(superType)
                 }
             }
         }
