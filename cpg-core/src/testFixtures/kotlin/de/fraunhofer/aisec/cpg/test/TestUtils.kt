@@ -113,9 +113,8 @@ fun analyze(
 ): TranslationResult {
     val files =
         Files.walk(topLevel, Int.MAX_VALUE)
-            .map(Path::toFile)
-            .filter { it.isFile }
-            .filter { it.name.endsWith(fileExtension!!) }
+            .map { it.toFile() }
+            .filter { it.isFile && (fileExtension == null || it.name.endsWith(fileExtension)) }
             .sorted()
             .collect(Collectors.toList())
     return analyze(files, topLevel, usePasses, configModifier)
