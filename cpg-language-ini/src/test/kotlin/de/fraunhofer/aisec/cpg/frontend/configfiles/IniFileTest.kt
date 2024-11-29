@@ -43,7 +43,7 @@ import kotlin.test.assertNotNull
 class IniFileTest : BaseTest() {
 
     @Test
-    fun testGettingStartedWithINIConfigfiles() {
+    fun testSimpleINIFile() {
         val topLevel = Path.of("src", "test", "resources")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("config.ini").toFile()), topLevel, true) {
