@@ -881,7 +881,7 @@ class ScopeManager : ScopeProvider {
      * arguments [scope] and [predicate] are forwarded.
      */
     fun lookupSymbolByNameOfNode(
-        node: HasScope,
+        node: Node,
         scope: Scope? = node.scope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
