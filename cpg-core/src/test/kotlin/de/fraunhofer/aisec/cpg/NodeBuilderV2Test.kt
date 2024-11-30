@@ -25,51 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.example.ExampleLanguageFrontend
+import de.fraunhofer.aisec.cpg.example.RawFileNode
+import de.fraunhofer.aisec.cpg.example.RawFunctionNode
+import de.fraunhofer.aisec.cpg.example.RawParameterNode
+import de.fraunhofer.aisec.cpg.example.RawTypeNode
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.plusAssign
+import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-
-class RawFileDeclarationNode(var children: List<RawDeclarationNode>) : RawDeclarationNode()
-
-class RawFunctionDeclarationNode : RawDeclarationNode()
-
-open class RawDeclarationNode : RawNode()
-
-open class RawNode
-
-private class TestDeclarationHandler(frontend: TestLanguageFrontend) :
-    Handler<Declaration, RawDeclarationNode, TestLanguageFrontend>(::ProblemDeclaration, frontend) {
-    override fun handle(node: RawDeclarationNode): Declaration {
-        when (node) {
-            is RawFunctionDeclarationNode -> handleFunction(node)
-            is RawFileDeclarationNode -> handleFile(node)
-        }
-
-        return ProblemDeclaration()
-    }
-
-    private fun handleFile(node: RawFileDeclarationNode): TranslationUnitDeclaration {
-        return translationUnitDeclaration("test.file").globalScope {
-            for (child in node.children) {
-                this += handle(child)
-            }
-        }
-    }
-
-    private fun handleFunction(node: RawFunctionDeclarationNode): FunctionDeclaration {
-        return functionDeclaration("main", rawNode = node).withScope {
-            val param = parameterDeclaration("argc", objectType("int"))
-
-            this += param
-        }
-    }
-}
 
 class NodeBuilderV2Test {
     @Test
@@ -96,5 +64,27 @@ class NodeBuilderV2Test {
 
         val param = func.parameters["argc"]
         assertNotNull(param)
+    }
+
+    @Test
+    fun testFrontend() {
+        val file =
+            RawFileNode(
+                "file.example",
+                children =
+                    listOf(
+                        RawFunctionNode(
+                            "main",
+                            params = listOf(RawParameterNode("argc", type = RawTypeNode("int")))
+                        )
+                    )
+            )
+
+        val frontend = ExampleLanguageFrontend(rawFileNode = file)
+        val node = frontend.parse(File(""))
+        assertIs<TranslationUnitDeclaration>(node)
+
+        val main = node.functions["main"]
+        assertNotNull(main)
     }
 }
