@@ -1,0 +1,31 @@
+name: detekt
+
+on:
+  push:
+    branches: ["main", "release/*"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: detekt
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup detekt
+        uses: peter-murray/setup-detekt@v2
+        with:
+          detekt_version: "1.20"
+      - name: Run Detekt
+        continue-on-error: true
+        run: |
+          detekt-cli --input ${{ github.workspace }} --report sarif:${{ github.workspace }}/detekt.sarif.json
+
+      # Uploads results to GitHub repository using the upload-sarif action
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: ${{ github.workspace }}/detekt.sarif.json
+          checkout_path: ${{ github.workspace }}
