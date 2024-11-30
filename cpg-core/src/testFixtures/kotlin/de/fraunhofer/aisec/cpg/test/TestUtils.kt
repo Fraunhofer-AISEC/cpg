@@ -113,9 +113,8 @@ fun analyze(
 ): TranslationResult {
     val files =
         Files.walk(topLevel, Int.MAX_VALUE)
-            .map(Path::toFile)
-            .filter { it.isFile }
-            .filter { it.name.endsWith(fileExtension!!) }
+            .map { it.toFile() }
+            .filter { it.isFile && (fileExtension == null || it.name.endsWith(fileExtension)) }
             .sorted()
             .collect(Collectors.toList())
     return analyze(files, topLevel, usePasses, configModifier)
@@ -319,6 +318,7 @@ fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: Strin
 }
 
 fun ContextProvider.assertResolvedType(fqn: String, generics: List<Type>? = null): Type {
-    var type = ctx?.typeManager?.lookupResolvedType(fqn, generics)
+    var type =
+        ctx?.typeManager?.lookupResolvedType(fqn, generics, (this as? LanguageProvider)?.language)
     return assertNotNull(type)
 }

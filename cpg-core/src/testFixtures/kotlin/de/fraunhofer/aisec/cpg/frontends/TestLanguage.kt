@@ -50,7 +50,7 @@ open class TestLanguage(final override var namespaceDelimiter: String = "::") :
 
     override val builtInTypes: Map<String, Type> =
         mapOf(
-            "boolean" to IntegerType("boolean", 1, this, NumericType.Modifier.SIGNED),
+            "boolean" to BooleanType("boolean", 1, this, NumericType.Modifier.SIGNED),
             "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
             "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
@@ -60,10 +60,6 @@ open class TestLanguage(final override var namespaceDelimiter: String = "::") :
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
-
-    override fun newFrontend(ctx: TranslationContext): TestLanguageFrontend {
-        return TestLanguageFrontend(language = this, ctx = ctx)
-    }
 }
 
 class StructTestLanguage(namespaceDelimiter: String = "::") :

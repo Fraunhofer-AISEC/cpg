@@ -199,15 +199,117 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followPrevFullDFGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+fun Node.followPrevFullDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.prevFullDFG },
-        collectFailedPaths = true,
-        findAllPossiblePaths = true,
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate
     )
 }
 
+/**
+ * Iterates the prev full DFG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
+    // We make everything fail to reach the end of the DFG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followPrevFullDFGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true
+        ) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the next full DFG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followNextFullDFGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+        ) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the next EOG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllNextEOGPaths(): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followNextEOGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+        ) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the prev PDG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followPrevEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the next PDG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllNextPDGGPaths(): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followNextPDGUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+        ) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the prev PDG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followPrevPDGUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis
+        ) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the prev CDG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
 fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
@@ -221,6 +323,10 @@ fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
         .failed
 }
 
+/**
+ * Iterates the next CDG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
 fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
@@ -232,6 +338,35 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
             false
         }
         .failed
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [ProgramDependences]) between the starting
+ * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
+ * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followNextPDGUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = false,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode ->
+            val nextNodes = currentNode.nextPDG.toMutableList()
+            if (interproceduralAnalysis) {
+                nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+            }
+            nextNodes
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
+    )
 }
 
 /**
@@ -254,6 +389,40 @@ fun Node.followNextCDGUntilHit(
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+            }
+            nextNodes
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [ProgramDependences]) between the starting
+ * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
+ * represented as lists of nodes. Paths which do not end at such a node are included in
+ * [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followPrevPDGUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = false,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode ->
+            val nextNodes = currentNode.prevPDG.toMutableList()
+            if (interproceduralAnalysis) {
+                nextNodes.addAll(
+                    (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                        it.astParent as? CallExpression
+                    } ?: listOf()
+                )
             }
             nextNodes
         },
@@ -393,13 +562,17 @@ fun Node.followNextFullDFGEdgesUntilHit(
  * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
  * such a statement is always executed.
  */
-fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+fun Node.followNextEOGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
             currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
         },
-        collectFailedPaths = true,
-        findAllPossiblePaths = true,
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate
     )
 }
@@ -414,13 +587,17 @@ fun Node.followNextEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndF
  * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
  * such a statement is always executed.
  */
-fun Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean): FulfilledAndFailedPaths {
+fun Node.followPrevEOGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    predicate: (Node) -> Boolean
+): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
             currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
         },
-        collectFailedPaths = true,
-        findAllPossiblePaths = true,
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate
     )
 }
