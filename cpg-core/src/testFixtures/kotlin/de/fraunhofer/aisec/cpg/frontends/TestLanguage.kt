@@ -92,16 +92,14 @@ open class TestLanguageFrontend(
     }
 
     override fun codeOf(astNode: Any): String? {
-        TODO("Not yet implemented")
+        return astNode.toString()
     }
 
     override fun locationOf(astNode: Any): PhysicalLocation? {
-        TODO("Not yet implemented")
+        return null
     }
 
-    override fun setComment(node: Node, astNode: Any) {
-        TODO("Not yet implemented")
-    }
+    override fun setComment(node: Node, astNode: Any) {}
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :

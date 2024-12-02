@@ -42,7 +42,12 @@ import org.slf4j.LoggerFactory
  * after having processed the files, i.e., it won't be available in passes.
  *
  * More information can be found in the
- * [GitHub wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
+ * [Documentation](https://fraunhofer-aisec.github.io/cpg/CPG/impl/language/#languagefrontend).
+ *
+ * @param AstNode This type parameter should be set to a class that is common to all AST nodes in
+ *   the language.
+ * @param TypeNode This type parameter should be set to a class that is common to all type nodes in
+ *   the language.
  */
 abstract class LanguageFrontend<AstNode, TypeNode>(
     /** The language this frontend works for. */
