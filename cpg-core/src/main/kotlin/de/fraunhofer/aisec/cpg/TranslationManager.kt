@@ -156,6 +156,16 @@ private constructor(
                                 .walkTopDown()
                                 .onEnter { !it.name.startsWith(".") }
                                 .filter { it.isFile && !it.name.startsWith(".") }
+                                .filter {
+                                    ctx.config.exclusionPatternsByString.none { pattern ->
+                                        it.absolutePath.contains(pattern)
+                                    }
+                                }
+                                .filter {
+                                    ctx.config.exclusionPatternsByRegex.none { pattern ->
+                                        pattern.containsMatchIn(it.absolutePath)
+                                    }
+                                }
                                 .toList()
                         files
                     } else {

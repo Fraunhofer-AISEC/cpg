@@ -95,4 +95,88 @@ class InferenceTest {
         assertNotNull(nextField)
         assertLocalName("T*", nextField.type)
     }
+
+    @Test
+    fun testUnaryOperatorReturnType() {
+        val tu =
+            GraphExamples.getInferenceUnaryOperatorReturnType()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
+        assertNotNull(tu)
+        with(tu) {
+            val longType = assertResolvedType("long")
+
+            val bar = tu.functions["bar"]
+            assertNotNull(bar)
+
+            assertEquals(longType, bar.returnTypes.singleOrNull())
+        }
+    }
+
+    @Test
+    fun testTupleTypeReturnType() {
+        val tu =
+            GraphExamples.getInferenceTupleReturnType()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
+        assertNotNull(tu)
+        with(tu) {
+            val fooType = assertResolvedType("Foo")
+            val barType = assertResolvedType("Bar")
+
+            val bar = tu.functions["bar"]
+            assertNotNull(bar)
+
+            assertEquals(listOf(fooType, barType), bar.returnTypes)
+        }
+    }
+
+    @Test
+    fun testBinaryOperatorReturnType() {
+        val tu =
+            GraphExamples.getInferenceBinaryOperatorReturnType()
+                .components
+                .firstOrNull()
+                ?.translationUnits
+                ?.firstOrNull()
+        assertNotNull(tu)
+        with(tu) {
+            val intType = assertResolvedType("int")
+            val longType = assertResolvedType("long")
+
+            val bar = tu.functions["bar"]
+            assertNotNull(bar)
+            assertEquals(intType, bar.returnTypes.singleOrNull())
+
+            val baz = tu.functions["baz"]
+            assertNotNull(baz)
+            assertEquals(longType, baz.returnTypes.singleOrNull())
+        }
+    }
+
+    @Test
+    fun testNestedNamespace() {
+        val result = GraphExamples.getInferenceNestedNamespace()
+        with(result) {
+            val java = result.namespaces["java"]
+            assertNotNull(java)
+            assertLocalName("java", java)
+
+            val javaLang = result.namespaces["java.lang"]
+            assertNotNull(javaLang)
+            assertLocalName("lang", javaLang)
+            // should exist in the scope of "java"
+            assertEquals(java, javaLang.scope?.astNode)
+
+            val javaLangString = result.records["java.lang.String"]
+            assertNotNull(javaLangString)
+            assertLocalName("String", javaLangString)
+            // should exist in the scope of "java.lang"
+            assertEquals(javaLang, javaLangString.scope?.astNode)
+        }
+    }
 }
