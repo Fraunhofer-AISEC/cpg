@@ -44,7 +44,7 @@ class ScopeTest {
         // two scopes, global and local
         val globalScope = GlobalScope()
         globalScope.addSymbol("a", globalA)
-        val scope = BlockScope(Block())
+        val scope = LocalScope(Block())
         scope.parent = globalScope
         scope.addSymbol("a", localA)
 
