@@ -26,12 +26,16 @@
 package de.fraunhofer.aisec.cpg.frontend.configfiles
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -45,14 +49,13 @@ import org.ini4j.Profile.Section
  * The INI file frontend. This frontend utilizes the [ini4j library](https://ini4j.sourceforge.net/)
  * to parse the config file. The result consists of
  * - a [TranslationUnitDeclaration] wrapping the entire result
- * - a [de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration] wrapping the INI file and
- *   thus preventing collisions with other symbols which might have the same name
+ * - a [NamespaceDeclaration] wrapping the INI file and thus preventing collisions with other
+ *   symbols which might have the same name
  * - a [RecordDeclaration] per `Section` (a section refers to a block of INI values marked with a
  *   line `[SectionName]`)
- * - a [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration] per entry in a section. The
- *   [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration.name] matches the `entry`s `name`
- *   field and the [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration.initializer] is set
- *   to a [statements.expressions.Literal] with the corresponding `entry`s `value`.
+ * - a [FieldDeclaration] per entry in a section. The [FieldDeclaration.name] matches the `entry`s
+ *   `name` field and the [FieldDeclaration.initializer] is set to a [Literal] with the
+ *   corresponding `entry`s `value`.
  *
  * Note:
  * - the "ini4j" library does not provide any super type for all nodes. Thus, the frontend accepts
@@ -63,8 +66,7 @@ import org.ini4j.Profile.Section
  *   `.toString()`
  * - [locationOf] always returns `null` as the "ini4j" library does not provide any means of getting
  *   a location given a node
- * - [setComment] not implemented as this is not used (no
- *   [de.fraunhofer.aisec.cpg.frontends.Handler] pattern implemented)
+ * - [setComment] not implemented as this is not used (no [Handler] pattern implemented)
  * - Comments in general are not supported.
  */
 class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationContext) :
@@ -125,10 +127,8 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
     }
 
     /**
-     * Translates an `MutableEntry` to a new
-     * [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration] with the
-     * [de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration.initializer] being set to the
-     * `entry`s value.
+     * Translates an `MutableEntry` to a new [FieldDeclaration] with the
+     * [FieldDeclaration.initializer] being set to the `entry`s value.
      */
     private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>) {
         val field =
