@@ -813,8 +813,10 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name): RecordDeclaration? {
-        return lookupSymbolByName(name).filterIsInstance<RecordDeclaration>().singleOrNull()
+    fun getRecordForName(name: Name, language: Language<*>?): RecordDeclaration? {
+        return lookupSymbolByName(name, language)
+            .filterIsInstance<RecordDeclaration>()
+            .singleOrNull()
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
@@ -875,6 +877,18 @@ class ScopeManager : ScopeProvider {
         get() = currentScope
 
     /**
+     * A convenience function to call [lookupSymbolByName] with the properties of [node]. The
+     * arguments [scope] and [predicate] are forwarded.
+     */
+    fun lookupSymbolByNameOfNode(
+        node: Node,
+        scope: Scope? = node.scope,
+        predicate: ((Declaration) -> Boolean)? = null,
+    ): List<Declaration> {
+        return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
+    }
+
+    /**
      * This function tries to convert a [Node.name] into a [Symbol] and then performs a lookup of
      * this symbol. This can either be an "unqualified lookup" if [name] is not qualified or a
      * "qualified lookup" if [Name.isQualified] is true. In the unqualified case the lookup starts
@@ -885,12 +899,13 @@ class ScopeManager : ScopeProvider {
      * function overloading. But it will only return list of declarations within the same scope; the
      * list cannot be spread across different scopes.
      *
-     * This means that as soon one or more declarations for the symbol are found in a "local" scope,
-     * these shadow all other occurrences of the same / symbol in a "higher" scope and only the ones
-     * from the lower ones will be returned.
+     * This means that as soon one or more declarations (of the matching [language]) for the symbol
+     * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
+     * "higher" scope and only the ones from the lower ones will be returned.
      */
     fun lookupSymbolByName(
         name: Name,
+        language: Language<*>?,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
@@ -900,14 +915,25 @@ class ScopeManager : ScopeProvider {
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            if (scope != null) {
-                    scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
-                } else {
+            when {
+                scope != null -> {
+                    scope
+                        .lookupSymbol(
+                            n.localName,
+                            languageOnly = language,
+                            thisScopeOnly = true,
+                            predicate = predicate
+                        )
+                        .toMutableList()
+                }
+                else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
-                    startScope?.lookupSymbol(n.localName, predicate = predicate)
+                    startScope
+                        ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
+                        ?.toMutableList() ?: mutableListOf()
                 }
-                ?.toMutableList() ?: return listOf()
+            }
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
@@ -932,9 +958,15 @@ class ScopeManager : ScopeProvider {
      * It is important to know that the lookup needs to be unique, so if multiple declarations match
      * this symbol, a warning is triggered and null is returned.
      */
-    fun lookupUniqueTypeSymbolByName(name: Name, startScope: Scope?): DeclaresType? {
+    fun lookupUniqueTypeSymbolByName(
+        name: Name,
+        language: Language<*>?,
+        startScope: Scope?
+    ): DeclaresType? {
         var symbols =
-            lookupSymbolByName(name = name, startScope = startScope) { it is DeclaresType }
+            lookupSymbolByName(name = name, language = language, startScope = startScope) {
+                    it is DeclaresType
+                }
                 .filterIsInstance<DeclaresType>()
 
         // We need to have a single match, otherwise we have an ambiguous type, and we cannot
