@@ -299,8 +299,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  * are between the child nodes.
  *
  * @param parentNode Used to extract the code for this node.
- * @param newLineType The char(s) used to describe a new line, usually either "\n" or "\r\n". This
- *   is needed because the location block spanning the children usually comprises more than one
+ * @param lineBreakSequence The char(s) used to describe a new line, usually either "\n" or "\r\n".
+ *   This is needed because the location block spanning the children usually comprises more than one
  *   line.
  */
 context(CodeAndLocationProvider<AstNode>)

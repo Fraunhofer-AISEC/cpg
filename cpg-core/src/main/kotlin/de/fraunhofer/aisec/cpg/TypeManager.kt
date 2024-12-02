@@ -57,8 +57,8 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
-    val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    val firstOrderTypes = mutableListOf<Type>()
+    val secondOrderTypes = mutableListOf<Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -200,26 +200,9 @@ class TypeManager {
         }
 
         if (t.isFirstOrderType) {
-            // Make sure we only ever return one unique object per type
-            if (!firstOrderTypes.add(t)) {
-                return firstOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace(
-                    "Registering unique first order type {}{}",
-                    t.name,
-                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
-                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
-                    } else {
-                        ""
-                    }
-                )
-            }
+            synchronized(firstOrderTypes) { firstOrderTypes.add(t) }
         } else if (t is SecondOrderType) {
-            if (!secondOrderTypes.add(t)) {
-                return secondOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace("Registering unique second order type {}", t.name)
-            }
+            synchronized(secondOrderTypes) { secondOrderTypes.add(t) }
         }
 
         return t
