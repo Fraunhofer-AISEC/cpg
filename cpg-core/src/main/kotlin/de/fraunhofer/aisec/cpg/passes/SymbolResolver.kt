@@ -591,9 +591,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
             candidates.addAll(
-                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language) {
-                    it.language == record.language
-                }
+                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
             )
         }
 
