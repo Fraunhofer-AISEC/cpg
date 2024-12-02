@@ -221,8 +221,8 @@ class ScopeManager : ScopeProvider {
      * The scope manager has an internal association between the type of scope, e.g. a [LocalScope]
      * and the CPG node it represents, e.g. a [Block].
      *
-     * Afterwards, all calls to [addDeclaration] will be distributed to the
-     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
+     * Afterward, all calls to [addDeclaration] will be distributed to the [DeclarationHolder] that
+     * is currently in-scope.
      */
     fun enterScope(nodeToScope: Node) {
         var newScope: Scope? = null
@@ -231,16 +231,16 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is Block,
                     is WhileStatement,
                     is DoStatement,
                     is AssertStatement,
                     is ForStatement,
                     is ForEachStatement,
-                    is SwitchStatement -> LocalScope(nodeToScope)
-                    is TryStatement -> LocalScope(nodeToScope)
-                    is IfStatement -> LocalScope(nodeToScope)
-                    is CatchClause -> LocalScope(nodeToScope)
+                    is SwitchStatement,
+                    is TryStatement,
+                    is IfStatement,
+                    is CatchClause,
+                    is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
