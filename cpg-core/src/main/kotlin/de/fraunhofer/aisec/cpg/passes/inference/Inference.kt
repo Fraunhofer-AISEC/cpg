@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
-import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
@@ -34,11 +33,14 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
@@ -80,7 +82,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         code: String?,
         isStatic: Boolean,
         signature: List<Type?>,
-        returnType: Type?,
+        incomingReturnType: Type?,
         hint: CallExpression? = null
     ): FunctionDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
@@ -108,15 +110,6 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 }
             inferred.code = code
 
-            debugWithFileLocation(
-                hint,
-                log,
-                "Inferred a new {} declaration {} with parameter types {} in $it",
-                if (inferred is MethodDeclaration) "method" else "function",
-                inferred.name,
-                signature.map { it?.name }
-            )
-
             // Create parameter declarations and receiver (only for methods).
             if (inferred is MethodDeclaration) {
                 createInferredReceiver(inferred, record)
@@ -124,8 +117,35 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             createInferredParameters(inferred, signature)
 
             // Set the type and return type(s)
-            returnType?.let { inferred.returnTypes = listOf(it) }
+            var returnType =
+                if (
+                    ctx.config.inferenceConfiguration.inferReturnTypes &&
+                        incomingReturnType is UnknownType &&
+                        hint != null
+                ) {
+                    inferReturnType(hint) ?: unknownType()
+                } else {
+                    incomingReturnType
+                }
+
+            if (returnType is TupleType) {
+                inferred.returnTypes = returnType.types
+            } else if (returnType != null) {
+                inferred.returnTypes = listOf(returnType)
+            }
+
             inferred.type = FunctionType.computeType(inferred)
+
+            debugWithFileLocation(
+                hint,
+                log,
+                "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
+                if (inferred is MethodDeclaration) "method" else "function",
+                inferred.name,
+                signature.map { it?.name },
+                inferred.returnTypes.map { it.name },
+                it
+            )
 
             // Add it to the scope
             scopeManager.addDeclaration(inferred)
@@ -528,6 +548,73 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         this.scopeManager = ctx.scopeManager
         this.typeManager = ctx.typeManager
     }
+
+    /**
+     * This function tries to infer a return type for an inferred [FunctionDeclaration] based the
+     * original [CallExpression] (as the [hint]) parameter that was used to infer the function.
+     */
+    fun inferReturnType(hint: CallExpression): Type? {
+        // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
+        // type as the return type of the function
+        var targetType =
+            ctx.currentComponent.assignments.singleOrNull { it.value == hint }?.target?.type
+        if (targetType != null && targetType !is UnknownType) {
+            return targetType
+        }
+
+        // Look for an "argument holder". These can be different kind of nodes
+        val holder =
+            ctx.currentComponent.allChildren<ArgumentHolder> { it.hasArgument(hint) }.singleOrNull()
+        when (holder) {
+            is UnaryOperator -> {
+                // If it's a boolean operator, the return type is probably a boolean
+                if (holder.operatorCode == "!") {
+                    return hint.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
+                }
+                // If it's a numeric operator, return the largest numeric type that we have; we
+                // prefer integers to floats
+                if (holder.operatorCode in listOf("+", "-", "++", "--")) {
+                    val numericTypes =
+                        hint.language
+                            ?.builtInTypes
+                            ?.values
+                            ?.filterIsInstance<NumericType>()
+                            ?.sortedWith(
+                                compareBy<NumericType> { it.bitWidth }
+                                    .then { a, b -> preferIntegerType(a, b) }
+                            )
+
+                    return numericTypes?.lastOrNull()
+                }
+            }
+            is ConstructExpression -> {
+                return holder.type
+            }
+            is BinaryOperator -> {
+                // If it is on the right side, it's probably the same as on the left-side (and
+                // vice versa)
+                if (hint == holder.rhs) {
+                    return holder.lhs.type
+                } else if (hint == holder.lhs) {
+                    return holder.rhs.type
+                }
+            }
+            is ReturnStatement -> {
+                // If this is part of a return statement, we can take the return type
+                val func =
+                    hint.firstParentOrNull { it is FunctionDeclaration } as? FunctionDeclaration
+                val returnTypes = func?.returnTypes
+
+                return if (returnTypes != null && returnTypes.size > 1) {
+                    TupleType(returnTypes)
+                } else {
+                    returnTypes?.singleOrNull()
+                }
+            }
+        }
+
+        return null
+    }
 }
 
 /** Provides information about the inference status of a node. */
@@ -604,4 +691,13 @@ fun RecordDeclaration.inferMethod(
             call.type,
             call
         ) as? MethodDeclaration
+}
+
+/** A small helper function that prefers [IntegerType] when comparing two [NumericType] types. */
+fun preferIntegerType(a: NumericType, b: NumericType): Int {
+    return when {
+        a is IntegerType && b is IntegerType -> 0
+        a is IntegerType && b !is IntegerType -> 1
+        else -> -1
+    }
 }

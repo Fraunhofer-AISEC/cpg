@@ -245,7 +245,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
-        return this.scopeManager.getRecordForName(Name(name)) != null
+        return this.scopeManager.getRecordForName(Name(name), language) != null
     }
 
     fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {

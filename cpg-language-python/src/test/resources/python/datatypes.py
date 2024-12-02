@@ -8,3 +8,4 @@ d = {
 }
 e = f'Values of a: {a} and b: {b!s}'
 f = a[1:3:2]
+

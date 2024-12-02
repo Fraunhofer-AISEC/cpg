@@ -29,24 +29,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
-
-    /*
-    Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
-    conversion is an integer:
-        -1: no formatting
-        115: !s string formatting
-        114: !r repr formatting
-        97: !a ascii formatting
-     */
-    private val formattedValConversionNoFormatting = -1L
-    private val formattedValConversionString = 115L
-    private val formattedValConversionRepr = 114L
-    private val formattedValConversionASCII = 97L
 
     override fun handleNode(node: Python.AST.BaseExpr): Expression {
         return when (node) {
@@ -182,45 +168,116 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return assignExpression
     }
 
+    /**
+     * Translates a Python
+     * [`FormattedValue`](https://docs.python.org/3/library/ast.html#ast.FormattedValue) into an
+     * [Expression].
+     *
+     * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
+     *
+     * The following example
+     *
+     * ```python
+     *  f"{value:.2f}"
+     * ```
+     *
+     * is modeled:
+     * 1. The value `value` is wrapped in a `format()` call.
+     * 2. The `format()` call has two arguments:
+     *     - The value to format (`value`).
+     *     - The format specification (`".2f"`).
+     *
+     * CPG Representation:
+     * - `CallExpression` node:
+     *         - `callee`: `Reference` to `format`.
+     *         - `arguments`:
+     *             1. A node representing `value`.
+     *             2. A node representing the string `".2f"`.
+     */
     private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
-        if (node.format_spec != null) {
-            return newProblemExpression(
-                "Cannot handle formatted value with format_spec ${node.format_spec} yet",
-                rawNode = node
-            )
+        /*
+        Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
+        conversion is an integer:
+        -1: no formatting
+        115: !s string formatting
+        114: !r repr formatting
+        97: !a ascii formatting
+        */
+        val formattedValConversionNoFormatting = -1L
+        val formattedValConversionString = 115L
+        val formattedValConversionRepr = 114L
+        val formattedValConversionASCII = 97L
+
+        val formatSpec = node.format_spec?.let { handle(it) }
+        val valueExpression = handle(node.value)
+        val conversion =
+            when (node.conversion) {
+                formattedValConversionNoFormatting -> {
+                    // No formatting, just return the value.
+                    valueExpression
+                }
+                formattedValConversionString -> {
+                    // String representation: wrap in `str()` call.
+                    val strCall =
+                        newCallExpression(
+                                callee = newReference(name = "str", rawNode = node),
+                                fqn = "str",
+                                rawNode = node
+                            )
+                            .implicit()
+                    strCall.addArgument(valueExpression)
+                    strCall
+                }
+                formattedValConversionRepr -> {
+                    // Repr-String representation: wrap in `repr()` call.
+                    val reprCall =
+                        newCallExpression(
+                                callee = newReference(name = "repr", rawNode = node),
+                                fqn = "repr",
+                                rawNode = node
+                            )
+                            .implicit()
+                    reprCall.addArgument(valueExpression)
+                    reprCall
+                }
+                formattedValConversionASCII -> {
+                    // ASCII-String representation: wrap in `ascii()` call.
+                    val asciiCall =
+                        newCallExpression(
+                                newReference("ascii", rawNode = node),
+                                "ascii",
+                                rawNode = node
+                            )
+                            .implicit()
+                    asciiCall.addArgument(handle(node.value))
+                    asciiCall
+                }
+                else ->
+                    newProblemExpression(
+                        problem =
+                            "Cannot handle formatted value with conversion code ${node.conversion} yet",
+                        rawNode = node
+                    )
+            }
+        if (formatSpec != null) {
+            return newCallExpression(
+                    callee = newReference(name = "format", rawNode = node),
+                    fqn = "format",
+                    rawNode = node
+                )
+                .implicit()
+                .apply {
+                    addArgument(conversion)
+                    addArgument(formatSpec)
+                }
         }
-        return when (node.conversion) {
-            formattedValConversionNoFormatting -> {
-                // No formatting, just return the value.
-                handle(node.value)
-            }
-            formattedValConversionString -> {
-                // String representation. wrap in str() call.
-                val strCall =
-                    newCallExpression(newReference("str", rawNode = node), "str", rawNode = node)
-                strCall.addArgument(handle(node.value))
-                strCall
-            }
-            formattedValConversionRepr -> {
-                newProblemExpression(
-                    "Cannot handle conversion '114: !r repr formatting', yet.",
-                    rawNode = node
-                )
-            }
-            formattedValConversionASCII -> {
-                newProblemExpression(
-                    "Cannot handle conversion '97: !a ascii formatting', yet.",
-                    rawNode = node
-                )
-            }
-            else ->
-                newProblemExpression(
-                    "Cannot handle formatted value with conversion ${node.conversion} yet",
-                    rawNode = node
-                )
-        }
+        return conversion
     }
 
+    /**
+     * Translates a Python [`JoinedStr`](https://docs.python.org/3/library/ast.html#ast.JoinedStr)
+     * into a [Expression].
+     */
     private fun handleJoinedStr(node: Python.AST.JoinedStr): Expression {
         val values = node.values.map(::handle)
         return if (values.isEmpty()) {
@@ -237,19 +294,24 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
      * The last operands are further down the tree.
      */
-    private fun joinListWithBinOp(
+    internal fun joinListWithBinOp(
         operatorCode: String,
         nodes: List<Expression>,
-        rawNode: Python.AST.AST? = null
+        rawNode: Python.AST.AST? = null,
+        isImplicit: Boolean = true
     ): BinaryOperator {
-        val lastTwo = newBinaryOperator(operatorCode, rawNode = rawNode)
-        lastTwo.rhs = nodes.last()
-        lastTwo.lhs = nodes[nodes.size - 2]
+        val lastTwo =
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = nodes.last()
+                lhs = nodes[nodes.size - 2]
+                this.isImplicit = isImplicit
+            }
         return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
-            val nextValue = newBinaryOperator(operatorCode)
-            nextValue.rhs = start
-            nextValue.lhs = newVal
-            nextValue
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = start
+                lhs = newVal
+                this.isImplicit = isImplicit
+            }
         }
     }
 
@@ -297,18 +359,12 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 rawNode = node
             )
         } else {
-            // Start with the last two operands, then keep prepending the previous ones until the
-            // list is finished.
-            val lastTwo = newBinaryOperator(op, rawNode = node)
-            lastTwo.rhs = handle(node.values.last())
-            lastTwo.lhs = handle(node.values[node.values.size - 2])
-            return node.values.subList(0, node.values.size - 2).foldRight(lastTwo) { newVal, start
-                ->
-                val nextValue = newBinaryOperator(op, rawNode = node)
-                nextValue.rhs = start
-                nextValue.lhs = handle(newVal)
-                nextValue
-            }
+            joinListWithBinOp(
+                operatorCode = op,
+                nodes = node.values.map(::handle),
+                rawNode = node,
+                isImplicit = true
+            )
         }
     }
 

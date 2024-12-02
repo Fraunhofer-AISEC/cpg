@@ -78,6 +78,7 @@ class TranslatePlugin : Plugin {
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage\")" +
                         "                    .defaultPasses()\n" +
                         "                    .useParallelPasses(false)\n" +
                         "                    .configurePass<de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass>(\n" +
