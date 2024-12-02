@@ -300,7 +300,7 @@ fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: De
 }
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
-    assertNotNull(node)
+    assertNotNull(node, message)
     assertEquals(fqn, node.name.toString(), message)
 }
 
@@ -317,8 +317,8 @@ fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: Strin
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
 
-fun ContextProvider.assertResolvedType(fqn: String, generics: List<Type>? = null): Type {
+fun ContextProvider.assertResolvedType(fqn: String): Type {
     var type =
-        ctx?.typeManager?.lookupResolvedType(fqn, generics, (this as? LanguageProvider)?.language)
+        ctx?.typeManager?.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
     return assertNotNull(type)
 }
