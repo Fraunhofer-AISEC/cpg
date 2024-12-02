@@ -104,7 +104,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
         // constructor declarations and such with the same name. It seems this is ok since most
         // languages will prefer structs/classes over functions when resolving types.
-        var declares = scopeManager.lookupUniqueTypeSymbolByName(type.name, type.scope)
+        var declares =
+            scopeManager.lookupUniqueTypeSymbolByName(type.name, type.language, type.scope)
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
