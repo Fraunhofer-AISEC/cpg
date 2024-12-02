@@ -43,7 +43,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.net.URI
 import org.ini4j.Ini
-import org.ini4j.Profile
+import org.ini4j.Profile.Section
 
 /**
  * The INI file frontend. This frontend utilizes the [ini4j library](https://ini4j.sourceforge.net/)
@@ -118,7 +118,7 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
      * Translates a `Section` into a [RecordDeclaration] and handles all `entries` using
      * [handleEntry].
      */
-    private fun handleSection(section: Profile.Section) {
+    private fun handleSection(section: Section) {
         val record = newRecordDeclaration(name = section.name, kind = "section", rawNode = section)
         scopeManager.addDeclaration(record)
         scopeManager.enterScope(record)
@@ -141,8 +141,53 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
         return primitiveType("string")
     }
 
+    /**
+     * Returns an approximation of the original code by re-creating (parts of) the INI file given
+     * the parsed results provided by ini4j. This is not a perfect representation of the original
+     * code (comments, order, ...), however re-parsing it should result in the same
+     * CPG-representation.
+     */
     override fun codeOf(astNode: Any): String? {
-        return astNode.toString()
+        return when (astNode) {
+            is Ini -> codeOfIni(astNode)
+            is Section -> codeOfSection(astNode)
+            is Map.Entry<*, *> -> codeOfEntry(astNode)
+            else -> null
+        }
+    }
+
+    /**
+     * Returns an approximation of the original code by re-creating (parts of) the INI file given
+     * the parsed results provided by ini4j. This is not a perfect representation of the original
+     * code (comments, order, ...), however re-parsing it should result in the same
+     * CPG-representation.
+     */
+    private fun codeOfIni(ini: Ini): String {
+        return ini.values.joinToString(System.lineSeparator()) { codeOfSection(it) }
+    }
+
+    /**
+     * Returns an approximation of the original code by re-creating (parts of) the INI file given
+     * the parsed results provided by ini4j. This is not a perfect representation of the original
+     * code (comments, order, ...), however re-parsing it should result in the same
+     * CPG-representation.
+     */
+    private fun codeOfEntry(entry: Map.Entry<*, *>): String {
+        return "${entry.key} = ${entry.value}"
+    }
+
+    /**
+     * Returns an approximation of the original code by re-creating (parts of) the INI file given
+     * the parsed results provided by ini4j. This is not a perfect representation of the original
+     * code (comments, order, ...), however re-parsing it should result in the same
+     * CPG-representation.
+     */
+    private fun codeOfSection(section: Section): String {
+        return "[" +
+            section.name +
+            "]" +
+            System.lineSeparator() +
+            section.entries.joinToString(System.lineSeparator()) { codeOfEntry(it) }
     }
 
     /**
