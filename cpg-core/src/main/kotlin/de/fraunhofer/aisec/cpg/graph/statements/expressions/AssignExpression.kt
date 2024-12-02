@@ -138,7 +138,7 @@ class AssignExpression :
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpression: HasType): Expression? {
-        return if (lhs.size > 1) {
+        return if (lhs.size == 1) {
             rhs.singleOrNull()
         } else {
             // Basically, we need to find out which index on the lhs this variable belongs to and

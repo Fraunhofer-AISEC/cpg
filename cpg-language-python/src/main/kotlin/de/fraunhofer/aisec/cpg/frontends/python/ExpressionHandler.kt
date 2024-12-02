@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -339,7 +340,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             lst += handle(e)
         }
         val ile = newInitializerListExpression(rawNode = node)
-        ile.type = frontend.objectType("tuple")
+        ile.type = TupleType(types = lst.map { it.type })
         ile.initializers = lst
         return ile
     }
