@@ -173,7 +173,7 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
      * CPG-representation.
      */
     private fun codeOfEntry(entry: Map.Entry<*, *>): String {
-        return entry.key.toString() + " = " + entry.value.toString()
+        return "${entry.key} = ${entry.value}"
     }
 
     /**
