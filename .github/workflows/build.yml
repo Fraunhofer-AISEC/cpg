@@ -17,7 +17,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${ 'self-hosted' || 'ubuntu-latest' }
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - run: |
