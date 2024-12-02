@@ -40,5 +40,5 @@ publishing {
 }
 
 dependencies {
-    api(libs.javaparser)
+    implementation(libs.javaparser)
 }
