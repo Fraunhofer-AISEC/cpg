@@ -40,7 +40,7 @@ module:cpg-language-go
 de.fraunhofer.aisec.cpg.frontends.golang
 de.fraunhofer.aisec.cpg.passes
 module:cpg-language-ini
-de.fraunhofer.aisec.cpg.frontend.configfiles
+de.fraunhofer.aisec.cpg.frontends.ini
 module:cpg-language-java
 de.fraunhofer.aisec.cpg.frontends.java
 de.fraunhofer.aisec.cpg.passes
