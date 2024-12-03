@@ -195,6 +195,20 @@ class PythonLanguage :
         return super.propagateTypeOfBinaryOperation(operation)
     }
 
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?,
+    ): CastResult {
+        // We model parameter declarations without type hints as a "dynamic"-type.
+        if (targetType is DynamicType && targetHint is ParameterDeclaration) {
+            return DirectMatch
+        }
+
+        return super.tryCast(type, targetType, hint, targetHint)
+    }
+
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
