@@ -54,7 +54,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
         // If the node already has a function summary, we have visited it before and can
         // return here.
-                if (config.functionSummaries.hasSummary(node)) {
+        if (config.functionSummaries.hasSummary(node)) {
             return
         }
 
@@ -254,24 +254,54 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
 
-        // TODO: Check if we have a function summary for everything in currentNode.invokes. If not,
-        // we should process the respective FunctionDeclaration now. Set the arguments. Push the
-        // values of the arguments and return value after executing the function call to our
-        // doubleState.
+        // TODO: Check if we have a function summary for everything in currentNode.invokes
+        if (currentNode.invokes.all { ctx.config.functionSummaries.hasSummary(it) }) {
+            // We already have a FunctionSummary. Set the arguments. Push the
+            // values of the arguments and return value after executing the function call to our
+            // doubleState.
+            // TODO: Use all invokes elements
+            val changedParams =
+                ctx.config.functionSummaries.getLastWrites(currentNode.invokes.first())
+            for ((param, newValue) in changedParams) {
+                val arg =
+                    when (param) {
+                        (currentNode.invokes.first() as? MethodDeclaration)?.receiver ->
+                            (currentNode as? MemberCallExpression)?.base.unwrapReference()
+                        is ParameterDeclaration ->
+                            currentNode.arguments[param.argumentIndex].unwrapReference()
+                        else -> null
+                    }
+                if (arg != null) {
+                    // Since arg is a pointer (otherwise it couldn't change in the function), we
+                    // have to work with the value of the pointer
+                    doubleState.getValues(arg).forEach { a ->
+                        newValue.forEach { value ->
+                            doubleState = doubleState.updateValues(value, a)
+                        }
+                    }
+                }
+                println(arg)
+            }
+        } else if (currentNode.invokes.all { it.hasBody() }) {
+            // Process the missing FunctionDeclarations
+
+        } else {
+            // We don't have a body or a FunctionSummary
+        }
 
         /*
-        For now, we only care about memcpy*, which can influence memoryAddresses or memoryValues
+        For now, we only care about memcpy* and memset, which can influence memoryAddresses or memoryValues
          */
         var src: Expression? = null
         var dst: Expression? = null
         if (
-            (currentNode.name.localName in listOf("memcpy_s", "memcpy_verw_s")) &&
+            (currentNode.name.localName in listOf("memcpy_s", "memcpy_verw_s", "memset_s")) &&
                 currentNode.arguments.size == 4
         ) {
             dst = currentNode.arguments[0]
             src = currentNode.arguments[2]
         } else if (
-            (currentNode.name.localName in listOf("memcpy", "memcpy_verw")) &&
+            (currentNode.name.localName in listOf("memcpy", "memcpy_verw", "memset")) &&
                 currentNode.arguments.size == 3
         ) {
             dst = currentNode.arguments[0]
@@ -514,6 +544,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
                      */
+                    if (!node.memoryAddressIsInitialized())
+                        node.memoryAddress = MemoryAddress(node.name)
                     this.declarationsState.elements[node.memoryAddress]?.elements?.second?.elements
                         ?: setOf(UnknownMemoryValue())
                 }
@@ -538,8 +570,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 ?: setOf(UnknownMemoryValue())
                         }
                         .toSet()
-                is Literal<*> -> setOf(node)
+                is Literal<*>,
                 is BinaryOperator -> setOf(node)
+                // TODO: This may no longer be necessary with function summaries
+                is CallExpression -> setOf(UnknownMemoryValue(node.name))
                 else -> setOf(UnknownMemoryValue()) /*setOf(node)*/
             }
         }
@@ -654,7 +688,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
             var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
 
-            /* When we are dealing with SubscriptExpression, we also have to initially the arrayExpression, since that hasn't been done yet
+            /* When we are dealing with SubscriptExpression, we also have to initialise the arrayExpression, since that hasn't been done yet
              */
             if (dst is SubscriptExpression) {
                 val AEaddresses = this.getAddresses(dst.arrayExpression)

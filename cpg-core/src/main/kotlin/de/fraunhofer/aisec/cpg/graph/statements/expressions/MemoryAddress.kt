@@ -26,10 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
-class MemoryAddress(override var name: Name) : Declaration() {
+open class MemoryAddress(override var name: Name) : Declaration() {
     /*
      * When the node represents the MemoryAddress of a struct or an array, we use the fieldAddresses map to store the MemoryAddresses of the different fields.
      * Therefore, for structs the key should be a FieldDeclaration.
@@ -61,8 +60,8 @@ class MemoryAddress(override var name: Name) : Declaration() {
  * function's context. This is used for a [ParameterDeclaration] and serves as some sort of stepping
  * stone.
  */
-class ParameterMemoryValue(override var name: Name) : Node() {
-    override fun equals(other: Any?): Boolean {
+class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
+    /*    override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
         }
@@ -74,22 +73,22 @@ class ParameterMemoryValue(override var name: Name) : Node() {
 
     override fun hashCode(): Int {
         return super.hashCode()
-    }
+    }*/
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
-class UnknownMemoryValue() : Node() {
-    override fun equals(other: Any?): Boolean {
+class UnknownMemoryValue(override var name: Name = Name("")) : MemoryAddress(name) {
+    /*    override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
         }
         if (other !is UnknownMemoryValue) {
             return false
         }
-        return true
+        return this.name == other.name
     }
 
     override fun hashCode(): Int {
         return super.hashCode()
-    }
+    }*/
 }
