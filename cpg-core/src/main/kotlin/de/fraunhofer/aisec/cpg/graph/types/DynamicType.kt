@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,28 +26,17 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
- * This type represents a [Type] that uses auto-inference (usually from an initializer) to determine
- * its actual type. It is commonly used in languages that have a special keyword, such as `auto` in
- * C++.
- *
- * Things to consider:
- * 1) This is intentionally a distinct type and not the [UnknownType]. The type is known to the
- *    compiler (or to us) at some point, e.g., after an assignment, but it is not specifically
- *    specified in the source-code.
- * 2) This should not be used to languages that have dynamic types. Once auto-type who was assigned
- *    to [Expression.type] is "resolved", it should be replaced by the actual type that it
- *    represents. Contrary to that, a [DynamicType] can change its internal type representation at
- *    any point, e.g., after the next assignment.
+ * This type represents a [Type] that is dynamically determined at run-time. This is used for a
+ * [Language], which has dynamic runtime typing, such as Python or Java/TypeScript.
  */
-class AutoType(language: Language<*>) : Type("auto", language) {
+class DynamicType(override var language: Language<*>) : Type("dynamic", language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        throw IllegalArgumentException("Cannot reference a dynamic type")
     }
 
     override fun dereference(): Type {
-        return unknownType()
+        throw IllegalArgumentException("Cannot dereference a dynamic type")
     }
 }

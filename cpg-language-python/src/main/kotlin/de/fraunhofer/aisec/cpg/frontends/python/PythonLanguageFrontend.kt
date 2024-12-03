@@ -168,8 +168,8 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     override fun typeOf(type: Python.AST.AST?): Type {
         return when (type) {
             null -> {
-                // No type information -> we return an autoType to infer things magically
-                autoType()
+                // No type information -> we return a dynamic type to infer things magically
+                dynamicType()
             }
 
             is Python.AST.Name -> {
